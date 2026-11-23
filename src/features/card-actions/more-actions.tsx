@@ -15,14 +15,14 @@ import type { TrackingStatus } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
- * Which secondary actions `item` has: a list add, and pause and drop once a
- * connected provider holds an entry they would move.
+ * Which secondary actions `item` has: a list add, and pause or drop when a
+ * connected provider holds an entry it would move.
  */
 function useMoreActions(item: NormalizedMediaItem) {
   const list = useCanAddToList(item);
   const targets = useWriteTargetsSplit(item, 'tracking');
-  const { changeable } = useTrackingState(targets.item, targets.writable);
-  return { list, tracking: changeable };
+  const { movable } = useTrackingState(targets.item, targets.writable);
+  return { list, movable, tracking: movable.paused || movable.dropped };
 }
 
 /**
@@ -38,7 +38,7 @@ export function MoreActions({
   onBack: () => void;
   onClose: () => void;
 }) {
-  const list = useCanAddToList(item);
+  const { list, movable } = useMoreActions(item);
   const [step, setStep] = useState<'menu' | 'list' | TrackingStatus>('menu');
   const toMenu = () => setStep('menu');
   switch (step) {
@@ -57,8 +57,12 @@ export function MoreActions({
             {list && (
               <Button icon={<Button.Icon name="add" />} label="Add to list" onPress={() => setStep('list')} variant="quiet" />
             )}
-            <Button icon={<Button.Icon name="pause" />} label="Pause tracking" onPress={() => setStep('paused')} variant="quiet" />
-            <Button icon={<Button.Icon name="close-circle-outline" />} label="Drop" onPress={() => setStep('dropped')} variant="quiet" />
+            {movable.paused && (
+              <Button icon={<Button.Icon name="pause" />} label="Pause tracking" onPress={() => setStep('paused')} variant="quiet" />
+            )}
+            {movable.dropped && (
+              <Button icon={<Button.Icon name="close-circle-outline" />} label="Drop" onPress={() => setStep('dropped')} variant="quiet" />
+            )}
           </View>
         </WriteSheet.Step>
       );

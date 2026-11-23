@@ -1,5 +1,5 @@
 import { HardcoverStatus } from '@/lib/providers/hardcover/reads';
-import { Provider, type ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId, type TrackingStatus } from '@/lib/providers/types';
 import { useAniListEntryStateQuery } from '@/state/queries/anilist';
 import { useHardcoverBookEntryQuery } from '@/state/queries/hardcover';
 import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
@@ -33,16 +33,27 @@ const HARDCOVER_LABELS: Record<number, string> = {
 
 const NOT_TRACKED = 'Not tracked';
 
+/** The statuses a pause or drop moves, the same set the adapters accept. */
+type MovableState = 'active' | TrackingStatus;
+const ANILIST_STATE: Record<string, MovableState | undefined> = { CURRENT: 'active', PAUSED: 'paused', DROPPED: 'dropped' };
+const SIMKL_STATE: Record<string, MovableState | undefined> = { watching: 'active', hold: 'paused', dropped: 'dropped' };
+const HARDCOVER_STATE: Record<number, MovableState | undefined> = {
+  [HardcoverStatus.Reading]: 'active',
+  [HardcoverStatus.Paused]: 'paused',
+  [HardcoverStatus.DidNotFinish]: 'dropped',
+};
+
 /**
  * Each target's current status, from the reads the details screen already
  * holds, so providers that disagree show it before the write. A target whose
- * read has not landed has no label. `changeable` is whether any target holds
- * an entry a pause or drop would move, the same set the adapters accept.
+ * read has not landed has no label. `movable[status]` is whether any target
+ * holds an entry that a change to `status` would move: one the adapters
+ * accept that is not in that status already.
  */
 export function useTrackingState(
   item: NormalizedMediaItem,
   targets: readonly ProviderId[],
-): { labels: Partial<Record<ProviderId, string>>; changeable: boolean } {
+): { labels: Partial<Record<ProviderId, string>>; movable: Record<TrackingStatus, boolean> } {
   const reading = item.type === 'BOOK';
   // A disabled query still returns cached data, and the details screen caches
   // these reads for items that are not targets, such as a film.
@@ -64,10 +75,15 @@ export function useTrackingState(
   const hardcover = onHardcover ? hardcoverQuery.data : undefined;
 
   const labels: Partial<Record<ProviderId, string>> = {};
-  const changeable =
-    ['CURRENT', 'PAUSED', 'DROPPED'].includes(anilist?.entry?.status ?? '') ||
-    ['watching', 'hold', 'dropped'].includes(simkl?.status ?? '') ||
-    ([HardcoverStatus.Reading, HardcoverStatus.Paused, HardcoverStatus.DidNotFinish] as number[]).includes(hardcover?.statusId ?? 0);
+  const current = [
+    ANILIST_STATE[anilist?.entry?.status ?? ''],
+    SIMKL_STATE[simkl?.status ?? ''],
+    HARDCOVER_STATE[hardcover?.statusId ?? 0],
+  ].filter((status) => status != null);
+  const movable = {
+    paused: current.some((status) => status !== 'paused'),
+    dropped: current.some((status) => status !== 'dropped'),
+  };
   if (anilist != null) {
     const status = anilist.entry?.status;
     labels[Provider.AniList] = status == null
@@ -82,5 +98,5 @@ export function useTrackingState(
   if (hardcover !== undefined) {
     labels[Provider.Hardcover] = hardcover == null ? NOT_TRACKED : HARDCOVER_LABELS[hardcover.statusId];
   }
-  return { labels, changeable };
+  return { labels, movable };
 }
