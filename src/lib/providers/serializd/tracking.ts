@@ -2,13 +2,13 @@ import * as Effect from 'effect/Effect';
 import * as Schema from 'effect/Schema';
 
 import type { ProviderWriteResult } from '@/features/log-media/fan-out';
-import { ProviderAuthError, ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
+import type { ProviderError } from '@/lib/providers/errors';
 import { trackingStatusSkip } from '@/lib/providers/tracking-status';
 import { Provider, type TrackingStatus } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
 import { serializdHttp } from './http';
-import { Id, Username } from './watched';
+import { Id, readShowPages } from './watched';
 
 const provider = Provider.Serializd;
 
@@ -29,24 +29,10 @@ export type SerializdTrackingLists = Record<keyof typeof LISTS, number[]>;
 /** `watched` is a show with watched seasons that is on none of the lists. */
 export type SerializdTrackingState = keyof typeof LISTS | 'watched';
 
-/** Every show id on one status list. `sort_by` is mandatory: without it the API answers 500. */
-const readList = Effect.fnUntraced(function* (deps: SerializdDeps, list: string) {
-  const username = deps.session?.username;
-  if (!Schema.is(Username)(username)) return yield* new ProviderAuthError({ provider, refreshFailed: true });
-  const readPage = (page: number) =>
-    serializdHttp<unknown>(deps, `/user/${encodeURIComponent(username)}/${list}/${page}?sort_by=date_added_desc`, { auth: true }).pipe(
-      Effect.flatMap((raw) => Schema.decodeUnknownEffect(ShowsPage)(raw).pipe(
-        Effect.mapError(() => new ProviderDecodeError({ provider, detail: `unrecognized ${list}` })),
-      )),
-    );
-  const first = yield* readPage(1);
-  const rest = yield* Effect.forEach(
-    Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, index) => index + 2),
-    readPage,
-    { concurrency: 3 },
+const readList = (deps: SerializdDeps, list: string) =>
+  readShowPages(deps, list, ShowsPage).pipe(
+    Effect.map((pages) => pages.flatMap((page) => page.items.map((show) => show.showId))),
   );
-  return [first, ...rest].flatMap((page) => page.items.map((show) => show.showId));
-});
 
 /**
  * The account's Currently Watching, Paused and Dropped lists. Serializd has
