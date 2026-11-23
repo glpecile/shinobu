@@ -99,11 +99,11 @@ async function runTrackingStatusWrite(
   // The watchlist's invalidation covers every key a status reads: AniList's
   // entry and current lists, Simkl's library, Hardcover's library and Up Next.
   invalidateAfterWatchlist(queryClient, enriched, report.succeeded);
-  if (report.succeeded.includes(Provider.Serializd)) {
+  const serializdUser = getSerializdUsername();
+  if (serializdUser != null && report.succeeded.includes(Provider.Serializd)) {
     // Serializd leaves paused and dropped shows out of Coming Soon.
-    const username = getSerializdUsername() ?? '';
-    queryClient.invalidateQueries({ queryKey: serializdQueryKeys.trackingLists(username) });
-    queryClient.invalidateQueries({ queryKey: serializdQueryKeys.upcoming(username) });
+    queryClient.invalidateQueries({ queryKey: serializdQueryKeys.trackingLists(serializdUser) });
+    queryClient.invalidateQueries({ queryKey: serializdQueryKeys.upcoming(serializdUser) });
   }
   if (report.succeeded.length > 0 && platform !== 'web') {
     await refreshNotifications(createRefreshDeps(queryClient), { throttle: false });
