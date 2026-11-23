@@ -1,4 +1,4 @@
-import { useQuery, useSuspenseInfiniteQuery, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery, useSuspenseInfiniteQuery, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { getSerializdList, getSerializdListsPage, type SerializdListEntry, type SerializdListKind } from '@/lib/providers/serializd/lists';
@@ -8,7 +8,8 @@ import type { SerializdDeps, SerializdSession } from '@/lib/providers/serializd/
 import { Provider } from '@/lib/providers/types';
 import { getSerializdSession, getSerializdUsername } from '@/state/session/serializd';
 import { getWatchedEpisodeKeys } from '@/lib/providers/serializd/progress';
-import { getSerializdWatchedShows } from '@/lib/providers/serializd/watched';
+import { getSerializdTrackingLists, serializdTrackingState } from '@/lib/providers/serializd/tracking';
+import { getSerializdWatchedShows, type SerializdWatchedShow } from '@/lib/providers/serializd/watched';
 import { getSerializdUpcoming, type SerializdUpcomingEpisode } from '@/lib/providers/serializd/upcoming';
 
 /**
@@ -72,6 +73,7 @@ export function validateSerializdToken(token: string): Promise<SerializdSession>
 export const serializdQueryKeys = {
   all: [Provider.Serializd] as const,
   watchedShows: (username: string) => [...serializdQueryKeys.all, 'watched-shows', username] as const,
+  trackingLists: (username: string) => [...serializdQueryKeys.all, 'tracking-lists', username] as const,
   listsRoot: () => [...serializdQueryKeys.all, 'lists'] as const,
   lists: (username: string, kind: SerializdListKind) => [...serializdQueryKeys.listsRoot(), username, kind] as const,
   listRoot: () => [...serializdQueryKeys.all, 'list'] as const,
@@ -81,16 +83,50 @@ export const serializdQueryKeys = {
     [...serializdQueryKeys.all, 'progress', username, tmdbId] as const,
 };
 
-/** Mounted TV marks share one account-wide read, not a request chain per poster. */
-export function useSerializdWatchedShowsQuery(username: string | null) {
-  return useQuery({
+function watchedShowsQuery(username: string | null) {
+  return queryOptions({
     queryKey: serializdQueryKeys.watchedShows(username ?? ''),
     queryFn: ({ signal }) => Effect.runPromise(getSerializdWatchedShows(serializdDeps(username)), { signal }),
-    enabled: username != null,
     staleTime: 5 * 60_000,
     retry: false,
-    throwOnError: false,
   });
+}
+
+/** Mounted TV marks share one account-wide read, not a request chain per poster. */
+export function useSerializdWatchedShowsQuery(username: string | null) {
+  return useQuery({ ...watchedShowsQuery(username), enabled: username != null, throwOnError: false });
+}
+
+function isWatchedOnSerializd(shows: readonly SerializdWatchedShow[], tmdbId: number): boolean {
+  return shows.some((show) => show.item.externalIds.tmdb === tmdbId);
+}
+
+/**
+ * The show's status for a pause or drop: the three status lists read fresh,
+ * and the watched snapshot from cache only when no list holds the show.
+ */
+export async function fetchSerializdTrackingState(queryClient: QueryClient, tmdbId: number) {
+  const username = getSerializdUsername();
+  const lists = await Effect.runPromise(getSerializdTrackingLists(serializdDeps(username)));
+  const listed = serializdTrackingState(lists, tmdbId, false);
+  if (listed != null) return listed;
+  const watched = await queryClient.fetchQuery(watchedShowsQuery(username));
+  return serializdTrackingState(lists, tmdbId, isWatchedOnSerializd(watched, tmdbId));
+}
+
+/** The show's Serializd status, null when untracked and undefined until both reads land. */
+export function useSerializdTrackingStateQuery({ tmdbId, enabled }: { tmdbId: number | undefined; enabled: boolean }) {
+  const username = getSerializdUsername();
+  const on = enabled && username != null && tmdbId != null;
+  const lists = useQuery({
+    queryKey: serializdQueryKeys.trackingLists(username ?? ''),
+    queryFn: ({ signal }) => Effect.runPromise(getSerializdTrackingLists(serializdDeps(username)), { signal }),
+    enabled: on,
+    staleTime: 5 * 60_000,
+  });
+  const watched = useSerializdWatchedShowsQuery(on ? username : null);
+  if (tmdbId == null || lists.data == null || watched.data == null) return undefined;
+  return serializdTrackingState(lists.data, tmdbId, isWatchedOnSerializd(watched.data, tmdbId));
 }
 
 /** Shares the episode-granular progress cache used by log reconciliation. */

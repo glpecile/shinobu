@@ -7,8 +7,8 @@ import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
 import { serializdHttp } from './http';
 
-const Username = Schema.String.check(Schema.isPattern(/^(?!.*\.\.)[A-Za-z0-9_.-]{1,100}$/));
-const Id = Schema.Int.check(Schema.isGreaterThan(0));
+export const Username = Schema.String.check(Schema.isPattern(/^(?!.*\.\.)[A-Za-z0-9_.-]{1,100}$/));
+export const Id = Schema.Int.check(Schema.isGreaterThan(0));
 const WatchedPage = Schema.Struct({
   items: Schema.Array(Schema.Struct({
     showId: Id,

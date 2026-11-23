@@ -3,6 +3,7 @@ import { STATUS_NAMES } from '@/lib/providers/hardcover/writes';
 import { Provider, type ProviderId, type TrackingStatus } from '@/lib/providers/types';
 import { useAniListEntryStateQuery } from '@/state/queries/anilist';
 import { useHardcoverBookEntryQuery } from '@/state/queries/hardcover';
+import { useSerializdTrackingStateQuery } from '@/state/queries/serializd';
 import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -30,12 +31,15 @@ const SIMKL_LABELS: Record<string, string> = {
   plantowatch: 'Plan to watch',
 };
 
+const SERIALIZD_LABELS = { watching: 'Watching', watched: 'Watched', paused: 'Paused', dropped: 'Dropped' } as const;
+
 const NOT_TRACKED = 'Not tracked';
 
 /** The statuses a pause or drop moves, the same set the adapters accept. */
 type MovableState = 'active' | TrackingStatus;
 const ANILIST_STATE: Record<string, MovableState | undefined> = { CURRENT: 'active', PAUSED: 'paused', DROPPED: 'dropped' };
 const SIMKL_STATE: Record<string, MovableState | undefined> = { watching: 'active', hold: 'paused', dropped: 'dropped' };
+const SERIALIZD_STATE = { watching: 'active', watched: 'active', paused: 'paused', dropped: 'dropped' } as const;
 const HARDCOVER_STATE: Record<number, MovableState | undefined> = {
   [HardcoverStatus.Reading]: 'active',
   [HardcoverStatus.Paused]: 'paused',
@@ -69,6 +73,10 @@ export function useTrackingState(
     bookId: item.externalIds.hardcover,
     enabled: onHardcover,
   });
+  const serializd = useSerializdTrackingStateQuery({
+    tmdbId: item.externalIds.tmdb,
+    enabled: targets.includes(Provider.Serializd),
+  });
   const anilist = onAniList ? anilistQuery.data : undefined;
   const simkl = onSimkl ? simklQuery.data : undefined;
   const hardcover = onHardcover ? hardcoverQuery.data : undefined;
@@ -78,6 +86,7 @@ export function useTrackingState(
     [Provider.AniList]: ANILIST_STATE[anilist?.entry?.status ?? ''],
     [Provider.Simkl]: SIMKL_STATE[simkl?.status ?? ''],
     [Provider.Hardcover]: HARDCOVER_STATE[hardcover?.statusId ?? 0],
+    [Provider.Serializd]: serializd == null ? undefined : SERIALIZD_STATE[serializd],
   };
   const moves = (status: TrackingStatus) =>
     targets.filter((id) => current[id] != null && current[id] !== status);
@@ -93,6 +102,9 @@ export function useTrackingState(
   }
   if (hardcover !== undefined) {
     labels[Provider.Hardcover] = hardcover == null ? NOT_TRACKED : STATUS_NAMES[hardcover.statusId];
+  }
+  if (serializd !== undefined) {
+    labels[Provider.Serializd] = serializd == null ? NOT_TRACKED : SERIALIZD_LABELS[serializd];
   }
   return { labels, movable };
 }

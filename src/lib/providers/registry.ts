@@ -101,9 +101,10 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // (KTD-9) if the probe's finding or the read ever regresses.
     watchlistWrite: 'write',
     watchlistRemove: 'manual',
-    // It reads paused and dropped pages, but no status write is verified,
-    // and web would need a new proxy rule.
-    trackingStatus: 'manual',
+    // `POST paused_shows` / `dropped_shows` with `{ show_id }`, taken from
+    // serializd.com's own client. Reverting to `'manual'` is the rollback
+    // (`docs/solutions/tracking-status-provider-support.md`).
+    trackingStatus: 'write',
     // Its API has no average; only the www page shows one (#318).
     communityScore: false,
   },
