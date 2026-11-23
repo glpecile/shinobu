@@ -105,10 +105,10 @@
           },
           {
             "group": [
-              "torph",
-              "torph/*"
+              "@glpecile/norph",
+              "@glpecile/norph/*"
             ],
-            "message": "Import MorphText from @/components/morph-text \u2014 torph is DOM-only; the wrapper falls back to a plain Text on native via index.tsx."
+            "message": "Import MorphText from @/components/morph-text \u2014 the one seam for the morph library."
           },
           {
             "group": [
@@ -341,6 +341,7 @@
         "src/components/image.tsx",
         "src/components/keyboard-avoiding-view.tsx",
         "src/components/keyboard-aware-scroll-view.tsx",
+        "src/components/morph-text.tsx",
         "src/components/presstable/index.tsx",
         "src/components/presstable/index.web.tsx",
         "src/components/refresh-control/index.tsx",
@@ -371,7 +372,6 @@
     {
       "files": [
         "src/components/sheet/**",
-        "src/components/morph-text/**",
         "src/components/toast-host/**",
         "src/lib/haptics/**",
         "src/lib/toast/**"
