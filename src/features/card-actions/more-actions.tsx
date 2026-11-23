@@ -38,7 +38,7 @@ export function MoreActions({
   onBack: () => void;
   onClose: () => void;
 }) {
-  const { list } = useMoreActions(item);
+  const list = useCanAddToList(item);
   const [step, setStep] = useState<'menu' | 'list' | TrackingStatus>('menu');
   const toMenu = () => setStep('menu');
   switch (step) {

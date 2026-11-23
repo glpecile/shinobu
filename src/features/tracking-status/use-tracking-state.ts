@@ -44,22 +44,30 @@ export function useTrackingState(
   targets: readonly ProviderId[],
 ): { labels: Partial<Record<ProviderId, string>>; changeable: boolean } {
   const reading = item.type === 'BOOK';
-  const anilist = useAniListEntryStateQuery({
+  // A disabled query still returns cached data, and the details screen caches
+  // these reads for items that are not targets, such as a film.
+  const onAniList = targets.includes(Provider.AniList);
+  const onSimkl = targets.includes(Provider.Simkl);
+  const onHardcover = targets.includes(Provider.Hardcover);
+  const anilistQuery = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
     type: reading ? 'MANGA' : 'ANIME',
-    enabled: targets.includes(Provider.AniList),
-  }).data;
-  const simkl = useSimklLibraryEntryQuery({ item, enabled: targets.includes(Provider.Simkl) });
-  const hardcover = useHardcoverBookEntryQuery({
-    bookId: item.externalIds.hardcover,
-    enabled: targets.includes(Provider.Hardcover),
+    enabled: onAniList,
   });
+  const simklQuery = useSimklLibraryEntryQuery({ item, enabled: onSimkl });
+  const hardcoverQuery = useHardcoverBookEntryQuery({
+    bookId: item.externalIds.hardcover,
+    enabled: onHardcover,
+  });
+  const anilist = onAniList ? anilistQuery.data : undefined;
+  const simkl = onSimkl ? simklQuery.data : undefined;
+  const hardcover = onHardcover ? hardcoverQuery.data : undefined;
 
   const labels: Partial<Record<ProviderId, string>> = {};
   const changeable =
     ['CURRENT', 'PAUSED', 'DROPPED'].includes(anilist?.entry?.status ?? '') ||
-    ['watching', 'hold', 'dropped'].includes(simkl.data?.status ?? '') ||
-    ([HardcoverStatus.Reading, HardcoverStatus.Paused, HardcoverStatus.DidNotFinish] as number[]).includes(hardcover.data?.statusId ?? 0);
+    ['watching', 'hold', 'dropped'].includes(simkl?.status ?? '') ||
+    ([HardcoverStatus.Reading, HardcoverStatus.Paused, HardcoverStatus.DidNotFinish] as number[]).includes(hardcover?.statusId ?? 0);
   if (anilist != null) {
     const status = anilist.entry?.status;
     labels[Provider.AniList] = status == null
@@ -68,11 +76,11 @@ export function useTrackingState(
         ? 'Reading'
         : ANILIST_LABELS[status] ?? status;
   }
-  if (simkl.isSuccess) {
-    labels[Provider.Simkl] = simkl.data == null ? NOT_TRACKED : SIMKL_LABELS[simkl.data.status];
+  if (simkl !== undefined) {
+    labels[Provider.Simkl] = simkl == null ? NOT_TRACKED : SIMKL_LABELS[simkl.status];
   }
-  if (hardcover.isSuccess) {
-    labels[Provider.Hardcover] = hardcover.data == null ? NOT_TRACKED : HARDCOVER_LABELS[hardcover.data.statusId];
+  if (hardcover !== undefined) {
+    labels[Provider.Hardcover] = hardcover == null ? NOT_TRACKED : HARDCOVER_LABELS[hardcover.statusId];
   }
   return { labels, changeable };
 }
