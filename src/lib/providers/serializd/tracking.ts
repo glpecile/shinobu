@@ -8,7 +8,7 @@ import { Provider, type TrackingStatus } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
 import { serializdHttp } from './http';
-import { Id, readShowPages } from './watched';
+import { Id, readShowPages, type SerializdWatchedShow } from './watched';
 
 const ShowsPage = Schema.Struct({
   items: Schema.Array(Schema.Struct({ showId: Id })),
@@ -24,8 +24,11 @@ const LISTS = {
 /** TMDB show ids on each of the account's three status lists. */
 type SerializdTrackingLists = Record<keyof typeof LISTS, number[]>;
 
-/** `watched` is a show with watched seasons that is on none of the lists. */
-type SerializdTrackingState = keyof typeof LISTS | 'watched';
+/**
+ * `watched` is a show with watched seasons that is on none of the lists, and
+ * `completed` one with every season watched, which never moves (#227).
+ */
+type SerializdTrackingState = keyof typeof LISTS | 'watched' | 'completed';
 
 const readList = (deps: SerializdDeps, list: string) =>
   readShowPages(deps, list, ShowsPage).pipe(
@@ -48,12 +51,13 @@ export function getSerializdTrackingLists(deps: SerializdDeps): Effect.Effect<Se
 export function serializdTrackingState(
   lists: SerializdTrackingLists,
   tmdbId: number,
-  watched: boolean,
+  watched: SerializdWatchedShow | undefined,
 ): SerializdTrackingState | null {
   if (lists.paused.includes(tmdbId)) return 'paused';
   if (lists.dropped.includes(tmdbId)) return 'dropped';
   if (lists.watching.includes(tmdbId)) return 'watching';
-  return watched ? 'watched' : null;
+  if (watched == null) return null;
+  return watched.totalSeasons != null && watched.watchedSeasons >= watched.totalSeasons ? 'completed' : 'watched';
 }
 
 /** The response bodies are not captured, so a 2xx with no JSON still counts. */

@@ -74,6 +74,9 @@ is no per-show status read, so a status needs every page of the three lists.
 still hold their season ids in `watchedpage_v2`. No show was on two of the
 three lists at once.
 
+A show on no list with watched seasons counts as watched and can move. With
+every season watched (`numSeasons`), it counts as completed and never moves.
+
 The site's client removes the show from Currently Watching after it adds it to
 Paused or Dropped, and removes all its seasons from the watchlist. The adapter
 does the first and leaves the watchlist alone. It also removes the show from

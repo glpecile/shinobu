@@ -97,8 +97,8 @@ export function useSerializdWatchedShowsQuery(username: string | null) {
   return useQuery({ ...watchedShowsQuery(username), enabled: username != null, throwOnError: false });
 }
 
-function isWatchedOnSerializd(shows: readonly SerializdWatchedShow[], tmdbId: number): boolean {
-  return shows.some((show) => show.item.externalIds.tmdb === tmdbId);
+function findWatchedShow(shows: readonly SerializdWatchedShow[], tmdbId: number) {
+  return shows.find((show) => show.item.externalIds.tmdb === tmdbId);
 }
 
 function trackingListsQuery(username: string | null) {
@@ -118,10 +118,10 @@ function trackingListsQuery(username: string | null) {
 export async function fetchSerializdTrackingState(queryClient: QueryClient, tmdbId: number) {
   const username = getSerializdUsername();
   const lists = await queryClient.fetchQuery({ ...trackingListsQuery(username), staleTime: 0 });
-  const listed = serializdTrackingState(lists, tmdbId, false);
+  const listed = serializdTrackingState(lists, tmdbId, undefined);
   if (listed != null) return listed;
   const watched = await queryClient.fetchQuery(watchedShowsQuery(username));
-  return serializdTrackingState(lists, tmdbId, isWatchedOnSerializd(watched, tmdbId));
+  return serializdTrackingState(lists, tmdbId, findWatchedShow(watched, tmdbId));
 }
 
 /** The show's Serializd status, null when untracked and undefined until both reads land. */
@@ -131,7 +131,7 @@ export function useSerializdTrackingStateQuery({ tmdbId, enabled }: { tmdbId: nu
   const lists = useQuery({ ...trackingListsQuery(username), enabled: on });
   const watched = useSerializdWatchedShowsQuery(on ? username : null);
   if (!on || lists.data == null || watched.data == null) return undefined;
-  return serializdTrackingState(lists.data, tmdbId, isWatchedOnSerializd(watched.data, tmdbId));
+  return serializdTrackingState(lists.data, tmdbId, findWatchedShow(watched.data, tmdbId));
 }
 
 /** Shares the episode-granular progress cache used by log reconciliation. */

@@ -31,7 +31,7 @@ const SIMKL_LABELS: Record<string, string> = {
   plantowatch: 'Plan to watch',
 };
 
-const SERIALIZD_LABELS = { watching: 'Watching', watched: 'Watched', paused: 'Paused', dropped: 'Dropped' } as const;
+const SERIALIZD_LABELS = { watching: 'Watching', watched: 'Watched', completed: 'Completed', paused: 'Paused', dropped: 'Dropped' } as const;
 
 const NOT_TRACKED = 'Not tracked';
 
@@ -39,7 +39,7 @@ const NOT_TRACKED = 'Not tracked';
 type MovableState = 'active' | TrackingStatus;
 const ANILIST_STATE: Record<string, MovableState | undefined> = { CURRENT: 'active', PAUSED: 'paused', DROPPED: 'dropped' };
 const SIMKL_STATE: Record<string, MovableState | undefined> = { watching: 'active', hold: 'paused', dropped: 'dropped' };
-const SERIALIZD_STATE = { watching: 'active', watched: 'active', paused: 'paused', dropped: 'dropped' } as const;
+const SERIALIZD_STATE = { watching: 'active', watched: 'active', completed: undefined, paused: 'paused', dropped: 'dropped' } as const;
 const HARDCOVER_STATE: Record<number, MovableState | undefined> = {
   [HardcoverStatus.Reading]: 'active',
   [HardcoverStatus.Paused]: 'paused',
