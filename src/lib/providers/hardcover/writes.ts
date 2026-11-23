@@ -167,7 +167,9 @@ export function logToHardcover(
   });
 }
 
-const STATUS_NAMES: Record<number, string> = {
+/** Hardcover's own name for each status, as its app shows it. */
+export const STATUS_NAMES: Record<number, string> = {
+  [HardcoverStatus.WantToRead]: 'Want to Read',
   [HardcoverStatus.Reading]: 'Currently Reading',
   [HardcoverStatus.Read]: 'Read',
   [HardcoverStatus.Paused]: 'Paused',

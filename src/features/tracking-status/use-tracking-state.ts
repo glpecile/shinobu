@@ -1,4 +1,5 @@
 import { HardcoverStatus } from '@/lib/providers/hardcover/reads';
+import { STATUS_NAMES } from '@/lib/providers/hardcover/writes';
 import { Provider, type ProviderId, type TrackingStatus } from '@/lib/providers/types';
 import { useAniListEntryStateQuery } from '@/state/queries/anilist';
 import { useHardcoverBookEntryQuery } from '@/state/queries/hardcover';
@@ -14,21 +15,19 @@ const ANILIST_LABELS: Record<string, string> = {
   PLANNING: 'Planning',
 };
 
+/** A bridged book's AniList entry is its manga's, read rather than watched. */
+const ANILIST_READING_LABELS: Record<string, string> = {
+  CURRENT: 'Reading',
+  REPEATING: 'Rereading',
+  COMPLETED: 'Read',
+};
+
 const SIMKL_LABELS: Record<string, string> = {
   watching: 'Watching',
   hold: 'Paused',
   dropped: 'Dropped',
   completed: 'Completed',
   plantowatch: 'Plan to watch',
-};
-
-const HARDCOVER_LABELS: Record<number, string> = {
-  [HardcoverStatus.WantToRead]: 'Want to Read',
-  [HardcoverStatus.Reading]: 'Reading',
-  [HardcoverStatus.Read]: 'Read',
-  [HardcoverStatus.Paused]: 'Paused',
-  [HardcoverStatus.DidNotFinish]: 'Did Not Finish',
-  [HardcoverStatus.Ignored]: 'Ignored',
 };
 
 const NOT_TRACKED = 'Not tracked';
@@ -87,15 +86,13 @@ export function useTrackingState(
     const status = anilist.entry?.status;
     labels[Provider.AniList] = status == null
       ? NOT_TRACKED
-      : reading && status === 'CURRENT'
-        ? 'Reading'
-        : ANILIST_LABELS[status] ?? status;
+      : (reading ? ANILIST_READING_LABELS[status] : undefined) ?? ANILIST_LABELS[status] ?? status;
   }
   if (simkl !== undefined) {
     labels[Provider.Simkl] = simkl == null ? NOT_TRACKED : SIMKL_LABELS[simkl.status];
   }
   if (hardcover !== undefined) {
-    labels[Provider.Hardcover] = hardcover == null ? NOT_TRACKED : HARDCOVER_LABELS[hardcover.statusId];
+    labels[Provider.Hardcover] = hardcover == null ? NOT_TRACKED : STATUS_NAMES[hardcover.statusId];
   }
   return { labels, movable };
 }
