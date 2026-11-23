@@ -183,10 +183,10 @@ describe("splitWriteTargets('watchlist')", () => {
 
 // #227: pause and drop reach series and books only, from their own declaration.
 describe("splitWriteTargets('tracking')", () => {
-  it('a series: AniList and Simkl write, Trakt and Serializd are manual links', () => {
+  it('a series: AniList, Serializd and Simkl write, Trakt is a manual link', () => {
     expect(
       splitWriteTargets({ type: 'TV', ...ids({ trakt: 1, anilist: 2 }) }, ALL5, 'ios', 'tracking'),
-    ).toEqual({ writable: ['anilist', 'simkl'], manual: ['trakt', 'serializd'] });
+    ).toEqual({ writable: ['anilist', 'serializd', 'simkl'], manual: ['trakt'] });
   });
 
   it('a film and a standalone manga have nothing to pause', () => {

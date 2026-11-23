@@ -12,18 +12,22 @@ import { invalidateAfterWatchlist } from '@/features/watchlist-media/invalidate'
 import { setAniListTrackingStatus } from '@/lib/providers/anilist/writes';
 import { setHardcoverTrackingStatus } from '@/lib/providers/hardcover/writes';
 import { resolveWriteTargets, splitWriteTargets } from '@/lib/providers/routing';
+import { setSerializdTrackingStatus } from '@/lib/providers/serializd/tracking';
 import { getAllItems } from '@/lib/providers/simkl/reads';
 import { setSimklTrackingStatus } from '@/lib/providers/simkl/writes';
 import { Provider, type ProviderId, type TrackingStatus } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
 import { hardcoverDeps } from '@/state/queries/hardcover';
+import { fetchSerializdTrackingState, serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { findLibraryEntry, simklDeps } from '@/state/queries/simkl';
 import { useConnectedProviders } from '@/state/session';
+import { getSerializdUsername } from '@/state/session/serializd';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface TrackingStatusPayload {
   item: NormalizedMediaItem;
   status: TrackingStatus;
+  queryClient: QueryClient;
 }
 
 /**
@@ -42,6 +46,11 @@ const TRACKING_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<TrackingStatusP
   },
   [Provider.Hardcover]: ({ item, status }) =>
     Effect.runPromise(setHardcoverTrackingStatus(hardcoverDeps(), item, status)),
+  [Provider.Serializd]: async ({ item, status, queryClient }) => {
+    const tmdbId = item.externalIds.tmdb;
+    const current = tmdbId == null ? null : await fetchSerializdTrackingState(queryClient, tmdbId);
+    return Effect.runPromise(setSerializdTrackingStatus(serializdDeps(), item, current, status));
+  },
 };
 
 interface TrackingStatusVariables {
@@ -86,10 +95,16 @@ async function runTrackingStatusWrite(
     throw new Error(`No connected provider can change the status of "${enriched.title}"`);
   }
 
-  const report = await runProviderWrites(TRACKING_ADAPTERS, targets, { item: enriched, status });
+  const report = await runProviderWrites(TRACKING_ADAPTERS, targets, { item: enriched, status, queryClient });
   // The watchlist's invalidation covers every key a status reads: AniList's
   // entry and current lists, Simkl's library, Hardcover's library and Up Next.
   invalidateAfterWatchlist(queryClient, enriched, report.succeeded);
+  const serializdUser = getSerializdUsername();
+  if (serializdUser != null && report.succeeded.includes(Provider.Serializd)) {
+    // Serializd leaves paused and dropped shows out of Coming Soon.
+    queryClient.invalidateQueries({ queryKey: serializdQueryKeys.trackingLists(serializdUser) });
+    queryClient.invalidateQueries({ queryKey: serializdQueryKeys.upcoming(serializdUser) });
+  }
   if (report.succeeded.length > 0 && platform !== 'web') {
     await refreshNotifications(createRefreshDeps(queryClient), { throttle: false });
   }
