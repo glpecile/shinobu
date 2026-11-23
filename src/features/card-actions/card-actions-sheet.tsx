@@ -498,7 +498,7 @@ function WatchlistRow({
       break;
   }
   return (
-    <MoreActionsCapsule className="mb-3" item={item} onOpen={(step) => onOpenMode(step === 'more' ? 'more' : 'list-add')}>
+    <MoreActionsCapsule className="mb-3" item={item} onOpen={onOpenMode}>
       {main}
     </MoreActionsCapsule>
   );
@@ -514,7 +514,7 @@ function WatchlistAddRow({
 }) {
   const ctaShown = useWatchlistCtaShown(item);
   return (
-    <MoreActionsCapsule className="mb-3" item={item} onOpen={(step) => onOpenMode(step === 'more' ? 'more' : 'list-add')}>
+    <MoreActionsCapsule className="mb-3" item={item} onOpen={onOpenMode}>
       {ctaShown ? (
         <WatchlistMediaButton
           className="mb-0"

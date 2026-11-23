@@ -86,23 +86,25 @@ export function MoreActionsCapsule({
 }: {
   item: NormalizedMediaItem;
   children: ReactNode;
-  onOpen?: (step: 'more' | 'list') => void;
+  onOpen?: (mode: 'more' | 'list-add') => void;
   className?: string;
 }) {
   const { list, tracking } = useMoreActions(item);
   const [open, setOpen] = useState(false);
-  // Remounts the content per open, so it starts on its first step.
-  const [session, setSession] = useState(0);
-  if (!list && !tracking) return children == null ? null : <View className={className}>{children}</View>;
+  // The step is chosen at press time, so a read landing while the sheet is
+  // open does not swap its content. `session` remounts it per open.
+  const [opened, setOpened] = useState<{ session: number; mode: 'more' | 'list-add' } | null>(null);
+  if (!list && !tracking && !open) return children == null ? null : <View className={className}>{children}</View>;
   const label = tracking ? 'More actions' : 'Add to list';
   const icon = <Button.Icon name={tracking ? 'ellipsis-horizontal' : 'add'} />;
   function openSheet() {
     haptics.selection();
+    const mode = tracking ? 'more' : 'list-add';
     if (onOpen != null) {
-      onOpen(tracking ? 'more' : 'list');
+      onOpen(mode);
       return;
     }
-    setSession(session + 1);
+    setOpened({ session: (opened?.session ?? 0) + 1, mode });
     setOpen(true);
   }
   const close = () => setOpen(false);
@@ -124,11 +126,11 @@ export function MoreActionsCapsule({
       )}
       {onOpen == null && (
         <Sheet onClose={close} open={open}>
-          {session > 0 &&
-            (tracking ? (
-              <MoreActions item={item} key={session} onBack={close} onClose={close} />
+          {opened != null &&
+            (opened.mode === 'more' ? (
+              <MoreActions item={item} key={opened.session} onBack={close} onClose={close} />
             ) : (
-              <AddToListPicker item={item} key={session} onClose={close} />
+              <AddToListPicker item={item} key={opened.session} onClose={close} />
             ))}
         </Sheet>
       )}
