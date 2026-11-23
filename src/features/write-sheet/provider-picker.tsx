@@ -45,7 +45,7 @@ function ProviderToggle({
 
   return (
     <PresstableOpacity
-      accessibilityLabel={detail == null ? `Write to ${descriptor.label}` : `Write to ${descriptor.label}, now ${detail}`}
+      accessibilityLabel={detail == null ? `Write to ${descriptor.label}` : `Write to ${descriptor.label}, currently ${detail}`}
       accessibilityRole="button"
       accessibilityState={{ checked: selected }}
       aria-pressed={selected}
