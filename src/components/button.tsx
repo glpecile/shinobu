@@ -134,6 +134,9 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `add` / `remove` | add a title or create a list; step a number up / down |
  * | `list-outline` | open a list |
  * | `create-outline` | rename or edit in place |
+ * | `pause` | pause tracking a series or book |
+ * | `close-circle-outline` | drop: stop tracking, history stays |
+ * | `ellipsis-horizontal` | open a title's secondary actions |
  *
  * Outside a `Button` it renders nothing rather than guessing a colour — a
  * mis-coloured icon on an accent fill is invisible, and silence is the more

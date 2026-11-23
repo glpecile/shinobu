@@ -5,7 +5,7 @@ import type { TokenStore } from '@/lib/providers/token-store';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { AniListDeps } from './deps';
 import { getEntryState } from './reads';
-import { deleteAniListEntry, logToAniList, planOnAniList } from './writes';
+import { deleteAniListEntry, logToAniList, planOnAniList, setAniListTrackingStatus } from './writes';
 
 const TOKENS: TokenStore = {
   get: () => ({ accessToken: 'tok' }),
@@ -817,5 +817,29 @@ describe('deleteAniListEntry — allowDestructive lifts the refusal and nothing 
       reason: 'removing would delete your whole AniList entry, which is COMPLETED',
     });
     expect(seen.mutations).toEqual([]);
+  });
+});
+
+describe('setAniListTrackingStatus', () => {
+  test('a watched entry sends only the status, and a rewatch is a skip', async () => {
+    const current = calls();
+    const repeating = calls();
+    await Effect.runPromise(
+      setAniListTrackingStatus(
+        watchlistDeps(current, { entry: { status: 'CURRENT', progress: 5, repeat: 1 }, episodes: 24 }),
+        SERIES,
+        'paused',
+      ),
+    );
+    const skipped = await Effect.runPromise(
+      setAniListTrackingStatus(
+        watchlistDeps(repeating, { entry: { status: 'REPEATING', progress: 3, repeat: 1 }, episodes: 24 }),
+        SERIES,
+        'dropped',
+      ),
+    );
+    expect(current.mutations).toEqual([{ mediaId: 104578, status: 'PAUSED' }]);
+    expect(skipped).toEqual({ status: 'skipped', reason: 'AniList tracks this as a rewatch' });
+    expect(repeating.mutations).toEqual([]);
   });
 });

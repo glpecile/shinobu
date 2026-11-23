@@ -7,6 +7,7 @@ const ALLOWED_FILES = [
   '/src/features/log-media/use-log-media.ts',
   '/src/features/watchlist-media/use-watchlist-media.ts',
   '/src/features/watchlist-media/use-unwatchlist-media.ts',
+  '/src/features/tracking-status/use-tracking-status.ts',
 ];
 
 export default defineRule({

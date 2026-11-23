@@ -113,7 +113,7 @@ export function anilistMediaKind(item: Pick<NormalizedMediaItem, 'type'>): 'ANIM
  * reach Letterboxd through two different type rules — and differs only in
  * which descriptor field declares support.
  */
-export type WriteCapability = 'log' | 'watchlist' | 'watchlist-remove';
+export type WriteCapability = 'log' | 'watchlist' | 'watchlist-remove' | 'tracking';
 
 /**
  * How `provider` supports `capability`. The log verb keeps its boolean
@@ -121,8 +121,33 @@ export type WriteCapability = 'log' | 'watchlist' | 'watchlist-remove';
  * never branch on the verb.
  */
 function writeSupport(provider: ProviderDescriptor, capability: WriteCapability): WriteSupport {
-  if (capability === 'log') return provider.canWrite ? 'write' : 'none';
-  return capability === 'watchlist' ? provider.watchlistWrite : provider.watchlistRemove;
+  switch (capability) {
+    case 'log':
+      return provider.canWrite ? 'write' : 'none';
+    case 'watchlist':
+      return provider.watchlistWrite;
+    case 'watchlist-remove':
+      return provider.watchlistRemove;
+    case 'tracking':
+      return provider.trackingStatus;
+  }
+}
+
+/**
+ * Whether pause and drop apply: a series or a book. A film has nothing to
+ * pause, and standalone manga waits for the reading domain (#227 scope).
+ */
+function hasTrackingStatus(item: RoutableItem): boolean {
+  switch (item.type) {
+    case 'TV':
+    case 'BOOK':
+      return true;
+    case 'ANIME':
+      return item.isFilm !== true;
+    case 'MOVIE':
+    case 'MANGA':
+      return false;
+  }
 }
 
 /**
@@ -141,6 +166,7 @@ export function providersForWrite(
   connected: readonly ProviderId[],
   capability: WriteCapability,
 ): ProviderId[] {
+  if (capability === 'tracking' && !hasTrackingStatus(item)) return [];
   const types = effectiveTypes(item);
   return connected.filter((id) => {
     // A whole-entry Letterboxd TV log has no movie identity on other providers.

@@ -181,6 +181,20 @@ describe("splitWriteTargets('watchlist')", () => {
   });
 });
 
+// #227: pause and drop reach series and books only, from their own declaration.
+describe("splitWriteTargets('tracking')", () => {
+  it('a series: AniList and Simkl write, Trakt and Serializd are manual links', () => {
+    expect(
+      splitWriteTargets({ type: 'TV', ...ids({ trakt: 1, anilist: 2 }) }, ALL5, 'ios', 'tracking'),
+    ).toEqual({ writable: ['anilist', 'simkl'], manual: ['trakt', 'serializd'] });
+  });
+
+  it('a film and a standalone manga have nothing to pause', () => {
+    expect(providersForWrite({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) }, ALL5, 'tracking')).toEqual([]);
+    expect(providersForWrite({ type: 'MANGA', ...ids({ anilist: 1 }) }, ALL5, 'tracking')).toEqual([]);
+  });
+});
+
 // Plan 0031 R33/KTD-15: remove is a second verb on the same axis, read from its
 // own field — deriving it from `watchlistWrite` is the symmetry assumption the
 // registry's docblock forbids.

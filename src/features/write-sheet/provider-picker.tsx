@@ -33,10 +33,11 @@ interface ProviderToggleProps {
   id: ProviderId;
   selected: boolean;
   onToggle: () => void;
+  detail?: string;
 }
 
 function ProviderToggle({
-  id, selected, onToggle,
+  id, selected, onToggle, detail,
 }: ProviderToggleProps) {
   const accent = useThemeColor('--color-accent');
   const muted = useThemeColor('--color-muted');
@@ -44,7 +45,7 @@ function ProviderToggle({
 
   return (
     <PresstableOpacity
-      accessibilityLabel={`Write to ${descriptor.label}`}
+      accessibilityLabel={detail == null ? `Write to ${descriptor.label}` : `Write to ${descriptor.label}, ${detail}`}
       accessibilityRole="button"
       accessibilityState={{ checked: selected }}
       aria-pressed={selected}
@@ -60,6 +61,7 @@ function ProviderToggle({
         <Text className="text-foreground font-sans-semibold text-sm">
           {descriptor.label}
         </Text>
+        {detail != null && <Text className="text-muted font-sans text-sm">{detail}</Text>}
       </View>
       <View>
         <Ionicons color={muted} name="ellipse-outline" size={20} />
@@ -76,6 +78,8 @@ function ProviderToggle({
 
 export interface ProviderPickerProps {
   targets: readonly ProviderId[];
+  /** A short fact beside a provider's name, such as its current status. */
+  details?: Partial<Record<ProviderId, string>>;
   selectedProviders: readonly ProviderId[];
   onSelectAll: () => void;
   onSelectNone: () => void;
@@ -118,6 +122,7 @@ function NoTargets({ onConnect }: { onConnect?: () => void }) {
  */
 function ProviderOptions({
   targets,
+  details,
   selectedProviders,
   onSelectAll,
   onSelectNone,
@@ -150,6 +155,7 @@ function ProviderOptions({
       )}
       {targets.map((id) => (
         <ProviderToggle
+          detail={details?.[id]}
           id={id}
           key={id}
           onToggle={() => {

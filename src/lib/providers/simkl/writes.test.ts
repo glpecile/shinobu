@@ -8,8 +8,10 @@ import {
   addToSimklWatchlist,
   logToSimkl,
   removeFromSimklWatchlist,
+  setSimklTrackingStatus,
   type SimklLogEntry,
 } from './writes';
+import type { SimklLibraryEntry } from './normalize';
 
 interface RecordedCall {
   url: URL;
@@ -493,5 +495,25 @@ describe('removeFromSimklWatchlist', () => {
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
     expect(result.status).toBe('skipped');
     expect(calls).toHaveLength(1);
+  });
+});
+
+const libraryRow = (status: SimklLibraryEntry['status']): SimklLibraryEntry => ({
+  item: { ...show, externalIds: { simkl: 900_000, tmdb: 1396 } },
+  status,
+  watchedKeys: new Set(['1-1']),
+  watchedEpisodes: [{ season: 1, number: 1 }],
+});
+
+describe('setSimklTrackingStatus', () => {
+  test('a watching row moves to hold by its own ids, and a completed row is a skip', async () => {
+    const { deps, calls } = makeDeps(() => okAddToListResponse());
+    await Effect.runPromise(setSimklTrackingStatus(deps, libraryRow('watching'), 'paused'));
+    const skipped = await Effect.runPromise(setSimklTrackingStatus(deps, libraryRow('completed'), 'dropped'));
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url.pathname).toBe('/sync/add-to-list');
+    expect(requestBody(calls[0]!).shows).toEqual([{ to: 'hold', ids: { simkl: 900_000 } }]);
+    expect(skipped).toEqual({ status: 'skipped', reason: 'Simkl tracks this as completed' });
   });
 });

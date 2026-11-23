@@ -20,6 +20,7 @@ const VERB_WORD: Record<WriteCapability, string> = {
   log: 'logged',
   watchlist: 'added',
   'watchlist-remove': 'removed',
+  tracking: 'paused or dropped',
 };
 
 export function manualWriteReasons(

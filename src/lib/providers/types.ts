@@ -43,6 +43,9 @@ export type ErrorSourceId = ProviderId | MetadataSourceId;
  */
 export type WriteSupport = 'write' | 'manual' | 'none';
 
+/** The status the pause and drop verbs set (#227). */
+export type TrackingStatus = 'paused' | 'dropped';
+
 /**
  * Capability declaration for one provider. Providers are NOT assumed to be
  * symmetric read+write: future integrations (games, books, music) are often
@@ -83,6 +86,12 @@ export interface ProviderDescriptor {
    * stays one flat list shared by all verbs. Verb splits; platform does not.
    */
   watchlistRemove: WriteSupport;
+  /**
+   * Whether pausing or dropping a series or book is possible (#227,
+   * plan 0123). A status change that keeps progress and history, so it is
+   * not implied by `canWrite` or the watchlist verbs.
+   */
+  trackingStatus: WriteSupport;
   /**
    * Whether the provider publishes a community score the details Ratings
    * section reads (#318). Trakt's and Serializd's stay links only.
