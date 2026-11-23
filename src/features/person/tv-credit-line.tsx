@@ -6,9 +6,8 @@ import { Collapse } from '@/components/collapse';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { episodeCode } from '@/features/episode-details/episode-label';
-import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
-import type { TvCredit } from '@/lib/providers/tmdb/normalize';
+import type { CreditEpisode, TvCredit } from '@/lib/providers/tmdb/normalize';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
@@ -18,29 +17,11 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { creditRoleLine } from './person-credit-sheet';
 
 /**
- * A person's credits on one show, one line each with its episode count
- * ("Director · 5 episodes"). A line opens to its episodes, and each episode
+ * One of a person's credits on a show, with its episode count
+ * ("Director · 5 episodes"). The line opens to its episodes, and each episode
  * opens its screen. `onNavigate` closes the host sheet before the push.
  */
-export function TvCreditLines({
-  show,
-  credits,
-  onNavigate,
-}: {
-  show: NormalizedMediaItem;
-  credits: readonly TvCredit[];
-  onNavigate: () => void;
-}) {
-  return (
-    <View className="mt-2">
-      {credits.map((credit) => (
-        <TvCreditLine credit={credit} key={credit.creditId} onNavigate={onNavigate} show={show} />
-      ))}
-    </View>
-  );
-}
-
-function TvCreditLine({
+export function TvCreditLine({
   show,
   credit,
   onNavigate,
@@ -56,16 +37,18 @@ function TvCreditLine({
   // TMDB ties a series regular to only a few of their episodes (Cranston:
   // 3 of 62), so a list is shown only when it accounts for every episode.
   const listed = episodes.data?.length === credit.episodeCount ? episodes.data : null;
-  const role = creditRoleLine({ role: credit.label, kind: credit.kind });
+  const role = creditRoleLine(credit);
   const label = counted
     ? `${role} · ${credit.episodeCount} ${credit.episodeCount === 1 ? 'episode' : 'episodes'}`
     : role;
 
   if (listed == null) {
-    // Same height as the disclosure, so the line doesn't grow when the list lands.
+    // Same frame as the disclosure, chevron slot included, so the label
+    // doesn't re-wrap when the list lands.
     return (
-      <View className={cn(counted && 'min-h-11', 'justify-center')}>
-        <Text className="text-foreground font-sans text-sm">{label}</Text>
+      <View className="min-h-11 flex-row items-center gap-2">
+        <Text className="flex-1 text-foreground font-sans text-sm">{label}</Text>
+        {counted && <View className="w-4" />}
       </View>
     );
   }
@@ -102,7 +85,7 @@ function EpisodeLink({
   onNavigate,
 }: {
   show: NormalizedMediaItem;
-  episode: { season: number; number: number; title: string };
+  episode: CreditEpisode;
   onNavigate: () => void;
 }) {
   const pushRoute = usePushRoute();
@@ -121,7 +104,7 @@ function EpisodeLink({
         pushRoute(routes.episode(show.id, episode.season, episode.number));
       }}
     >
-      <Text className="text-muted font-sans text-sm">{code}</Text>
+      <Text className="min-w-14 text-muted font-sans text-sm tabular-nums">{code}</Text>
       <Text className="flex-1 text-foreground font-sans text-sm" numberOfLines={1}>
         {episode.title}
       </Text>

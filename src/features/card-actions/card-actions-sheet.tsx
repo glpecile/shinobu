@@ -22,7 +22,7 @@ import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episo
 import { LogSheetContent } from '@/features/log-media/session/catch-up-log-sheet';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { creditRoleLine, type PersonCredit } from '@/features/person/person-credit-sheet';
-import { TvCreditLines } from '@/features/person/tv-credit-lines';
+import { TvCreditLine } from '@/features/person/tv-credit-line';
 import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
 import { UnwatchlistMediaButton } from '@/features/watchlist-media/unwatchlist-media-button';
 import { useWatchlistCtaShown, WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
@@ -50,6 +50,10 @@ import { useTraktMediaImages } from '@/state/queries/trakt';
 import { useLetterboxdFilmQuery } from '@/state/queries/letterboxd';
 import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
+
+export type CardCredit = Pick<PersonCredit, 'name' | 'headshot' | 'role' | 'kind'> & {
+  tvCredits?: readonly TvCredit[];
+};
 
 interface CardActionsSheetProps {
   listRemoval?: { target: ListEditTarget; entryId?: string; subtitle?: string } | null;
@@ -111,9 +115,7 @@ interface CardActionsSheetProps {
    * `tvCredits` replaces the role with one line per job or character, each
    * with its episodes.
    */
-  credit?: (Pick<PersonCredit, 'name' | 'headshot' | 'role' | 'kind'> & {
-    tvCredits?: readonly TvCredit[];
-  }) | null;
+  credit?: CardCredit | null;
   watchlistRemoval?: {
     entry: WatchlistEntry;
     errors: readonly ProviderFailure[];
@@ -360,7 +362,16 @@ export function CardActionsSheet({
                 </View>
               </View>
               {credit.tvCredits != null && (
-                <TvCreditLines credits={credit.tvCredits} onNavigate={onClose} show={item} />
+                <View className="mt-2">
+                  {credit.tvCredits.map((tvCredit) => (
+                    <TvCreditLine
+                      credit={tvCredit}
+                      key={tvCredit.creditId}
+                      onNavigate={onClose}
+                      show={item}
+                    />
+                  ))}
+                </View>
               )}
             </View>
           )}

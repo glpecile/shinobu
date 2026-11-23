@@ -311,7 +311,7 @@ export interface TvCredit {
   creditId: string;
   kind: 'cast' | 'crew';
   /** The character for cast, the job for crew; '' when unknown. */
-  label: string;
+  role: string;
   /** Null when TMDB counts no episodes, as on a Creator credit. */
   episodeCount: number | null;
 }
@@ -340,21 +340,21 @@ function normalizeTvCredits(raw: TmdbPersonResponse): Record<string, TvCredit[]>
     ...(raw.combined_credits?.cast ?? []).map((credit) => ({
       credit,
       kind: 'cast' as const,
-      label: credit.character ?? '',
+      role: credit.character ?? '',
     })),
     ...(raw.combined_credits?.crew ?? []).map((credit) => ({
       credit,
       kind: 'crew' as const,
-      label: credit.job ?? '',
+      role: credit.job ?? '',
     })),
   ];
-  for (const { credit, kind, label } of credits) {
+  for (const { credit, kind, role } of credits) {
     if (credit.media_type !== 'tv' || credit.credit_id == null) continue;
     const id = `tmdb-tv-${credit.id}`;
     (byShow[id] ??= []).push({
       creditId: credit.credit_id,
       kind,
-      label,
+      role,
       episodeCount: credit.episode_count != null && credit.episode_count > 0 ? credit.episode_count : null,
     });
   }

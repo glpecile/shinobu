@@ -111,8 +111,8 @@ describe('tvCredits', () => {
     );
     expect(tvCredits).toEqual({
       'tmdb-tv-1396': [
-        { creditId: 'd1', kind: 'crew', label: 'Director', episodeCount: 5 },
-        { creditId: 'c1', kind: 'crew', label: 'Creator', episodeCount: null },
+        { creditId: 'd1', kind: 'crew', role: 'Director', episodeCount: 5 },
+        { creditId: 'c1', kind: 'crew', role: 'Creator', episodeCount: null },
       ],
     });
   });
