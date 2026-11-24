@@ -1196,7 +1196,10 @@ export function useLogMedia() {
       // Both skip flavors ride along: reconcile skips (`skipped`) prove the
       // provider is ahead of the cached sections, and adapter skips
       // (`result.skipped`) cost only a recompute from warm caches.
-      const settled = invalidateAfterLog(queryClient, item, result.succeeded, [
+      // A retry or a replay reads fresh, so a skip there is a write that landed
+      // unseen: no earlier round refreshed the provider's other reads for it.
+      const landed = variables.retryOf == null ? result.succeeded : [...result.succeeded, ...skipped];
+      const settled = invalidateAfterLog(queryClient, item, landed, [
         ...skipped,
         ...result.skipped,
       ]);
