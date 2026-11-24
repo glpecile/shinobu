@@ -1,3 +1,4 @@
+import { ProviderNetworkError, ProviderRateLimitError } from '@/lib/providers/errors';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -55,8 +56,16 @@ export interface LogMediaVariables {
    * Set by the confirm sheet's retry: the original round's rewatch decision.
    * A retried provider that already has the watch then landed on the first
    * try, so it is skipped instead of being logged again as a rewatch.
+   * `unsent` names targets whose request never left the device. They are sent
+   * even when their watch state can't be read.
    */
-  retryOf?: { rewatch: boolean };
+  retryOf?: { rewatch: boolean; unsent?: readonly ProviderId[] };
+  /**
+   * Set by the pending-log replay only: the id of the record it sends again
+   * (`pending-logs.ts`). Nobody watches a replay, so a watch-state read that
+   * fails stops it before any write.
+   */
+  replay?: string;
 }
 
 /**
@@ -89,7 +98,18 @@ export type WriteAdapter<V> = (variables: V) => Promise<ProviderWriteResult>;
 export type ProviderWriteOutcome =
   /** Written — with an optional partial-write reason passed through (R16). */
   | { provider: ProviderId; status: 'ok'; reason?: string }
-  | { provider: ProviderId; status: 'error'; message: string }
+  | {
+      provider: ProviderId;
+      status: 'error';
+      message: string;
+      /**
+       * Set when a later try could succeed. `network`: no answer came back, so
+       * the write may have landed. `rate-limit`: the provider refused it.
+       */
+      transient?: 'network' | 'rate-limit';
+    }
+  /** Saved on this device, to send when the connection is back (`pending-logs.ts`). */
+  | { provider: ProviderId; status: 'queued' }
   /**
    * Left untouched: either already in sync ahead of the others (reconcile,
    * plan 0011, no `reason`), or an adapter-reported skip (plan 0017 R9, e.g. a
@@ -114,10 +134,19 @@ export interface ProviderWriteReport {
 export type LogMediaResult = ProviderWriteReport & {
   /** True when the write round was a parity rewatch (plan 0011). */
   rewatch: boolean;
+  /** Providers whose write waits in the pending queue. Not logged yet. */
+  queued: ProviderId[];
 };
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/** Why a failed call could succeed later, or undefined when it could not. */
+export function transientKind(error: unknown): 'network' | 'rate-limit' | undefined {
+  if (error instanceof ProviderRateLimitError) return 'rate-limit';
+  if (error instanceof ProviderNetworkError && error.status == null) return 'network';
+  return undefined;
 }
 
 /**
@@ -162,7 +191,13 @@ export async function runProviderWrites<V>(
         }
         return { provider, status: 'ok' };
       } catch (error) {
-        return { provider, status: 'error', message: errorMessage(error) };
+        const transient = transientKind(error);
+        return {
+          provider,
+          status: 'error',
+          message: errorMessage(error),
+          ...(transient != null ? { transient } : {}),
+        };
       }
     }),
   );

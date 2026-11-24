@@ -27,6 +27,12 @@ describe('logToastCopy (plan 0032 R9)', () => {
         .message,
     ).toBe('Trakt — AniList already had it');
   });
+
+  test('a log that only waits for a connection never says it was logged', () => {
+    expect(
+      logToastCopy({ rewatch: false, succeeded: [], skipped: [], queued: ['trakt', 'simkl'] }),
+    ).toEqual({ title: 'Saved offline', message: 'Logs to Trakt, Simkl when you are back online' });
+  });
 });
 
 describe('episodeNoticeToastCopy', () => {

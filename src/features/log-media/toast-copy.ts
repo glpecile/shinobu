@@ -13,18 +13,27 @@ const list = (ids: readonly ProviderId[]) =>
   ids.map((id) => PROVIDERS[id].label).join(', ');
 
 export function logToastCopy(
-  report: Pick<LogMediaResult, 'rewatch' | 'succeeded' | 'skipped'>,
+  report: Pick<LogMediaResult, 'rewatch' | 'succeeded' | 'skipped'> & { queued?: readonly ProviderId[] },
   /** What a repeat of this item is called: manga is reread, not rewatched. */
   repeat: 'rewatch' | 'reread' = 'rewatch',
   /** A manga chapter range, e.g. "chapters 6–12", which the title names. */
   span?: string,
 ): { title: string; message: string } {
+  // A queued provider is not logged yet, and the toast must not say it is.
+  const later =
+    report.queued != null && report.queued.length > 0
+      ? `${list(report.queued)} when you are back online`
+      : null;
+  if (report.succeeded.length === 0 && later != null) {
+    return { title: 'Saved offline', message: `Logs to ${later}` };
+  }
+  const landed =
+    report.skipped.length > 0
+      ? `${list(report.succeeded)} — ${list(report.skipped)} already had it`
+      : list(report.succeeded);
   return {
     title: report.rewatch ? `Logged ${repeat}` : span != null ? `Logged ${span}` : 'Logged',
-    message:
-      report.skipped.length > 0
-        ? `${list(report.succeeded)} — ${list(report.skipped)} already had it`
-        : list(report.succeeded),
+    message: later == null ? landed : `${landed}. ${later}`,
   };
 }
 
@@ -46,7 +55,7 @@ export function episodeNoticeToastCopy(
     };
   }
   const notes = report.outcomes.flatMap((outcome) =>
-    outcome.status === 'error' || outcome.reason == null ? [] : [`${PROVIDERS[outcome.provider].label}: ${outcome.reason}.`],
+    outcome.status === 'error' || outcome.status === 'queued' || outcome.reason == null ? [] : [`${PROVIDERS[outcome.provider].label}: ${outcome.reason}.`],
   );
   return {
     tone: report.succeeded.length > 0 ? 'success' : 'error',

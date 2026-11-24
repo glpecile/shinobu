@@ -71,7 +71,8 @@ function distinctReasons(rows: readonly LedgerRow[]): ProviderWriteOutcome[] {
   const seen = new Map<string, ProviderWriteOutcome>();
   for (const row of rows) {
     for (const outcome of row.result?.outcomes ?? []) {
-      const text = outcome.status === 'error' ? outcome.message : outcome.reason;
+      const text =
+        outcome.status === 'error' ? outcome.message : outcome.status === 'queued' ? undefined : outcome.reason;
       if (text == null) continue;
       const key = `${outcome.provider}:${outcome.status}:${text}`;
       if (!seen.has(key)) seen.set(key, outcome);
@@ -280,10 +281,11 @@ function CatchUpForm({
     }
     if (rows.length > 1) {
       const succeeded = new Set(rows.flatMap((row) => row.result?.succeeded ?? []));
-      toast.success(
-        'Caught up',
-        `Logged ${rows.length} episodes to ${labels([...succeeded])}`,
-      );
+      if (succeeded.size === 0) {
+        toast.success('Saved offline', `${rows.length} episodes log when you are back online`);
+      } else {
+        toast.success('Caught up', `Logged ${rows.length} episodes to ${labels([...succeeded])}`);
+      }
     } else {
       const only = rows[0]?.result;
       if (only != null) {
@@ -399,10 +401,12 @@ function CatchUpForm({
       row.status === 'error' ||
       (row.status === 'done' && row.result != null && !isCleanWriteReport(row.result)),
   );
-  const landed = ledger.filter(
+  const clean = ledger.filter(
     (row) =>
       row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
-  ).length;
+  );
+  const landed = clean.filter((row) => (row.result?.succeeded.length ?? 0) > 0).length;
+  const saved = clean.length - landed;
   const sending = ledger.filter((row) => row.status === 'pending').length;
   const simklQueued =
     selectedProviders.includes(Provider.Simkl) && ledger.length > 1 && sending > 0;
@@ -474,7 +478,7 @@ function CatchUpForm({
                   variant="log"
                   disabled={selectedProviders.length === 0 || queue == null}
                   icon={<Button.Icon name="eye" />}
-                  label={chainLabel(code, { landed, failed: problems.length })}
+                  label={chainLabel(code, { landed, failed: problems.length, saved })}
                   loading={awaiting || queue == null}
                   loadingLabel="Logging…"
                   morphLabel

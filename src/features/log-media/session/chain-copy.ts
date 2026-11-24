@@ -28,11 +28,17 @@ const list = (ids: readonly ProviderId[]) =>
  */
 export function chainLabel(
   code: string,
-  counts: { landed: number; failed: number },
+  counts: { landed: number; failed: number; saved?: number },
 ): string {
-  const { landed, failed } = counts;
+  const { landed, failed, saved = 0 } = counts;
   const suffix =
-    failed > 0 ? `${failed} failed` : landed > 0 ? `${landed} logged` : null;
+    failed > 0
+      ? `${failed} failed`
+      : landed > 0
+        ? `${landed} logged`
+        : saved > 0
+          ? `${saved} saved offline`
+          : null;
   return suffix == null ? `Log ${code}` : `Log ${code} · ${suffix}`;
 }
 

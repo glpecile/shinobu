@@ -11,6 +11,7 @@ function result(overrides: Partial<LogMediaResult> = {}): LogMediaResult {
     succeeded: [],
     failed: [],
     skipped: [],
+    queued: [],
     rewatch: false,
     ...overrides,
   };

@@ -779,6 +779,32 @@ describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
     expect(plan.unconfirmed).toEqual([]);
     expect(plan.variables.rewatch).toBe(true);
   });
+
+  test('a replay sends a target that never left the device, even when its watch state cannot be read', async () => {
+    const plan = await planLogWrite(
+      client(),
+      { item: inception, providers: ['simkl'], retryOf: { rewatch: false, unsent: ['simkl'] }, replay: 'r1' },
+      ['simkl'],
+    );
+
+    expect(plan.writeTargets).toEqual(['simkl']);
+    expect(plan.unconfirmed).toEqual([]);
+  });
+
+  test('a replay plans no write while a watch-state read gets no answer', async () => {
+    await connectTrakt();
+    httpHandler = async () => {
+      throw new TypeError('Network request failed');
+    };
+
+    await expect(
+      planLogWrite(
+        client(),
+        { item: inception, providers: ['trakt'], retryOf: { rewatch: false, unsent: ['trakt'] }, replay: 'r1' },
+        ['trakt'],
+      ),
+    ).rejects.toThrow('network error');
+  });
 });
 
 /** A one-book library: `entry` answers the entry read, and each mutation is recorded. */

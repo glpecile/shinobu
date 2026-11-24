@@ -16,7 +16,8 @@ export type CatchUpEvidenceState =
  * reads its progress (already cached by the Up Next gather); a Simkl entry its
  * library row (the cached snapshot) and, for TV, the season layout the anime
  * fan-out already caches. A read that fails is `ready` with nothing — the
- * queue degrades to the entry alone, never to a guess.
+ * queue degrades to the entry alone, never to a guess. So is a read paused
+ * offline: the sheet must still log the one episode into the pending queue.
  */
 export function useCatchUpEvidence(entry: UpNextEpisodeEntry): CatchUpEvidenceState {
   const chainable = (entry.episodesBehind ?? 1) > 1;
@@ -46,10 +47,10 @@ export function useCatchUpEvidence(entry: UpNextEpisodeEntry): CatchUpEvidenceSt
   if (!chainable) return { status: 'ready', evidence: {} };
 
   if (source === Provider.Trakt) {
-    if (traktId != null && progress.data == null && !progress.isError) {
+    if (traktId != null && progress.data == null && !progress.isError && !progress.isPaused) {
       return { status: 'loading' };
     }
-    if (needsLayout && layout.data === undefined && !layout.isError) {
+    if (needsLayout && layout.data === undefined && !layout.isError && !layout.isPaused) {
       return { status: 'loading' };
     }
     return {
@@ -61,10 +62,10 @@ export function useCatchUpEvidence(entry: UpNextEpisodeEntry): CatchUpEvidenceSt
   if (source === Provider.Simkl) {
     // `undefined` is "snapshot not loaded"; a loaded snapshot without this
     // show selects to `null`.
-    if (simklEntry.data === undefined && !simklEntry.isError) {
+    if (simklEntry.data === undefined && !simklEntry.isError && !simklEntry.isPaused) {
       return { status: 'loading' };
     }
-    if (needsLayout && layout.data === undefined && !layout.isError) {
+    if (needsLayout && layout.data === undefined && !layout.isError && !layout.isPaused) {
       return { status: 'loading' };
     }
     return {

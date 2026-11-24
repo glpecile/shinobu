@@ -19,6 +19,7 @@ import { DiaryList, DiaryListSkeleton } from '@/features/diary/diary-list';
 import { DiaryWelcome } from '@/features/diary/diary-welcome';
 import { DiaryFormatFilter } from '@/features/diary/format-filter';
 import { DIARY_FORMAT_OPTIONS, type DiaryFormat } from '@/features/diary/merge';
+import { PendingLogs } from '@/features/log-media/pending-logs-sheet';
 import { cn } from '@/lib/cn';
 import { feedReadsType } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
@@ -185,7 +186,12 @@ function DiaryScreen() {
       <Head>
         <title>Diary — Shinobu</title>
       </Head>
-      <DiaryHeader>{filter}</DiaryHeader>
+      <DiaryHeader>
+        <View className="flex-row items-center gap-2">
+          <PendingLogs />
+          {filter}
+        </View>
+      </DiaryHeader>
       {/* Keyed so the list fades and settles in over the skeleton instead of
           cutting; the wrapper sits outside the list, never on its recycled rows. */}
       <SectionEnter className="flex-1" key={diary.isLoading ? 'skeleton' : 'content'}>

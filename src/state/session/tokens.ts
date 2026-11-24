@@ -42,12 +42,28 @@ export function onProviderConnected(listener: (id: ProviderId) => void): void {
  */
 export function setProviderSession(id: ProviderId, session: ProviderSession): void {
   const connecting = storage.getString(keyFor(id)) == null;
+  if (connecting) storage.set(epochKeyFor(id), String(Date.now()));
   storage.set(keyFor(id), JSON.stringify(session));
   if (connecting) connectListener?.(id);
 }
 
 export function clearProviderSession(id: ProviderId): void {
   storage.remove(keyFor(id));
+  storage.remove(epochKeyFor(id));
+}
+
+const epochKeyFor = (id: ProviderId) => `connectedAt.${id}`;
+
+/**
+ * When this provider's session began, or null without one. A token refresh
+ * keeps it. A disconnect followed by a connect changes it, so a queued log
+ * bound to it never replays under another account
+ * (`features/log-media/pending-logs.ts`). A session older than this key
+ * reads as 0.
+ */
+export function providerSessionEpoch(id: ProviderId): number | null {
+  if (storage.getString(keyFor(id)) == null) return null;
+  return Number(storage.getString(epochKeyFor(id)) ?? 0);
 }
 
 export function connectedProviderIds(): ProviderId[] {

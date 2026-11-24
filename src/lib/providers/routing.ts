@@ -341,3 +341,40 @@ export function resolveWriteTargets(
       !isManualWriteTarget(provider, options.platform, options.capability, options.letterboxdUserscript),
   );
 }
+
+/**
+ * Whether a log to `provider` may wait in the pending queue and be sent later
+ * with nobody watching. Letterboxd on web has no transport an unattended
+ * replay can use.
+ */
+export function canQueueLog(provider: ProviderId, platform: string): boolean {
+  switch (provider) {
+    case Provider.Letterboxd:
+      return platform !== 'web';
+    case Provider.Trakt:
+    case Provider.AniList:
+    case Provider.Simkl:
+    case Provider.Serializd:
+    case Provider.Hardcover:
+      return true;
+  }
+}
+
+/**
+ * Whether a fresh watch-state read can prove that a log did not land on
+ * `provider`. Only then is a write with an unknown outcome sent again. Simkl
+ * has no such read, Letterboxd's shows a viewing but never its absence, and
+ * Hardcover's shows a finished book but not a page.
+ */
+export function logReadProvesAbsence(provider: ProviderId): boolean {
+  switch (provider) {
+    case Provider.Trakt:
+    case Provider.AniList:
+    case Provider.Serializd:
+      return true;
+    case Provider.Simkl:
+    case Provider.Letterboxd:
+    case Provider.Hardcover:
+      return false;
+  }
+}
