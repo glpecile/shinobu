@@ -74,6 +74,10 @@ export function createQueryClient(): QueryClient {
         retry: (failureCount, error) => failureCount < retryCountFor(error),
         retryDelay,
       },
+      // A write never waits for a connection in memory, where a restart loses
+      // it. Offline, it fails with its per-provider links, and a log goes to
+      // the pending queue (`features/log-media/pending-logs.ts`).
+      mutations: { networkMode: 'always' },
     },
   });
 }
