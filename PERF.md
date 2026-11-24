@@ -59,6 +59,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - Invalidate by media type. An episode cannot change the watched-movies library. (#383)
 - Limit pull-to-refresh to the current item's queries. (#330)
 - Write the confirmed result into the cache, so the tick shows before the refetch. (#296)
+- Draw a confirmed log before the provider answers. `useOptimistic` in `CatchUpLogProvider` holds it until the log's refetches land (`LogMediaResult.settled`), and a failed write ends it. Show only an episode the data proves. (#497)
 - Cancel reads that started before a write. If you do not, they put old data back. (#329)
 
 ## Prefetch

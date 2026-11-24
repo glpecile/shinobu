@@ -87,5 +87,25 @@ Rules that are easy to break:
 Limits: 50 records, 7 days. Past either, the log fails with its links. Nothing
 is dropped silently.
 
-Not built: queued watchlist, list, pause and drop writes. An offline log does
-not advance Up Next.
+## A log shows at once
+
+`features/log-media/optimistic.ts`. A confirmed episode log is drawn before
+any provider read shows it: its Continue Watching card moves and its season
+row ticks. This replaces plan 0019 KTD-6 ("nothing advances optimistically").
+
+- Two sources feed it. `useOptimistic` in `CatchUpLogProvider` holds a log
+  while its write and its refetches run (`LogMediaResult.settled`). The pending
+  queue holds a log that waits offline.
+- A failed write ends the optimistic state, so the card and the tick go back.
+  A queued record whose legs all stopped is not drawn as watched.
+- A card moves only to an episode the data proves: the catch-up chain's next
+  episode, or the next number of an unseasoned entry (AniList, Simkl anime)
+  while its backlog count lasts. Otherwise the card leaves the rail until the
+  refetch. A seasoned entry can't count forward, because the next number may
+  belong to another season. Offline, a Trakt or Simkl TV card therefore leaves
+  the rail while its log waits.
+- It is display state only. The log path still reconciles against provider
+  reads, never against this.
+- Films, books, the Diary feed and the watchlist are not drawn ahead.
+
+Not built: queued watchlist, list, pause and drop writes.

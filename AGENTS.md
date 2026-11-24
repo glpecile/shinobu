@@ -199,6 +199,11 @@ never `pod update` (`docs/solutions/pod-install-stale-podfile-lock.md`).
   account, or after an unanswered write that no read can check
   (`docs/solutions/offline-reads-and-queued-logs.md`). No other write waits:
   mutations run with `networkMode: 'always'` and fail offline with their links.
+- A confirmed episode log is drawn at once, before a provider read shows it
+  (`features/log-media/optimistic.ts`). `useOptimistic` holds it while the
+  write runs, and the pending queue holds it offline. A card moves only to an
+  episode the data proves, and a failed write puts it back. The log path never
+  reconciles against this state.
 - Never a dead-end error. A write the platform can't do
   (`unsupportedWritePlatforms`), a failure, or a skip links to the item on that
   provider through `providerItemUrl` (`lib/providers/external-urls.ts`).
