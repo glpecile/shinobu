@@ -50,6 +50,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - Show each provider's result when it arrives. During a refetch, keep the complete cached result. (#328)
 - Render the item that is ready before its full catalog loads. (#347)
 - Do not make a detail read wait for Home to load. (#187)
+- Offline, pause a read. Do not retry it. Native reports connectivity through `lib/online`, so a read with no network sends 0 attempts, not 4, and resumes on reconnect. Not measured on a device. (#208)
 
 ## Invalidation
 
