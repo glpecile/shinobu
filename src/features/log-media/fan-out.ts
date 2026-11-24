@@ -136,6 +136,11 @@ export type LogMediaResult = ProviderWriteReport & {
   rewatch: boolean;
   /** Providers whose write waits in the pending queue. Not logged yet. */
   queued: ProviderId[];
+  /**
+   * Resolves when the reads this log made stale are fetched again. Until
+   * then the screens draw the log from `LoggedWatch` (`optimistic.ts`).
+   */
+  settled?: Promise<void>;
 };
 
 function errorMessage(error: unknown): string {

@@ -1,4 +1,10 @@
-import { onlineManager, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  onlineManager,
+  useMutation,
+  useQueryClient,
+  type InvalidateQueryFilters,
+  type QueryClient,
+} from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { logToAniList } from '@/lib/providers/anilist/writes';
@@ -783,13 +789,17 @@ export function invalidateAfterLog(
   item: NormalizedMediaItem,
   succeeded: readonly ProviderId[],
   skipped: readonly ProviderId[] = [],
-) {
+): Promise<void> {
+  const refetches: Promise<void>[] = [];
+  const invalidate = (filters: InvalidateQueryFilters) => {
+    refetches.push(queryClient.invalidateQueries(filters));
+  };
   // The write changed watch history — refresh the reads that show it. Runs on
   // the *enriched* item (the mutation may have discovered ids the caller's
   // copy lacks), which is why this lives here and not in onSuccess.
   if (succeeded.includes(Provider.Trakt)) {
     const filmLike = item.type === 'MOVIE' || item.isFilm === true;
-    queryClient.invalidateQueries({
+    invalidate({
       queryKey: filmLike ? traktQueryKeys.watchedMovies() : traktQueryKeys.watchedShows(),
     });
     // Trakt removes a watched item from the watchlist server-side — "watching 1
@@ -798,28 +808,28 @@ export function invalidateAfterLog(
     // for the full window showing something the user has already watched (plan
     // 0031 KTD-5). The prefix, not a per-sort key: this path can't know which
     // type/sort the surface requested.
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
+    invalidate({ queryKey: traktQueryKeys.watchlistRoot() });
     const traktId = item.externalIds.trakt;
     if (!filmLike && traktId != null) {
       // TV logs also change this show's seasons/progress views (plan 0010).
-      queryClient.invalidateQueries({
+      invalidate({
         queryKey: traktQueryKeys.showProgress(traktId),
       });
     }
   }
   if (succeeded.includes(Provider.AniList)) {
-    if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
-    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.library() });
+    if (item.externalIds.anilist != null) invalidate({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
+    invalidate({ queryKey: anilistQueryKeys.library() });
     // The one list read this log can change: manga feeds Continue Reading and
     // the reading list, anime feeds Up Next and the watchlist.
-    queryClient.invalidateQueries({
+    invalidate({
       queryKey: anilistMediaKind(item) === 'MANGA'
         ? anilistQueryKeys.currentMangaEntries()
         : anilistQueryKeys.currentAnimeEntries(),
     });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {
-      queryClient.invalidateQueries({
+      invalidate({
         queryKey: anilistQueryKeys.entryState(mediaId),
       });
     }
@@ -831,24 +841,24 @@ export function invalidateAfterLog(
     // activities delta that gates their refetch (plan 0034 KTD-5). Registered
     // here before U7 flipped canRead — which is what made the flip
     // read-correct on day one.
-    queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() });
-    queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
+    invalidate({ queryKey: simklQueryKeys.allItemsRoot() });
+    invalidate({ queryKey: simklQueryKeys.activities() });
   }
   if (succeeded.includes(Provider.Hardcover)) {
-    queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.libraryRoot() });
-    queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.listRoot() });
+    invalidate({ queryKey: hardcoverQueryKeys.libraryRoot() });
+    invalidate({ queryKey: hardcoverQueryKeys.listRoot() });
   }
   if (succeeded.includes(Provider.Serializd)) {
     // The write moved progress — refresh it so the next reconcile sees it.
     const username = getSerializdUsername();
     if (username != null) {
-      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.watchedShows(username) });
+      invalidate({ queryKey: serializdQueryKeys.watchedShows(username) });
       // A log resumes a paused or dropped show, which Coming Soon leaves out.
-      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.trackingLists(username) });
-      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.upcoming(username) });
+      invalidate({ queryKey: serializdQueryKeys.trackingLists(username) });
+      invalidate({ queryKey: serializdQueryKeys.upcoming(username) });
       const tmdbId = item.externalIds.tmdb;
       if (tmdbId != null) {
-        queryClient.invalidateQueries({
+        invalidate({
           queryKey: serializdQueryKeys.progress(username, tmdbId),
         });
       }
@@ -860,7 +870,7 @@ export function invalidateAfterLog(
     const slug =
       item.externalIds.letterboxd ??
       (tmdb != null ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb)) ?? null : null);
-    queryClient.invalidateQueries({
+    invalidate({
       queryKey: letterboxdQueryKeys.filmWatchesRoot(),
       predicate: ({ queryKey }) =>
         (slug != null && (queryKey[3] === slug ||
@@ -871,12 +881,12 @@ export function invalidateAfterLog(
     // A pre-write RSS response must not repopulate the shared input as fresh.
     void queryClient.cancelQueries({ queryKey: DIARY_QUERY_ROOT });
     void queryClient.cancelQueries({ queryKey: letterboxdQueryKeys.diaryRoot() });
-    queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.diaryRoot(), refetchType: 'none' });
+    invalidate({ queryKey: letterboxdQueryKeys.diaryRoot(), refetchType: 'none' });
   }
   // Every diary provider's write lands a new log — the unified diary must
   // show it on its next visit (plan 0016 KTD9). One query, one invalidation.
   if (succeeded.length > 0) {
-    queryClient.invalidateQueries({ queryKey: DIARY_QUERY_ROOT });
+    invalidate({ queryKey: DIARY_QUERY_ROOT });
   }
   // Logs can change membership or status without a separate watchlist write.
   // Refresh the gather only after the provider entries it reads are stale.
@@ -886,7 +896,7 @@ export function invalidateAfterLog(
     succeeded.includes(Provider.Simkl) ||
     succeeded.includes(Provider.Hardcover)
   ) {
-    queryClient.invalidateQueries({ queryKey: watchlistQueryKeys.inputs() });
+    invalidate({ queryKey: watchlistQueryKeys.inputs() });
   }
   // **Last on purpose.** `invalidateQueries` starts the refetch of the active
   // Up Next query *synchronously*, and `fetchUpNextInputs` reaches its
@@ -914,8 +924,9 @@ export function invalidateAfterLog(
   const touched = (provider: ProviderId) =>
     succeeded.includes(provider) || skipped.includes(provider);
   if (touched(Provider.Trakt) || touched(Provider.AniList) || touched(Provider.Simkl)) {
-    queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
+    invalidate({ queryKey: upNextQueryKeys.inputs() });
   }
+  return Promise.all(refetches).then(() => undefined);
 }
 
 /**
@@ -1185,7 +1196,7 @@ export function useLogMedia() {
       // Both skip flavors ride along: reconcile skips (`skipped`) prove the
       // provider is ahead of the cached sections, and adapter skips
       // (`result.skipped`) cost only a recompute from warm caches.
-      invalidateAfterLog(queryClient, item, result.succeeded, [
+      const settled = invalidateAfterLog(queryClient, item, result.succeeded, [
         ...skipped,
         ...result.skipped,
       ]);
@@ -1263,6 +1274,7 @@ export function useLogMedia() {
         skipped,
         queued,
         rewatch: plan.rewatch,
+        settled,
       };
     },
   });

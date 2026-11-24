@@ -14,11 +14,10 @@ function labels(ids: readonly ProviderId[]): string {
 /**
  * The quick-log outcome rule, kept pure so the interesting part — which
  * outcomes may advance the card — is unit-tested without a renderer (plan
- * 0019 U5, KTD-6 / R8 / R9). `settling` is the deliberate gap between a
- * successful write and a moved card: nothing is advanced optimistically, so
- * the card holds a pending state until the catch-up sheet's awaited
- * invalidation of the Up Next slot resolves and the recomputed data either
- * advances it, moves it to Calendar, or drops it.
+ * 0019 U5, KTD-6 / R8 / R9). `settling` is the gap between a successful write
+ * and the recomputed data: the card already moved optimistically
+ * (`features/log-media/optimistic.ts`) and holds a pending state until the
+ * catch-up sheet's awaited invalidation of the Up Next slot resolves.
  */
 export interface QuickLogOutcome {
   phase: 'settling' | 'failed';

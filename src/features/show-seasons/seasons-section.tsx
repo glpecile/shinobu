@@ -24,6 +24,8 @@ import type {
   NormalizedSeason,
 } from '@/types/media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
+import { withLoggedKeys } from '@/features/log-media/optimistic';
+import { useLoggedWatches } from '@/features/log-media/logged-context';
 import { useCatchUpControls } from '@/features/log-media/session/state';
 import {
   EpisodeActionsSheet,
@@ -92,15 +94,19 @@ function ShowDetailsList({
     item,
     enabled: connected.includes(Provider.Simkl),
   });
-  const watchedKeys =
+  const logged = useLoggedWatches();
+  const watchedKeys = withLoggedKeys(
     traktWatched?.watchedKeys ??
-    new Set(seasons.flatMap((season) =>
-      season.episodes
-        .filter((episode) => simklEpisodeIsWatched(
-          simklEntry, season.number, episode.number, episode.firstAired,
-        ))
-        .map((episode) => `${season.number}-${episode.number}`),
-    ));
+      new Set(seasons.flatMap((season) =>
+        season.episodes
+          .filter((episode) => simklEpisodeIsWatched(
+            simklEntry, season.number, episode.number, episode.firstAired,
+          ))
+          .map((episode) => `${season.number}-${episode.number}`),
+      )),
+    item,
+    logged,
+  );
 
   const { openLog: openLogSession } = useCatchUpControls();
   const pushRoute = usePushRoute();

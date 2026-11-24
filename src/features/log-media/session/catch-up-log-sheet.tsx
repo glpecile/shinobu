@@ -18,6 +18,7 @@ import { LetterboxdCompletionOffer } from '@/features/log-media/letterboxd-compl
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { resolveQuickLog } from '@/features/up-next/ui/quick-log-state';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
+import { loggedWatch } from '@/features/log-media/optimistic';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { haptics } from '@/lib/haptics';
@@ -181,9 +182,10 @@ function EpisodeCatchUpForm({ request, open, onClose, onDismiss, onOpenRequest }
  * write lock means the second through last Simkl legs coalesce into one POST
  * that lands when the lock lifts (`features/log-media/simkl-write-lock.ts`).
  *
- * Nothing advances optimistically (plan 0019 KTD-6): the card behind the
- * sheet spins until its slot's awaited invalidation resolves, and moves only
- * from recomputed data. The sheet is the plan; the feed is the truth.
+ * The card behind the sheet moves on each confirm (`optimistic.ts`), to the
+ * chain's own next episode, and spins until its slot's awaited invalidation
+ * resolves. A failed write puts the card back. The sheet is the plan; the
+ * feed is the truth once it lands.
  */
 function CatchUpForm({
   item,
@@ -208,7 +210,7 @@ function CatchUpForm({
   const logMedia = useLogMedia();
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
-  const { trackBusy } = useCatchUpControls();
+  const { trackBusy, trackLog } = useCatchUpControls();
   const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useTargetSelection(targets);
   const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
@@ -318,11 +320,13 @@ function CatchUpForm({
   }
 
   /** One episode's write: a pending row, the fan-out, the card's settle signal, the landing. */
-  function fire(episode: CatchUpEpisode, variables: LogMediaVariables) {
+  function fire(episode: CatchUpEpisode, variables: LogMediaVariables, next?: CatchUpEpisode) {
     const episodeCode = capitalize(catchUpEpisodeCode(episode));
     // A re-fire (the last episode's re-press, a retry) replaces the old row.
     record(episode, { status: 'pending' });
     const write = logMedia.mutateAsync(variables);
+    // The card behind the sheet moves on now. `next` is the chain's own proof.
+    trackLog(loggedWatch(variables, next), write.then((result) => result.settled));
 
     // The card's settle signal (docs/solutions/quick-log-settle-refresh-to-update.md):
     // once the source provider landed (or already had it), await the slot's
@@ -372,7 +376,7 @@ function CatchUpForm({
     if (frozen == null) setFrozen(plan);
     const episode = plan[index] ?? current;
     if (index >= plan.length - 1) lastFiredRef.current = true;
-    fire(episode, variablesFor(episode));
+    fire(episode, variablesFor(episode), plan[index + 1]);
 
     if (index >= plan.length - 1) return;
     setIndex(index + 1);

@@ -6,6 +6,7 @@ import { useCatchUpControls } from '@/features/log-media/session/state';
 import { toast } from '@/lib/toast';
 import { currentUsableProviders } from '@/state/session';
 import type { LogMediaResult, LogMediaVariables } from './fan-out';
+import { loggedWatch, type LoggedWatch } from './optimistic';
 import { pendingLogs, sendablePendingLog } from './pending-logs';
 import { useLogMedia } from './use-log-media';
 
@@ -28,6 +29,7 @@ let draining = false;
 async function drain(
   log: (variables: LogMediaVariables) => Promise<LogMediaResult>,
   trackBusy: (itemId: string, work: Promise<unknown>) => void,
+  trackLog: (watch: LoggedWatch | null, work: Promise<unknown>) => void,
 ): Promise<void> {
   const stoppedBefore = stoppedLegs();
   let logged = 0;
@@ -43,6 +45,8 @@ async function drain(
       replay: id,
     });
     trackBusy(record.variables.item.id, write);
+    // The record leaves the queue before its refetch lands. This covers the gap.
+    trackLog(loggedWatch(record.variables), write.then((result) => result.settled));
     let result: LogMediaResult;
     try {
       result = await write;
@@ -64,16 +68,16 @@ async function drain(
 /** Sends the pending queue now, unless a drain already runs or the device is offline. */
 export function useDrainPendingLogs(): () => void {
   const { mutateAsync } = useLogMedia();
-  const { trackBusy } = useCatchUpControls();
+  const { trackBusy, trackLog } = useCatchUpControls();
   return () => {
     if (draining || !onlineManager.isOnline() || pendingLogs().length === 0) return;
     draining = true;
     const work =
       process.env.EXPO_OS !== 'web'
-        ? drain(mutateAsync, trackBusy)
+        ? drain(mutateAsync, trackBusy, trackLog)
         : // Without the Web Locks API two tabs could send one record twice, so nothing is sent.
           (navigator.locks?.request('shinobu-pending-logs', { ifAvailable: true }, (lock) =>
-            lock == null ? undefined : drain(mutateAsync, trackBusy),
+            lock == null ? undefined : drain(mutateAsync, trackBusy, trackLog),
           ) ?? Promise.resolve());
     void work.finally(() => {
       draining = false;
