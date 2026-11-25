@@ -186,7 +186,7 @@ export function checkLegs(
         now - record.queuedAt > MAX_AGE_MS
           ? 'It waited more than 7 days for a connection, so it was not sent.'
           : epochOf(provider) !== leg.epoch
-            ? `${label} was disconnected after this log was saved.`
+            ? `${label} was disconnected or connected again after this log was saved.`
             : !usable.includes(provider)
               ? `${label} must be connected again before it can log.`
               : null;

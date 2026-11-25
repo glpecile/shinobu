@@ -70,10 +70,9 @@ const epochKeyFor = (id: ProviderId) => `connectedAt.${id}`;
 /**
  * When this provider's session began, or null without one. A token refresh
  * keeps it. An OAuth connect, or a connect under another username, changes
- * it, so a queued log
- * bound to it never replays under another account
- * (`features/log-media/pending-logs.ts`). A session older than this key
- * reads as 0.
+ * it, so a queued log bound to it never replays under another account
+ * (`features/log-media/pending-logs.ts`). A session older than this key reads
+ * as 0.
  */
 export function providerSessionEpoch(id: ProviderId): number | null {
   if (storage.getString(keyFor(id)) == null) return null;
