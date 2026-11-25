@@ -93,6 +93,7 @@ const {
   simklLogAdapter,
   withMappingSkips,
   withUnconfirmed,
+  withUnread,
 } = await import('./use-log-media');
 const { fanOutLog } = await import('./fan-out');
 const { manualLinkForOutcome, splitSkippedOutcomes } = await import(
@@ -791,19 +792,62 @@ describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
     expect(plan.unconfirmed).toEqual([]);
   });
 
-  test('a replay plans no write while a watch-state read gets no answer', async () => {
+  test('a replay writes no target whose watch-state read gets no answer, and still writes the others', async () => {
     await connectTrakt();
     httpHandler = async () => {
       throw new TypeError('Network request failed');
     };
+    const sent: string[] = [];
+    const adapter = (provider: string) => async () => {
+      sent.push(provider);
+      return { status: 'ok' } as const;
+    };
 
-    await expect(
-      planLogWrite(
-        client(),
-        { item: inception, providers: ['trakt'], retryOf: { rewatch: false, unsent: ['trakt'] }, replay: 'r1' },
-        ['trakt'],
-      ),
-    ).rejects.toThrow('network error');
+    const plan = await planLogWrite(
+      client(),
+      {
+        item: inception,
+        providers: ['trakt', 'simkl'],
+        retryOf: { rewatch: false, unsent: ['trakt', 'simkl'] },
+        replay: 'r1',
+      },
+      ['trakt', 'simkl'],
+    );
+    const report = await fanOutLog(
+      withUnread({ trakt: adapter('trakt'), simkl: adapter('simkl') }, plan.unread),
+      plan.writeTargets,
+      plan.variables,
+    );
+
+    expect(sent).toEqual(['simkl']);
+    expect(report.outcomes.find((outcome) => outcome.provider === 'trakt')).toMatchObject({
+      status: 'error',
+      transient: 'network',
+    });
+  });
+
+  test('a replay with a read unanswered holds a mapping-skipped target too', async () => {
+    const { setProviderSession } = await import('@/state/session/tokens');
+    setProviderSession('anilist', { accessToken: 'tok' });
+    episodeMap = null;
+    httpHandler = async () => {
+      throw new TypeError('Network request failed');
+    };
+
+    const plan = await planLogWrite(
+      client(),
+      {
+        item: animeSeries(),
+        entryEpisodes: [3],
+        providers: ['trakt', 'anilist'],
+        retryOf: { rewatch: false, unsent: ['trakt', 'anilist'] },
+        replay: 'r1',
+      },
+      ['trakt', 'anilist'],
+    );
+
+    expect([...plan.mappingSkips.keys()]).toEqual(['trakt']);
+    expect([...plan.unread.keys()].sort()).toEqual(['anilist', 'trakt']);
   });
 });
 
@@ -886,5 +930,22 @@ describe('the Hardcover leg of the log fan-out (plan 0117 B3)', () => {
     expect(retry.skipped).toEqual(['hardcover']);
     expect(mutations).toBe(1);
     expect(later.variables.rewatch).toBe(true);
+  });
+
+  test('a retried log that got no answer is not sent again where no read can prove it did not land', async () => {
+    await connectHardcover(() => Response.json({}));
+
+    const retry = await planLogWrite(
+      client(),
+      {
+        item: book,
+        reading: { finished: false, page: 40 },
+        providers: ['hardcover'],
+        retryOf: { rewatch: false, unanswered: ['hardcover'] },
+      },
+      ['hardcover'],
+    );
+
+    expect(retry.unconfirmed).toEqual(['hardcover']);
   });
 });

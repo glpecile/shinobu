@@ -49,7 +49,10 @@ A read works offline only when it is in the persisted snapshot
 
 `features/log-media/pending-logs.ts` keeps logs that could not be sent, in its
 own MMKV file. `useLogMedia` writes to it, and `PendingLogReplayer` sends it
-again through `useLogMedia` at launch, on reconnect and on foreground.
+again through `useLogMedia` at launch, on reconnect and on foreground. While a
+leg still waits it also sends on a timer, after 1 minute and then doubling to
+15. A log that got no answer on a device that reports a connection has no
+other trigger.
 
 A leg is one provider's part of one log.
 
@@ -70,11 +73,21 @@ Rules that are easy to break:
   shows a finished book but not a page, and a resend could add a second
   journal entry. A rewatch round is never kept:
   the provider records the watch either way.
+- **Try again does not resend an unanswered write there either**
+  (`retryOf.unanswered`). The retry reads first. If the read shows the watch,
+  the leg is done. If not, it is refused with the link, in the Pending sheet
+  and in the log sheet. A Letterboxd bridge timeout is such a write. A log
+  made by hand over such a leg is refused the same way, and `useLogMedia`
+  returns `unanswered` so the sheet's next Try again is refused too. A rewatch
+  retry in the log sheet is the exception. It is sent again.
 - **A replay is never a rewatch.** Nobody confirms it.
-- **A replay reads strictly.** A watch-state read that gets no answer stops
-  the drain before any write. Interactively, the same failure means "write".
+- **A replay reads strictly.** A provider whose watch-state read gets no
+  answer is not written (`LogWritePlan.unread`). In that round a provider
+  skipped for a missing mapping waits too, because its lookup may have failed
+  the same way. Interactively, the same failure means "write".
 - **One record at a time, oldest first.** AniList keeps one counter. A
-  transient failure stops the drain until the next trigger.
+  transient failure holds that provider's later legs until the next drain.
+  The other providers are still sent.
 - **A leg is bound to a session** (`providerSessionEpoch`). A token refresh
   keeps the epoch. An OAuth connect always changes it, also over a kept
   session, because Trakt, Simkl, AniList and Hardcover sessions name no

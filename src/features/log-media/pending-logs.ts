@@ -92,13 +92,14 @@ export function pendingLogs(): readonly PendingLog[] {
   return snapshot;
 }
 
-function subscribe(listener: () => void): () => void {
+/** Calls `listener` after each change to the queue. */
+export function subscribePendingLogs(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
 export function usePendingLogs(): readonly PendingLog[] {
-  return useSyncExternalStore(subscribe, pendingLogs, () => EMPTY);
+  return useSyncExternalStore(subscribePendingLogs, pendingLogs, () => EMPTY);
 }
 
 function update(id: string, change: (record: PendingLog) => PendingLog): void {

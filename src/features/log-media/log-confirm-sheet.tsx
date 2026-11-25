@@ -326,7 +326,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const [watchedAt, setWatchedAt] = useState<Date | null>(() => request.watchedAt == null ? null : new Date(request.watchedAt));
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);
-  const [retryOf, setRetryOf] = useState<{ rewatch: boolean } | null>(null);
+  const [retryOf, setRetryOf] = useState<{ rewatch: boolean; unanswered: ProviderId[] } | null>(null);
   // Warms the pre-write watch-state reads while the sheet is open, so Confirm
   // starts writing at once. A chapter range reads the same entry, so typing
   // doesn't re-warm.
@@ -437,7 +437,16 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   function retry() {
     if (result != null && result.failed.length > 0) {
       setSelectedProviders([...result.failed]);
-      setRetryOf({ rewatch: result.rewatch });
+      setRetryOf({
+        rewatch: result.rewatch,
+        // A refused retry is an answer, so an earlier unanswered try is kept.
+        unanswered: [
+          ...(result.unanswered ?? []),
+          ...result.outcomes.flatMap((outcome) =>
+            outcome.status === 'error' && outcome.transient === 'network' ? [outcome.provider] : [],
+          ),
+        ],
+      });
     }
     logMedia.reset();
   }
