@@ -10,12 +10,8 @@ import { loggedWatch, type LoggedWatch } from './optimistic';
 import { pendingLogs, sendablePendingLog } from './pending-logs';
 import { useLogMedia } from './use-log-media';
 
-function stoppedLegs(): number {
-  return pendingLogs().reduce(
-    (count, record) => count + Object.values(record.legs).filter((leg) => leg.state === 'failed').length,
-    0,
-  );
-}
+const stoppedLegs = () =>
+  pendingLogs().flatMap((record) => Object.values(record.legs)).filter((leg) => leg.state === 'failed').length;
 
 /** One drain at a time in this app. Web tabs share the queue and take the lock below. */
 let draining = false;
@@ -59,7 +55,7 @@ async function drain(
   }
   // Only a leg that stopped in this drain: an old one must not toast on every foreground.
   if (stoppedLegs() > stoppedBefore) {
-    toast.error('A saved log was not sent', 'Open Pending in your diary.');
+    toast.error('Not every saved log was sent', 'Open Pending logs in your diary.');
   } else if (logged > 0) {
     toast.success('Logged', logged === 1 ? 'Sent 1 saved log.' : `Sent ${logged} saved logs.`);
   }

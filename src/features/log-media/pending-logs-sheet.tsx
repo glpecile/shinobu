@@ -43,8 +43,9 @@ export function PendingLogs() {
     <>
       {records.length > 0 && (
         <Button
-          icon={<Button.Icon name="chevron-down" />}
+          icon={<Button.Icon name="list-outline" />}
           label={`${records.length} pending`}
+          morphLabel
           onPress={() => setOpen(true)}
           size="sm"
           variant="quiet"
@@ -55,7 +56,7 @@ export function PendingLogs() {
           <WriteSheet.Title>Pending logs</WriteSheet.Title>
         </Sheet.Header>
         <WriteSheet.Description>
-          Saved on this device. Shinobu sends them when you are back online.
+          Saved on this device. Shinobu sends them when you are online. A log that stopped waits for Try again.
         </WriteSheet.Description>
         {/* ponytail: at most MAX_PENDING_LOGS cards in the sheet's scroller. Use List if the cap grows. */}
         {records.map((record) => {
