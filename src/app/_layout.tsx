@@ -121,9 +121,11 @@ export default function Layout() {
       {appReady && (
       <ErrorBoundary FallbackComponent={ErrorFallback} onError={reloadOnStaleBundle}>
         <KeyboardProvider>
-          <SheetProvider>
            <LightboxProvider>
            <CatchUpLogProvider>
+          {/* Innermost of the three: a native sheet renders at this host, so
+              only the providers above it reach a sheet's content. */}
+          <SheetProvider>
             {/* ThemeProvider keeps the native tab bar / navigator chrome themed
                 and prevents header-button flicker when switching tabs. */}
             <ThemeProvider value={navigationTheme}>
@@ -187,9 +189,9 @@ export default function Layout() {
                 <ToastHost />
               </AppShell>
             </ThemeProvider>
+          </SheetProvider>
            </CatchUpLogProvider>
            </LightboxProvider>
-          </SheetProvider>
         </KeyboardProvider>
       </ErrorBoundary>
       )}
