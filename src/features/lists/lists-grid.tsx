@@ -27,12 +27,10 @@ function useGrid() {
   return { columns, rowHeight: cardWidth / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale + 24 };
 }
 
-/** Mirrors one index page's column count and card shape. */
 export function ListsGridSkeleton() {
   const { columns } = useGrid();
   return (
     <View className="flex-row flex-wrap px-2.5 pt-1.5">
-      {/* Three rows: one index page holds 12 lists, so this is the first paint on desktop. */}
       {Array.from({ length: columns * 3 }).map((_, index) => (
         <View className="px-2 pb-6" key={index} style={{ width: `${100 / columns}%` }}>
           <ListCardSkeleton delay={staggerDelay(index)} />
@@ -44,11 +42,6 @@ export function ListsGridSkeleton() {
 
 type GridItem = ListSummary | { id: 'new' };
 
-/**
- * One paginated list index (created or liked) shared by Letterboxd and
- * Serializd: the empty state, the dedupe across pages, the list sheet, and the
- * grid + load-more + external-link footer. Created leads with New list.
- */
 export function ListsIndex({
   provider, kind, lists, hasNextPage, isFetchingNextPage, isFetchNextPageError,
   refetch, fetchNextPage, emptyBody,
@@ -98,9 +91,6 @@ export function ListsIndex({
           // starves its container pool (the web "creating one on demand"
           // warning) and skews the scroll extent.
           estimatedItemSize={rowHeight}
-          // Two rows ahead and recycled, as the poster wall: a card is a
-          // pressable over a stack of images, too costly to mount mid-fling.
-          // `PosterStack` keys its images for reuse.
           drawDistance={rowHeight * 2}
           getItemType={(item) => ('title' in item ? 'list' : 'new')}
           keyExtractor={(item) => item.id}

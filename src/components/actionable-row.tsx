@@ -7,12 +7,6 @@ import { useNewTabPress } from '@/components/use-new-tab-press';
 import { cn } from '@/lib/cn';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * The ⋯ that opens the row's actions dialog. Editable lists keep it visible
- * on touch devices; other rows reveal it on hover and use long-press on touch.
- * Fine pointers reserve the hover slot
- * so revealing the control never nudges the title.
- */
 function RowActionsButton({
   item,
   visible,
@@ -40,7 +34,6 @@ function RowActionsButton({
   );
 }
 
-/** Accessibility props forwarded to a row's pressable(s). */
 export type RowAccessibility = Pick<
   ComponentProps<typeof PresstableScale>,
   'accessibilityHint' | 'accessibilityLabel' | 'accessibilityRole' | 'accessibilityState'
@@ -54,28 +47,15 @@ export interface ActionableRowProps {
   onPress: () => void;
   pressBehavior?: ComponentProps<typeof PresstableScale>['pressBehavior'];
   onActions: (item: NormalizedMediaItem) => void;
-  /** Poster and text; fills the available width when actions stay visible. */
   leading: ReactNode;
-  /** Provider marks, chevrons — pushed to the row's right edge. */
   trailing?: ReactNode;
-  /** Padding/height for the row container. */
   className: string;
   accessibility?: RowAccessibility;
 }
 
 /**
- * The interaction shell every list row that has a card-actions dialog shares —
- * the diary's three row shapes and the search results (plan 0028 R2). Press
- * opens details (⌘/Ctrl+click opens them in a new tab on web), long-press opens
- * the actions dialog, and hovering reveals the ⋯ that opens that same dialog.
- *
- * The ⋯ can't be a *child* of the row's pressable — nesting two
- * gesture-handler buttons would let a ⋯ press bubble
- * into the row press. So on web the row is split into two sibling pressables,
- * leading (poster + title) and trailing (provider marks). Editable lists put
- * the ⋯ at the far edge; hover-only rows keep it beside the title.
- * Both halves carry the same press/long-press. Native rows use this split
- * when `showActions` exposes the control; otherwise they stay one pressable.
+ * Splits into sibling pressables around the actions button because nesting two
+ * gesture-handler buttons lets a press on the inner button bubble into the row.
  */
 export function ActionableRow({
   item,
@@ -130,8 +110,6 @@ export function ActionableRow({
         {leading}
       </PresstableScale>
       {!showActions && actionsButton}
-      {/* Trailing marks and the space around them also open the item. No a11y
-          props here: the leading half already announces the row. */}
       <PresstableScale
         className={cn('shrink-0 flex-row items-center justify-end self-stretch', showActions ? 'ml-2' : 'grow')}
         onLongPress={pressProps.onLongPress}

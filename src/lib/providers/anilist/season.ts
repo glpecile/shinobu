@@ -26,7 +26,6 @@ export function animeSeasonLabel({ season, year }: AnimeSeasonWindow): string {
   return `${name} ${year}`;
 }
 
-/** Display order — the cours as they fall in a calendar year. */
 export const ANIME_SEASONS: readonly AnimeSeason[] = ['WINTER', 'SPRING', 'SUMMER', 'FALL'];
 
 /**

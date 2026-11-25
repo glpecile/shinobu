@@ -1,7 +1,6 @@
 import { Text, View } from 'react-native';
 import type { ReactNode } from 'react';
 
-/** Mirrors index.tsx — keep both platform variants' props identical. */
 export interface WatchedAtFieldProps {
   value: Date | null;
   onChange: (value: Date | null) => void;
@@ -16,15 +15,7 @@ function toInputValue(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-/**
- * Web fallback: the community picker has no web build, so this renders the
- * browser's own date input. The input *displays* today while `value` is null
- * (an empty mm/dd/yyyy placeholder reads as broken), but null still means
- * "just now" — watchedAt is omitted so Trakt stamps the confirm-time instant;
- * only an actual pick becomes a backdate. The picked calendar day keeps the
- * current time-of-day so the stored instant lands inside the chosen local
- * date, not on a midnight boundary that can shift a day when converted to UTC.
- */
+/** Uses current time-of-day on picked dates so UTC conversion does not shift the local calendar day. */
 export function WatchedAtField({ value, onChange, label = 'Watched on', children }: WatchedAtFieldProps) {
   const today = toInputValue(new Date());
   return (
@@ -33,15 +24,10 @@ export function WatchedAtField({ value, onChange, label = 'Watched on', children
         <Text className="text-muted font-sans text-sm">{label}</Text>
         <input
           aria-label={label}
-          // The field row already draws the pill. `appearance-none` drops
-          // Safari's own rounded fill. `self-stretch` keeps the row's full
-          // height tappable.
+          // appearance-none drops Safari's default rounded fill on date inputs.
           className="appearance-none self-stretch bg-transparent text-foreground font-sans text-sm"
           max={today}
-          // The browser paints the calendar-picker glyph from `color-scheme`, not
-          // from `color`: without this it stays the light-scheme black on the
-          // dark surface. `light dark` follows the OS preference, the same
-          // signal the app's theme follows (`app/+html.tsx`).
+          // Browsers tint the native date-picker icon from color-scheme, not color.
           style={{ colorScheme: 'light dark' }}
           onChange={(event) => {
             const raw = event.target.value;

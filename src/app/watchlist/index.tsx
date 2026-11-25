@@ -44,41 +44,6 @@ import {
   watchlistQueryKeys,
 } from '@/state/queries/watchlist';
 
-/**
- * The cross-provider watchlist (plan 0031 R24). One surface for every
- * connected provider's watchlist, merged by `computeWatchlist` — which is why
- * the header carries **no** provider mark: a merged surface must not wear one
- * provider's brand.
- *
- * **It is now the only watchlist surface** (owner, 2026-08-01):
- * `/watchlist/letterboxd` is deleted. A second, single-provider screen was a
- * whole duplicate surface — its own header, empty states, error boundary and
- * pager — answering a question this one answers with `?provider=letterboxd`,
- * and the Letterboxd feed row's "View all" deep-links exactly that. The filter
- * lives in the URL so it stays shareable and resets on a fresh visit; the
- * grid/list choice is a standing preference and lives on the device
- * (`state/prefs/watchlist-view`). One is state, the other is taste.
- *
- * **Partial failure here is one list plus an inline notice, not a
- * `SuspenseSection` per source — a deliberate, argued divergence from
- * AGENTS.md § Loading & Error States (KTD-12), not a shortcut.** That default
- * rests on an assumption this surface breaks: that each section can render
- * independently. Dedupe needs *every* source in hand before anything can
- * render, so there is no per-source subtree to wrap, and wrapping the whole
- * grid in one boundary would blank it when one provider fails — worse than the
- * default. So the gather captures each leg's failure (`settle`) and the screen
- * renders the rows it has plus one line naming the provider that failed, with a
- * retry. Naming a provider in a *result* is exactly where AGENTS.md permits it,
- * and the notice is informational: it is **not** a per-provider toggle —
- * hide/collapse operates on items and sections, never providers. Do not "fix"
- * this back to the default. The home *row* keeps its single `SuspenseSection`;
- * one row is one slot, so the default applies there.
- */
-
-/**
- * R29's inline notice: one line per failed leg, above the wall, with a single
- * retry. The rows that *did* load stay on screen behind it.
- */
 function LegFailureNotice({
   failures,
   onRetry,
@@ -116,37 +81,15 @@ function WatchlistGrid({
   const pushRoute = usePushRoute();
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
-  // The row the sheet was opened from, held in state rather than looked up out
-  // of `entries` on every render (plan 0031 U16). That is the difference between
-  // a removal you can read the result of and one you cannot: a successful
-  // removal takes the entry *out* of `entries` when the refetch lands, so a
-  // derived lookup would unmount the button — and its failure lines, its
-  // AniList refusal, its unknown-membership rows — at exactly the moment they
-  // matter. Cleared with the sheet, never mid-write.
   const [activeEntry, setActiveEntry] = useState<WatchlistEntry | null>(null);
   const { entries, errors, incomplete } = useSuspenseWatchlistQuery();
   const metadata = useMediaMetadata(entries.map((entry) => entry.item));
-  // Letterboxd is the only paginated leg, and it stays behind `onEndReached` —
-  // **never** auto-paged to complete dedupe (22 sequential scrapes per gather
-  // is exactly what plan 0031's scope boundary rules out). This observer is the
-  // pager only; the films it loads reach the wall through the gather's
-  // `pages.flat()`, so an appended page merges against the Trakt leg instead of
-  // rendering as a duplicate of a row already on screen.
   const pages = useLetterboxdWatchlistPagesQuery();
   const view = useWatchlistView();
   const sort = useMediaSort('watchlist');
-  // Both layouts take `MediaLayoutProps`, so the swap is one binding and
-  // nothing below branches on the view. Swapping the component *does* remount
-  // the list — correct here: they are different geometries, and a preserved
-  // scroll offset from a poster wall means nothing in a row list.
   const Layout = view === 'grid' ? PosterWall : WatchlistRows;
-  // The toolbar's counts describe the **whole** list, so it takes `entries`
-  // while the layout takes the narrowed set — a filter that renumbered its own
-  // options as you used it could never be widened back on evidence.
   const enriched = entries.map((entry, index) => ({ ...entry, item: metadata.items[index] }));
   const shown = sortMediaEntries(filterWatchlistEntries(enriched, provider), sort);
-  // Outside the layout's JSX, which also depends on paging flags: here React
-  // Compiler keeps the cells' callbacks stable while a page loads.
   const onItemActions = (item: NormalizedMediaItem) => {
     setActiveEntry(entries.find((entry) => entry.item.id === item.id) ?? null);
     openActions(item);
@@ -159,17 +102,9 @@ function WatchlistGrid({
 
   async function loadMore() {
     await pages.fetchNextPage();
-    // The new page lands in the infinite entry, not in the merge — the gather
-    // has to re-read it. Every leg is fresh inside its own stale window, so
-    // this re-merges without spending a request.
     await queryClient.invalidateQueries({ queryKey: watchlistQueryKeys.inputs() });
   }
 
-  // Only a total failure takes over the page: `settle` means one leg failing
-  // still yields rows, and those rows plus the notice beat a blank screen.
-  // Keyed off the **unfiltered** entries, always — a narrowed-to-nothing
-  // watchlist is a filter result, not an outage, and offering "Try again" for
-  // it would send the user chasing a network problem that isn't there.
   if (entries.length === 0 && errors.length > 0) {
     return (
       <CenteredNotice>
@@ -197,9 +132,6 @@ function WatchlistGrid({
     );
   }
 
-  // The toolbar stays mounted below, so the only way out of an empty filter is
-  // always on screen — including the deep-linked case where the named
-  // provider's leg failed this gather and legitimately holds nothing.
   const layout =
     shown.length === 0 ? (
       <CenteredNotice>
@@ -239,9 +171,6 @@ function WatchlistGrid({
     <>
       <WatchlistToolbar
         entries={entries}
-        // Same `incomplete` the removal path reads (R35), one surface over: a
-        // leg with unread pages can only state a floor, so its count renders
-        // `46+` until the scrape is exhausted.
         incomplete={incomplete}
         onProviderChange={onProviderChange}
         provider={provider}
@@ -250,12 +179,6 @@ function WatchlistGrid({
       />
       <LegFailureNotice failures={errors} onRetry={() => void refresh()} />
       {layout}
-      {/* The one surface that offers the removal (R35): only a `WatchlistEntry`
-          knows which providers actually hold the item, and only this screen has
-          one. `errors` rides along because a leg that failed this gather makes
-          its provider's membership *unknown*, not absent — and `incomplete`
-          for the same reason, one step milder: a leg that read page 1 of 22
-          never looked at the film the user is removing. */}
       <CardActionsSheet
         {...sheetProps}
         watchlistRemoval={
@@ -270,17 +193,10 @@ function WatchlistGrid({
 
 export default function WatchlistScreen() {
   const router = useRouter();
-  // The filter lives in the URL, not in state: it is what makes
-  // `routes.watchlist('letterboxd')` a real destination for the Letterboxd feed
-  // row (the reason `/watchlist/letterboxd` could be deleted rather than
-  // redirected) and what makes a narrowed watchlist shareable on web.
   const params = useLocalSearchParams<{ provider?: string }>();
   const provider = parseWatchlistProvider(params.provider);
 
   function setProvider(next: ProviderId | null) {
-    // `setParams`, not a push: changing the filter is not a new destination,
-    // and pushing would make Back walk through every filter the user tried
-    // instead of leaving the screen.
     router.setParams({ provider: next ?? '' });
   }
 
@@ -302,7 +218,6 @@ export default function WatchlistScreen() {
         )}
       >
         <BackButton className="-ml-2" onPress={goBack} />
-        {/* No `ProviderIcon` — see the file docblock. */}
         <Text className="text-2xl font-display text-foreground">Watchlist</Text>
       </View>
       <Suspense
@@ -319,12 +234,6 @@ export default function WatchlistScreen() {
   );
 }
 
-/**
- * Route-level containment: the grid already renders its own retry for gather
- * failures (they are captured, not thrown), so the boundary only catches
- * render-time faults — still better here than the root boundary blanking the
- * app.
- */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (

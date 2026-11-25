@@ -28,29 +28,7 @@ export function titleKey(title: string): string {
   return key;
 }
 
-/**
- * Choose which text-search result actually *is* the film we looked up by
- * title+year. Confidence beats tolerance, in tiers:
- *
- * 1. exact year — and inside that tier an exact title beats a partial one, so
- *    "Labyrinth" (2025) never loses to "Labyrinth of Cinema" (2025);
- * 2. ±1 year, but only when the window holds exactly one plausible film
- *    (festival premiere vs wide release can straddle a year boundary between
- *    providers — two candidates either side of the target is a guess, not a
- *    match);
- * 3. otherwise **no match**.
- *
- * The top hit is just the most popular film sharing the title (Nolan's
- * "The Odyssey" (2026) must not resolve to Kubrick's "2001: A Space
- * Odyssey"), and wrong-film metadata — or worse, a log write to the wrong
- * film — is strictly worse than none
- * (docs/solutions/trakt-text-search-wrong-movie-match.md). `null` means
- * "skip the merge", never "take the first result"; only a yearless item
- * falls back to the top hit.
- *
- * `title` is optional so callers without one (or with a query that isn't the
- * item's own title) keep pure year gating.
- */
+/** Match the title and year with enough evidence to address the same movie in a provider write. */
 export function pickMovieMatch(
   results: readonly NormalizedMediaItem[],
   year: number | undefined,
@@ -77,21 +55,8 @@ export function pickMovieMatch(
 }
 
 /**
- * The AniList counterpart, for the anime-film discovery fallback (plan 0024
- * KTD3). Stricter than `pickMovieMatch` in one way and looser in another,
- * both deliberate:
- *
- * - **Exact year only, no ±1 window.** This search only runs when ani.zip
- *   already missed, so there's no corroborating id — a near-year guess would
- *   attach a wrong AniList id to a log write.
- * - **The top exact-year hit is acceptable** when no title matches exactly.
- *   AniList sorts by `SEARCH_MATCH` (title relevance), not popularity, so
- *   "first" here isn't the trap that motivated `pickMovieMatch` — and an
- *   anime film's AniList title is routinely the romaji/native one while the
- *   query carries TMDB's English title.
- *
- * Films only (`isFilm`), because the AniList query already narrows to
- * `format: MOVIE` and a TV entry must never satisfy a film lookup.
+ * Match an anime film by title and year. Use AniList's format and title aliases when narrowing
+ * results.
  */
 export function pickAnimeFilmMatch(
   results: readonly NormalizedMediaItem[],

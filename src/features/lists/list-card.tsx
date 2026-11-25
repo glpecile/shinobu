@@ -11,13 +11,8 @@ import { useThemeColor } from '@/lib/theme-color';
 import { listMeta, type ListSummary } from './list-summary';
 import { PosterStack } from './poster-stack';
 
-/**
- * Title and meta are one line each, so a card's height follows from its width:
- * mt-2.5 + text-sm's 20 line + mt-1 + text-xs's 16 line. Short, and the rail scrolls vertically.
- */
 export const LIST_CARD_TEXT_HEIGHT = 50;
 
-/** A fanned poster stack over one-line title and meta; long-press opens the list sheet. */
 export function ListCard({ list, onPress, onActions }: {
   list: ListSummary;
   onPress: () => void;
@@ -45,7 +40,6 @@ export function ListCard({ list, onPress, onActions }: {
           <ProviderIcon id={list.provider} size={12} />
         </View>
       </PresstableScale>
-      {/* A sibling, not a child: a ⋯ press must not bubble into the card's. */}
       {process.env.EXPO_OS === 'web' && (
         <OverlayActionsButton className="absolute top-1.5 right-1.5" label={`More about ${list.title}`} onPress={() => onActions(list)} size="lg" visible={hovered} />
       )}
@@ -64,7 +58,6 @@ function newListNote(provider: ListSummary['provider']) {
   }
 }
 
-/** The created index's and rail's first card: an empty stack that opens the editor. */
 export function NewListCard({ provider, onPress }: { provider: ListSummary['provider']; onPress: () => void }) {
   const muted = useThemeColor('--color-muted');
   return (

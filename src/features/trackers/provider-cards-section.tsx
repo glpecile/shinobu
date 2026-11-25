@@ -18,15 +18,6 @@ import {
   useTraktNeedsCredentials,
 } from '@/state/session';
 
-/**
- * The Settings screen's Trackers section: every provider in the registry
- * (AGENTS.md: adding a provider widens `PROVIDERS`, nothing else), connected
- * first, then available.
- *
- * The provider sheet is hoisted here rather than living inside each card: one
- * `ModalBottomSheet` for the screen, opened on whichever provider was tapped
- * (`provider-sheet.tsx`).
- */
 export function ProviderCardsSection() {
   const connectedIds = useConnectedProviders();
   const traktNeedsCredentials = useTraktNeedsCredentials();
@@ -36,7 +27,6 @@ export function ProviderCardsSection() {
   const [movedIds, setMovedIds] = useState<ProviderId[]>([]);
   if (connectedIds !== shownIds) {
     setShownIds(connectedIds);
-    // Web hydration swapping in the real sessions isn't the user moving a card.
     if (shownIds !== SERVER_CONNECTED_PROVIDERS) {
       setMovedIds([
         ...movedIds,
@@ -45,12 +35,8 @@ export function ProviderCardsSection() {
       ]);
     }
   }
-  // `sheetId` is kept while closing so the content doesn't vanish mid-animation
-  // (the shape `card-actions-sheet` uses for its `item`).
   const [sheetId, setSheetId] = useState<ProviderId | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  // Whether the sheet was opened *to connect*. A sheet opened on an already
-  // connected provider must not close itself the instant it appears.
   const [sheetWasConnected, setSheetWasConnected] = useState(false);
 
   function openSheet(id: ProviderId) {
@@ -60,8 +46,6 @@ export function ProviderCardsSection() {
     setSheetOpen(true);
   }
 
-  // The decision itself is a pure function, unit-tested in
-  // provider-connections.test.ts; this effect only applies it.
   const autoClose = shouldAutoCloseSheet({
     open: sheetOpen,
     sheetId,
@@ -72,7 +56,6 @@ export function ProviderCardsSection() {
     if (autoClose) setSheetOpen(false);
   }, [autoClose]);
 
-  // Why a stored session the provider no longer accepts needs a reconnect.
   function reconnectReason(id: ProviderId): string | undefined {
     switch (id) {
       case Provider.Trakt:
@@ -115,7 +98,6 @@ export function ProviderCardsSection() {
   );
 }
 
-/** Settles a row into the place it just moved to during this visit. */
 function MovedCard({
   moved,
   children,

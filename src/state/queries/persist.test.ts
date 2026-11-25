@@ -137,7 +137,6 @@ test('batches completed refetches into one current snapshot and flushes pending 
       keys.map((_, index) => `fresh-${index}`),
     );
 
-    // Each change restarts the quiet window.
     act(() => client.setQueryData(keys[0]!, 'latest'));
     act(() => jest.advanceTimersByTime(1_999));
     act(() => client.removeQueries({ queryKey: keys[1], exact: true }));
@@ -149,7 +148,6 @@ test('batches completed refetches into one current snapshot and flushes pending 
     expect(saved?.[0]?.state.data).toBe('latest');
     expect(saved?.some((query) => JSON.stringify(query.queryKey) === JSON.stringify(keys[1]))).toBe(false);
 
-    // A steady trickle still writes once its first change is ten seconds old.
     for (let tick = 0; tick < 5; tick += 1) {
       act(() => client.setQueryData(keys[2]!, `trickle-${tick}`));
       act(() => jest.advanceTimersByTime(1_999));
@@ -198,14 +196,7 @@ describe('serialize / deserialize', () => {
     expect(restoredData(clientWith(upNextQueryKeys.inputs(), data))).toEqual(data);
   });
 
-  // Regression, and a real crash rather than a hypothetical: ani.zip episode
-  // maps are `ReadonlyMap` and `['mapping','anizip-episodes']` has been on the
-  // allowlist since the home-feed restore landed. Without a codec they restored
-  // as `{}`, which is the *worst* shape — `canonicalSeasonTitle`'s
-  // `map.size === 0` guard passes (`undefined === 0` is false) and the next
-  // line calls `map.values()`, so every cold-started anime details screen with
-  // a mapping threw "undefined is not a function".
-  // A restored infinite query refetches every page it holds on its first read.
+  // A persisted ani.zip map used to restore as an object and crash episode placement.
   test('writes only an infinite query\'s first page', () => {
     const data = { pages: [{ slices: {} }, { slices: {} }], pageParams: [{ simkl: 1 }, { simkl: 2 }] };
     expect(restoredData(clientWith(diaryQueryKeys.feed(['simkl'], '', ''), data))).toEqual({
@@ -226,7 +217,6 @@ describe('serialize / deserialize', () => {
     expect(restored).toBeInstanceOf(Map);
     expect(restored.size).toBe(2);
     expect(restored.get(2)).toEqual({ season: 1, number: 2 });
-    // The exact call that threw.
     expect([...restored.values()].map((episode) => episode.season)).toEqual([1, 1]);
   });
 
@@ -261,16 +251,11 @@ describe('isPersistedQueryKey', () => {
     expect(
       isPersistedQueryKey(anilistQueryKeys.seasonalAnime({ season: 'SUMMER', year: 2026 })),
     ).toBe(true);
-    // Written as literals in persist.ts — see the comment there.
     expect(isPersistedQueryKey(['mapping', 'anizip', { anilistId: 1 }])).toBe(true);
     expect(isPersistedQueryKey(['mapping', 'anizip-episodes', 1])).toBe(true);
     expect(isPersistedQueryKey(letterboxdQueryKeys.watchlist('gian'))).toBe(true);
-    // The trending rows are Simkl's since plan 0034 — these, not Trakt's old
-    // trending keys, are what must restore with the rest of the feed.
     expect(isPersistedQueryKey(simklQueryKeys.trending('movies'))).toBe(true);
     expect(isPersistedQueryKey(simklQueryKeys.trending('tv'))).toBe(true);
-    // The cross-provider watchlist gather (plan 0031): without it this is the
-    // one home row that pops in as a skeleton after every cold start.
     expect(isPersistedQueryKey(watchlistQueryKeys.inputs())).toBe(true);
     expect(isPersistedQueryKey(diaryQueryKeys.feed(['simkl'], '', ''))).toBe(true);
     expect(isPersistedQueryKey(letterboxdQueryKeys.lists('gian', 'liked'))).toBe(true);

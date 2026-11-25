@@ -19,25 +19,14 @@ import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 import { useDisconnectProvider } from '@/state/session';
 
-/**
- * The one provider sheet for the whole screen.
- *
- * Deliberately *not* one per card: `ModalBottomSheet` instances all register
- * with the single `SheetProvider` host, and four mounted at once measured their
- * `'content'` detent as the full screen height — a two-line connect flow opened
- * as a full-page sheet. Every other caller in the app (`card-actions-sheet`,
- * `log-confirm-sheet`) mounts exactly one; this follows that shape, with the
- * section owning "which provider is open".
- */
+/** Mount one per screen: multiple `ModalBottomSheet` instances under `SheetProvider` mismeasure `'content'` detents as full screen height. */
 export function ProviderSheet({
   id,
   connected,
   open,
   onClose,
 }: {
-  /** Kept (not nulled) while closing so content doesn't vanish mid-animation. */
   id: ProviderId | null;
-  /** Whether the provider was connected when the sheet opened. */
   connected: boolean;
   open: boolean;
   onClose: () => void;

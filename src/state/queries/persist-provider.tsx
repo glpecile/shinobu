@@ -19,10 +19,8 @@ import { isPersistedQueryKey, persistOptions } from './persist';
 const RESTORES_SYNC = process.env.EXPO_OS !== 'web';
 
 /**
- * A snapshot waits for two quiet seconds, and at most ten. A list's per-film
- * reads settle one by one for several seconds; each dehydrates and stringifies
- * the whole persisted cache (about 40 ms on a Pixel 8 Pro), so one write per
- * burst replaces one every two seconds.
+ * Batch snapshot writes after two quiet seconds or ten seconds total. Each dehydration
+ * serializes the full allowlist.
  */
 const QUIET_MS = 2_000;
 const MAX_WAIT_MS = 10_000;

@@ -26,9 +26,6 @@ import {
 
 type SaveStatus = 'idle' | 'checking' | 'invalid' | 'unreachable';
 
-// v4 read tokens are long JWTs (three dot-separated base64url segments). The
-// shape check catches the two common mistakes — pasting the short v3 API key,
-// or pasting the whole curl example — before a request is ever made.
 const tokenSchema = z.object({
   token: z
     .string()
@@ -42,7 +39,6 @@ const tokenSchema = z.object({
 
 type TokenForm = z.infer<typeof tokenSchema>;
 
-/** Cheapest authenticated TMDB call — 200 iff the token is accepted. */
 async function tokenWorks(token: string): Promise<boolean> {
   const response = await fetch(`${TMDB_API_BASE_URL}/authentication`, {
     headers: {
@@ -58,22 +54,7 @@ const STATUS_MESSAGE: Record<Exclude<SaveStatus, 'idle' | 'checking'>, string> =
   unreachable: "Couldn't reach TMDB to check that token. Try again in a moment.",
 };
 
-/**
- * Bring-your-own TMDB key (plan 0024 U10). TMDB is the primary metadata source
- * for every detail screen and the only source for the person/studio routes
- * (AGENTS.md), but its token is builder-supplied — a build that ships none
- * leaves those surfaces dark with no way in from the app. Settings' Metadata
- * section is that way in, and it renders **only** when the build ships no token: with one
- * present a stored value would be ignored anyway (`resolveTmdbToken`), so
- * offering the field would be a lie.
- *
- * Modeled on `connect-anilist-button.tsx`: react-hook-form + zod, a collapsed
- * how-to, and an edit/clear escape hatch. The token is validated against TMDB
- * before it is persisted, and it is never logged.
- */
 export function ConnectTmdbTokenSection() {
-  // SSR-safe lazy initializer — MMKV's web fallback is localStorage
-  // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
   const [saved, setSaved] = useState<string | null>(() => storedTmdbToken());
   const [status, setStatus] = useState<SaveStatus>('idle');
   const queryClient = useQueryClient();
@@ -89,12 +70,6 @@ export function ConnectTmdbTokenSection() {
     resolver: zodResolver(tokenSchema),
   });
 
-  /**
-   * Details and TMDB reads resolved *without* a token are cached for an hour
-   * with the token outside their query key — so without this drop, an
-   * already-visited screen keeps serving provider-only metadata and the new
-   * token looks like it needs an app restart (R13).
-   */
   function dropTokenlessCaches() {
     queryClient.removeQueries({ queryKey: mediaDetailsQueryKeys.all });
     queryClient.removeQueries({ queryKey: tmdbQueryKeys.all });
@@ -106,7 +81,6 @@ export function ConnectTmdbTokenSection() {
     try {
       accepted = await tokenWorks(values.token);
     } catch {
-      // Network failure, not a bad token — say so rather than blaming the key.
       setStatus('unreachable');
       return;
     }
@@ -217,8 +191,6 @@ export function ConnectTmdbTokenSection() {
                   onSubmitEditing={() => void submit()}
                   placeholder="API Read Access Token"
                   returnKeyType="done"
-                  // Long opaque credential — never offer to save/suggest it,
-                  // and keep it off screen-sharing shoulder-surfers.
                   secureTextEntry
                   value={field.value}
                 />
@@ -237,8 +209,6 @@ export function ConnectTmdbTokenSection() {
             <Button
               icon={<Button.Icon name="checkmark" />}
               label="Save token"
-              // Validated against TMDB before it is stored, so this waits on a
-              // real round-trip.
               loading={status === 'checking'}
               loadingLabel="Checking…"
               onPress={() => void submit()}

@@ -1,29 +1,10 @@
 import { useEffect } from 'react';
 
-/**
- * "Tap the tab you're already on, again" → refresh that screen, the same
- * gesture Twitter/Instagram/Apple's own apps put on a bottom bar. It lives
- * here rather than in a screen because only `app/(tabs)/_layout.tsx` can
- * observe a tab press: `NativeTabs.Trigger`'s `tabPress` fires on every tap
- * (active tab or not), and the screen it belongs to is a different route file
- * — the same boundary `features/search/focus-signal.ts` bridges for search.
- *
- * Native only in effect: the web shell is a sidebar with no pull-to-refresh
- * behind it (react-native-web's `RefreshControl` is a no-op), so
- * `_layout.web.tsx` emits nothing and every subscriber simply never fires.
- */
+/** Detect a second press on the same tab so the caller can refresh it. */
 
 /**
- * Two presses of the *same* tab inside this window are one double tap.
- *
- * Deliberately far wider than the platform's own ~300ms double-tap timeout,
- * because what's measured here is not the gap between the two touches — it's
- * the gap between the two *JS* `tabPress` callbacks, and the native tab bar
- * adds its own delivery lag on top. Measured on the Pixel emulator
- * (2026-08-18): taps 204ms apart arrived 413ms apart, so a 400ms window
- * silently swallowed a real double tap. It also competes with nothing — a
- * single tab press has no delayed action being held back — so erring wide
- * costs at most one extra refresh of a screen the user is already looking at.
+ * Tab double-press window in ms, wider than a platform gesture to allow a deliberate second
+ * press.
  */
 export const TAB_DOUBLE_TAP_MS = 600;
 
@@ -59,7 +40,6 @@ export function onTabDoubleTap(
   };
 }
 
-/** Runs `onDoubleTap` when `tab`'s own trigger is double-tapped. */
 export function useTabDoubleTap(
   tab: string | undefined,
   onDoubleTap: () => void,

@@ -45,7 +45,6 @@ function subscribe(onStoreChange: () => void): () => void {
   return () => subscription.remove();
 }
 
-/** Reactive read of the toggle, for the settings screen. */
 export function useNotificationsEnabled(): boolean {
   return useSyncExternalStore(subscribe, readEnabled, getServerSnapshot);
 }
@@ -76,7 +75,6 @@ function subscribeMuted(onStoreChange: () => void): () => void {
   return () => subscription.remove();
 }
 
-/** Reactive read of one kind's toggle, for the settings screen. */
 export function useNotificationKindEnabled(kind: NotificationKind): boolean {
   return useSyncExternalStore(
     subscribeMuted,

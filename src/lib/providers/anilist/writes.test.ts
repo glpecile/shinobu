@@ -31,10 +31,6 @@ interface EntryFixture {
   customLists?: unknown;
 }
 
-/**
- * Fake AniList: replies to the entry-state query from `entry`/`episodes` and
- * records the SaveMediaListEntry variables.
- */
 function capturingDeps(
   captured: { variables: unknown },
   state: {
@@ -85,7 +81,6 @@ const BOOK: NormalizedMediaItem = {
   externalIds: { hardcover: 61, anilist: 143703 },
 };
 
-/** The variables a finished reread of `BOOK`'s volume `number` sends, against a two-volume entry. */
 async function rereadVolume(entry: EntryFixture, number: number) {
   const captured = { variables: null as unknown };
   await Effect.runPromise(
@@ -257,10 +252,8 @@ describe('logToAniList series', () => {
       .toEqual({ mediaId: 143703, status: 'REPEATING', progressVolumes: 1 });
     expect(await rereadVolume({ status: 'REPEATING', progress: 35, progressVolumes: 1, repeat: 0 }, 2))
       .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 1 });
-    // A first read in progress is no reread, whatever Hardcover says.
     expect(await rereadVolume({ status: 'CURRENT', progress: 12, progressVolumes: 3, repeat: 0 }, 1))
       .toEqual({ mediaId: 143703, status: 'CURRENT', progressVolumes: 3 });
-    // Rereading only the last volume still counts the reread.
     expect(await rereadVolume({ status: 'COMPLETED', progress: 35, progressVolumes: 2, repeat: 1 }, 2))
       .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 2 });
   });
@@ -332,7 +325,6 @@ function watchlistDeps(
      */
     entry: EntryFixture | null | (() => EntryFixture | null);
     episodes?: number | null;
-    /** AniList answering `deleted: false` — a failed delete, not a skip. */
     deleted?: boolean;
   },
   failure?: 'network',
@@ -372,13 +364,6 @@ function calls(): WatchlistCalls {
   return { entryReads: 0, mutations: [] };
 }
 
-/**
- * Plan 0031 KTD-2. `MediaList.status` is single-valued, so every one of these
- * cases is really the same assertion from a different angle: an entry that
- * exists is never written over, and a guard that could not answer is not an
- * excuse to write. The `mutations` array is the real subject — a skip that
- * still issued the mutation would be a status clobber reported as success.
- */
 describe('planOnAniList — the exclusive-status guard (KTD-2)', () => {
   test('no entry writes PLANNING with progress and repeat omitted', async () => {
     const seen = calls();
@@ -551,11 +536,6 @@ describe('deleteAniListEntry — only a bare PLANNING entry is deletable (R36)',
     expect(seen.mutations).toEqual([]);
   });
 
-  /**
-   * The refusal set is wider than status + progress on purpose (R36.2): each of
-   * these entries is `PLANNING`/`progress: 0` apart from one field, and that one
-   * field is the entry's entire reason for existing.
-   */
   const refusals: { name: string; entry: EntryFixture; reason: string }[] = [
     {
       name: 'a CURRENT entry',
@@ -730,7 +710,6 @@ describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
       status: 'skipped',
       reason: 'removing would delete your whole AniList entry, which is CURRENT',
     });
-    // Two calls, two reads: nothing is remembered between them.
     expect(seen.entryReads).toBe(2);
     expect(seen.mutations).toEqual([{ id: 700 }]);
   });

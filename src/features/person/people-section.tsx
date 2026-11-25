@@ -50,25 +50,20 @@ function PersonCard({
   onPress?: () => void;
   onActions: (credit: PersonCredit) => void;
 }) {
-  // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
-  // web-only ⋯ reveal rides on RN-web's pointer events instead (same shape as
-  // the media card's).
+  // Uniwind has no group-hover:, so web hover uses RN-web pointer events.
   const [hovered, setHovered] = useState(false);
   const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
 
   const content = <PersonCardContent credit={credit} />;
 
   return (
-    // The ⋯ is a *sibling* of the pressable, not a child — nesting two
-    // gesture-handler buttons would let a ⋯ press bubble into the card press.
+    // Sibling, not child: nested gesture-handler buttons bubble presses into the card.
     <View
       className="w-24 mr-4 relative"
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
       {onPress == null ? (
-        // No TMDB token means no person page to open, but the credit sheet
-        // still has the full role to show, so the card stays pressable.
         <PresstableScale
           accessibilityLabel={`${credit.name} / ${credit.role}`}
           className="items-center"
@@ -98,11 +93,6 @@ function PersonCard({
   );
 }
 
-/**
- * A rail of credit cards. Without `onCreditActions` there is no long-press
- * sheet: a book's author opens their Hardcover page,
- * and a character, which has no person behind it, is display-only.
- */
 export function PeopleSection({
   title,
   people,
@@ -115,7 +105,6 @@ export function PeopleSection({
   const pushRoute = usePushRoute();
   const { scrollProps, fade } = useRailFade();
   const { fontScale } = useWindowDimensions();
-  // No TMDB token, no TMDB person pages — AniList people still open theirs.
   const hasTmdb = useTmdbToken() !== '';
 
   if (people.length === 0) return null;
@@ -160,7 +149,6 @@ export function PeopleSection({
             )
           }
           showsHorizontalScrollIndicator={false}
-          // 80px avatar + 10px gaps + three 16px text lines (name, two role lines).
           style={{ height: 90 + 48 * fontScale }}
           {...scrollProps}
         />
@@ -174,8 +162,6 @@ export function PeopleRailSkeleton() {
   return (
     <View className="mt-8">
       <Skeleton className="h-6 w-24 rounded mb-4" />
-      {/* Enough cards to overflow any viewport up to the max-w-4xl container;
-          overflow-hidden clips the excess, reading as an off-screen carousel. */}
       <View className="flex-row overflow-hidden">
         {Array.from({ length: 10 }).map((_, index) => (
           <View className="w-24 items-center mr-4" key={index}>
@@ -198,7 +184,6 @@ export function PeopleRailSkeleton() {
   );
 }
 
-/** One rail per section behind the boundary (Cast + Crew). */
 export function PeopleSectionsSkeleton() {
   return (
     <>

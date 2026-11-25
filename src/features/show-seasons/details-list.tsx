@@ -26,22 +26,19 @@ interface EpisodeSection extends SeasonActions {
 }
 
 /**
- * Rows below a toggled season snap; only the opened season's rows unfold.
- * Legend List positions rows over several commits, so any transition on the
- * rows below (`LayoutAnimation`, `itemLayoutAnimation`) slid them from stale
- * estimates and left a gap on close.
+ * Legend List positions rows over several commits, so `LayoutAnimation` /
+ * `itemLayoutAnimation` on rows below slides from stale estimates and leaves a
+ * gap on close.
  */
 const UNFOLD = css.keyframes({
   from: { opacity: 0, transform: [{ translateY: -6 }] },
   to: { opacity: 1, transform: [{ translateY: 0 }] },
 });
 const UNFOLD_FADE = css.keyframes({ from: { opacity: 0 }, to: { opacity: 1 } });
-/** Rows past this are below the fold when a season opens. */
 const UNFOLD_ROWS = 10;
 const UNFOLD_STAGGER = 20;
 const FOOTER_ROW = { kind: 'footer', key: 'footer' } as const;
 
-/** One vertical viewport, like the diary: no season owns a nested scroll view or mapped episode body. */
 export function DetailsList({
   header,
   footer,
@@ -68,8 +65,6 @@ export function DetailsList({
     <List
       style={{ flex: 1 }}
       data={rows}
-      // Watched state, mapping callbacks and the footer (which sharpens once
-      // the item's TMDB id resolves) can change without changing the rows.
       extraData={[episodeSection, footer, unfolding]}
       estimatedItemSize={44}
       // Keep expansion within the buffer used to allocate the initial pool.

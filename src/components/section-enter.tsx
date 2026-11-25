@@ -4,7 +4,6 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { AnimatedView } from '@/components/animated-view';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 
-/** Tiny: whatever it replaces occupied the same box. */
 const SECTION_RISE = 6;
 
 const sectionEntering = {
@@ -12,16 +11,12 @@ const sectionEntering = {
   '100%': { opacity: 1, transform: [{ translateY: 0 }] },
 };
 
-/** Reduced motion keeps the fade and drops the travel. */
 export const sectionFading = {
   '0%': { opacity: 0 },
   '100%': { opacity: 1 },
 };
 
-/**
- * Holds the first frame inside the animation timeline so staggered entrances
- * stay hidden until their turn, without relying on a backwards fill.
- */
+/** Embeds the delay in keyframes because Reanimated's web CSS animations drop `animationFillMode`. */
 export function heldKeyframes<Frame>(
   keyframes: { '0%': Frame; '100%': Frame },
   delay: number,
@@ -34,16 +29,7 @@ export function heldKeyframes<Frame>(
   };
 }
 
-/**
- * Fades and settles its children in on mount — what a section resolving looks
- * like instead of a hard cut. `SuspenseSection` mounts it when its query
- * resolves; a screen switching between mutually exclusive states (skeleton,
- * results, empty) mounts it with a `key` per state.
- *
- * A CSS animation rather than an `entering=` layout animation: the wrapper has
- * to contribute its height to the scroll view's flow on web, which a layout
- * animation pins.
- */
+/** Uses a CSS animation rather than Reanimated `entering=`, which pins the wrapper out of web scroll-view flow. */
 export function SectionEnter({
   children,
   className,
@@ -75,7 +61,6 @@ export function SectionEnter({
   );
 }
 
-/** Initial rows and started entrances stay still when a rail remounts them. */
 export function useArrivalHistory(ids: readonly string[]): Set<string> {
   const [seen] = useState(() => new Set(ids));
   return seen;

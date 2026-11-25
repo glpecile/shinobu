@@ -3,7 +3,6 @@ import { Text } from 'react-native';
 
 import { cn } from '@/lib/cn';
 
-/** Small uppercase label over or beside a title. `className` is layout only. */
 export function Eyebrow({
   tone = 'muted',
   className,

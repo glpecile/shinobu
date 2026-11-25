@@ -70,7 +70,6 @@ describe('seasonRows', () => {
   });
 });
 
-// Local times: the label reads the user's calendar day and clock.
 const at = (day: number, hour: number) => new Date(2026, 10, day, hour, 30).toISOString();
 
 describe('airingNote', () => {

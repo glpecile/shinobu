@@ -112,11 +112,6 @@ import type {
   MediaType,
 } from '@/types/media';
 
-/**
- * Turns an AniList list entry into the same "Watched/Watching …" phrasing the
- * Trakt line uses, so both providers' detail pages read identically. Null for
- * plan-to-watch (nothing watched yet to report).
- */
 function anilistWatchedLabel(
   entry: {
     status: string | null;
@@ -146,14 +141,6 @@ function anilistWatchedLabel(
   }
 }
 
-/**
- * "3 / 12" as a single stat value, replacing the old side-by-side
- * Progress + Total tiles. Only the progress half goes through MorphText:
- * AGENTS.md reserves the morph for text that changes in place from user
- * state, and the total is static catalogue data that would just churn the
- * animation. Caller renders the bare number instead when no total is known,
- * so a dangling "3 / " is impossible.
- */
 function ProgressOfTotal({
   progress,
   total,
@@ -172,17 +159,6 @@ function ProgressOfTotal({
   );
 }
 
-/**
- * "Watched (2) · Sep 15, 2026 · Mar 3, 2024" under the meta line. A film lists
- * every dated play across providers (`useFilmPlaysQuery`); otherwise it reads
- * whichever connected provider records the item: Trakt/Simkl (shows count
- * logged episodes), then the AniList list entry for anime, so
- * Trakt-sourced and AniList-sourced pages carry the same line. Lives as its
- * own element so the hooks only run once the screen has a resolved item.
- *
- * The first leg is `useWatchedInfo`, not Trakt alone: a film logged to Simkl
- * and not Trakt is watched too, and used to render no line at all.
- */
 function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
   const watched = useWatchedInfo(item);
@@ -191,8 +167,6 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
     type: item.type,
     enabled: PROVIDERS[Provider.AniList].mediaTypes.includes(item.type) && connected.includes(Provider.AniList),
   });
-  // Simkl's leg (plan 0034): the library entry gives a Simkl-sourced show the
-  // same line Trakt-sourced pages carry.
   const simklEntry = useSimklLibraryEntryQuery({
     item,
     enabled:
@@ -209,7 +183,6 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
 
   const plays = useFilmPlaysQuery(item).data ?? [];
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  // One date per local day: a fan-out logs the same play to every provider.
   const days = [
     ...new Set(
       [...plays, ...(watched != null ? [{ watchedAt: watched.lastWatchedAt }] : [])].map(
@@ -242,8 +215,6 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
     simklEntry.data != null &&
     (simklProgress ?? 0) > 0
   ) {
-    // Completed entries can omit episode rows; the shared count uses provider
-    // totals and combines anime cours for a TV-shaped detail page.
     const count = simklProgress ?? 0;
     const episodes = `${count} ${count === 1 ? 'episode' : 'episodes'} logged`;
     label =
@@ -261,17 +232,10 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   }
   if (label == null) return null;
 
-  // A MorphText can't wrap, so each part morphs on its own and the parts wrap
-  // as whole units beside the poster instead of running under it. Past 1×
-  // system text one part can outgrow the column, so the line falls back to a
-  // wrapping Text, like Up Next's empty day.
   const wrapsAsText = fontScale > 1;
   const parts = wrapsAsText ? [label] : label.split(' · ');
   return (
-    // One VoiceOver/TalkBack stop, though each native MorphText is its own.
-    // Web reads the parts inline, so it needs no grouping.
     <View accessible accessibilityLabel={label} className="flex-row items-start gap-1.5 mt-1.5">
-      {/* One text-sm line (20pt, scaled like the text), so the eye centres on the first line. */}
       <View className="justify-center" style={{ height: 20 * fontScale }}>
         <Ionicons
           color={accent}
@@ -286,8 +250,6 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
       >
         {parts.map((part, index) => (
           <MorphText
-            // Dates run newest first, so they count from the end: a new play's
-            // date mounts instead of shifting every older date into the next.
             key={index === 0 ? 'status' : parts.length - index}
             className="text-muted font-sans text-sm"
             numberOfLines={wrapsAsText ? 0 : undefined}
@@ -300,11 +262,6 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-/**
- * Studio cards. Plain press opens the studio page; long-press opens the studio
- * sheet (plan 0035 R8). Without a TMDB token there is no page to open, so a
- * plain press opens the sheet.
- */
 function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   const pushRoute = usePushRoute();
   const canOpenStudios = useTmdbToken() !== '';
@@ -324,7 +281,6 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
       <Section.Header>
         <Section.Title>Studios</Section.Title>
       </Section.Header>
-      {/* Web top padding keeps the ⋯ focus ring inside the rail's clip. */}
       <Rail contentContainerClassName="gap-4 web:pt-1">
         {studios.map((entry) => (
           <StudioCard
@@ -344,8 +300,6 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
           />
         ))}
       </Rail>
-      {/* Kept (not nulled) while closing so the sheet's content doesn't vanish
-          mid-animation — same contract as the credit sheet above. */}
       <StudioSheet
         onClose={() => setSheetOpen(false)}
         open={sheetOpen}
@@ -355,7 +309,6 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   );
 }
 
-/** The want-to-watch CTA with its secondary actions beside it, or those alone. */
 function WatchlistRow({ item }: { item: NormalizedMediaItem }) {
   const ctaShown = useWatchlistCtaShown(item);
   return (
@@ -365,7 +318,6 @@ function WatchlistRow({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-/** Display-only cards: a character has no person page to open. */
 function characterCredits(characters: NormalizedCharacter[]): PersonCredit[] {
   return characters.map((character) => ({
     id: character.id,
@@ -376,11 +328,6 @@ function characterCredits(characters: NormalizedCharacter[]): PersonCredit[] {
   }));
 }
 
-/**
- * Characters + Cast + Crew + Studios rails, with the long-press credit sheet
- * they share. Source-agnostic: the two wrappers below decide where credits
- * come from.
- */
 function CreditRails({
   characters = [],
   cast = [],
@@ -394,8 +341,6 @@ function CreditRails({
   crewTitle: string;
   studios?: NormalizedStudio[];
 }) {
-  // Long-press (web: the hover ⋯) on a credit card opens this instead of
-  // navigating — the role text a 96px card had to clip is the whole point.
   const [credit, setCredit] = useState<PersonCredit | null>(null);
   const [creditOpen, setCreditOpen] = useState(false);
 
@@ -407,7 +352,6 @@ function CreditRails({
 
   return (
     <>
-      {/* No `onCreditActions`: a character isn't a person, so its card opens nothing. */}
       <PeopleSection title="Characters" people={characterCredits(characters)} />
       <PeopleSection
         onCreditActions={openCredit}
@@ -436,8 +380,6 @@ function CreditRails({
         }))}
       />
       <StudiosList studios={studios} />
-      {/* `credit` is kept (not nulled) while closing so the sheet's content
-          doesn't vanish mid-animation — same contract as the card actions. */}
       <PersonCreditSheet
         credit={credit}
         onClose={() => setCreditOpen(false)}
@@ -447,11 +389,6 @@ function CreditRails({
   );
 }
 
-/**
- * Credits from the one TMDB-first metadata query (plan 0014) — the same
- * composed read regardless of the item's origin provider, with the
- * Trakt/AniList fallback handled inside the query, not by this boundary.
- */
 function CreditsSections({ item }: { item: NormalizedMediaItem }) {
   const { data } = useSuspenseMediaDetailsQuery(item);
   return (
@@ -459,10 +396,6 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-/**
- * Manga credits ride the AniList relations request the page already makes
- * (TMDB has no manga to credit), so they cost no request of their own.
- */
 function MangaCreditsSections({ mediaId }: { mediaId: number }) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId, type: 'MANGA' });
   return (
@@ -470,11 +403,6 @@ function MangaCreditsSections({ mediaId }: { mediaId: number }) {
   );
 }
 
-/**
- * A book's authors and characters, from the same Hardcover read as its
- * header. An author opens their Hardcover page by id, never a name lookup,
- * which could open a namesake. Characters are display-only.
- */
 function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
   const { data } = useSuspenseMediaDetailsQuery(item);
   return (
@@ -484,7 +412,6 @@ function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
         people={data.crew.map((member) => ({
           id: member.id,
           name: member.name,
-          // The rail's title already says "Authors"; only other roles show.
           role: member.job === 'Author' ? '' : member.job,
           kind: 'crew' as const,
           headshot: member.headshot,
@@ -509,11 +436,6 @@ function StudiosSkeleton() {
   );
 }
 
-/**
- * Mirrors the loaded layout so content lands without a shift. The delays run
- * top-down (backdrop → poster → title → overview), so the screen reads as
- * filling in from the hero rather than flashing as one rectangle.
- */
 function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdrop: boolean }) {
   const backButtonClearance = useFloatingBackButtonClearance();
   return (
@@ -574,42 +496,24 @@ function DetailsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
-  // The hero scrim fades to the *page background*, not black: the title
-  // straddles the image/page boundary and `text-foreground` is near-black in
-  // the light theme, so a black scrim swallowed it there. Dark theme looks
-  // the same as before (its background token is near-black).
-  // `useCSSVariable`, not `useThemeColor`: this colour is *composed* into the
-  // gradient's transparent stop (`${background}00`), and web's `var(--token)`
-  // cannot be concatenated. The prerender has no DOM to read, so the first
-  // page a visitor loads fades to this dark fallback even in the light theme
-  // — the scrim sits under a hero image, and it corrects on the next
-  // navigation. docs/solutions/web-prerender-bakes-js-resolved-colors.md
+  // Composed into `${background}00` for LinearGradient (web var() can't be concatenated);
+  // static prerender falls back to #0a0a0a (docs/solutions/web-prerender-bakes-js-resolved-colors.md).
   const backgroundVariable = useCSSVariable('--color-background');
   const background =
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   const backButtonClearance = useFloatingBackButtonClearance();
-  // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
 
   const { item, isLoading } = useResolvedMediaItem(id, mediaType);
-  // TMDB is the metadata source of truth (plan 0014): the same composed
-  // query that feeds the credit sections hands the header a catalogue
-  // record, and its display fields override whatever the origin provider
-  // carried. Non-suspending — the header renders instantly from the item
-  // and sharpens when TMDB answers.
   const mediaDetails = useMediaDetailsQuery(item);
   const anilistId = item?.externalIds.anilist;
   const connected = useConnectedProviders();
   const onAniList = item != null && PROVIDERS[Provider.AniList].mediaTypes.includes(item.type);
-  // Items resolved from trending/search carry 0 progress even when the viewer
-  // has already watched episodes. The live entry state corrects the stat tile.
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: anilistId,
     type: item?.type,
     enabled: onAniList && connected.includes(Provider.AniList),
   });
-  // TV progress spans anime cours; anime progress stays entry-relative.
-  // Shares `WatchedLine`'s library cache, so it costs no extra request.
   const onSimkl =
     item?.type === 'TV' ||
     (item?.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null);
@@ -617,13 +521,8 @@ function DetailsScreen() {
     item: onSimkl ? item : null,
     enabled: connected.includes(Provider.Simkl),
   });
-  // Items resolved from the watched feed arrive artless (Trakt dropped images
-  // from /sync/watched/* in 2026) — recover poster/backdrop lazily.
+  // Trakt dropped images from /sync/watched/*, so watched-feed items need lazy artwork.
   const artwork = useTraktMediaImages(item);
-  // Shared-cache reads for the pre-airing guard: the seasons sections mount
-  // the same queries, so these subscribe without fetching twice. Catalogue ids
-  // are merged in — a tokenless row's ids can arrive only via the catalogue,
-  // and the sections read them from the merged value too.
   const catalogueIds = mediaDetails.data?.catalogue?.externalIds;
   const tvSeasonsSource = useShowSeasonsSource(
     item?.type === 'TV' ? { externalIds: { ...catalogueIds, ...item.externalIds } } : null,
@@ -645,7 +544,6 @@ function DetailsScreen() {
   if (isLoading && item == null) {
     return (
       <>
-        {/* Only a book is known to have no backdrop before it loads. */}
         <DetailsSkeleton backdrop={provider !== Provider.Hardcover} zoomPoster={zoomPoster} />
         <FloatingBackButton onPress={goBack} />
         {id !== '' && <FloatingShareButton href={routes.details(id, mediaType)} />}
@@ -654,8 +552,7 @@ function DetailsScreen() {
   }
 
   if (item == null) {
-    // Old Trakt URLs omitted the type; movie and show IDs can overlap.
-    // Let the viewer disambiguate instead of fetching an arbitrary namesake.
+    // Trakt movie and show IDs overlap.
     if (id.startsWith('trakt-') && mediaType == null) {
       return (
         <View className="flex-1 bg-background items-center justify-center px-8 gap-3">
@@ -709,35 +606,22 @@ function DetailsScreen() {
   const shown = applyPrimaryMetadata(item, mediaDetails.data?.catalogue);
   const alternates = alternateTitles(shown);
   const overview = shown.overview != null ? <ExpandableText text={shown.overview} /> : null;
-  // "0 / 1 episodes" on a film (anime films included) is noise — only show
-  // progress where it means something (series, manga, or a film already logged).
-  // A book has no read leg yet, so its 0 would be a guess; the page count sits
-  // in the meta line instead.
   const showProgress =
     (shown.type !== 'MOVIE' && shown.type !== 'BOOK' && shown.isFilm !== true) ||
     shown.currentProgress > 0;
   const bookSeries = mediaDetails.data?.series;
-  // AniList progress belongs to this cour, not the whole TMDB series.
   const displayedProgress =
     shown.type === 'ANIME' && shown.isFilm !== true
       ? anilistEntry.data?.entry?.progress ?? simklProgress.data ?? shown.currentProgress
       : (onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
         simklProgress.data ??
         shown.currentProgress;
-  // Only one cache is ever populated — the reads enable by type, so the
-  // anime query is dead on a TV item and vice versa — no type branch needed.
   const headerEpisodes =
     tvSeasonsCache?.flatMap((season) => season.episodes) ?? animeSeasonCache?.episodes;
-  // Variant D: before anything airs, the 0/total tile becomes a premiere
-  // countdown (or collapses with no date); the sections drop their rows
-  // through the same guard. Premiere is defined whenever display is
-  // 'countdown' — the guard only returns it with a parseable premiere.
   const display = preAiringDisplay(shown, headerEpisodes, displayedProgress);
   const premiere = seriesPremiere(shown, headerEpisodes ?? []);
 
   function refresh() {
-    // Home stays mounted under the stack, so provider-root refreshes also
-    // reload its unrelated feeds.
     const { trakt, tmdb, letterboxd } = shown.externalIds;
     const letterboxdSlug = letterboxd ?? (tmdb != null
       ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb))
@@ -758,10 +642,6 @@ function DetailsScreen() {
         ? [anilistQueryKeys.entryState(anilistId), anilistQueryKeys.relations(anilistId), anilistQueryKeys.anime(anilistId)]
         : []),
     ];
-    // Sections that failed are unmounted, leaving their queries inactive and
-    // stuck in error state. Remove those so the resetKey remount refetches
-    // from scratch. Healthy (active) ones refetch in the background instead,
-    // without re-suspending into a skeleton.
     for (const queryKey of keys) {
       queryClient.removeQueries({ queryKey, type: 'inactive', predicate: (query) => query.state.status === 'error' });
     }
@@ -771,7 +651,6 @@ function DetailsScreen() {
     );
   }
 
-  // A cover stretched to a backdrop crops to a blur of its title, so a book shows none.
   const backdrop =
     shown.type === 'BOOK'
       ? null
@@ -803,7 +682,6 @@ function DetailsScreen() {
         </View>
       )}
 
-      {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
       <View className="w-full max-w-4xl self-center px-6">
         <View className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', backdrop == null && 'mt-0')}>
           <View className="flex-1">
@@ -829,7 +707,6 @@ function DetailsScreen() {
                 shown.genres != null && shown.genres.length > 0 && (
                   <MetaLine.Part icon="pricetags-outline">{shown.genres.slice(0, 3).join(', ')}</MetaLine.Part>
                 ),
-                // The Progress tile shows the total once there is progress.
                 !showProgress && shown.progressUnit === 'page' && shown.totalEpisodes != null && (
                   <MetaLine.Part icon="book-outline">{`${shown.totalEpisodes} pages`}</MetaLine.Part>
                 ),
@@ -841,8 +718,6 @@ function DetailsScreen() {
               ]}
             />
             <WatchedLine item={shown} />
-            {/* Wide screens fill the column beside the poster; phones keep the
-                overview full width below it. */}
             {overview != null && <View className="hidden md:flex mt-4">{overview}</View>}
           </View>
           <Link.AppleZoomTarget>
@@ -861,11 +736,6 @@ function DetailsScreen() {
 
         {overview != null && <View className="md:hidden">{overview}</View>}
 
-        {/* Placement only, film-like only (plan 0031 R11): a film that isn't
-            out yet can't be logged, so the want-to-watch CTA is the primary
-            control and the disabled log button doesn't render. Everything
-            else — including an airing series with no release date — keeps the
-            log button and gets the CTA beneath it. */}
         {!watchlistCtaIsPrimary(shown) && <LogMediaButton item={shown} />}
         <LetterboxdCompletionButton item={shown} />
         <WatchlistRow item={shown} />
@@ -893,8 +763,6 @@ function DetailsScreen() {
                     />
                   )
                 }
-                // Manga counts chapters and books count pages in the same
-                // field, so the label follows the unit.
                 caption={`${shown.progressUnit}s`}
               />
               {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
@@ -941,7 +809,6 @@ function DetailsScreen() {
 
       <ReleaseTimeline item={shown} />
 
-      {/* The boards and subreddits cover anime, film and TV, not print. */}
       {shown.type !== 'MANGA' && shown.type !== 'BOOK' && <DiscussionSection item={shown} />}
 
       <RatingsSection item={shown} resetKey={refreshCount} />

@@ -1,7 +1,6 @@
 import { Button, type ButtonSize, type ButtonVariant } from '@/components/button';
 import { haptics } from '@/lib/haptics';
 
-/** Controlled like toggle: stage a diary field or bind a provider mutation. */
 export function LikeButton({
   liked,
   onChange,

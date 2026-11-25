@@ -10,30 +10,6 @@ import { Provider, type ProviderId } from '@/lib/providers/types';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * A watched film leaves the watchlist (plan 0033 U7, owner decision
- * 2026-07-30): once a **film-like** log lands somewhere, the item is removed
- * from every watchlist that holds it, through the same removal verb the picker
- * fires — same routing, same per-provider guards (AniList's R36 fresh-read
- * guard sees the just-logged COMPLETED entry and skips rather than deleting
- * it; a Trakt copy the server already auto-removed reports `deleted: 0` as a
- * harmless skip; Letterboxd's state set is an idempotent 204 either way).
- *
- * **Movies only.** A TV log deliberately does not trigger this — one episode
- * watched does not mean the show stops being "to watch", so shows are removed
- * manually (the same reasoning as Trakt's own show/season caveat in
- * `invalidateAfterLog`). `isFilm` anime route as films, exactly like the log
- * fan-out itself.
- *
- * **Best-effort, cache-only discovery, never a surface.** Membership comes
- * from the gathered watchlist cache (`findWatchlistRemoval` — a cold cache is
- * a no-op, never a fetch, per `useIsWatchlisted`'s discipline), and the
- * removal's report is deliberately discarded: this is a derived write the
- * user didn't aim, so its failure must not fail the log, reopen the sheet, or
- * block the toast. A film that stays on the list because the removal failed
- * is visible on the next gather and removable by hand — a recoverable state,
- * unlike a log report polluted with outcomes the user never asked about.
- */
 export async function removeWatchedFromWatchlist(
   queryClient: QueryClient,
   item: NormalizedMediaItem,
@@ -51,14 +27,9 @@ export async function removeWatchedFromWatchlist(
   const removal = findWatchlistRemoval(data, item);
   if (removal == null) return;
 
-  // **Simkl is excluded by construction** (plan 0036). Its one status per item
-  // means the log that just landed already moved the film out of
-  // `plantowatch`, so this derived removal has nothing left to do — and firing
-  // it anyway is actively unsafe: `/sync/history/remove` deletes watch history,
-  // and it would arrive inside Simkl's ~20s per-user write lock, against a
-  // snapshot that may not have caught up with the log yet
-  // (docs/solutions/simkl-rate-limits-and-write-lock.md). The user's own
-  // removal, aimed from the picker, keeps its Simkl leg.
+  // Exclude Simkl: logging already moved the film out of `plantowatch`, and
+  // `/sync/history/remove` deletes watch history while colliding with Simkl's
+  // ~20s write lock (docs/solutions/simkl-rate-limits-and-write-lock.md).
   const providers = removal.entry.sources.filter((id) => id !== Provider.Simkl);
   if (providers.length === 0) return;
 
@@ -73,7 +44,5 @@ export async function removeWatchedFromWatchlist(
       removal.incomplete,
     );
   } catch {
-    // Best-effort by contract (docblock) — including the "nothing at all can
-    // be offered" throw, which for a derived write is just "nothing to do".
   }
 }

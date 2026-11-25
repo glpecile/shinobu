@@ -30,11 +30,6 @@ interface TrackingStatusPayload {
   queryClient: QueryClient;
 }
 
-/**
- * One adapter per provider that declares `trackingStatus: 'write'`. Each one
- * reads the entry fresh before it writes, never from the cache: a stale
- * status could move a completed show back to paused.
- */
 const TRACKING_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<TrackingStatusPayload>>> = {
   [Provider.AniList]: ({ item, status }) =>
     Effect.runPromise(setAniListTrackingStatus(anilistDeps(), item, status)),
@@ -55,7 +50,6 @@ const TRACKING_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<TrackingStatusP
 
 interface TrackingStatusVariables {
   status: TrackingStatus;
-  /** Narrows the routed targets, as the picker's toggles do. */
   providers: ProviderId[];
 }
 
@@ -63,7 +57,6 @@ function trackingMutationKey(itemId: string) {
   return ['tracking-status', itemId] as const;
 }
 
-/** Whether a pause or drop of this item is in flight anywhere in the tree. */
 export function useIsTrackingStatusPending(itemId: string): boolean {
   return (
     useMutationState({
@@ -72,11 +65,6 @@ export function useIsTrackingStatusPending(itemId: string): boolean {
   );
 }
 
-/**
- * Pause or drop: enrich, route to every selected provider that supports it,
- * fan out, invalidate, and reschedule notifications so a paused series stops
- * its reminders.
- */
 async function runTrackingStatusWrite(
   queryClient: QueryClient,
   item: NormalizedMediaItem,
@@ -96,8 +84,6 @@ async function runTrackingStatusWrite(
   }
 
   const report = await runProviderWrites(TRACKING_ADAPTERS, targets, { item: enriched, status, queryClient });
-  // The watchlist's invalidation covers every key a status reads: AniList's
-  // entry and current lists, Simkl's library, Hardcover's library and Up Next.
   invalidateAfterWatchlist(queryClient, enriched, report.succeeded);
   const serializdUser = getSerializdUsername();
   if (serializdUser != null && report.succeeded.includes(Provider.Serializd)) {
@@ -111,7 +97,6 @@ async function runTrackingStatusWrite(
   return { ...report, item: enriched, manual };
 }
 
-/** The pause and drop verb (#227), keyed on the item like the watchlist verbs. */
 export function useTrackingStatus(item: NormalizedMediaItem) {
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();

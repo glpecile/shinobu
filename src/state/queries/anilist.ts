@@ -53,10 +53,6 @@ const tokenStore: TokenStore = {
   clear: () => clearProviderSession(Provider.AniList),
 };
 
-/**
- * Real dependency wiring for AniList effects — the state → lib/providers
- * boundary, mirroring `traktDeps()`.
- */
 export function anilistDeps(): AniListDeps {
   return { fetch: httpFetch, tokens: tokenStore };
 }
@@ -116,7 +112,6 @@ export const anilistQueryKeys = {
    */
   currentMangaEntries: () =>
     [...anilistQueryKeys.all, 'current-manga-entries'] as const,
-  /** Continue Reading's settled slice of `currentMangaEntries`. */
   reading: () => [...anilistQueryKeys.currentMangaEntries(), 'reading'] as const,
   /**
    * Popular anime of one cour — keyed by season so a boundary crossing
@@ -131,28 +126,22 @@ export const anilistQueryKeys = {
   /** The explorer's infinite pages of the same read — page 1 is seeded from the row's entry. */
   seasonalAnimePages: (window: AnimeSeasonWindow, format: AnimeFormatFilter) =>
     [...anilistQueryKeys.seasonalAnimePagesRoot(), window.season, window.year, format] as const,
-  /** One anime by id — the cold deep link's fetch (`resolve-item.ts`). */
   anime: (mediaId: number) => [...anilistQueryKeys.all, 'anime', mediaId] as const,
   /** The viewer's recorded state for one media — reconcile reads this (plan 0011). */
   entryState: (mediaId: number) =>
     [...anilistQueryKeys.all, 'entry-state', mediaId, aniListSessionRevision()] as const,
-  /** Prequels, sequels, adaptations… plus recommendations and tags of one media. */
   relations: (mediaId: number) =>
     [...anilistQueryKeys.all, 'relations', mediaId] as const,
   /** Prefix over every search entry — details/[id] scans this for cache hits
    *  (the only route a manga result can resolve through). Shared root so the
    *  scan in `search-cache.ts` can't drift from the key built here. */
   searchRoot: () => [...SEARCH_QUERY_ROOTS.anilist],
-  /** Public title search (search screen's AniList section), per scope. */
   search: (query: string, limit: number, type: 'ANIME' | 'MANGA') =>
     [...anilistQueryKeys.searchRoot(), query, limit, type] as const,
-  /** One staff member's profile and credits, by AniList id (`/person/anilist/<id>`). */
   staff: (id: number) => [...anilistQueryKeys.all, 'staff', id] as const,
   staffSearch: (query: string) =>
     [...anilistQueryKeys.all, 'staff-search', query] as const,
-  /** A person's AniList staff id, resolved by name (plan 0035 R12). */
   staffId: (name: string) => [...anilistQueryKeys.all, 'staff-id', name] as const,
-  /** A studio's AniList id, resolved by name — the studio sheet's link. */
   studioId: (name: string) =>
     [...anilistQueryKeys.all, 'studio-id', name] as const,
 };
@@ -200,12 +189,7 @@ export function useAniListLibraryQuery(enabled: boolean) {
   });
 }
 
-/**
- * The viewer's currently-watching list with airing info (plan 0019 U2). The
- * viewer-id prefix request is cached forever under its own key (it never
- * changes for a session; the disconnect flow purges it), so steady-state
- * refreshes spend 1 request of the 30/min budget instead of 2.
- */
+/** The AniList viewer id is cached for the session. Disconnect purges it. */
 export function fetchCurrentAnimeEntries(
   queryClient: QueryClient,
 ): Promise<AniListCurrentEntry[]> {
@@ -315,7 +299,6 @@ export async function fetchReadingManga(queryClient: QueryClient): Promise<Norma
     .map((entry) => entry.item);
 }
 
-/** A Continue Reading card's item, for the details screen's cache-only resolution chain. */
 export function findInCurrentMangaCache(
   queryClient: QueryClient,
   id: string,
@@ -378,7 +361,6 @@ export function useSuspenseSeasonalAnimePagesQuery(
   });
 }
 
-/** Same window as the home feed's catalogue rows (`use-unified-feed.ts`). */
 const SEASONAL_STALE_MS = 15 * 60_000;
 
 /**
@@ -477,13 +459,7 @@ export async function fetchAniListSequel(
   }
 }
 
-/**
- * The connected AniList account (id + handle), on the same forever-cached key
- * the list reads already prime — so the Manage Trackers card showing "who am I
- * connected as" costs no extra request once anything else has run, and at most
- * one on a cold settings visit (the 30 req/min budget is the constraint here,
- * `docs/solutions/anilist-rate-limit-retry-storm.md`).
- */
+/** Manage Trackers shares the viewer read that list requests already prime. */
 export function useAniListViewerQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: anilistQueryKeys.viewer(),
@@ -529,10 +505,6 @@ export function useAniListSearchQuery(params: {
   });
 }
 
-/**
- * Staff by name for the search tab's People scope — the people TMDB doesn't
- * index (manga authors) and the only people search without a TMDB token.
- */
 export function useAniListStaffSearchQuery(params: {
   query: string;
   enabled: boolean;
@@ -599,22 +571,8 @@ export function useAniListEpisodesQuery(params: {
 }
 
 /**
- * The AniList staff id for a person's name, or `null` when nothing matches
- * confidently (plan 0035 R12/R13) — what turns "Open in AniList" from a link
- * into no link at all.
- *
- * Three properties are load-bearing:
- *
- * - **Lazy.** `enabled` is the sheet's own open flag, so a Cast rail of 20 cards
- *   costs 0 requests; only the one a user long-pressed resolves. Firing per-pill
- *   on render is what the 30 req/min budget forbids.
- * - **Public.** No token, so this works before AniList is connected — though the
- *   pill itself only renders while it is.
- * - **Validated.** `pickPersonMatch` is the house matcher (exact folded name,
- *   then a word-order swap for family-name-first romanizations), and its fuzzy
- *   top-hit fallback is deliberately **discarded** here: an actor AniList has
- *   never heard of would otherwise deep-link to whoever came back first. A
- *   near-name is a wrong page, and R13 says hide instead.
+ * Resolve an AniList staff id on demand. Require an exact folded name or reversed word order
+ * before linking.
  */
 export function useAniListStaffIdQuery(params: {
   name: string;
@@ -636,7 +594,6 @@ export function useAniListStaffIdQuery(params: {
   });
 }
 
-/** The studio half of `useAniListStaffIdQuery`, rule for rule. */
 export function useAniListStudioIdQuery(params: {
   name: string;
   enabled?: boolean;
@@ -674,9 +631,6 @@ function exactNameMatchId(
   return match.id;
 }
 
-/**
- * Suspense variant for mounting under `SuspenseSection` on the detail screen.
- */
 export function useSuspenseAniListEpisodesQuery(params: { mediaId: number }) {
   const { mediaId } = params;
   const queryClient = useQueryClient();

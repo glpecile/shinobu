@@ -69,7 +69,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-/** What the field searches for. Rides the URL as `?scope=`, like `?q=`. */
 const SCOPES = [
   {
     value: 'titles',
@@ -105,12 +104,6 @@ function resultMeta(item: NormalizedMediaItem): string {
     .join(' · ');
 }
 
-/**
- * A result row carries the same actions as a feed card (plan 0028 R2): press
- * opens details, long-press (web: the hover ⋯) opens the actions dialog, so a
- * title you searched for can be logged without a round trip through its details
- * page. `ActionableRow` is the shared shell the diary already uses.
- */
 function SearchResultRow({
   item,
   byline,
@@ -118,7 +111,6 @@ function SearchResultRow({
   onActions,
 }: {
   item: NormalizedMediaItem;
-  /** Who made it, for results whose title alone is ambiguous (books). */
   byline?: string;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
@@ -169,7 +161,6 @@ function SearchResultRow({
   );
 }
 
-/** A person or studio hit: a face or a logo, a name, and a press to its page. */
 function EntityResultRow({
   row,
   onPress,
@@ -192,7 +183,6 @@ function EntityResultRow({
           textClassName="text-sm"
         />
       ) : row.image !== '' ? (
-        // Same treatment as the studio page's logo: contain, on the logo tile.
         <Image
           className="w-12 h-12 rounded bg-logo-tile p-1"
           contentFit="contain"
@@ -249,11 +239,6 @@ function SectionHeader({
   );
 }
 
-/**
- * One flat virtualized list holds every provider section — headers and status
- * rows are list items too, so Legend List keeps virtualizing long result sets
- * instead of nesting per-section lists.
- */
 type SearchRow =
   | { kind: 'header'; key: string; provider: IconSourceId; label: string }
   | { kind: 'result'; key: string; item: NormalizedMediaItem; byline?: string }
@@ -297,7 +282,6 @@ function sectionRows<Hit>(
     return [header, { kind: 'error', key: `${provider}-error` }];
   }
   const items = search.data ?? [];
-  // A section with nothing to say disappears — the other one keeps the screen.
   if (items.length === 0) return [];
   return [header, ...items.map(toRow)];
 }
@@ -327,49 +311,26 @@ function SearchScreen() {
   const inputRef = useRef<TextInputInstance>(null);
   const scrollRef = useRef<ScrollViewInstance>(null);
   const reduceMotion = useReducedMotion();
-  // The same actions dialog the feed and diary open — quick log, details, and
-  // the provider links, from a result row.
   const { openActions, sheetProps } = useCardActions();
 
-  // The native "search" tab role only auto-focuses the field on iOS (its
-  // dedicated search-tab UIKit affordance) — Android has no equivalent, so
-  // tapping an already-active search tab did nothing. `onSearchFocusRequest`
-  // fires on every tap of that tab (see app/(tabs)/_layout.tsx) — and on web
-  // for every search tab press and ⌘K (see components/app-shell) — so this
-  // opens the keyboard the same way on every platform.
+  // Only iOS's search tab role auto-focuses the field; Android and web need explicit focus requests.
   useLayoutEffect(() => {
     let handle: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = onSearchFocusRequest(() => {
       const field = inputRef.current;
       if (field == null) return;
-      // Android keeps the field *focused* after the keyboard is dismissed
-      // (back gesture, scroll-away), so `.focus()` on an already-focused
-      // input is a no-op and the keyboard never returns — blur first to force
-      // a real focus transition. iOS's search-tab role handles its own
-      // re-focus, so it's left alone.
-      //
-      // `Keyboard.isVisible()` is what keeps that blur scoped to the case it
-      // exists for. Focused *with* the keyboard already up is the steady state
-      // after any tap, so re-tapping the search tab used to blur (keyboard
-      // slides out) and re-focus (slides back in) — the keyboard visibly
-      // coming up twice on a double tap, with nothing gained (owner report
-      // 2026-08-18). Nothing to do there: the field already has the focus this
-      // request asks for.
+      // Android keeps TextInput focused after keyboard dismiss, so .focus() is a no-op unless blurred first; skip when keyboard is already visible.
       if (process.env.EXPO_OS === 'android' && field.isFocused()) {
         if (Keyboard.isVisible()) return;
         field.blur();
       }
-      // The shell commits web navigation synchronously; the layout subscription
-      // is ready before its gesture handler requests focus. Firefox can retain
-      // DOM focus after dismissing the keyboard, so force a fresh transition.
+      // Firefox can retain DOM focus after dismissing the keyboard, so blur before focusing.
       if (process.env.EXPO_OS === 'web') {
         if (field.isFocused()) field.blur();
         field.focus();
         return;
       }
-      // Deferred past the tab-press frame: focusing synchronously inside the
-      // native tab transition gets swallowed (and the blur above needs a tick
-      // to land before the re-focus counts as a transition).
+      // Defer past the native tab transition frame (and the Android blur) or focus gets swallowed.
       clearTimeout(handle);
       handle = setTimeout(() => inputRef.current?.focus(), 50);
     });
@@ -379,9 +340,6 @@ function SearchScreen() {
     };
   }, []);
 
-  // A real debounce (not useDeferredValue, which settles per keystroke and
-  // fired a request for every character): the query — and the shareable
-  // ?q= URL param — trail the input by one quiet interval.
   useEffect(() => {
     if (input === query) return undefined;
     const handle = setTimeout(() => {
@@ -391,20 +349,12 @@ function SearchScreen() {
     return () => clearTimeout(handle);
   }, [input, query, router]);
 
-  // Movies & TV comes from TMDB (builder token, no tracker needed) whenever
-  // the token exists; Trakt text search fires only as the fallback when the
-  // build has no TMDB token but *does* have an active Trakt client key (env
-  // or BYO). Post-detachment most builds ship no Trakt key at all, and an
-  // unauthenticated Trakt search is a guaranteed 4xx — the failure the old
-  // always-Trakt section surfaced as a permanent error row.
   const tmdbAvailable = useTmdbToken() !== '';
   const moviesTvSource: IconSourceId | null = tmdbAvailable
     ? 'tmdb'
     : getClientIdForProvider(Provider.Trakt) !== ''
       ? Provider.Trakt
       : null;
-  // Studios exist on TMDB only, so without a token the scope isn't offered,
-  // and a shared `?scope=studios` link falls back to titles.
   const scopes = SCOPES.filter(
     (entry) => entry.value !== 'studios' || tmdbAvailable,
   );
@@ -412,7 +362,6 @@ function SearchScreen() {
   const reading = scope.value === 'reading';
   const titleSearch = scope.value === 'titles' || reading;
 
-  // Reading searches AniList alone and never asks TMDB or Trakt.
   const tmdbSearch = useTmdbSearchQuery({
     query,
     enabled: scope.value === 'titles' && moviesTvSource === 'tmdb',
@@ -435,8 +384,6 @@ function SearchScreen() {
     query,
     enabled: scope.value === 'people',
   });
-  // Books join the Reading scope (plan 0119 KTD-3), only with a Hardcover
-  // session: every Hardcover read needs one.
   const booksSearchable = useConnectedProviders().includes(Provider.Hardcover);
   const bookSearch = useHardcoverBookSearchQuery({
     query,
@@ -530,7 +477,6 @@ function SearchScreen() {
   const rows = sections.flatMap((section) => section.rows);
   const fetching = searchable && sections.some((section) => section.search.isFetching);
 
-  // The screen below the field is one of five mutually exclusive states.
   const state = !searchable
     ? 'idle'
     : sections.every((section) => section.search.isLoading)
@@ -551,10 +497,6 @@ function SearchScreen() {
     pushRoute(routes.details(item.id, item.type));
   }
 
-  // Resets all three representations of the query at once. Leaving `query`
-  // behind would keep the stale results mounted until the debounce catches up
-  // (and re-push the old `?q=`), so the button clears input, debounced query,
-  // and route param together. SearchField restores focus for the next search.
   function clearSearch() {
     setInput('');
     setQuery('');
@@ -584,15 +526,12 @@ function SearchScreen() {
         />
       </View>
 
-      {/* Inset before keyboard avoidance so the tab bar and keyboard overlap
-          aren't added together. Android's tab host already insets content. */}
+      {/* Inset before KeyboardAvoidingView so tab bar and keyboard insets don't stack; Android's tab host already insets. */}
       <SafeAreaView edges={{ bottom: process.env.EXPO_OS === 'ios' }} style={{ flex: 1 }}>
         <KeyboardAvoidingView automaticOffset behavior="padding" className="flex-1">
           {/* The Fab anchors to this frame: an absolute child of the padded view
               sits on its padding box, under the keyboard. */}
           <View className="flex-1">
-            {/* No entrance between states: typing drives them many times a
-                day, so each one cuts. */}
             <View className="flex-1">
               {state === 'idle' ? (
                 scope.value === 'titles' ? (
@@ -622,8 +561,6 @@ function SearchScreen() {
                 ) : (
                   <View className="flex-1">
                     <PosterWall key={scope.value} subject={scope.value} />
-                    {/* Where the wall's fade turns solid, as on Home: low on
-                        phones (clear of the Fab), left on wide screens. */}
                     <View className="flex-1 justify-end md:justify-center px-6 pb-24 md:px-16 md:pb-16">
                       <Text className="text-5xl text-muted mb-4">忍</Text>
                       <Text className="text-2xl font-display text-foreground">Search</Text>
@@ -659,9 +596,6 @@ function SearchScreen() {
                   ) : null}
                 </CenteredNotice>
               ) : (
-                // While a newer query is in flight the previous results stay visible
-                // (keepPreviousData), dimmed so the staleness is legible — and the
-                // dim crossfades, since it changes twice per search.
                 <AnimatedView
                   className="flex-1"
                   style={{
@@ -676,8 +610,6 @@ function SearchScreen() {
                   }}
                 >
                   <List
-                    // Clear the native bottom tab bar (unmeasurable height) so the last
-                    // result isn't hidden behind it; web has no tab bar.
                     contentContainerStyle={
                       process.env.EXPO_OS === 'web' ? undefined : { paddingBottom: 96 }
                     }
@@ -739,10 +671,6 @@ function SearchScreen() {
           />
         ))}
       </PickerSheet>
-      {/* `canHide={false}`: a search result is not a feed entry, and hiding one
-          would quietly suppress it everywhere. `providerLinks="connected"`
-          because a result's source provider is an accident of which search
-          answered — what the user wants is the tracker they actually use. */}
       <CardActionsSheet
         {...sheetProps}
         canHide={false}

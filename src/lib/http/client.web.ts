@@ -4,5 +4,4 @@ import type { HttpFetch } from './types';
 // `const f = fetch` throws "Illegal invocation" when called in browsers.
 export const httpFetch: HttpFetch = (input, init) => globalThis.fetch(input, init);
 
-// Launch replay is native-only.
 export function endLaunchReplay() {}

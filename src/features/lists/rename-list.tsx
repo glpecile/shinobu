@@ -61,10 +61,6 @@ function RenameForm({ target, description: saved, onDone }: { target: ListEditTa
   );
 }
 
-/**
- * The owner's rename control for a list's toolbar, and the sheet it opens. Icon-only on a phone, where the toolbar can't fit its label.
- * Pass a Hardcover list's `description` to edit it beside the name; other providers save only the name.
- */
 export function RenameList({ target, description }: { target: ListEditTarget; description?: string }) {
   const [open, setOpen] = useState(false);
   const compact = useWindowDimensions().width < 640;

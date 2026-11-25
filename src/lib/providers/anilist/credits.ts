@@ -26,7 +26,6 @@ type AniListCharacterEdge = {
   voiceActors: Array<AniListPerson | null> | null;
 } | null;
 
-/** A character with the fields a manga's Characters rail shows. */
 export type AniListCharacterRoleEdge = {
   /** CharacterRole enum: MAIN, SUPPORTING, BACKGROUND. */
   role: string | null;
@@ -167,8 +166,6 @@ function normalizeStudios(
   for (const studio of nodes ?? []) {
     if (studio == null || studio.name == null || studio.name === '') continue;
     const id = `anilist-studio-${studio.id}`;
-    // The numeric id rides along (plan 0035 R12): it is what deep-links the
-    // studio sheet straight to anilist.co/studio/{id}, no name search needed.
     if (!studios.has(id)) {
       studios.set(id, {
         id,
@@ -180,11 +177,6 @@ function normalizeStudios(
   return [...studios.values()];
 }
 
-/**
- * Anime credits for a detail view. AniList models cast as characters with one
- * or more voice actors, so the visible person is the voice actor and the
- * character remains the card subtitle.
- */
 export function getAnimeCredits(
   deps: AniListDeps,
   params: { mediaId: number },

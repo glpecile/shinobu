@@ -6,23 +6,12 @@ import { openExternalUrl } from '@/lib/open-external-url';
 export interface NewTabPress {
   /** Spread onto the pressable's *wrapper* — pointer-down bubbles up to it. */
   onPointerDown: (event: PointerEvent) => void;
-  /** True when the press was consumed by opening a new tab — bail out then. */
   opened: () => boolean;
 }
 
 /**
- * Web-only ⌘/Ctrl+click → open `href` in a new tab, for rows and cards that
- * navigate but can't *be* anchors: the web Presstable always renders a
- * button, and its `onPress` takes no event. So the
- * modifier state is latched on pointer-down (it bubbles up from the pressable)
- * and read back when the press lands.
- *
- *   const newTab = useNewTabPress(routes.details(item.id));
- *   <View onPointerDown={newTab.onPointerDown}>
- *     <PresstableScale onPress={() => { if (newTab.opened()) return; onPress(); }}>
- *
- * On native `opened()` is always false — the gesture doesn't exist there — so
- * call sites need no platform branch of their own.
+ * Web-only ⌘/Ctrl+click to open `href` in a new tab when the pressable's `onPress`
+ * receives no pointer event. Always returns `false` from `opened()` on native.
  */
 export function useNewTabPress(href: string): NewTabPress {
   const modifierHeldRef = useRef(false);

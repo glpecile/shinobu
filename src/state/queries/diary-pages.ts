@@ -7,21 +7,9 @@ import {
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
-/**
- * The unified diary is **one** infinite query (the Up Next / watchlist gather
- * shape): its `queryFn` fans out to every connected provider and each page
- * carries one slice per provider that advanced. One loading state, one merge
- * per page, so the screen never sees a half-merged feed
- * (docs/solutions/diary-reshuffles-while-providers-land.md). This module is
- * the page shape plus everything derived from it, RN- and Effect-free so the
- * cursor logic and the details-screen cache scan stay unit-testable without
- * pulling the http client.
- */
+/** The infinite diary query fetches one slice per advancing provider on each page. */
 
-/** Root of the one diary query — what the log fan-out invalidates and the
- *  details-screen cache scan reads. Keep it as specific as the query itself:
- *  a broader prefix once matched a sibling infinite query whose pages were
- *  media items, and the scan crashed the details screen reading `.item`. */
+/** Keep this prefix specific to the diary feed. Its consumers expect infinite pages. */
 export const DIARY_QUERY_ROOT = ['diary'] as const;
 
 export const diaryQueryKeys = {
@@ -41,7 +29,6 @@ export const diaryQueryKeys = {
       letterboxdUsername,
       serializdUsername,
     ] as const,
-  /** One film's dated plays (`useFilmPlaysQuery`) — under the root, so a log refreshes it. */
   filmPlays: (providers: readonly ProviderId[], ids: NormalizedMediaItem['externalIds']) =>
     [...DIARY_QUERY_ROOT, 'film-plays', providers.join(','), ids] as const,
   /** The TMDB show ids of the loaded AniList series logs (`showTmdbIds`). */
@@ -49,10 +36,8 @@ export const diaryQueryKeys = {
     [...DIARY_QUERY_ROOT, 'show-tmdb-ids', anilistIds.join(',')] as const,
 };
 
-/** The page param: which page each *advancing* provider fetches next. */
 export type DiaryCursor = Partial<Record<ProviderId, number>>;
 
-/** One provider's fetch within a page. */
 export interface DiarySlice {
   entries: NormalizedDiaryEntry[];
   /** The page to fetch after this one; undefined once exhausted. A failed
@@ -126,7 +111,6 @@ export function nextDiaryCursor(pages: readonly DiaryPage[]): DiaryCursor | unde
   return Object.keys(cursor).length > 0 ? cursor : undefined;
 }
 
-/** Every diary entry in every loaded page of the cached diary query. */
 export function cachedDiaryEntries(queryClient: QueryClient): NormalizedDiaryEntry[] {
   return queryClient
     .getQueriesData<{ pages?: DiaryPage[] }>({ queryKey: DIARY_QUERY_ROOT })

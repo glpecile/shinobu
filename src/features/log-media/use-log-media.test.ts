@@ -8,13 +8,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import type { LogMediaVariables, WriteAdapter } from './fan-out';
 
-/**
- * The plan 0027 chain end to end at the decision layer: enrich → translate →
- * route → reconcile → the exact variables each adapter sees. Seams faked the
- * way `enrich.test.ts` does — `state/queries/mapping` owns the provider deps
- * (MMKV tokens, the native fetch client) that don't load under bun, so faking
- * it keeps this a test of *which numbers reach which provider*.
- */
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -37,10 +30,6 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
-// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
-// graph, whose auth import reaches expo-crypto — mirror the surface it
-// consumes instead of loading the whole expo package under bun (the
-// `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
@@ -60,7 +49,6 @@ let laterCours = new Map<number, number[]>();
 const mappingCalls: string[] = [];
 
 mock.module('@/state/queries/mapping', () => ({
-  // Enrichment already has every id it needs on these fixtures.
   cachedAniZipIds: (_client: unknown, lookup: { anilistId?: number }) =>
     Promise.resolve(courIds.get(lookup.anilistId ?? -1) ?? prequelIds),
   cachedAniListFilmId: () => Promise.resolve(null),
@@ -142,7 +130,6 @@ test('a manga chapter range costs the entry read and one save at its last chapte
     id: 'anilist-100', title: 'Paper Moon Couriers', coverImage: '', type: 'MANGA',
     currentProgress: 5, progressUnit: 'chapter', lastUpdated: '', externalIds: { anilist: 100 },
   };
-  // A releasing manga: AniList has no chapter count, so nothing caps the range.
   const media = { type: 'MANGA', episodes: null, chapters: null, mediaListEntry: { status: 'CURRENT', progress: 5, repeat: 0 } };
   const sent: { query: string; variables: unknown }[] = [];
   httpHandler = async (_input, init) => {
@@ -153,7 +140,6 @@ test('a manga chapter range costs the entry read and one save at its last chapte
       : { data: { Media: media } });
   };
   const queryClient = client();
-  // The log button's entry query already holds the reconcile read.
   seedAniList(queryClient, 100, { status: 'CURRENT', progress: 5 });
 
   const plan = await planLogWrite(queryClient, { item, entryEpisodes: [6, 7, 8, 9, 10, 11, 12] }, ['anilist']);
@@ -209,7 +195,6 @@ function client(): QueryClient {
   });
 }
 
-/** Pre-seed the reconcile reads so nothing reaches the network. */
 function seedTrakt(queryClient: QueryClient, traktId: number, keys: string[]) {
   queryClient.setQueryData(traktQueryKeys.showProgress(traktId), {
     watchedKeys: new Set(keys),
@@ -227,7 +212,6 @@ function seedAniList(
   });
 }
 
-/** Records exactly what each adapter was handed, then reports success. */
 function recordingAdapters(seen: Map<ProviderId, LogMediaVariables>) {
   const make = (provider: ProviderId): WriteAdapter<LogMediaVariables> => (variables) => {
     seen.set(provider, variables);
@@ -302,15 +286,10 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
       'anilist',
     ]);
 
-    // AniList is *not* dropped: the old non-season-1 guard only applies to
-    // canonical-domain input now (R6/KTD2).
     expect(plan.targets).toEqual(['trakt', 'anilist']);
     expect(plan.mappingSkips.size).toBe(0);
-    // ani.zip says S02E03, but Trakt/TMDB hold one 24-episode season, so the
-    // episode the trackers can actually resolve is S01E15 (absolute).
     expect(plan.variables.episodes).toEqual([{ season: 1, number: 15 }]);
     expect(plan.variables.entryEpisodes).toEqual([3]);
-    // The caller's fields never survive as their own — one domain each.
     expect(plan.variables.episode).toBeUndefined();
 
     const seen = new Map<ProviderId, LogMediaVariables>();
@@ -321,7 +300,7 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
   });
 
   test('an unmappable entry skips Trakt and Serializd with a reason, AniList still writes', async () => {
-    episodeMap = null; // ani.zip down, or no table for this entry yet.
+    episodeMap = null;
     const queryClient = client();
     const item = animeSeries();
     seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
@@ -333,7 +312,6 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     ]);
 
     expect([...plan.mappingSkips.keys()]).toEqual(['trakt', 'serializd']);
-    // No canonical batch at all — nothing downstream can guess a season.
     expect(plan.variables.episodes).toBeUndefined();
     expect(plan.variables.entryEpisodes).toEqual([3]);
 
@@ -344,8 +322,6 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
       plan.variables,
     );
 
-    // The blocked adapters never ran; their skips carry the reason plan 0022's
-    // manual link keys off, and the fan-out did not throw.
     expect(seen.has('trakt')).toBe(false);
     expect(seen.has('serializd')).toBe(false);
     expect(seen.get('anilist')?.entryEpisodes).toEqual([3]);
@@ -354,8 +330,6 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     expect(result.outcomes[0]).toMatchObject({ provider: 'trakt', status: 'skipped' });
     expect((result.outcomes[0] as { reason: string }).reason).toBeTruthy();
 
-    // R3 → plan 0022 R6: because the skip carries a reason, it splits out of
-    // the "already in sync" copy and earns its own manual deep link.
     const { reconcileSkipped, reasonedSkips } = splitSkippedOutcomes(result.outcomes);
     expect(reconcileSkipped).toEqual([]);
     expect(reasonedSkips.map((skip) => skip.provider)).toEqual(['trakt', 'serializd']);
@@ -375,7 +349,6 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
 
     expect(mappingCalls).toEqual([]);
     expect(plan.targets).toEqual(['anilist']);
-    // No skip outcome for a provider that was never a target (R3).
     expect(plan.mappingSkips.size).toBe(0);
     expect(plan.variables.entryEpisodes).toEqual([3]);
     expect(plan.variables.episodes).toBeUndefined();
@@ -435,8 +408,6 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
   });
   test.each(['mapped', 'missing-map', 'missing-mal'] as const)('a later TMDB season resolves its cour safely: %s', async (mapping) => {
-    // Real Cyberpunk: Edgerunners data. TMDB 105248 holds both cours as S1 and
-    // S2; AniList 120377 is S1 and 195539 (MAL 61990), related as OTHER, is S2.
     courIds = new Map([
       [120377, { anilist: 120377, tvdb: 384541, mal: 42310 }],
       [195539, { anilist: 195539, tvdb: 384541, mal: 61990 }],
@@ -483,10 +454,6 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
     const item = animeSeries();
     seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
 
-    // AniList + Simkl only: no canonical-numbering target, so the R7
-    // short-circuit still skips the ~1 MB ani.zip document — Simkl's anime
-    // write speaks the entry/AniDB domain natively (KTD-6) and is deliberately
-    // NOT in CANONICAL_EPISODE_PROVIDERS.
     const plan = await planLogWrite(queryClient, { item, entryEpisodes: [3] }, [
       'anilist',
       'simkl',
@@ -499,8 +466,6 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
     const seen = new Map<ProviderId, LogMediaVariables>();
     await fanOutLog(recordingAdapters(seen), plan.writeTargets, plan.variables);
     expect(seen.get('simkl')?.entryEpisodes).toEqual([3]);
-    // The adapter itself resolves no map either: entry-domain input already is
-    // the domain Simkl counts by, so `cachedAniZipEpisodeMap` is never asked.
     const entries: unknown[] = [];
     const adapter = simklLogAdapter(queryClient, (entry) => {
       entries.push(entry);
@@ -512,7 +477,7 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
   });
 
   test('a translation miss skips Trakt with a reason while Simkl still writes the entry batch', async () => {
-    episodeMap = null; // ani.zip down, or no table for this entry yet.
+    episodeMap = null;
     const queryClient = client();
     const item = animeSeries();
     seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
@@ -523,8 +488,6 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
       'simkl',
     ]);
 
-    // Only the canonical-domain providers are mapping-blocked (R3); Simkl's
-    // entry-domain write is unaffected by the miss.
     expect([...plan.mappingSkips.keys()]).toEqual(['trakt']);
 
     const seen = new Map<ProviderId, LogMediaVariables>();
@@ -542,16 +505,12 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
     const queryClient = client();
     const item = animeSeries();
 
-    // Canonical origin (a TMDB-shaped surface): S02E03, not entry episode 3.
     const plan = await planLogWrite(
       queryClient,
       { item, episodes: [{ season: 2, number: 3 }] },
       ['simkl'],
     );
 
-    // A season-2+ canonical batch has no entry-domain reading — deriving one
-    // would hand Simkl "entry episode 3" for an episode that is not (the
-    // wrong-identity write plan 0027 bans).
     expect(plan.variables.entryEpisodes).toBeUndefined();
     expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
 
@@ -562,8 +521,6 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
     });
     await adapter(plan.variables);
 
-    // The adapter fetched the same cached table the forward translation uses
-    // and handed it to writes.ts for the reverse map (KTD-6).
     expect(mappingCalls).toEqual(['episode-map:185660']);
     expect(entries[0]).toMatchObject({ episodes: [{ season: 2, number: 3 }] });
     expect(entries[0].episodeMap).toBe(episodeMap);
@@ -580,8 +537,6 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
       ['anilist', 'simkl'],
     );
 
-    // Plan 0011's standing rule: a canonical season-1 batch IS the entry's own
-    // numbering, so both entry-domain consumers read it directly.
     expect(plan.variables.entryEpisodes).toEqual([3]);
 
     const entries: Array<{ episodeMap?: unknown }> = [];
@@ -619,9 +574,6 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
   test('early-season history does not satisfy a later-episode intent', async () => {
     const queryClient = client();
     const item = animeSeries();
-    // The user watched the show's first three episodes; this entry's episode 3
-    // is the show's fifteenth. Before plan 0027 it arrived as S1E3 and was
-    // wrongly skipped as "already in sync".
     seedTrakt(queryClient, 999, ['1-1', '1-2', '1-3']);
     seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
 
@@ -630,7 +582,6 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
       'anilist',
     ]);
 
-    // No false in-sync skip: both providers are behind and both get written.
     expect(plan.skipped).toEqual([]);
     expect(plan.writeTargets).toEqual(['trakt', 'anilist']);
     expect(plan.rewatch).toBe(false);
@@ -647,9 +598,6 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
       'anilist',
     ]);
 
-    // The mapping-skipped provider is excluded from the parity computation —
-    // it is neither in sync nor behind. It must not suppress the rewatch, and
-    // the rewatch must not imply all-provider parity.
     expect(plan.rewatch).toBe(true);
     expect(plan.skipped).toEqual([]);
     expect(plan.writeTargets).toEqual(['trakt', 'anilist']);
@@ -705,7 +653,6 @@ describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
       const url = String(input);
       if (init?.method === 'POST' && url.includes('/sync/history')) {
         posts += 1;
-        // The server commits the play, then the response times out.
         watched = [{
           plays: 1, last_watched_at: '2026-11-01T00:00:00.000Z', last_updated_at: '2026-11-01T00:00:00.000Z',
           movie: { title: 'Inception', year: 2010, ids: { trakt: 1, tmdb: 27205 } },
@@ -716,7 +663,6 @@ describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
       return new Response('{}');
     };
 
-    // The same steps useLogMedia's mutationFn runs, against the real Trakt adapter.
     const first = await planLogWrite(queryClient, { item: inception }, ['trakt']);
     const report = await fanOutLog(logAdapters(queryClient), first.writeTargets, first.variables);
     expect(report.failed).toEqual(['trakt']);
@@ -851,7 +797,6 @@ describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
   });
 });
 
-/** A one-book library: `entry` answers the entry read, and each mutation is recorded. */
 async function connectHardcover(onMutation: (variables: Record<string, unknown>) => Response) {
   const { setProviderSession } = await import('@/state/session/tokens');
   setProviderSession('hardcover', { accessToken: 'tok' });
@@ -861,7 +806,6 @@ async function connectHardcover(onMutation: (variables: Record<string, unknown>)
     if (body.query.startsWith('query BookEntry')) {
       return Response.json({ data: { me: [{ user_books: library.entry == null ? [] : [library.entry] }] } });
     }
-    // The reading bridge's book read: a book it can't read bridges nowhere.
     if (!body.query.trimStart().startsWith('mutation')) return Response.json({ data: { books_by_pk: null } });
     return onMutation(body.variables);
   };
@@ -910,7 +854,6 @@ describe('the Hardcover leg of the log fan-out (plan 0117 B3)', () => {
     let mutations = 0;
     const library = await connectHardcover(() => {
       mutations += 1;
-      // The server commits the finish, then the response times out.
       library.entry = { id: 456, status_id: 3, user_book_reads: [{ id: 12, finished_at: '2026-11-12' }] };
       return new Response('', { status: 504 });
     });

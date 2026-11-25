@@ -14,17 +14,7 @@ import { getAllItems } from './reads';
 
 const provider = Provider.Simkl;
 
-/**
- * One item's worth of a Simkl history batch — deliberately the same fields the
- * `LOG_ADAPTERS` seam hands every adapter (`features/log-media/use-log-media.ts`),
- * so U6's wiring is a passthrough: `{ item, episode/episodes, entryEpisodes,
- * watchedAt }` plus the one Simkl-specific input, the ani.zip numbering table.
- *
- * `logToSimkl` takes an *array* of these (plan 0034 KTD-3): every Simkl write
- * endpoint takes arrays and Simkl serialises writes per user behind a
- * ~20-second lock, so everything one fan-out produces must land as ONE POST —
- * arrays, never loops.
- */
+/** One item in a Simkl history batch, with an optional anime numbering table. */
 export interface SimklLogEntry {
   item: NormalizedMediaItem;
   /** A single canonical episode watch. Mutually exclusive with `episodes`. */
@@ -206,13 +196,8 @@ interface SimklNotFound {
 }
 
 /**
- * Every unmatched entry the summary reports, whatever its level: the whole-item
- * buckets (movies/shows/anime) AND the sub-item ones (seasons/episodes) an
- * episode-scoped write can miss on. A `shows[]` entry whose episodes come back
- * under `not_found.episodes` is a failed log exactly like an unmatched movie —
- * it must not read as a bare ok, or the fan-out's manual-link affordance never
- * fires. Mirrors the remove adapter, whose `deleted` sum already counts
- * episodes, and the Trakt history adapter's not_found sum.
+ * Count unmatched sub-items as well as whole items. An episode miss must produce a manual
+ * link.
  */
 function notFoundCount(notFound: SimklNotFound | null | undefined): number {
   if (notFound == null) return 0;
@@ -312,24 +297,8 @@ export function simklEntryDropReason(entry: SimklLogEntry): string | null {
 }
 
 /**
- * The Simkl mark-watched adapter (plan 0034 R3/R4): one `POST /sync/history`
- * per invocation, whatever the batch holds — `movies[]` whole-item, `shows[]`
- * episode-level (`seasons[].episodes[]`), anime under `anime[]` in AniDB
- * numbering. KTD-3 is the shape's reason: Simkl's ~20s per-user write lock
- * turns N sequential POSTs into a `400 rate_limit` collision, so batching is
- * correctness, not politeness. That 400 (and 429) surfaces as
- * `ProviderRateLimitError` from `simklHttp` and propagates untouched — no
- * retry lives here or above (the AniList lesson,
- * docs/solutions/anilist-rate-limit-retry-storm.md).
- *
- * Entries that can't be built (no usable id, an untranslatable anime batch)
- * are dropped with their reason rather than failing the POST for the rest;
- * nothing buildable at all is a reasoned skip with no request.
- *
- * Anime series emit `seasons: [{number: 1, episodes}]`: an AniDB-convention
- * entry is one sequential run, and the docs' anime idiom — a top-level
- * `episodes[]` — is documented as auto-wrapping to exactly this season-1 form
- * (api.simkl.org add-to-history, fetched 2026-07-31).
+ * Batch all history entries in one POST to respect Simkl's per-user write lock. Anime uses
+ * AniDB numbering. Unbuildable entries report a reason.
  */
 export function logToSimkl(
   deps: SimklDeps,
@@ -416,19 +385,7 @@ function unroutableError(item: NormalizedMediaItem): ProviderDecodeError {
   });
 }
 
-/**
- * The Simkl watchlist-add adapter (plan 0034 R5): `POST /sync/add-to-list`
- * with a per-item `to: 'plantowatch'` — the docs put `to` inside each
- * movies/shows/anime item, not at the body's top level (api.simkl.org
- * add-to-list, fetched 2026-07-31; the plan's top-level sketch predates the
- * verification). `plantowatch` is the one status Shinobu's watchlist verb maps
- * to, and the only sensible movie status anyway — movies can't be
- * `watching`/`hold` (Simkl silently rewrites those to `completed`).
- *
- * The response carries `added`/`not_found` arrays but no `existing` signal, so
- * a re-add is upsert-shaped and reports as a plain `ok` — the Trakt-style
- * "already on your watchlist" story has nothing to read here.
- */
+/** Put the target status on each item. Simkl does not report whether an add already existed. */
 export function addToSimklWatchlist(
   deps: SimklDeps,
   item: NormalizedMediaItem,
@@ -559,33 +516,9 @@ function destructiveSkipReason(item: NormalizedMediaItem): string {
 }
 
 /**
- * The Simkl watchlist-**remove** adapter (plan 0034 R5, Open Question 1 —
- * resolved against the live docs, 2026-07-31; flipped live by plan 0036).
- * There is **no** `/sync/remove-from-list` sibling and no status-only removal:
- * api.simkl.org documents `POST /sync/history/remove` as the canonical
- * un-track path, and a *whole-item* body (ids, no `seasons`/`episodes`)
- * removes the item from the user's library **entirely** — the plan-to-watch
- * entry, any watch history, and the rating. (A legacy `to: "remove"` on
- * add-to-list exists but is undocumented and deprecated.)
- *
- * That is why this is the one removal adapter with a **fresh in-effect read**
- * before the write — plan 0031 R36's invariant, which until now only AniList
- * needed:
- *
- * - It is what makes the destructive case *knowable*. Simkl holds one status
- *   per item, so a `plantowatch` row normally has no history at all; the
- *   dangerous row is the one a user manually moved back to plan-to-watch after
- *   watching part of it, and only a live read can tell the two apart.
- * - Absent from the fresh `plantowatch` snapshot means the item is not on the
- *   watchlist any more (a log moved it to `watching`/`completed`, or another
- *   device removed it). That is a reasoned skip with **no POST**, which is
- *   also what keeps a derived post-log removal out of Simkl's ~20s per-user
- *   write lock (docs/solutions/simkl-rate-limits-and-write-lock.md).
- *
- * With membership proven, `deleted: 0` is **not** a skip: a plan-to-watch row
- * with no history has no history rows to delete, and reporting that as "wasn't
- * in your library" would call every clean removal a no-op. `not_found` stays
- * the failure signal.
+ * A whole-item removal clears watchlist membership, history, and rating. Check current
+ * plan-to-watch membership and require separate confirmation for history. A confirmed bare
+ * entry can succeed with zero deleted plays.
  */
 export function removeFromSimklWatchlist(
   deps: SimklDeps,

@@ -25,7 +25,6 @@ mock.module('@/lib/motion', () => ({ DURATION: { swap: 180 }, EASE_OUT: 'ease-ou
 mock.module('@/lib/toast', () => ({ toast: { error: mock(() => {}) } }));
 const { SuspenseSection } = await import('./suspense-section');
 
-// The fallback is a real provider link, so it cannot be duplicated on reveal.
 test('interactive fallbacks leave no hidden focus target when content resolves', async () => {
   let resolve!: () => void;
   const pending = new Promise<void>((done) => { resolve = done; });

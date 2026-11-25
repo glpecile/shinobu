@@ -15,10 +15,6 @@ const ICON: Record<DiaryFormat, ComponentProps<typeof Ionicons>['name']> = {
   READING: 'library-outline',
 };
 
-/**
- * The diary's format filter: one pill at the header's trailing edge. It opens
- * the native menu on iOS and Android, and the picker sheet on web.
- */
 export function DiaryFormatFilter({
   options,
   value,

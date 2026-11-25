@@ -1,20 +1,6 @@
 /**
- * Whether a media release has actually aired in the user's local timezone
- * (AGENTS.md "Up Next & Timezones," todos/006). Provider air-date/time fields
- * — Trakt `first_aired`, AniList `airingSchedule` — must be treated as instants,
- * not bare date strings: comparing calendar dates naively across a timezone
- * boundary either spoils an unaired episode (showing it as available) or hides
- * an aired one.
- *
- * A full ISO instant (Trakt's format) parses to a fixed point in time and
- * compares identically in any timezone. A date-only string is the trap: under
- * the JS `Date` spec `new Date("2022-01-01")` becomes *UTC* midnight, which is
- * the origin-timezone bug. We instead treat it as midnight in the user's local
- * timezone, so "2022-01-01" means "aired by the start of Jan 1 where the user
- * is," not where the show originates.
- *
- * `now` is injectable for deterministic tests; production callers let it
- * default to the current wall clock.
+ * Compare ISO air instants with their offsets. Treat date-only airings as midnight in the
+ * user's timezone.
  */
 export function hasAired(
   firstAired: string | null | undefined,

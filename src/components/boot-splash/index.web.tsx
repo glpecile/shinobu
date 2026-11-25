@@ -1,6 +1,5 @@
 import { CSS_EASE_OUT } from '@/lib/motion';
 
-/** Release the static overlay only after React's startup gate opens. */
 export function dismissBootSplash() {
   const node = document.getElementById('boot-loader');
   if (!node || node.dataset.dismissing) return;
@@ -20,7 +19,6 @@ export function dismissBootSplash() {
   }
 }
 
-// The web splash is in +html.tsx so it paints before JavaScript or fonts load.
 export function BootSplash() {
   return null;
 }

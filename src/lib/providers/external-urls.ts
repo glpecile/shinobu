@@ -1,14 +1,4 @@
-// Provider web pages and endpoints that live entirely outside the app: the
-// setup pages the connect flows link users to, OAuth endpoints that otherwise
-// sit in react-native-importing modules, and the pure per-item public-page
-// URL builder (`providerItemUrl`, plans 0022/0023) shared by the manual-log
-// fallback and the Ratings section's links. The constants above must stay free of
-// react-native imports — scripts/check-external-urls.ts loads them under
-// plain bun (bun can't parse RN's entry point) to probe that these URLs are
-// still alive. Precedent for the risk: trakt.tv/oauth/applications died in
-// July 2026, 301-redirecting into a 404 (docs/solutions/trakt-oauth-setup.md).
-// `providerItemUrl` and `providerPersonUrl` only pull in type-only imports
-// (erased at build), so they don't break that constraint.
+// Public provider URLs and endpoint constants for navigation and connection setup.
 
 import { anilistMediaKind, animeEffectiveMovieTvType } from './routing';
 import { Provider, type ProviderId } from './types';
@@ -286,17 +276,7 @@ function letterboxdPersonUrl(person: UrlPerson): string | null {
   return `https://letterboxd.com/${role}/${slug}/`;
 }
 
-/**
- * An AniList staff page, by id (plan 0035 R11). The previous shape was a
- * name *search* — which sounds like a graceful fallback and is not: most TMDB
- * people have no AniList entry at all, so the overwhelmingly common outcome was
- * a link that opened an empty search results page. Id or nothing, same
- * never-relax-to-a-near-miss rule as the match pickers.
- *
- * The id comes from the caller (`state/queries/anilist.ts` resolves it, or an
- * AniList-sourced payload carried it) precisely because this module has to stay
- * pure — no async resolution can live here.
- */
+/** Build the public AniList staff URL from a resolved staff id. */
 export function anilistStaffUrl(id: number): string {
   return `https://anilist.co/staff/${id}`;
 }

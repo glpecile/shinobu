@@ -16,7 +16,6 @@ import { unhideItem, unhideList, useHiddenItems, useHiddenLists } from '@/state/
 import type { MediaType } from '@/types/media';
 
 const PREVIEW = 5;
-/** Past this many hidden entries the section grows a title search. */
 const SEARCH_MIN = 20;
 
 type Kind = MediaType | 'LIST' | 'LEGACY';
@@ -31,7 +30,6 @@ const KIND_ICON: Record<Kind, ComponentProps<typeof Ionicons>['name']> = {
   LEGACY: 'albums-outline',
 };
 
-/** Items hidden before their type was stored still name it when their provider tracks one type. */
 function legacyKind(id: string): Kind {
   const types = PROVIDERS[id.split('-')[0] as ProviderId]?.mediaTypes;
   return types?.length === 1 ? types[0] : 'LEGACY';
@@ -47,13 +45,6 @@ const KIND_LABEL: Record<Kind, string> = {
   LEGACY: 'Hidden item',
 };
 
-/**
- * Feed items hidden from a card's actions dialog, then lists hidden from a
- * list card's sheet, in saved order. Settings is the only place to unhide, so
- * hiding is always reversible. A row opens the item's details page (which
- * resolves hidden items too) or the list; its Show button unhides it.
- * Renders nothing while nothing is hidden.
- */
 export function HiddenItemsSection() {
   const pushRoute = usePushRoute();
   const muted = useThemeColor('--color-muted');

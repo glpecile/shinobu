@@ -38,11 +38,9 @@ function subtitle(entry: HardcoverListEntry) {
   return entry.authors.length > 0 ? entry.authors.join(', ') : entry.item.year == null ? '' : String(entry.item.year);
 }
 
-/** `ListProgress` for books: the list read carries each book's status, so nothing loads or fails here. */
 function ReadProgress({ entries, countLabel, partial }: { entries: readonly HardcoverListEntry[]; countLabel: string; partial: boolean }) {
   const read = entries.filter((entry) => entry.statusId === HardcoverStatus.Read).length;
   const reading = entries.filter((entry) => entry.statusId === HardcoverStatus.Reading).length;
-  // Loaded books only: an unrequested next page is never counted as unread.
   const label = `${read} of ${entries.length}${partial ? ' loaded' : ''} read`;
   if (entries.length === 0) return <Text className="font-sans text-sm text-muted tabular-nums">{countLabel}</Text>;
   return (
@@ -63,7 +61,6 @@ export function HardcoverListItems({ id }: { id: number }) {
   const pushRoute = usePushRoute();
   const accent = useThemeColor('--color-accent');
   const { openActions, sheetProps } = useCardActions();
-  // A book added between two page reads shifts the offsets, so a row can arrive twice.
   const entries = [...new Map(query.data.pages.flatMap((page) => page.entries).map((entry) => [entry.id, entry])).values()];
   const url = hardcoverListUrl(list.owner, list.slug) ?? hardcoverListsUrl(list.owner);
   const target = mine ? { provider: Provider.Hardcover, username: list.owner, id: list.id, title: list.title, url } : null;
@@ -92,7 +89,6 @@ export function HardcoverListItems({ id }: { id: number }) {
         <List
           className="flex-1"
           data={sortMediaEntries(entries, sort)}
-          // Four rows ahead and recycled, as the Serializd list.
           drawDistance={92 * 4}
           estimatedItemSize={92}
           recycleItems
@@ -134,9 +130,7 @@ export function HardcoverListItems({ id }: { id: number }) {
   );
 }
 
-/** Reserves Rename's and Delete's slots: ownership is unknown until the list loads, and most lists opened are one's own. */
 export function HardcoverListSkeleton({ shareHref }: { shareHref?: string }) {
-  // Rename and Delete drop their labels on a phone (`RenameList`, `DeleteList`).
   const compact = useWindowDimensions().width < 640;
   const sort = useMediaSort('lists');
   return (

@@ -16,7 +16,6 @@ test('a watching show is added to Paused and leaves Currently Watching, and an u
     session, baseUrl: 'https://api.test',
     fetch: async (url, init) => {
       calls.push([String(url), JSON.parse(String(init?.body))]);
-      // A 2xx without JSON is still a success.
       return new Response('');
     },
   };

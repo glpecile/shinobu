@@ -28,28 +28,11 @@ import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useWakeAt } from '@/lib/time/use-wake-at';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * Up Next on the home feed (plan 0019): what's ready to watch, and what's
- * coming this week. Chosen from three prototyped treatments on 2026-07-23 —
- * a 7-day strip that filters the cards beneath it.
- *
- * The strip spans exactly the Calendar window (today … today+6), so every
- * entry has a selectable day, and the cells derive their membership from the
- * same local-day grouping the badges use — no drift between the two.
- *
- * Continue Watching sits above the strip as a constant row: it is not part of
- * any day. The selected day is ephemeral UI state, deliberately not persisted.
- */
 export interface UpNextSectionProps {
   onItemPress: (item: NormalizedMediaItem) => void;
   onItemActions: (item: NormalizedMediaItem) => void;
 }
 
-/**
- * The day's cards settle in when the user picks a different day. Signed travel,
- * because the strip is a timeline: a later day arrives from the right, an
- * earlier one from the left. Module scope, per Reanimated's builder rule.
- */
 const DAY_CONTENT_SLIDE = 10;
 
 const slideFrom = (from: number) =>
@@ -62,15 +45,12 @@ const slideFrom = (from: number) =>
     },
   }).duration(DURATION.swap);
 
-/** Forward in the week: the new cards come in from the right. */
 const dayContentForward = slideFrom(DAY_CONTENT_SLIDE);
 const dayContentBackward = slideFrom(-DAY_CONTENT_SLIDE);
 
-/** Web avoids Keyframe's scroll-stale position snapshot; reduced motion drops travel. */
+/** Web avoids Reanimated Keyframe's scroll-stale position snapshot. */
 const dayContentFading = FadeIn.duration(DURATION.swap);
 
-/** `undefined` until a day is actually switched: the motion belongs to the
- * state change, not the page load. */
 function dayContentAnimation(
   direction: number,
   reduceMotion: boolean,
@@ -80,11 +60,6 @@ function dayContentAnimation(
   return direction > 0 ? dayContentForward : dayContentBackward;
 }
 
-/**
- * The empty-day line. "Today" is special: its episodes have already aired (and
- * live in Continue Watching), so it reads as done rather than as if nothing
- * happened — anything still to come today would occupy the cell, not this line.
- */
 function emptyDayCopy(offset: number, label: string): string {
   if (offset === 0) return "That's all for today.";
   if (offset === 1) return 'Nothing airing tomorrow.';
@@ -106,26 +81,13 @@ export function UpNextSection({
   const { continueWatching, calendar } = useUpNextSections(now);
   useWakeAt(nextSplitChange(calendar, now), now, refreshNow);
   const [selectedOffset, setSelectedOffset] = useState(0);
-  /** 0 until the first switch, then +1 for a later day and -1 for an earlier. */
   const [direction, setDirection] = useState(0);
   const reduceMotion = useReducedMotion();
   const { fontScale } = useWindowDimensions();
 
-  // Feed the strip *both* sections: today's already-aired episodes (which live
-  // in Continue Watching) still belong on the today cell — the strip is a
-  // schedule, not a second view of the aired/upcoming split. Off-window and
-  // instant-less entries fall out inside `calendarWeek`.
-  //
-  // Grouped straight after bucketing, so everything below this line — the dots
-  // and the cards alike — counts *cards*, not entries. That is what stops a
-  // ten-episode season drop reading as five dots (the cap) on a day that holds
-  // two shows, while a genuinely busy five-show day reads identically.
   const week = calendarWeek([...continueWatching, ...calendar], now).map(
     (day) => ({ ...day, groups: groupDayEntries(day.entries) }),
   );
-  // What a streaming refetch adds after the first render rises in, at the
-  // outermost level that is new: the section, else the Continue Watching
-  // block, else the card.
   const [startedEmpty] = useState(continueWatching.length === 0 && calendar.length === 0);
   const [hadContinueWatching] = useState(continueWatching.length > 0);
   const arrivalHistory = useArrivalHistory([
@@ -144,8 +106,6 @@ export function UpNextSection({
   return (
     <Root>
       {continueWatching.length > 0 && (
-        // The last card's own exit can't play once the whole block unmounts
-        // with it, so the block carries the same fade.
         <AnimatedView exiting={CARD_EXIT}>
           <ContinueWatchingRise>
             <CollapsibleSection
@@ -154,15 +114,9 @@ export function UpNextSection({
               title="Continue Watching"
             >
               <EpisodeCardRail
-                // Continue Watching is aired episodes by construction; the
-                // narrowing is what the union buys — no release row can slip
-                // in here and render a quick-log for something with no episode.
                 action={(group) => group.lead.kind === 'episode' ? <QuickLogButton entry={group.lead} /> : undefined}
                 arrival={hadContinueWatching ? (group) => ({ id: group.lead.item.id, seen: arrivalHistory }) : undefined}
                 badges={(group) => continueWatchingBadges(group.lead, now)}
-                // Wrapped, not grouped: this section holds one entry per show
-                // by construction (the pool fan answers with a single
-                // `next_episode` pointer each), so it can't produce a batch.
                 groups={continueWatching.map(soloGroup)}
                 onActionsPress={onItemActions}
                 onPress={onItemPress}
@@ -186,29 +140,20 @@ export function UpNextSection({
           }}
         />
 
-        {/* Empty and populated days reserve the same bounded list height. */}
         <View
           className="mt-3"
           style={{ minHeight: episodeCardRailHeight(fontScale, STACK_HEADROOM) }}
         >
-          {/* Populated days remount to replay the enter; empty days keep their
-              message mounted so it can morph. No block exit: an outgoing copy
-              would sit in flow beside the incoming one and shift the feed. */}
           <AnimatedView
             key={selected.groups.length === 0 ? 'empty' : selected.offset}
             className="flex-1"
             entering={dayContentAnimation(direction, reduceMotion)}
           >
             {selected.groups.length === 0 ? (
-              // Centered in the reserved space so the empty day reads as a
-              // deliberate state, not a layout gap. The 忍 mark renders in the
-              // OS fallback font (neither app family ships kanji, AGENTS.md
-              // Theming).
               <View className="flex-1 items-center justify-center px-4">
                 <Text className="text-muted/40 text-4xl mb-2">忍</Text>
                 <MorphText
                   className="text-muted font-sans text-sm text-center"
-                  // A morph runs on one line, so enlarged system text wraps as plain text.
                   numberOfLines={fontScale > 1 ? 0 : undefined}
                 >
                   {emptyDayCopy(selected.offset, selected.label)}
@@ -216,12 +161,6 @@ export function UpNextSection({
               </View>
             ) : (
               <EpisodeCardRail
-                // Aired-today episodes are watchable right now, so they keep
-                // the quick-log checkmark here too; still-upcoming ones — and
-                // release rows, which are never loggable — only carry their
-                // day badge. A batch never gets one either: the checkmark logs
-                // a single episode, and there is no honest answer to which of
-                // ten it would advance.
                 action={(group) =>
                   group.entries.length === 1 && group.lead.status === 'aired' && group.lead.kind === 'episode'
                     ? <QuickLogButton entry={group.lead} />

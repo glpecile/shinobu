@@ -35,8 +35,6 @@ describe('parseWatchlistProvider', () => {
   });
 
   test('a junk param shows the whole watchlist, never an error', () => {
-    // A bad URL must degrade to the unfiltered surface — a blank screen with
-    // an unnameable filter on it is the failure this guards.
     for (const raw of ['plex', '', undefined, null, 42, ['trakt']]) {
       expect(parseWatchlistProvider(raw)).toBeNull();
     }
@@ -77,16 +75,11 @@ describe('watchlistProviderCounts', () => {
 
 describe('the counts are honest about paging', () => {
   test('a partial count renders as a floor', () => {
-    // A bare "46" asserts a completeness the app has no evidence for while
-    // Letterboxd's scrape still has pages — and the number visibly grows as
-    // you scroll, which reads as a bug rather than as paging.
     expect(formatWatchlistCount(46, true)).toBe('46+');
     expect(formatWatchlistCount(46, false)).toBe('46');
   });
 
   test('the total is partial when any single leg is', () => {
-    // An unread Letterboxd page can hold a film no other tracker has, so the
-    // merged total cannot be exact while one source is still paging.
     expect(watchlistTotal(ENTRIES, ['letterboxd'])).toEqual({
       count: 4,
       partial: true,
@@ -97,9 +90,6 @@ describe('the counts are honest about paging', () => {
 
 describe('watchlistFilterOptions', () => {
   test('an active provider holding nothing still gets an option', () => {
-    // `?provider=serializd` on a gather where that leg failed: without this the
-    // screen shows no rows and no way to see — or clear — the filter that hid
-    // them.
     const options = watchlistFilterOptions(ENTRIES, 'serializd');
     expect(options.find((o) => o.provider === 'serializd')).toEqual({
       provider: 'serializd',
@@ -109,8 +99,6 @@ describe('watchlistFilterOptions', () => {
   });
 
   test('the partial flag survives the synthesized-option path', () => {
-    // The deep-linked-but-empty branch builds its rows separately, so it has
-    // its own chance to drop the flag.
     const options = watchlistFilterOptions(ENTRIES, 'serializd', [
       'serializd',
       'letterboxd',

@@ -37,7 +37,6 @@ export interface AnimeEpisodesResponse {
   } | null;
 }
 
-/** Shared by the episode-only read and the detail screen's combined read. */
 export const EPISODE_FIELDS = `
   episodes
   duration
@@ -55,11 +54,7 @@ function airingInstant(seconds: number): string {
   return new Date(seconds * 1000).toISOString();
 }
 
-/**
- * The day a finished, all-at-once release (a Netflix-style drop) put out every
- * episode, as `YYYY-MM-DD`. AniList schedules only episode 1 for those, so
- * without this the rest read as unaired.
- */
+/** AniList schedules only episode 1 for finished all-at-once releases; fall back to the release date (`YYYY-MM-DD`). */
 function singleDayRelease(media: Partial<NonNullable<AnimeEpisodesResponse['Media']>>): string | undefined {
   const { status, startDate: start, endDate: end } = media;
   if (status !== 'FINISHED' || start?.year == null || start.month == null || start.day == null) return undefined;
@@ -67,13 +62,6 @@ function singleDayRelease(media: Partial<NonNullable<AnimeEpisodesResponse['Medi
   return `${start.year}-${String(start.month).padStart(2, '0')}-${String(start.day).padStart(2, '0')}`;
 }
 
-/**
- * Per-episode data for one anime series: titles, thumbnails, and air instants.
- * Falls back to synthetic "Episode N" rows when AniList has no streaming
- * metadata, so an announced season comes back as a full list with no dates at
- * all; an absent `firstAired` is not a claim that the episode aired
- * (`hasStartedAiring`).
- */
 export function getAnimeEpisodes(
   deps: AniListDeps,
   params: { mediaId: number },
@@ -160,16 +148,8 @@ export function normalizeAnimeEpisodes(media: Partial<NonNullable<AnimeEpisodesR
   return buildSeason(episodes);
 }
 
-/**
- * One AniList entry is one section, and its episodes are numbered 1..n
- * *relative to that entry* — which is all this function knows. `number: 1` is
- * the section's index, not a claim about the canonical season: a sequel entry's
- * episode 1 may well be S02E01 or S03E13 (plan 0027). The neutral "Episodes"
- * title is the honest default; the details accordion replaces it with the real
- * canonical season once ani.zip's table resolves one, and never with
- * "Season 1". Watched-checkmark keys stay `1-{n}` for the same reason — they
- * derive from the entry's own progress.
- */
+// AniList numbers each entry 1..n (sequels included), so `number: 1` is only a
+// section index and the title stays neutral rather than claiming "Season 1".
 function buildSeason(episodes: NormalizedEpisode[]): NormalizedSeason {
   return {
     number: 1,

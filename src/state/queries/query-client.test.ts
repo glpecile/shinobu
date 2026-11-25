@@ -69,15 +69,13 @@ describe('retryDelay jitter', () => {
   test('stays within [floor, backoff] and is not a fixed value', () => {
     const samples = Array.from({ length: 200 }, () => retryDelay(0));
     for (const ms of samples) {
-      expect(ms).toBeGreaterThanOrEqual(500); // backoff/2 floor at attempt 0
-      expect(ms).toBeLessThanOrEqual(1_000); // full backoff at attempt 0
+      expect(ms).toBeGreaterThanOrEqual(500);
+      expect(ms).toBeLessThanOrEqual(1_000);
     }
-    // Equal jitter must actually spread — not collapse to one delay.
     expect(new Set(samples.map((ms) => Math.round(ms))).size).toBeGreaterThan(10);
   });
 
   test('backoff grows with attempt and caps', () => {
-    // Floors: attempt 0 → 500, attempt 1 → 1000, attempt 3 → 4000; capped.
     expect(retryDelay(1)).toBeGreaterThanOrEqual(1_000);
     expect(retryDelay(3)).toBeGreaterThanOrEqual(4_000);
     expect(retryDelay(20)).toBeLessThanOrEqual(30_000);

@@ -33,14 +33,10 @@ export interface FabProps {
   shape?: FabShape;
   variant?: FabVariant;
   loading?: boolean;
-  /** Positioning and margins only. Size and shape belong to their props. */
   className?: string;
 }
 
-/**
- * A compact floating action with independent size, shape, and color variants.
- * Borders live on the inner View because Android does not draw them on pressto.
- */
+/** Borders live on the inner View because Android does not draw them on pressto. */
 export function Fab({
   icon,
   label,
@@ -75,7 +71,6 @@ export function Fab({
       onPress={() => {
         if (onPress() !== false) haptics.selection();
       }}
-      // 3D is 24% alpha, the tab bar's ripple strength. Android only.
       rippleColor={`${color}3D`}
     >
       {/* Not flattened: on a card's cover, Fabric mounted the icon under this

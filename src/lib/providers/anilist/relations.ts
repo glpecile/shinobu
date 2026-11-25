@@ -64,9 +64,7 @@ export interface AnimeRelations {
   /** Anime episodes share this round-trip; manga has no season. */
   season: NormalizedSeason | null;
   relations: AnimeRelation[];
-  /** Community recommendations, best-rated first. */
   recommendations: NormalizedMediaItem[];
-  /** Tag names, most-voted first; spoiler tags dropped. */
   tags: string[];
   /** Empty unless asked for with `withCredits`. */
   characters: NormalizedCharacter[];

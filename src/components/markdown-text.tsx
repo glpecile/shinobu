@@ -6,7 +6,6 @@ import { httpUrl } from '@/components/markdown-links/http-url';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useThemeColor } from '@/lib/theme-color';
 
-/** Provider Markdown, styled as body copy, with HTTP(S)-only external links. */
 export function MarkdownText({
   text,
   numberOfLines,

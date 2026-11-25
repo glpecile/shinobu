@@ -13,7 +13,6 @@ import { LETTERBOXD_BASE_URL } from './config';
 import type { LetterboxdDeps } from './deps';
 import { normalizeWatchlistFilm } from './normalize';
 
-/** One film scraped off the public watchlist page. */
 export interface LetterboxdWatchlistFilm {
   /** The film's URL slug — Shinobu's Letterboxd external id. */
   slug: string;
@@ -157,7 +156,6 @@ export function getWatchlistPage(
   });
 }
 
-/** The first page alone — what the home feed's capped carousel row needs. */
 export function getWatchlist(
   deps: LetterboxdDeps,
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {

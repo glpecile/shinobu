@@ -29,12 +29,9 @@ type RefreshControlProps = Omit<ComponentProps<typeof GestureRefreshControl>, 'o
   tab?: string;
 };
 
-/** Where the content rests while the refresh runs. */
 const HOLD = 64;
-/** The content trails the finger, X-style. */
 const FRICTION = 0.5;
 const settle = { duration: DURATION.toggle, easing: TIMING_EASE_IN_OUT };
-/** A release carries the finger's speed into the settle, so a flick doesn't stall. */
 function release(velocity: number) {
   'worklet';
   return { duration: 400, dampingRatio: 0.8, overshootClamping: true, velocity };
@@ -58,7 +55,6 @@ export function RefreshControl({
   const dragged = useSharedValue(0);
   // The finalize event has no velocity, so the release reads the last update's.
   const fling = useSharedValue(0);
-  // A screen drawn under the status bar opens the gap below it.
   const gap = useDerivedValue(() => Math.max(0, pull.get() - progressViewOffset));
   const content = useAnimatedStyle(() => ({ transform: [{ translateY: pull.get() }] }));
   const position = useAnimatedStyle(() => ({
@@ -78,7 +74,6 @@ export function RefreshControl({
     run();
   });
 
-  // One tick as the pull arms the refresh, on the frame the mark fills.
   useAnimatedReaction(
     () => dragged.get() > 0 && gap.get() >= PULL_TRIGGER,
     (armed, wasArmed) => {
@@ -96,7 +91,6 @@ export function RefreshControl({
     },
     onUpdate: (event) => {
       if (refreshing) return;
-      // Only a drag that starts pulling at the top, or is already pulling.
       if (dragged.get() === 0 && (offset.get() > 0 || event.changeY <= 0)) return;
       dragged.set(Math.max(0, dragged.get() + event.changeY));
       fling.set(event.velocityY * FRICTION);

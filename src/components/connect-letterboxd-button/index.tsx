@@ -11,8 +11,6 @@ import { connectLetterboxd } from '@/state/session/letterboxd';
 
 type ConnectionStatus = 'idle' | 'checking' | 'not-found' | 'error';
 
-// Letterboxd usernames are URL path segments — letters, digits, underscores,
-// hyphens. Catch pasted profile URLs and @-handles rather than a strict spec.
 const usernameSchema = z.object({
   username: z
     .string()
@@ -26,14 +24,6 @@ const usernameSchema = z.object({
 
 type UsernameForm = z.infer<typeof usernameSchema>;
 
-/**
- * Web Letterboxd connect: read-only, a public username (plan 0012 decision 1).
- * Optional web logging uses the Tampermonkey setup in the provider sheet,
- * without capturing cookies. Native signs in through a WebView (index.native.tsx).
- * Reads and the validation fetch below run through the same-origin Worker
- * proxy (plan 0018), so the username is validated against the live RSS feed
- * before saving, same as native.
- */
 export function ConnectLetterboxdButton() {
   const [status, setStatus] = useState<ConnectionStatus>('idle');
 

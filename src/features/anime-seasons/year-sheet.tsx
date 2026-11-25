@@ -6,11 +6,6 @@ import { Sheet } from '@/components/sheet';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 
-/**
- * The year jump behind the explorer's year label: a grid of every year in
- * range, newest first, in the app's bottom sheet. A stepper alone made a
- * decade ten taps; this makes any year one.
- */
 export function YearSheet({
   open,
   onClose,

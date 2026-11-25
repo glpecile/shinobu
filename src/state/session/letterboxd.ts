@@ -42,7 +42,6 @@ export function getLetterboxdUsername(): string | null {
   return getProviderSession(Provider.Letterboxd)?.username ?? null;
 }
 
-/** The captured write session, or null for a read-only (username-only) connect. */
 export function getLetterboxdSession(): LetterboxdSession | null {
   const session = getProviderSession(Provider.Letterboxd);
   if (

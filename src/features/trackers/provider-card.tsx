@@ -8,16 +8,6 @@ import { useThemeColor } from '@/lib/theme-color';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 
-/**
- * One provider's row on the Trackers rail. Pressing it opens the provider's
- * sheet, which connects or disconnects, so every row ends in a chevron.
- *
- * The caller owns the connected/disconnected decision (`splitProviders`).
- * `reconnectReason` marks a stored session the provider no longer accepts,
- * gated out of connected, and says why: Trakt holding a token without the
- * user's own credentials (plan 0034 U9), or a Hardcover session that can't
- * refresh again.
- */
 export function ProviderCard({
   id,
   connected,

@@ -3,10 +3,6 @@ import { View } from 'react-native';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 
-/**
- * The card's own placeholder: title row, then `lines` bars on the body's
- * 26px pitch (`text-base leading-relaxed`), with the `mb-6` the card carries.
- */
 export function ExpandableTextSkeleton({
   lines = 2,
   className,

@@ -8,7 +8,6 @@ export interface SimklEpisodeState {
   completedAll: boolean;
 }
 
-/** Project cour-relative anime records into the season layout used by TV details. */
 export function simklEpisodeState(entries: readonly SimklLibraryEntry[]): SimklEpisodeState {
   const episodes = new Map<string, SimklWatchedEpisode>();
   const completedSeasons = new Set<number>();

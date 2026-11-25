@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 
 import { createAniListWriteQueue } from './anilist-write-queue';
 
-/** A promise plus the handles to settle it by hand. */
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: unknown) => void;
@@ -15,13 +14,11 @@ function deferred<T>() {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-/** Hand-driven settle window — the tests never wait out the real one. */
 function testClock() {
   const timers: Array<() => void> = [];
   let time = 0;
   return {
     clock: { schedule: (run: () => void) => void timers.push(run), now: () => time },
-    /** Fires only the oldest pending timer. */
     fireOldest: async () => {
       await tick();
       timers.shift()?.();
@@ -30,10 +27,6 @@ function testClock() {
     setNow: (ms: number) => {
       time = ms;
     },
-    /**
-     * "The window elapsed" — repeatedly, because each write that goes out
-     * schedules the next window when it lands.
-     */
     advance: async (rounds = 6) => {
       for (let i = 0; i < rounds; i += 1) {
         await tick();
@@ -57,7 +50,6 @@ describe('createAniListWriteQueue', () => {
     };
 
     const head = queue.submit('1:false', 3, run(3));
-    // Episodes 4–6 arrive while episode 3 is still in the air.
     const folded = [4, 5, 6].map((rank) => queue.submit('1:false', rank, run(rank)));
     await tick();
     expect(ranks).toEqual([3]);
@@ -65,8 +57,6 @@ describe('createAniListWriteQueue', () => {
     first.resolve('wrote 3');
     expect(await head).toBe('wrote 3');
     await advance();
-    // One write for all three, carrying the highest progress — and every
-    // folded caller resolves with it, because the entry really is at 6.
     expect(await Promise.all(folded)).toEqual(['wrote 6', 'wrote 6', 'wrote 6']);
     expect(ranks).toEqual([3, 6]);
   });
@@ -152,8 +142,6 @@ describe('createAniListWriteQueue', () => {
       return Promise.resolve(`wrote ${rank}`);
     };
 
-    // Episode 3 lands before episode 4 is pressed, so only the window can
-    // fold 4 and 5 — and 5 arriving restarts it, outdating 3's timer.
     await queue.submit('1:false', 3, run(3));
     const four = queue.submit('1:false', 4, run(4));
     await fireOldest();
@@ -163,7 +151,6 @@ describe('createAniListWriteQueue', () => {
     expect(await Promise.all([four, five])).toEqual(['wrote 5', 'wrote 5']);
     expect(ranks).toEqual([3, 5]);
 
-    // Past the cap an arrival no longer restarts it: 6's window drains 7.
     await queue.submit('1:false', 6, run(6));
     setNow(30_000);
     const seven = queue.submit('1:false', 7, run(7));

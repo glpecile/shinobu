@@ -36,8 +36,6 @@ describe('resolveQuickLog', () => {
   });
 
   test('source failing does not advance, even when another provider succeeded', () => {
-    // The entry was computed from Trakt's data — a failed Trakt write leaves
-    // no new data to advance from.
     expect(
       resolveQuickLog(
         result({ succeeded: ['serializd'], failed: ['trakt'] }),

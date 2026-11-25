@@ -97,7 +97,6 @@ describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
     expect(queryClient.getQueryData(watchlistKey)).toBeUndefined();
     expect(queryClient.getQueryData(upNextKey)).toBeUndefined();
     expect(queryClient.getQueryData(diaryKey)).toBeUndefined();
-    // Another provider's cache must survive a Simkl disconnect untouched.
     expect(queryClient.getQueryData(['trakt', 'viewer'])).toBe(
       'unrelated' as never,
     );
@@ -144,7 +143,6 @@ describe('syncQueryCacheWithSessions', () => {
     queryClient.setQueryData(upNextKey, { progress: [] });
     const unsubscribe = syncQueryCacheWithSessions(queryClient);
 
-    // What the transport's `tokens.clear()` does on a dead token.
     clearProviderSession('anilist');
 
     expect(queryClient.getQueryData(['anilist', 'viewer'])).toBeUndefined();

@@ -1,16 +1,6 @@
-# Cache-warm + release canary (docs/plans/0025, KTD-1). GitHub scopes Actions
-# caches per ref: a run for tag `vB` can only restore caches created on its own
-# ref or on the default branch — never on tag `vA`. Nothing on `main` touched
-# Gradle, so every release recompiled all native C++ across 4 ABIs from cold
-# (35m34s, run 30175163780). This workflow runs the same secretless
-# `assembleRelease` on `main` so `release.yml` has a warm Gradle cache + ccache
-# to restore, and doubles as a canary: a broken Android build surfaces here, not
-# at tag time. See docs/solutions/android-ci-tag-cache-scoping.md.
-#
-# INTEGRITY INVARIANT (KTD-1): `main`-scoped caches are executable-code inputs to
-# signed release APKs. This workflow is their *only* writer — it takes no
-# secrets and runs only on the default branch. Granting cache-write to another
-# ref or trigger (or adding secrets here) is a security-reviewed change.
+# Warm Android build caches on main so release tags can restore them.
+# This secretless workflow is their only writer. Signed APK builds consume these
+# caches as executable inputs (docs/solutions/android-ci-tag-cache-scoping.md).
 name: Android Warm Cache
 
 on:
@@ -23,8 +13,7 @@ on:
       - 'plugins/**'
       - '.github/workflows/release.yml'
       - '.github/workflows/android-warm.yml'
-  # Eviction guard: GitHub drops cache entries unused for 7 days, so releases
-  # cut more than a week apart would land cold again without this.
+  # Run weekly to keep GitHub from evicting the warm cache.
   schedule:
     - cron: '17 5 * * 1'
   workflow_dispatch:
@@ -33,8 +22,6 @@ concurrency:
   group: android-warm-${{ github.ref }}
   cancel-in-progress: true
 
-# No write token: this build executes dependency code (postinstall scripts,
-# gradle plugins) on a schedule and needs nothing but the source.
 permissions:
   contents: read
 
@@ -42,9 +29,6 @@ jobs:
   warm:
     runs-on: ubuntu-latest
     env:
-      # ccache intercepts the NDK/CMake C++ compile that dominates the build.
-      # CMake >= 3.17 initializes CMAKE_<LANG>_COMPILER_LAUNCHER from these env
-      # vars, so no config-plugin or generated-file change is needed (KTD-3).
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_COMPILERCHECK: content
       CCACHE_MAXSIZE: 1.5G
@@ -65,8 +49,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # No .env.local here: EXPO_PUBLIC_* credentials change the JS bundle, not
-      # anything compiled or cached, and this workflow must stay secretless.
+      # Keep the warm build secretless. Provider variables only affect the JS bundle.
       - name: Prebuild Android project
         run: bunx expo prebuild --platform android
 
@@ -78,9 +61,7 @@ jobs:
           fi
           ccache --version
 
-      # `github.run_id` suffix + prefix restore-keys, not a bare content key: an
-      # exact-key hit makes actions/cache skip the post-job save, so a refreshed
-      # ccache would never persist and the cache would silently decay (KTD-3).
+      # Use a fresh key so the cache action saves updated outputs after a prefix hit.
       - name: Cache ccache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
@@ -90,20 +71,15 @@ jobs:
             ccache-android-${{ runner.os }}-${{ hashFiles('bun.lock', 'app.json') }}-
             ccache-android-${{ runner.os }}-
 
-      # Stats live inside CCACHE_DIR, so without a reset `ccache -s` below would
-      # report every prior run's cumulative hits instead of this run's.
+      # Reset after restore because CCACHE_DIR also holds stats from prior runs.
       - name: Reset ccache stats
         run: ccache -z
 
-      # setup-gradle writes the cache on the default branch and is read-only
-      # everywhere else by default (KTD-2) — exactly the scoping this needs. It
-      # caches the wrapper distribution, dependencies and the local build cache,
-      # and stops the daemon before saving. SHA-pinned for parity with
-      # release.yml, where the decoded keystore lives.
+      # Use the same Gradle action as release.yml so both workflows share the cache.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
-      # Same flags as release.yml so Gradle task-output cache keys match.
+      # Match release.yml so both builds share the Gradle task-output cache.
       - name: Build universal release APK
         working-directory: android
         run: ./gradlew :app:assembleRelease --build-cache -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"

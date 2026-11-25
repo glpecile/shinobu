@@ -8,7 +8,6 @@ import { PresstableOpacity } from '@/components/presstable';
 import { EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
-/** The quiet onward link used by Home section headers. */
 export function ViewAllLink({
   title,
   onPress,

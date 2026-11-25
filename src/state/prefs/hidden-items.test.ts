@@ -104,7 +104,6 @@ describe('visibleItems', () => {
   });
 });
 
-/** A merged watchlist entry's shape, reduced to what the filter reads. */
 interface MergedRow {
   key: string;
   ids: string[];

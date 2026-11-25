@@ -1,10 +1,7 @@
 import { formatCalendarDate } from '@/lib/time/calendar-date';
 import type { NormalizedPerson } from '@/types/media';
 
-/**
- * Whole years between two bare dates (UTC-parsed like `formatCalendarDate`) — the
- * person's age, or age at death when `until` is the deathday.
- */
+/** Whole years from a bare YYYY-MM-DD date to until (compared in UTC). */
 export function yearsBetween(from: string, until: Date): number | null {
   const [year, month, day] = from.split('-').map(Number);
   if (!year || !month || !day) return null;
@@ -15,12 +12,6 @@ export function yearsBetween(from: string, until: Date): number | null {
   return age >= 0 ? age : null;
 }
 
-/**
- * "Acting · Nov 12, 1980 (45) · London, Ontario, Canada" — TMDB has no
- * height field, so age is the one derivable extra stat. Shared by the
- * `/person/[id]` header and the credit sheet a long-press opens, so the same
- * person reads identically in both (plan 0028 R1).
- */
 export function personMetaLine(person: NormalizedPerson): string {
   let lifespan: string | null = null;
   if (person.birthday != null) {

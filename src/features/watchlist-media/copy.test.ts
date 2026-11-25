@@ -101,8 +101,6 @@ describe('watchlistResultView report families (plan 0031 R14)', () => {
 
 describe('isWatchlistCtaSettled (plan 0031 U15, R14, KTD-14)', () => {
   test('a known-watchlisted item settles on first mount, with no report', () => {
-    // The app-restart / other-device / added-on-the-website case the old
-    // mutation-derived condition could never answer: no write ever fired here.
     expect(isWatchlistCtaSettled(true, null)).toBe(true);
   });
 
@@ -122,8 +120,6 @@ describe('isWatchlistCtaSettled (plan 0031 U15, R14, KTD-14)', () => {
   });
 
   test('on one watchlist but missing from another is not settled', () => {
-    // Owner report 2026-08-01: a film left on the Letterboxd watchlist after a
-    // Simkl-only removal is "on a watchlist" and still has an add to offer.
     expect(isWatchlistCtaSettled(true, null, true)).toBe(false);
   });
 
@@ -146,9 +142,6 @@ describe('the three result families (plan 0031 KTD-8/R17)', () => {
       'already on your watchlist',
       'already watching',
     ]);
-    // The all-skip report renders as *something*: this is the most common
-    // repeat interaction, and the log button's copy (a suffix to a success
-    // line that isn't there) would render nothing at all.
     expect(view.allSkip).toBe(true);
   });
 
@@ -158,16 +151,12 @@ describe('isUnwatchlistCtaSettled (plan 0031 U16, R35)', () => {
   const clean = watchlistResultView(report([{ provider: 'trakt', status: 'ok' }]), FILM);
 
   test('a cold cache never renders "Removed" for something nobody removed', () => {
-    // No report at all: `onList: false` on its own is the state of every item
-    // the user has never watchlisted.
     expect(isUnwatchlistCtaSettled(false, null, [])).toBe(false);
   });
 
   test('settles once the refetch lands and every membership was known', () => {
     expect(isUnwatchlistCtaSettled(false, clean, [])).toBe(true);
-    // Still on a watchlist — the removal has not landed yet.
     expect(isUnwatchlistCtaSettled(true, clean, [])).toBe(false);
-    // Surface never opened: unknown is never a claim of absence (R31).
     expect(isUnwatchlistCtaSettled(undefined, clean, [])).toBe(false);
   });
 
@@ -225,14 +214,6 @@ describe('picker confirm labels and toast titles (plan 0032 R3)', () => {
   });
 });
 
-/**
- * Plan 0035 R3/R4. The warning is the price of letting a CURRENT entry be
- * removed at all: the delete destroys progress, score and notes, so a removal
- * that fires without this text on screen is data loss the user never agreed to.
- * R4's other half matters just as much — a bare PLANNING removal loses
- * nothing, so it carries no warning. Every removal confirms (owner decision 2026-11-18), and the
- * confirm step names what each provider loses.
- */
 describe('removalLine (the remove sheet’s confirm step)', () => {
   test('a Planning entry only leaves the list; an entry in progress is deleted whole', () => {
     const book = { item: { bridgedAniList: { id: 143703, title: 'Nisemonogatari' } } };

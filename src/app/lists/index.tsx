@@ -6,7 +6,6 @@ import { serializdListUrl } from '@/lib/providers/serializd/lists';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 
-/** Preserve shared links from before list identities moved into resource paths. */
 export default function LegacyListsScreen() {
   const { provider = Provider.Letterboxd, kind, owner, slug, id } = useLocalSearchParams<{
     provider?: string | string[]; kind?: string | string[];

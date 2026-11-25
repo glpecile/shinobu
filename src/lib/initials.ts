@@ -1,4 +1,3 @@
-/** "Ana de Armas" → "AD" — the headshot fallback monogram. */
 export function initials(name: string): string {
   return name
     .trim()

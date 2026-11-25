@@ -7,7 +7,6 @@ import { DURATION, TIMING_EASE_IN_OUT } from '@/lib/motion';
 
 const AnimatedCircle = createAnimatedComponent(Circle);
 
-/** Determinate progress only: callers with an unknown total show a count instead. */
 export function ProgressRing({ value, max, label, size = 16 }: { value: number; max: number; label: string; size?: number }) {
   const accent = useThemeColor('--color-accent');
   const border = useThemeColor('--color-border');

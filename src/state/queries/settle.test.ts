@@ -2,10 +2,6 @@ import { describe, expect, test } from 'bun:test';
 
 import { settle, streamLegs } from './settle';
 
-/**
- * The shared partial-failure contract, tested once now that two gatherers
- * depend on it (plan 0031 R26 — lifted from `up-next.ts`, not copied).
- */
 describe('settle', () => {
   test('passes a leg’s rows through with no errors', async () => {
     expect(await settle('trakt', async () => [1, 2])).toEqual({
@@ -35,7 +31,6 @@ describe('streamLegs', () => {
       (partial) => partial.length > 0,
     );
 
-    // The empty leg settles first and is skipped; the fast one shows alone.
     expect((await stream.next()).value).toEqual([1]);
     releaseSlow([2]);
     expect((await stream.next()).value).toEqual([1, 2]);

@@ -5,23 +5,13 @@ import {
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import type { ProviderId } from '@/lib/providers/types';
 
-/** The minimum of any verb's write report this predicate reads. */
 export interface WriteReportLike {
   succeeded: readonly ProviderId[];
   failed: readonly ProviderId[];
-  /** Log only: providers whose write waits in the pending queue. */
   queued?: readonly ProviderId[];
   outcomes: readonly ProviderWriteOutcome[];
 }
 
-/**
- * Whether a write sheet may close itself on this report — equivalently, whether
- * the outcome fits in a toast (plan 0032 KTD-3). Toasts are announcement-only
- * (R7), so any post-write news with a recourse link — a failure, a reasoned
- * skip, a partial success — must keep the sheet open; upfront rows and
- * reason-less reconcile skips were visible pre-confirm and don't block. A log
- * saved for later needs no recourse either, so it closes the sheet too.
- */
 export function isCleanWriteReport(report: WriteReportLike): boolean {
   const { reasonedSkips } = splitSkippedOutcomes(report.outcomes);
   return (

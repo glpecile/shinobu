@@ -59,7 +59,6 @@ function subscribe(onStoreChange: () => void): () => void {
   return () => subscription.remove();
 }
 
-/** The set of minimized diary day keys — reactive across restarts. */
 export function useCollapsedDiaryDays(): ReadonlySet<string> {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

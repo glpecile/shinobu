@@ -105,24 +105,15 @@ function subscribe(onStoreChange: () => void): () => void {
   return () => subscription.remove();
 }
 
-/** Every hidden feed item, for filtering and the unhide list — reactive. */
 export function useHiddenItems(): readonly HiddenItem[] {
   return useSyncExternalStore(subscribe, itemsSnapshot, getServerSnapshot);
 }
 
-/** Every hidden list — reactive. */
 export function useHiddenLists(): readonly HiddenItem[] {
   return useSyncExternalStore(subscribe, listsSnapshot, getServerSnapshot);
 }
 
-/**
- * `items` minus `hidden`, **returning `items` itself when nothing is hidden**
- * — which is the overwhelmingly common case. A fresh array on every render
- * (the old `items.slice()`) changed identity for every downstream consumer,
- * so React Compiler's memoization could never hold and a long carousel
- * re-rendered every card on any unrelated state change (plan 0024 U7/KTD4).
- * Pure and exported so that contract is unit-testable without the store.
- */
+/** Keep the original array when no items are hidden, so list rows keep their memoized props. */
 export function visibleItems<T extends { id: string }>(
   items: readonly T[],
   hidden: readonly HiddenItem[],
@@ -132,22 +123,7 @@ export function visibleItems<T extends { id: string }>(
   return items.filter((item) => !hiddenIds.has(item.id));
 }
 
-/**
- * `rows` minus the ones **any** of whose ids the user hid — `visibleItems`
- * generalized from one id per row to many (plan 0031 KTD-13).
- *
- * Why "any": hidden ids are provider-scoped (`trakt-123`, `letterboxd-slug`),
- * while a merged watchlist entry has one canonical id and several contributing
- * ones. Filtering on the canonical id alone is a real bug — a film hidden from
- * the Letterboxd row reappears in the merged grid as its Trakt twin (R30).
- *
- * **The identity contract is the stronger one**: the same array reference comes
- * back whenever the filter removed *nothing*, not merely when the hidden set is
- * empty. `visibleItems`'s weaker short-circuit would hand Up Next a fresh array
- * on every render as soon as the user hides one unrelated item anywhere,
- * re-breaking the React Compiler memoization plan 0024 KTD4 fixed on Continue
- * Watching and Calendar. Pure and exported so that is testable without the store.
- */
+/** Hide a merged row when any of its provider-scoped ids is hidden. */
 export function visibleByIds<T>(
   rows: readonly T[],
   hidden: readonly HiddenItem[],

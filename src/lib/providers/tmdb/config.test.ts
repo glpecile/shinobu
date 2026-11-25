@@ -3,8 +3,6 @@ import { describe, expect, test } from 'bun:test';
 import { resolveTmdbToken } from './config';
 
 describe('resolveTmdbToken', () => {
-  // R13's contract: a build that ships a token is the maintainer's decision,
-  // and a stored value must never quietly override it.
   test('the builder token wins whenever it exists', () => {
     expect(resolveTmdbToken({ builder: 'builder-token', stored: 'user-token' })).toBe(
       'builder-token',

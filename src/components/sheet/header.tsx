@@ -6,10 +6,8 @@ import { cn } from '@/lib/cn';
 
 import { SheetCloseContext } from './context';
 
-/** Dismissal beside a sheet heading; inline steps can override what close means. */
 export function SheetDismissHeader({ children, className, onClose, done = false }: {
   children: ReactNode;
-  /** Layout only: alignment and spacing around the header. */
   className?: string;
   onClose?: () => void;
   done?: boolean;
@@ -26,7 +24,6 @@ export function SheetDismissHeader({ children, className, onClose, done = false 
         icon={<Button.Icon name={done ? 'checkmark' : 'close'} />}
         iconOnly
         label={done ? 'Done' : 'Close'}
-        // A step's own `onClose` bypasses the sheet's close, so blur the field here too.
         onPress={() => {
           Keyboard.dismiss();
           close();

@@ -69,7 +69,6 @@ export function getPerson(
   });
 }
 
-/** The episodes one TV credit (a job or character on a show) covers. */
 export function getCreditEpisodes(
   deps: TmdbDeps,
   params: { creditId: string },

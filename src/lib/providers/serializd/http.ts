@@ -15,7 +15,6 @@ const provider = Provider.Serializd;
 export interface SerializdHttpOptions {
   method?: 'GET' | 'POST';
   body?: unknown;
-  /** Attach `Authorization: Bearer {token}` from the session (writes/progress). */
   auth?: boolean;
 }
 

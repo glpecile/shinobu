@@ -16,8 +16,6 @@ import {
 } from '@/state/prefs/sidebar';
 
 const RAIL_WIDTH = 64;
-/** Fixed icon column so icons never shift between expanded/collapsed — only the
- *  labels reveal and the width slides. `RAIL_WIDTH` minus the `px-2` gutters. */
 const ICON_COL = RAIL_WIDTH - 16;
 const opacityTransition = {
   transitionDuration: '160ms',
@@ -33,15 +31,6 @@ interface NavItem {
   icon: IoniconName;
 }
 
-// Outline icons only — the sidebar's active state is the tonal red squircle,
-// never a heavy filled glyph (the solid variants read poorly when selected).
-// The mobile bottom bar mirrors Android's wide stadium instead (see below).
-// Diary uses `reader-outline` (a lined page), not `book-outline`: the open-book
-// glyph is much wider and optically heavier than its home/search/settings
-// siblings at size 22, and `journal-outline` collapsed into a featureless slab
-// (owner call 2026-09-08). Native's tab bar keeps `book`/`book.fill` — this is a
-// web-rail-only optical fix. Search comes last to match the native tab bar,
-// where iOS pins the search-role tab to the end.
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: routes.home, icon: 'home-outline' },
   { label: 'Diary', href: routes.diary, icon: 'reader-outline' },
@@ -55,12 +44,8 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 /**
- * One press handler for both nav surfaces (mobile bar, sidebar). The search
- * destination also asks for the field: the tab's tap is the only user gesture
- * in the flow, and touch browsers only raise the keyboard on the back of one
- * — so search navigation must commit before requesting focus, inside that
- * same gesture. A pending request delivered by a mount effect is too late.
- * Every other destination navigates, or no-ops on a re-press.
+ * Touch browsers only raise the keyboard inside a user gesture, so search
+ * navigation commits synchronously (`flushSync`) before requesting focus.
  */
 function onNavItemPress(
   item: NavItem,
@@ -75,38 +60,20 @@ function onNavItemPress(
   if (!active) pushRoute(item.href);
 }
 
-/** Keeps a mousedown from focusing the search button; the press focuses the field. */
 function preventMouseFocus(event: MouseEvent<HTMLElement>): void {
   event.preventDefault();
 }
 
 /**
- * Theme colors for the props that take a color *string* — an icon-font glyph,
- * the toggle's drawn strokes — rather than a class.
- *
- * `var(…)` rather than uniwind's `useCSSVariable`: react-native-web forwards a
- * `var()` color untouched (`modules/isWebColor`), so the browser resolves it
- * out of `global.css` exactly like a class does. Reading it in JS cannot work
- * on this surface — the web build is a static export, its prerender has no DOM
- * for `useCSSVariable` to read, so every glyph fell back to
- * `createIconSet`'s `'black'` default, that landed in the exported HTML, and
- * React never patches a hydrated element's inline style. The rail draws once
- * and never remounts, so it stayed black-on-black for the whole of a visitor's
- * first page. See docs/solutions/web-prerender-bakes-js-resolved-colors.md.
+ * `var()` rather than `useCSSVariable`: static web prerender has no DOM, so
+ * JS-resolved colors bake fallback values into exported HTML that hydration
+ * never patches (docs/solutions/web-prerender-bakes-js-resolved-colors.md).
  */
 const COLOR = {
   accentOnTonal: 'var(--color-accent-on-tonal)',
   foreground: 'var(--color-foreground)',
 } as const;
 
-/**
- * A label that fades as the sidebar collapses. It never shrinks (`flexShrink 0`)
- * so it slides out under the sidebar's `overflow-hidden` instead of ellipsing.
- * Below `md` it's `display: none`, not faded — the bottom bar carries its own
- * labels, and an invisible one would still hold its width in that row. `animate` is armed
- * only by a user toggle (see AppShell), so a reload with a persisted collapsed
- * pref paints shut instead of sliding shut.
- */
 function RevealLabel({
   children,
   collapsed,
@@ -133,10 +100,6 @@ function RevealLabel({
   );
 }
 
-/**
- * The sidebar control uses opposite divider positions to show which edge the
- * panel will move toward when pressed.
- */
 function PanelIcon({
   color,
   collapsed,
@@ -175,9 +138,6 @@ function PanelIcon({
   );
 }
 
-/**
- * The collapse control sits in the sidebar footer in both states.
- */
 function SidebarToggle({
   collapsed,
   animate,
@@ -239,45 +199,19 @@ function SidebarItem({
   );
 }
 
-/**
- * Persistent web navigation: at `md` and up a left rail (logo + destinations)
- * with the routed content filling the rest, matching plan.md Rule 103's
- * wide-screen left-panel split; below it the same nav lays itself out as a
- * bottom bar, the idiom a phone expects. Native has no sidebar — see `index.tsx`.
- *
- * The breakpoint is pure CSS (`md:` classes, i.e. real media queries in the
- * exported stylesheet — uniwind hands `className` straight to the DOM on web),
- * never `useWindowDimensions`: a JS branch measures nothing during the static
- * prerender, so the exported HTML would bake the desktop layout and snap to the
- * bar only after hydration.
- *
- * Collapse behavior is adapted from shadcn's `collapsible="icon"` sidebar: the
- * footer toggle (and ⌘/Ctrl+B) switches between the full rail and an icon-only
- * rail, persisted via `state/prefs/sidebar`. The width and labels animate
- * together (CSS transitions; web-only file). The toggle and the pref only exist
- * above `md` — the bottom bar has one shape.
- */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const pushRoute = usePushRoute();
   const collapsed = useSidebarCollapsed();
 
-  // The static prerender bakes the expanded rail while the collapsed pref
-  // lives in localStorage, so the post-hydration sync to a stored collapsed
-  // value lands one commit after the hydrated paint. Transitions arm only on
-  // a user toggle — never on mount — so that boot sync snaps shut instead of
-  // visibly sliding shut on every reload, while presses still animate. (A
-  // mount flag can't do this: the sync update batches with the mount effect's
-  // own update, re-arming transitions in the collapsing commit.)
+  // Transitions arm only on user toggle so the post-hydration sync to a stored collapsed pref snaps instead of sliding.
   const [animated, setAnimated] = useState(false);
   function userToggleSidebar(animate = true): void {
     setAnimated(animate);
     toggleSidebarCollapsed();
   }
 
-  // ⌘/Ctrl+B toggles the sidebar — the shadcn keyboard shortcut. Below `md`
-  // the pref still flips; it just has nothing to widen until the viewport does.
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
     function onKeyDown(event: KeyboardEvent) {
@@ -290,10 +224,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // ⌘/Ctrl+K jumps to search from anywhere. The modifier is the whole guard —
-  // a bare "k" typed into any field must never be hijacked. Already on search?
-  // Navigating again wouldn't re-mount the field (so `autoFocus` wouldn't
-  // fire); the focus signal covers that case instead.
   const onSearch = isActive(pathname, routes.search);
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
@@ -309,9 +239,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [onSearch, router]);
 
   return (
-    // `flex-col-reverse` puts the nav (first child) below the content on a
-    // phone and `md:flex-row` puts it back on the left; the bar is a flex
-    // sibling, not an overlay, so nothing needs bottom padding to clear it.
     <View className="flex-1 flex-col-reverse md:flex-row">
       <View
         className={cn(
@@ -319,12 +246,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           // oxlint-disable-next-line shadcn/no-arbitrary-values -- the home indicator's inset has no scale value
           'pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3',
           'md:h-full md:w-60 md:border-t-0 md:border-r md:pt-6 md:pb-0 md:flex-col',
-          // The bar is stretched, not `w-full`: `auto` can't interpolate, so
-          // crossing `md` snaps. From `100%` it slid down to 240px, squeezing
-          // the page to ~0px wide and latching Legend List's width
-          // (docs/solutions/web-breakpoint-cross-blanks-list.md).
-          // Unarmed until a user toggle (see above): the boot sync to a
-          // stored collapsed pref must snap, not slide.
+          // Keep width `auto` below `md` (never `w-full`) so crossing `md` snaps instead
+          // of transitioning and latching Legend List's width (docs/solutions/web-breakpoint-cross-blanks-list.md).
           // oxlint-disable-next-line shadcn/no-arbitrary-values -- Tailwind has no width-only transition
           animated && 'md:transition-[width] md:duration-220 md:motion-reduce:transition-none',
           collapsed && 'md:w-16',
@@ -360,9 +283,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 onMouseDown={item.href === routes.search ? preventMouseFocus : undefined}
                 onPress={() => onNavItemPress(item, active, pushRoute)}
               >
-                {/* Mirrors the native Android bar (`(tabs)/_layout.tsx`): a wide
-                    tonal stadium behind the glyph with the label below, labels
-                    always in the foreground colour. */}
                 <View
                   className={cn(
                     'h-8 w-16 items-center justify-center rounded-full',
@@ -390,11 +310,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 animate={animated}
                 item={item}
                 key={item.href}
-                // Pressing the tab you're on pushes nothing (the tabs Navigator
-                // is a stack, so pushing the same href again would stack a
-                // second copy of the page and replay its enter fade over
-                // itself) — search still asks for the field (see
-                // `onNavItemPress`).
                 onPress={() => onNavItemPress(item, active, pushRoute)}
               />
             );
@@ -408,8 +323,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         </View>
       </View>
-      {/* Clipped: a loading skeleton isn't in a scroller yet, and as the later
-          sibling it would paint over the bottom bar. */}
       <View className="flex-1 overflow-hidden">{children}</View>
     </View>
   );

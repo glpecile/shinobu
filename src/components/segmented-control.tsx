@@ -14,7 +14,6 @@ import { DURATION, EASE_IN_OUT } from '@/lib/motion';
 export interface SegmentedOption<T extends string> {
   value: T;
   label: string;
-  /** Spoken name when `label` is too terse ("TV" → "TV series"). */
   accessibilityLabel?: string;
 }
 
@@ -22,18 +21,11 @@ export interface SegmentedControlProps<T extends string> {
   options: readonly SegmentedOption<T>[];
   value: T;
   onChange: (value: T) => void;
-  /** Names the group for assistive tech ("Season", "Format"). */
   accessibilityLabel: string;
   size?: 'sm' | 'md';
   tone?: 'default' | 'accent';
-  /** Layout only (width, margins) — the control styles itself. */
   className?: string;
-  /**
-   * The selection as a continuous index (1.4 is between the second and third
-   * segment), for a control that fronts a pager: the pill follows it on the
-   * UI thread — under the finger mid-swipe, alongside a page scroll a tab tap
-   * started — instead of sliding on its own once `value` settles.
-   */
+  /** Continuous 0-based segment index (not 0–1) driving the pill position on the UI thread. */
   progress?: SharedValue<number>;
 }
 
@@ -42,11 +34,6 @@ const segmentClass = (size: 'sm' | 'md') =>
 const labelClass = (size: 'sm' | 'md') =>
   cn('font-sans-semibold', size === 'sm' ? 'text-xs' : 'text-sm');
 
-/**
- * Percentage translations are relative to each moving view: one segment for
- * the pill, the whole row for its counter-moving text. Neither needs a layout
- * measurement, so the same pill is visible from the first frame.
- */
 function SelectionPill<T extends string>({
   options,
   value,
@@ -117,21 +104,6 @@ function SelectionPill<T extends string>({
   );
 }
 
-/**
- * Equal-width segments with one pill that *slides* to the selection instead
- * of each segment repainting — the same declarative Reanimated CSS transition
- * the disclosure chevrons use, so it runs on the UI thread natively and as a
- * CSS transition on web. The pill is a clipped copy of the label row in the
- * inverted colours, counter-translated so the copy stays put while the pill
- * moves: the inverted text *is* the pill, so it tracks it to the pixel at
- * every position, mid-swipe included. Fading each label's colour instead
- * could only ever be keyed to the settled value, so it lagged the pill and
- * jumped at the end.
- *
- * Controlled only. Segments are equal width by design — a content-sized
- * variant would need per-segment measurement; add it when a caller has labels
- * too uneven to share a width.
- */
 export function SegmentedControl<T extends string>({
   options,
   value,

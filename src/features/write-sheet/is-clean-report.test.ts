@@ -81,8 +81,6 @@ describe('isCleanWriteReport (plan 0032 KTD-3)', () => {
   });
 
   test('a partial success (ok with a reason) is news the toast cannot carry (plan 0031 R16)', () => {
-    // Serializd's season-filtered add: written, except the watched seasons.
-    // Closing on the toast would drop the one line correcting "watchlisted".
     expect(
       isCleanWriteReport(
         report({

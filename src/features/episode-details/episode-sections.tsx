@@ -34,18 +34,6 @@ import type { EpisodeLog } from './use-episode-logs';
 import { episodeCode, formatAirDate } from './episode-label';
 import type { EpisodeRef } from './episode-neighbours';
 
-/**
- * The building blocks every episode surface composes — the three screen
- * variants lay them out differently (`./screen`), the long-press sheet uses
- * the small ones. Shared here so a still, a meta line or a log row reads the
- * same wherever it appears.
- */
-
-/**
- * The actions sheet's wide still, or the 忍 placeholder while TMDB hasn't
- * answered / has none. Plain image, not `ZoomableImage`: the lightbox's zoom
- * transition renders inside the sheet's clip.
- */
 export function EpisodeStill({
   uri,
   title,
@@ -68,7 +56,6 @@ export function EpisodeStill({
   );
 }
 
-/** "S2E10 · Show title" eyebrow, the episode title, air date · runtime. */
 export function EpisodeHeading({
   id,
   showTitle,
@@ -116,12 +103,6 @@ export function EpisodeHeading({
   );
 }
 
-/**
- * "Logged on AniList & Simkl · Sep 3, 2026" — one line for every provider that
- * records the episode as watched, dated by the latest watch. Nothing when none
- * does: an absent line is honest, a "not logged" line would overclaim for the
- * providers this can't read.
- */
 export function EpisodeLogs({
   logs,
   className,
@@ -175,7 +156,6 @@ function EpisodeCredits({
   number: number;
 }) {
   const { data } = useSuspenseTmdbEpisodeQuery({ tmdbId, season, number });
-  // Same long-press → credit sheet contract as the details screen's rails.
   const [credit, setCredit] = useState<PersonCredit | null>(null);
   const [creditOpen, setCreditOpen] = useState(false);
 
@@ -220,11 +200,6 @@ function EpisodeCredits({
   );
 }
 
-/**
- * Cast + crew credited on this episode, behind their own boundary so a TMDB
- * miss degrades to no rails rather than no screen. Renders nothing without a
- * TMDB id or token — TMDB is the only source that credits people per episode.
- */
 export function EpisodeCreditsSection({
   tmdbId,
   season,
@@ -242,28 +217,14 @@ export function EpisodeCreditsSection({
   );
 }
 
-/**
- * How the screen steps to a sibling episode. The native pager provides it and
- * scrolls there; without a provider (web) a step updates the route parameters.
- */
 export const EpisodeStep = createContext<((target: EpisodeRef) => void) | null>(null);
 
-/**
- * Steps to a sibling episode: the nav buttons, the log button's advance and
- * the web arrow keys all call this. Never a push: stepping through episodes
- * must not stack one screen per step, so back still returns to the show.
- */
 export function useGoToEpisode() {
   const router = useRouter();
   const step = use(EpisodeStep);
   return step ?? ((target: EpisodeRef) => router.setParams({ episode: [String(target.season), String(target.number)] }));
 }
 
-/**
- * Previous / next episode, across season boundaries, from the show's layout
- * (`useEpisode` → `episodeNeighbours`). Always the tracker's explicit
- * `season`+`number`, which is what the route places without ani.zip.
- */
 export function EpisodeNavigation({
   id,
   prev,
@@ -334,11 +295,6 @@ export function EpisodeNavigation({
   );
 }
 
-/**
- * Mirrors the loaded header so content lands without a shift: the eyebrow's
- * 16px line, the title's 36px line a `mt-1` under it, the meta line's 20px a
- * `mt-1.5` under that — each bar centred in its text line.
- */
 export function EpisodeHeaderSkeleton() {
   return (
     <View>

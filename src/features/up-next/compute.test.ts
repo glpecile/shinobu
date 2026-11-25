@@ -20,14 +20,7 @@ import type {
   UpNextInputs,
 } from './types';
 
-/**
- * The Up Next core, including the timezone boundary criteria todos/006 asks
- * this feature to discharge. `now` is fixed everywhere and air instants are
- * built with local-time constructors where the *calendar day* is what's under
- * test, so the suite means the same thing in every timezone it runs in.
- */
-
-const NOW = new Date(2026, 6, 23, 20, 0); // Thu 2026-07-23, 20:00 local
+const NOW = new Date(2026, 6, 23, 20, 0);
 
 function localInstant(
   year: number,
@@ -84,11 +77,6 @@ function inputs(overrides: Partial<UpNextInputs> = {}): UpNextInputs {
   };
 }
 
-/**
- * Defaults to `trakt`, so every pre-0034 case below asserts the provider-keyed
- * retype changed nothing for the source that already existed — the Simkl cases
- * opt in explicitly (the same discipline as `anilistInput`'s CURRENT default).
- */
 function progressInput(
   item: NormalizedMediaItem,
   nextEpisode?: ProgressUpNextInput['nextEpisode'],
@@ -102,11 +90,6 @@ function progressInput(
   };
 }
 
-/**
- * Defaults to CURRENT, so every pre-0030 case below asserts the widened list
- * read changed nothing for the status that already existed — the PLANNING
- * cases opt in explicitly.
- */
 function anilistInput(
   item: NormalizedMediaItem,
   overrides: Partial<AniListUpNextInput> = {},
@@ -120,12 +103,6 @@ function anilistInput(
   };
 }
 
-/**
- * A tracker's calendar row (plan 0030 KTD-2): the show plus the episode airing
- * in the window — no progress and no pool, which is exactly why it can speak
- * for shows the pool fan never reaches. Trakt-sourced by default, mirroring
- * `progressInput`.
- */
 function calendarInput(
   item: NormalizedMediaItem,
   episode: CalendarUpNextInput['episode'],
@@ -160,7 +137,6 @@ function releaseInput(
   return { item, kind, date, source };
 }
 
-/** The release arm's payload, narrowed — the mirror of `episodeOf`. */
 function releaseOf(entry: UpNextEntry) {
   if (entry.kind !== 'release') {
     throw new Error(`expected a release entry, got ${entry.kind}`);
@@ -168,11 +144,6 @@ function releaseOf(entry: UpNextEntry) {
   return entry.release;
 }
 
-/**
- * Asserting on an episode payload means narrowing the union first — and failing
- * loudly rather than silently passing if a source ever starts emitting the
- * other arm where an episode is expected.
- */
 function episodeOf(entry: UpNextEntry): UpNextEpisode {
   if (entry.kind !== 'episode') {
     throw new Error(`expected an episode entry, got ${entry.kind}`);
@@ -238,10 +209,6 @@ describe('computeUpNext — Trakt shows', () => {
     });
   });
 
-  // The double-source removal (plan 0030 U4): the pool fan's pointer used to be
-  // Calendar's Trakt source *as well as* Continue Watching's. It no longer is —
-  // `/calendars/my/shows` states the same airing for a strictly larger set of
-  // shows, and emitting it from both would double the pooled ones.
   test('an unaired pooled pointer no longer contributes a Calendar entry', () => {
     const data = computeUpNext(
       inputs({
@@ -313,10 +280,6 @@ describe('computeUpNext — Trakt shows', () => {
 
 describe('computeUpNext — the Trakt my-calendars source (U4/KTD-2)', () => {
   test('an airing the calendar reports for earlier today is not Continue Watching', () => {
-    // The calendar window opens at local midnight, so it reports this morning's
-    // airings too — but it speaks for shows the user has never opened, and
-    // promoting one to `aired` would offer a quick-log for a show with no
-    // progress behind it (R4).
     const data = computeUpNext(
       inputs({
         calendar: [
@@ -340,7 +303,7 @@ describe('computeUpNext — the Trakt my-calendars source (U4/KTD-2)', () => {
           calendarInput(show(103), {
             season: 1,
             number: 2,
-            firstAired: localInstant(2026, 7, 30, 12, 0), // 7 days out
+            firstAired: localInstant(2026, 7, 30, 12, 0),
           }),
         ],
       }),
@@ -383,8 +346,6 @@ describe('computeUpNext — film releases (U5/R3)', () => {
       { kind: 'theatrical', date: '2026-07-24' },
       { kind: 'digital', date: '2026-07-26' },
     ]);
-    // Two rows for one film must not collide as list keys, and must not read
-    // the same on screen.
     expect(data.calendar.map((entry) => entry.id)).toEqual([
       'trakt-300-theatrical',
       'trakt-300-digital',
@@ -393,9 +354,6 @@ describe('computeUpNext — film releases (U5/R3)', () => {
   });
 
   test('a duplicate theatrical row across sources collapses, the digital one survives', () => {
-    // The same film on the Trakt and Letterboxd watchlists: one TMDB id, but
-    // (id, kind) is the key — collapsing on the id alone would swallow the
-    // digital row (KTD-6).
     const ids = { trakt: 301, tmdb: 5001 };
     const data = computeUpNext(
       inputs({
@@ -416,10 +374,7 @@ describe('computeUpNext — film releases (U5/R3)', () => {
       'theatrical',
       'digital',
     ]);
-    // First one in wins, so the row keeps the source that stated it first.
     expect(data.calendar[0].source).toBe('letterboxd');
-    // Each row carries the other joined copy, whichever source won its kind:
-    // hiding a film hides every release row of it (plan 0030 R8).
     expect(data.calendar.map((entry) => entry.twinIds)).toEqual([
       ['trakt-301'],
       ['letterboxd-film-301'],
@@ -450,7 +405,6 @@ describe('computeUpNext — film releases (U5/R3)', () => {
       NOW,
     );
     expect(data.calendar).toEqual([]);
-    // And a release never lands in the quick-log section, released or not (R5).
     expect(data.continueWatching).toEqual([]);
   });
 
@@ -464,26 +418,23 @@ describe('computeUpNext — film releases (U5/R3)', () => {
   });
 
   test('Calendar interleaves releases and episodes strictly by instant', () => {
-    // The ordering trap: a release is a bare local day and an episode a UTC
-    // instant, so comparing the raw strings would file the Saturday release
-    // ahead of Friday's late-evening episode.
     const data = computeUpNext(
       inputs({
         calendar: [
           calendarInput(show(310), {
             season: 1,
             number: 2,
-            firstAired: localInstant(2026, 7, 24, 23, 30), // Fri, late
+            firstAired: localInstant(2026, 7, 24, 23, 30),
           }),
           calendarInput(show(311), {
             season: 1,
             number: 2,
-            firstAired: localInstant(2026, 7, 26, 12, 0), // Sun
+            firstAired: localInstant(2026, 7, 26, 12, 0),
           }),
         ],
         releases: [
-          releaseInput(film(312), 'theatrical', '2026-07-25'), // Sat
-          releaseInput(film(313), 'digital', '2026-07-24'), // Fri, midnight
+          releaseInput(film(312), 'theatrical', '2026-07-25'),
+          releaseInput(film(313), 'digital', '2026-07-24'),
         ],
       }),
       NOW,
@@ -496,9 +447,6 @@ describe('computeUpNext — film releases (U5/R3)', () => {
 
 describe('computeUpNext — timezone boundaries (todos/006)', () => {
   test('aired in the origin timezone but not locally stays upcoming', () => {
-    // At this instant it is already 2026-07-24 in JST, so a naive "the date
-    // matches over there" read would spoil show 12's episode as available —
-    // its air instant is still an hour away.
     const now = new Date('2026-07-23T23:00:00.000Z');
     const data = computeUpNext(
       inputs({
@@ -506,20 +454,19 @@ describe('computeUpNext — timezone boundaries (todos/006)', () => {
           progressInput(show(11), {
             season: 1,
             number: 4,
-            firstAired: '2026-07-24T00:00:00.000+09:00', // 2026-07-23T15:00Z
+            firstAired: '2026-07-24T00:00:00.000+09:00',
           }),
         ],
         calendar: [
           calendarInput(show(12), {
             season: 1,
             number: 4,
-            firstAired: '2026-07-24T09:00:00.000+09:00', // 2026-07-24T00:00Z
+            firstAired: '2026-07-24T09:00:00.000+09:00',
           }),
         ],
       }),
       now,
     );
-    // The first instant has passed (15:00Z), the second has not.
     expect(
       data.continueWatching.map((entry) => entry.item.externalIds.trakt),
     ).toEqual([11]);
@@ -529,15 +476,13 @@ describe('computeUpNext — timezone boundaries (todos/006)', () => {
   });
 
   test('an instant that already passed counts as aired across a date-line boundary', () => {
-    // Air instant reads as "tomorrow" on the origin calendar, but the absolute
-    // instant is in the past — instants, not calendar dates, decide.
     const data = computeUpNext(
       inputs({
         progress: [
           progressInput(show(13), {
             season: 1,
             number: 4,
-            firstAired: '2026-07-24T10:00:00.000+14:00', // 2026-07-23T20:00Z
+            firstAired: '2026-07-24T10:00:00.000+14:00',
           }),
         ],
       }),
@@ -579,7 +524,6 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
       source: 'anilist',
       status: 'aired',
       episode: { number: 6 },
-      // Episodes 6..8 are out below the E9 pointer.
       episodesBehind: 3,
     });
     expect(episodeOf(data.continueWatching[0]).season).toBeUndefined();
@@ -630,7 +574,6 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
     );
     expect(data.continueWatching).toHaveLength(1);
     expect(episodeOf(data.continueWatching[0])).toEqual({ number: 4 });
-    // Schedule exhausted: the whole remaining run (4..12) has aired.
     expect(data.continueWatching[0]).toMatchObject({ episodesBehind: 9 });
   });
 
@@ -671,14 +614,6 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
   });
 });
 
-/**
- * Plan 0030 KTD-3, the regression guard the plan names explicitly. One list
- * request now carries plan-to-watch entries as well (R12), and PLANNING entries
- * sit at progress 0 — which the classifier above reads as "four episodes behind
- * and every one of them already out". Only the status gate keeps that out of
- * Continue Watching, and nothing about it is visible at the type level, so
- * these cases are the whole safety net.
- */
 describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
   test('a planned sequel waits for its prequel to be completed without hiding current progress or its upcoming premiere', () => {
     const airingAt = Math.floor(NOW.getTime() / 1000);
@@ -749,11 +684,6 @@ describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
   });
 
   test('a PLANNING series already mid-run is excluded from both sections', () => {
-    // The flood case. progress 0 → next = 1, four episodes below the pointer,
-    // which classifies as `aired` by construction. Un-gated this puts the
-    // user's entire plan-to-watch backlog into Continue Watching — and it must
-    // not land in Calendar either: episode 1 airing weeks ago is not a
-    // calendar event for a show that was never started.
     const data = computeUpNext(
       inputs({
         anilist: [
@@ -771,10 +701,6 @@ describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
   });
 
   test('a gated PLANNING entry leaves its Trakt twin standing', () => {
-    // Dedupe suppresses a Trakt card only for AniList entries that *survived*.
-    // A gated PLANNING entry must not take the Trakt row down with it —
-    // otherwise adding a show to the AniList plan list would silently delete a
-    // card the user is actively watching on Trakt.
     const data = computeUpNext(
       inputs({
         progress: [
@@ -825,9 +751,7 @@ describe('computeUpNext — cross-provider dedupe (R5)', () => {
     expect(data.continueWatching).toHaveLength(1);
     expect(data.continueWatching[0].source).toBe('anilist');
     expect(data.continueWatching[0].twinIds).toEqual(['trakt-20']);
-    // Differing progress across providers must not produce two cards.
     expect(episodeOf(data.continueWatching[0]).number).toBe(6);
-    // A shared show id doesn't prove the same AniList season entry.
     expect(data.continueWatching[0].item.externalIds.trakt).toBeUndefined();
   });
 
@@ -851,13 +775,6 @@ describe('computeUpNext — cross-provider dedupe (R5)', () => {
   });
 });
 
-/**
- * Plan 0034 U8/R9: the Simkl legs ride the same provider-tagged inputs as
- * Trakt's, so classification (instants through `hasAired`, never calendar
- * dates) is identical by construction — these cases pin the parts that are
- * Simkl-specific: the null-date arithmetic, the finale flag, absolute anime
- * numbering, and the KTD-10 precedence when both trackers speak.
- */
 function simklShow(
   simklId: number,
   overrides: Partial<NormalizedMediaItem> = {},
@@ -877,9 +794,6 @@ function simklShow(
 
 describe('computeUpNext — Simkl progress leg (plan 0034 U8/R9)', () => {
   test('a null-date pointer proven aired by counts degrades to a progress-only entry', () => {
-    // Simkl knows the episode but not its air date, and the show is absent
-    // from the calendar files — the plan's "degrades to progress-only, never
-    // hidden" case. The entry carries no instant, like an AniList back-episode.
     const data = computeUpNext(
       inputs({
         progress: [
@@ -898,8 +812,6 @@ describe('computeUpNext — Simkl progress leg (plan 0034 U8/R9)', () => {
   });
 
   test('a Simkl anime pointer carries no season, and the id reflects it', () => {
-    // Simkl numbers anime absolutely (the AniDB convention) — no fabricated
-    // season, the same plan-0027 rule AniList entries follow.
     const data = computeUpNext(
       inputs({
         progress: [
@@ -976,9 +888,6 @@ describe('computeUpNext — cross-tracker dedupe (plan 0034 KTD-10/R10)', () => 
   });
 
   test('precedence is per section: a Simkl upcoming row leaves Trakt’s aired row standing', () => {
-    // Trakt knows the user is an episode behind; Simkl only states next week's
-    // airing. Keying the collapse on (tmdb, status) keeps both sections whole
-    // instead of letting the upcoming row delete the quick-loggable one.
     const data = computeUpNext(
       inputs({
         progress: [
@@ -1027,9 +936,6 @@ describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () =
     { identity: 'MAL', ids: { mal: 55555 } },
     { identity: 'AniList', ids: { anilist: 901 } },
   ])('a shared $identity entry keeps the AniList card with the tracker’s write ids', ({ ids }) => {
-    // The live duplicate: "Youjo Senki II" (AniList, romaji) next to "Saga of
-    // Tanya the Evil Season 2" (Simkl calendar, English) — same show, same
-    // airing. The tracker carries the TV identity AniList needs for logging.
     const item = anime(901, { externalIds: { anilist: 901, mal: 55555 } });
     const data = computeUpNext(
       inputs({
@@ -1064,31 +970,27 @@ describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () =
 
 describe('calendarWeek — the week strip buckets (U8)', () => {
   test("today's already-aired episodes land on the today cell (not just upcoming)", () => {
-    // The whole point of feeding the strip *both* sections: an episode that
-    // aired earlier today is in Continue Watching, but the today cell must
-    // still show it — a "This week" schedule that reads "nothing today" when
-    // something aired today is wrong.
     const data = computeUpNext(
       inputs({
         progress: [
           progressInput(show(50), {
             season: 1,
             number: 3,
-            firstAired: localInstant(2026, 7, 23, 9, 0), // aired 09:00 today
+            firstAired: localInstant(2026, 7, 23, 9, 0),
           }),
         ],
         calendar: [
           calendarInput(show(51), {
             season: 1,
             number: 2,
-            firstAired: localInstant(2026, 7, 25, 12, 0), // upcoming
+            firstAired: localInstant(2026, 7, 25, 12, 0),
           }),
         ],
       }),
       NOW,
     );
-    expect(data.continueWatching).toHaveLength(1); // the aired one
-    expect(data.calendar).toHaveLength(1); // the upcoming one
+    expect(data.continueWatching).toHaveLength(1);
+    expect(data.calendar).toHaveLength(1);
 
     const week = calendarWeek([...data.continueWatching, ...data.calendar], NOW);
     expect(week[0].entries.map((e) => e.item.externalIds.trakt)).toEqual([50]);
@@ -1102,7 +1004,7 @@ describe('calendarWeek — the week strip buckets (U8)', () => {
           progressInput(show(52), {
             season: 1,
             number: 3,
-            firstAired: localInstant(2026, 7, 21, 12, 0), // two days ago
+            firstAired: localInstant(2026, 7, 21, 12, 0),
           }),
         ],
       }),
@@ -1121,14 +1023,11 @@ describe('calendarWeek — the week strip buckets (U8)', () => {
       'Tomorrow',
       'Saturday',
     ]);
-    expect(week[2].entries).toHaveLength(1); // 2026-07-25 is two days out
+    expect(week[2].entries).toHaveLength(1);
     expect(week[0].entries).toEqual([]);
   });
 
   test('a date-only film release buckets on its local day, not the UTC one', () => {
-    // The union's other arm through the same accessor: a release states a bare
-    // calendar day, and reading it as UTC midnight would land it a cell early
-    // for every user west of Greenwich.
     const release: UpNextEntry = {
       kind: 'release',
       id: 'trakt-60-theatrical',

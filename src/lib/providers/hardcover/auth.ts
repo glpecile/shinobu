@@ -47,15 +47,8 @@ const tokenResponse = Schema.Struct({
 const oauthError = Schema.Struct({ error: optionalNullable(Schema.String) });
 
 /**
- * One POST to the token or revoke endpoint. Never retried: a code and a
- * refresh token are both single-use, and a request that got no answer may
- * still have spent one. Every failure but a 429 is marked not retryable so
- * TanStack Query does not replay the call that led here.
- *
- * The body is form-encoded, which keeps the request CORS-simple. `fetch`
- * runs with its default credentials mode on purpose: these endpoints answer
- * `access-control-allow-origin: *` and set cookies, and a browser rejects
- * `*` on a credentialed request.
+ * Single-use OAuth grants never retry. An unanswered request may already have spent the
+ * credential.
  */
 function oauthPost(
   deps: HardcoverDeps,
@@ -163,19 +156,9 @@ export function exchangeHardcoverCode(
 const refreshCooldowns = new WeakMap<TokenStore, number>();
 
 /**
- * One refresh-token grant. Hardcover rotates the refresh token on every use
- * and revokes the whole chain when a spent one is replayed.
- *
- * - `invalid_grant`, or no refresh token to send: the chain is dead. The
- *   session is kept and marked `reconnectNeeded`, which takes Hardcover out
- *   of every read and write and shows the reconnect banner. It is never
- *   cleared here.
- * - 429: the request did not run. Refreshes stay off for the cooldown and
- *   fail without a request.
- * - Anything else (no answer, 5xx, a body that does not decode): the outcome
- *   is unknown and the token may be spent, so it is never sent again. The
- *   session is marked `reconnectNeeded` as for a refusal, and the call fails
- *   with the original error.
+ * Hardcover rotates refresh tokens and revokes the chain on replay. A rate limit holds the
+ * grant until cooldown. Refusal or unknown outcome keeps the session stored and marks it for
+ * reconnect.
  */
 function refreshSession(deps: HardcoverDeps): Effect.Effect<ProviderSession, ProviderError> {
   return Effect.gen(function* () {
@@ -224,18 +207,9 @@ const inflightRefreshes = new WeakMap<
 >();
 
 /**
- * The refresh `hardcoverRequest` runs after a 401 on `usedAccessToken`. At
- * most one refresh request leaves this browser or device at a time:
- *
- * - Concurrent callers in one process share one in-flight promise, keyed by
- *   token store like Trakt's `coalescedRefreshSession`.
- * - Across web tabs the refresh holds `deps.refreshLock`.
- * - Once it holds the lock, a caller whose 401 came from a token that is no
- *   longer the stored one takes the stored session: another caller or tab
- *   rotated it first, and a second grant would waste a rotation.
- *
- * The refresh runs on its own fiber, so a caller that is interrupted (a
- * cancelled query) never aborts a grant that is already on the wire.
+ * Coalesce refreshes per token store and take the web lock across tabs. Recheck the stored
+ * token after acquiring it. A detached fiber keeps caller cancellation from aborting an
+ * in-flight grant.
  */
 export function coalescedRefreshSession(
   deps: HardcoverDeps,

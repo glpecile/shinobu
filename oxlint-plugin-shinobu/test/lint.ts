@@ -9,7 +9,6 @@ interface Diagnostic {
   filename: string;
 }
 
-/** Run the real plugin with only the rule under test enabled. */
 export function lint(rule: string, files: Record<string, string>): Diagnostic[] {
   const dir = mkdtempSync(join(tmpdir(), 'shinobu-lint-'));
   try {

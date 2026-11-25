@@ -9,7 +9,6 @@ import {
   type ResolveWatchlistFilm,
 } from './letterboxd-releases';
 
-/** A watchlist row exactly as `normalizeWatchlistFilm` shapes it: no ids, no dates. */
 function film(slug: string, year?: number): NormalizedMediaItem {
   return {
     id: `letterboxd-${slug}`,
@@ -24,7 +23,6 @@ function film(slug: string, year?: number): NormalizedMediaItem {
   };
 }
 
-/** A TMDB catalogue record, as leg 2 of the resolve returns it. */
 function catalogue(params: {
   title: string;
   year: number;
@@ -54,7 +52,6 @@ function catalogue(params: {
 
 const NOW = new Date('2026-07-27T12:00:00.000Z');
 
-/** Resolves every film to the same record — the shape, not the matching, under test. */
 function alwaysResolve(record: NormalizedMediaItem): ResolveWatchlistFilm {
   return (candidate) => Promise.resolve(mergeCatalogueMetadata(candidate, record));
 }
@@ -71,9 +68,6 @@ describe('selectReleaseCandidates', () => {
 
     const kept = selectReleaseCandidates(films, NOW).map((item) => item.id);
 
-    // A yearless row is the announced-but-undated case this feature is for —
-    // dropping it would filter out exactly the films most likely to be dated
-    // inside the window.
     expect(kept).toEqual([
       'letterboxd-this-year',
       'letterboxd-next-year',
@@ -86,8 +80,6 @@ describe('selectReleaseCandidates', () => {
       film(`upcoming-${index}`, 2026),
     );
 
-    // The cap applies *after* the filter, so a backlog-heavy watchlist doesn't
-    // spend its whole budget on films the filter would have dropped.
     expect(selectReleaseCandidates([film('old', 1999), ...films], NOW)).toEqual(
       films.slice(0, 30),
     );
@@ -124,8 +116,6 @@ describe('letterboxdReleaseInputs', () => {
         source: 'letterboxd',
       },
     ]);
-    // The resolved TMDB id rides along — it is the only thing that can collapse
-    // this row against the same film on the Trakt watchlist (KTD-6).
     expect(inputs[0]?.item.externalIds.tmdb).toBe(1234);
   });
 
@@ -161,8 +151,6 @@ describe('letterboxdReleaseInputs', () => {
       return null;
     });
 
-    // Two calls per film, so an unbounded fan would be a 60-request burst — the
-    // shape rate limiters punish, for a source nothing on screen waits on.
     expect(peak).toBeLessThanOrEqual(4);
   });
 

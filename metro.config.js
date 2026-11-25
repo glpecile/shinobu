@@ -2,16 +2,13 @@ const http = require("node:http");
 const path = require("node:path");
 
 const { getDefaultConfig } = require("expo/metro-config");
-const { withUniwindConfig } = require("uniwind/metro"); // make sure this import exists
+const { withUniwindConfig } = require("uniwind/metro");
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
-// Apply uniwind modifications before exporting
 const uniwindConfig = withUniwindConfig(config, {
-  // relative path to your global.css file
   cssEntryFile: "./src/global.css",
-  // optional: path to typings
   dtsFile: "./src/uniwind-types.d.ts",
 });
 
@@ -26,28 +23,18 @@ uniwindConfig.resolver.resolveRequest = (context, moduleName, platform) =>
     ? context.resolveRequest(context, moduleName, platform)
     : uniwindResolveRequest(context, moduleName, platform);
 
-// Expo ships inline requires off. Turned on so launch only runs the modules
-// the first screen needs.
 const getTransformOptions = uniwindConfig.transformer.getTransformOptions;
 uniwindConfig.transformer.getTransformOptions = async (...args) => {
   const options = await getTransformOptions(...args);
   return { ...options, transform: { ...options.transform, inlineRequires: true } };
 };
 
-// --- Local worker proxy (web dev only) --------------------------------------
-// `bun web` (Metro) has no Worker, so the same-origin proxy paths the web app
-// depends on in production (`/api/serializd/*`, `/api/letterboxd/*`, `/api/fourchan/*`, `/api/reddit/*`) 404 there
-// — and the Letterboxd connect flow misreads that 404 as "username not found".
-// In dev, forward those prefixes to a locally running `wrangler dev`
-// (`bun run dev:worker`), which executes worker/index.ts exactly like
-// production. This lives here (dev tooling) so it can never ship in a bundle;
-// production routing is wrangler.jsonc's `run_worker_first`.
-// (docs/solutions/local-web-dev-proxy-middleware.md)
+// Metro has no Cloudflare Worker, so /api/* proxy routes 404 in web dev.
+// Forward them to local `wrangler dev` (docs/solutions/local-web-dev-proxy-middleware.md).
 const WORKER_DEV_ORIGIN =
   process.env.SHINOBU_WORKER_DEV_ORIGIN ?? "http://localhost:8787";
 const WORKER_PROXY_PREFIXES = ["/api/serializd/", "/api/letterboxd/", "/api/fourchan/", "/api/reddit/"];
 
-/** Connect-style middleware: relay proxy prefixes to `wrangler dev`, else next(). */
 function workerDevProxy(req, res, next) {
   if (!WORKER_PROXY_PREFIXES.some((prefix) => req.url?.startsWith(prefix))) {
     return next();
@@ -62,8 +49,6 @@ function workerDevProxy(req, res, next) {
     },
   );
   proxyReq.on("error", () => {
-    // `wrangler dev` isn't running — answer with a clean JSON 502 instead of
-    // letting the SPA fallback's 404 masquerade as "username not found".
     res.writeHead(502, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({

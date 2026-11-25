@@ -1,21 +1,11 @@
 import { formatCalendarDate } from '@/lib/time/calendar-date';
 import { isDateOnly } from '@/lib/time/has-aired';
 
-/**
- * "S2E10" — the pointer every episode surface leads with, in the app's one
- * episode-code format. It used to be spelled three ways ("S2 E10" here,
- * "S2E10" on the log button, "E10" in the season sheets) for the same episode
- * on screens one tap apart.
- */
 export function episodeCode(season: number, number: number): string {
   return `S${season}E${number}`;
 }
 
-/**
- * The air date, formatted for the kind of value the source carried: a bare
- * TMDB date renders as that calendar day everywhere (never shifted through
- * UTC), a Trakt instant renders in the viewer's local zone.
- */
+/** Bare `YYYY-MM-DD` dates format as that calendar day (no UTC shift); ISO instants format in the local timezone. */
 export function formatAirDate(firstAired: string): string {
   if (isDateOnly(firstAired)) return formatCalendarDate(firstAired, { weekday: 'short' });
   const date = new Date(firstAired);

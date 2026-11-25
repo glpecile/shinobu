@@ -11,17 +11,10 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * The rail every list down a gutter shares: a fixed-width left column with
- * one hairline at its centre. Row bodies (`RailLine`, posters) in the diary
- * and the filmography size themselves from these.
- */
 export const RAIL_W = 'w-14';
-/** Centre of `RAIL_W` (56px), where the hairline sits. */
 export const RAIL_LINE = 'left-7';
 
 const ROW = 'flex-row pt-5';
-/** `pb-3` so the count and rule centre on the lead's headline, not the block. */
 const TRAILING = 'flex-1 min-w-0 flex-row items-center pr-6 pb-3';
 const RULE = 'flex-1 h-px bg-border';
 const LEAD_LINE = cn('absolute w-px bg-border bottom-0', RAIL_LINE);
@@ -30,20 +23,6 @@ const OpenContext = createContext(true);
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
-/**
- * The head of a run of rail rows — a diary day, a filmography year. One
- * pressable row that toggles the run, composed of a lead (the date stacked
- * in the gutter, or a title on the page edge) and the count that runs a
- * hairline out to the chevron. The lead owns the stub of rail under it, and
- * draws it only while the run is open, so a folded head ends clean.
- *
- * ```tsx
- * <RailHead label="Sep 14, 10 entries" onToggle={…} open={open}>
- *   <RailHead.Date day="14" label="Sep" />
- *   <RailHead.Count>10 entries</RailHead.Count>
- * </RailHead>
- * ```
- */
 export function RailHead({
   open,
   onToggle,
@@ -52,7 +31,6 @@ export function RailHead({
 }: {
   open: boolean;
   onToggle: () => void;
-  /** What the row announces; the hint says what a press does. */
   label: string;
   children: ReactNode;
 }) {
@@ -71,7 +49,6 @@ export function RailHead({
   );
 }
 
-/** The date stacked in the gutter: numeral over month, the rail resuming below. */
 function RailHeadDate({
   day,
   label,
@@ -100,10 +77,6 @@ function RailHeadDate({
   );
 }
 
-/**
- * A title on the page gutter (`px-6`), the rail resuming under its first
- * letters. `pb-3` matches the trailing block, so the count centres on the title.
- */
 function RailHeadTitle({ children, muted = false, showRail = true }: { children: ReactNode; muted?: boolean; showRail?: boolean }) {
   const open = useContext(OpenContext);
   return (
@@ -121,11 +94,6 @@ function RailHeadTitle({ children, muted = false, showRail = true }: { children:
   );
 }
 
-/**
- * A glyph ringed on the rail with a title beside it, for runs named by topic
- * rather than date (the Settings sections). `pb-3` matches the trailing block,
- * so the count centres on the title.
- */
 function RailHeadIcon({ name, children, showRail = true }: { name: IconName; children: ReactNode; showRail?: boolean }) {
   const open = useContext(OpenContext);
   const muted = useThemeColor('--color-muted');
@@ -142,7 +110,6 @@ function RailHeadIcon({ name, children, showRail = true }: { name: IconName; chi
   );
 }
 
-/** The count, then the hairline out to the chevron that turns with the fold. */
 function RailHeadCount({ children }: { children: ReactNode }) {
   const open = useContext(OpenContext);
   return (
@@ -154,10 +121,6 @@ function RailHeadCount({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * The head's bars on the head's geometry, so the resolve moves nothing.
- * `animated` is off for a page held offscreen, as `Skeleton`'s is.
- */
 function RailHeadSkeleton({
   lead,
   showRail = true,
@@ -171,7 +134,6 @@ function RailHeadSkeleton({
     <View className={ROW}>
       {lead === 'date' ? (
         <View className={cn(RAIL_W, 'items-center relative')}>
-          {/* 24px tall: `font-display text-2xl leading-none`. */}
           <Skeleton animated={animated} className="w-7 h-6 rounded" />
           <Skeleton animated={animated} className="w-6 h-3 rounded mt-1" />
           {showRail && <View className={cn(LEAD_LINE, 'top-11')} />}
@@ -186,7 +148,6 @@ function RailHeadSkeleton({
         </View>
       ) : (
         <View className="relative pl-6 pr-2 pb-3">
-          {/* 20px tall: `font-display text-xl leading-none`. */}
           <Skeleton animated={animated} className="w-10 h-5 rounded" />
           {showRail && <View className={cn(LEAD_LINE, 'top-5')} />}
         </View>
@@ -199,12 +160,6 @@ function RailHeadSkeleton({
   );
 }
 
-/**
- * The head of the run in view, pinned over the list's top edge once the run's
- * own head has scrolled away. Place it after the list in a shared parent; the
- * list reports which run is on top (`onViewableItemsChanged`). Decoration to
- * touch: the rows under it stay pressable.
- */
 function RailHeadPinned({ title, count, visible, icon }: { title: string; count: string; visible: boolean; icon?: IconName }) {
   const reduceMotion = useReducedMotion();
   const muted = useThemeColor('--color-muted');
@@ -220,7 +175,6 @@ function RailHeadPinned({ title, count, visible, icon }: { title: string; count:
       style={{
         pointerEvents: 'none',
         opacity: visible ? 1 : 0,
-        // Drops in from under the screen header as the run's head scrolls up into it.
         transform: [{ translateY: visible ? 0 : -6 }],
         transitionProperty: ['opacity', 'transform'],
         transitionDuration: reduceMotion ? 0 : visible ? DURATION.enter : DURATION.exit,

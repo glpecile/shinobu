@@ -2,12 +2,6 @@ import { Text, View } from 'react-native';
 
 import { cn } from '@/lib/cn';
 
-/**
- * Stand-in for missing artwork (posters, backdrops, studio logos): the 忍
- * mark centered on a surface tile, instead of a void-black box. The kanji
- * intentionally renders in the OS fallback font — neither app family ships
- * kanji (AGENTS.md "Theming").
- */
 export function PosterPlaceholder({ className }: { className?: string }) {
   return (
     <View

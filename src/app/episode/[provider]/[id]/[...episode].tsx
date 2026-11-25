@@ -15,16 +15,6 @@ import { useAniZipEpisodeMapQuery, useSeasonLayoutQuery } from '@/state/queries/
 import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 
-/**
- * `/episode/[provider]/[id]/[season]/[number]` resolves the same show as
- * `/details/[provider]/[id]`. With only one episode segment
- * (`routes.animeEpisode`), `number` is an anime
- * entry's own numbering and this route places it on the trackers' layout the
- * way the seasons accordion does — the ani.zip read belongs to a details
- * screen, not to every diary row (plan 0027 R7). The screen itself is platform-split
- * (`features/episode-details/screen`): a full-bleed page on native, a page
- * inside the sidebar shell on web.
- */
 export default function EpisodeRoute() {
   const { provider, id: resourceId, episode } = useLocalSearchParams<{
     provider: string;
@@ -37,10 +27,6 @@ export default function EpisodeRoute() {
   const detailsHref = id == null ? routes.home : routes.details(id, 'TV');
   const router = useRouter();
   const { item: resolved, isLoading } = useResolvedMediaItem(id ?? '', provider === Provider.Trakt ? 'TV' : undefined);
-  // The same TMDB-over-provider merge the details screen applies: an anime
-  // item has no TMDB id of its own, the catalogue read discovers it, and the
-  // episode surfaces are TMDB-keyed. Cached from the details screen that
-  // linked here, so this costs no request.
   const mediaDetails = useMediaDetailsQuery(resolved);
   const item =
     resolved == null ? undefined : applyPrimaryMetadata(resolved, mediaDetails.data?.catalogue);
@@ -81,10 +67,6 @@ export default function EpisodeRoute() {
     return <EpisodeScreenSkeleton onBack={goBack} />;
   }
 
-  // An episode we can't place — no resolvable show, or an entry number ani.zip
-  // hasn't mapped onto TMDB's layout — is still a link to a show we *can*
-  // open. A dead end that names an internal mapping gap is worse than the
-  // show's own screen, so it lands there instead.
   if (item == null || !pointerValid) {
     return <Redirect href={detailsHref} />;
   }
@@ -99,10 +81,6 @@ export default function EpisodeRoute() {
   );
 }
 
-/**
- * Route-level containment (plan 0013 §5): a failed seasons/TMDB read lands on
- * this screen's not-found view with a retry, not the root boundary.
- */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (

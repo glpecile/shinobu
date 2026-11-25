@@ -11,23 +11,10 @@ import { GestureScrollView } from '@/components/animated-view';
 import { List, type ListProps } from '@/components/List';
 import { type ThemeColorToken, useThemeColor } from '@/lib/theme-color';
 
-/**
- * The token a rail's end fade blends into. A surface other than the page
- * background, like a sheet, provides its own.
- */
 export const RailFadeColor = createContext<ThemeColorToken>('--color-background');
 
 type ScrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 
-/**
- * A fade at the trailing edge of a horizontal scroller until it reaches the
- * end. Spread `scrollProps` on the scroller and render `fade` after it, in a
- * wrapper that doesn't set its own size, so the fade matches its frame.
- *
- * A rail whose content fits never scrolls, so its fade stays, over empty
- * space, in the color it fades into. That breaks only when content ends inside
- * the last 32pt without overflowing.
- */
 export function useRailFade(onScroll?: ScrollHandler) {
   const color = useThemeColor(useContext(RailFadeColor));
   const [atEnd, setAtEnd] = useState(false);
@@ -63,11 +50,7 @@ export function useRailFade(onScroll?: ScrollHandler) {
   };
 }
 
-/**
- * A horizontal scroll row with the trailing fade. `nestedScrollEnabled`: on
- * Android the episode pager otherwise takes every horizontal drag that starts
- * on the rail.
- */
+/** `nestedScrollEnabled` keeps Android's horizontal pager from stealing drags started on the rail. */
 export function Rail({ onScroll, ...rest }: ScrollViewProps) {
   const { scrollProps, fade } = useRailFade(onScroll);
   return (
@@ -84,7 +67,7 @@ export function Rail({ onScroll, ...rest }: ScrollViewProps) {
   );
 }
 
-/** A data-backed rail. The caller supplies its bounded cross-axis height. */
+/** Caller must supply a bounded cross-axis height. */
 export function VirtualizedRail<T>({ onScroll, ...props }: ListProps<T>) {
   const { scrollProps, fade } = useRailFade(onScroll);
   return (

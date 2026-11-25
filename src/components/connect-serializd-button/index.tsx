@@ -16,15 +16,6 @@ const credentialsSchema = z.object({
 
 type CredentialsForm = z.infer<typeof credentialsSchema>;
 
-/**
- * Web Serializd connect (plan 0017 R5): an email/password form that posts to
- * `/login` through the same-origin proxy, exchanging the password for a bearer
- * token. The password is used only for the exchange and never persisted — only
- * `{ accessToken, username }` is stored. Works on web (no `EXPO_OS` gate, R13)
- * because the proxy carries the request browser → same-origin → Serializd
- * without a CORS error. The credential trust boundary is documented as a risk
- * (plan 0017); the WebView path (mobile) is the primary, password-free connect.
- */
 export function ConnectSerializdButton() {
   const login = useMutation({
     // Never paused offline: the persister writes paused mutations to storage,
@@ -86,7 +77,6 @@ export function ConnectSerializdButton() {
       {errors.password != null && (
         <Text className="text-accent font-sans text-xs">{errors.password.message}</Text>
       )}
-      {/* The API's own message (wrong password, etc.); nothing is stored. */}
       {login.error != null && (
         <Text className="text-accent font-sans text-xs">{loginErrorText(login.error.message)}</Text>
       )}
@@ -101,7 +91,6 @@ export function ConnectSerializdButton() {
   );
 }
 
-/** Strip the diagnostic `serializd: ` provider prefix for user-facing display. */
 function loginErrorText(message: string): string {
   return message.replace(/^serializd:\s*/i, '');
 }

@@ -10,17 +10,8 @@ import { Fab } from '@/components/fab';
 import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 
-/**
- * How far (px) a list must be scrolled before the FAB appears. Under half a
- * screenful: once the first rows are out of sight the top is no longer a
- * single flick away, and waiting longer just makes the button feel absent.
- */
 export const SCROLL_TO_TOP_THRESHOLD = 300;
 
-// The FAB toggles mid-scroll, so its entrance has to read as an aside, not an
-// event: a small scale-up with a few px of rise says "this surfaced from the
-// corner" where a bare crossfade reads as a glitchy repaint. Travel stays tiny
-// for the same reason the log sheet's does — it appears many times a session.
 const FAB_RISE = 8;
 
 const fabEntering = new Keyframe({
@@ -41,16 +32,9 @@ const fabExiting = new Keyframe({
   },
 }).duration(DURATION.exit);
 
-/** Reduced motion keeps the fade and drops the travel (matches `features/up-next`). */
 const fabFadingIn = FadeIn.duration(DURATION.enter);
 const fabFadingOut = FadeOut.duration(DURATION.exit);
 
-/**
- * A floating "back to top" button for long scrolling screens. The owner tracks
- * its own scroll offset (compare against `SCROLL_TO_TOP_THRESHOLD`) and scrolls
- * its own list — this component only shows, hides, and forwards the press.
- * Render it as a sibling of the list inside a relatively-positioned container.
- */
 export function ScrollToTopFab({
   visible,
   onPress,
@@ -58,7 +42,6 @@ export function ScrollToTopFab({
 }: {
   visible: boolean;
   onPress: () => void;
-  /** Layout only; tab screens can clear the floating iOS tab bar. */
   className?: string;
 }) {
   const reduceMotion = useReducedMotion();

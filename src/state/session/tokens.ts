@@ -4,9 +4,8 @@ import type { ProviderId } from '@/lib/providers/types';
 import type { ProviderSession } from '@/types/session';
 
 /**
- * Per-provider OAuth token persistence. MMKV is synchronous and universal
- * (localStorage fallback on web). Encryption at rest is deferred to todos/003
- * on purpose — don't add an encryptionKey here without doing that todo.
+ * OAuth sessions use MMKV, with localStorage on web. Native encryption and existing-session
+ * migration are tracked in todos/003.
  */
 const storage = createMMKV({ id: 'session' });
 
@@ -88,7 +87,6 @@ export function connectedProviderIds(): ProviderId[] {
 
 const clientIdKeyFor = (id: ProviderId) => `clientId.${id}`;
 
-/** Per-provider API client id — avoids requiring env-file edits for user builds. */
 export function getProviderClientId(id: ProviderId): string | null {
   if (process.env.EXPO_OS === 'web' && typeof window === 'undefined') return null;
   return storage.getString(clientIdKeyFor(id)) ?? null;
@@ -147,7 +145,6 @@ export function isTokenKey(key: string): boolean {
   return PROVIDER_KEY_PATTERN.test(key) || key === TMDB_TOKEN_KEY;
 }
 
-/** Subscribe to any session change, by key; returns an unsubscribe function. */
 export function onSessionChange(listener: (key: string) => void): () => void {
   const subscription = storage.addOnValueChangedListener(listener);
   return () => subscription.remove();

@@ -2,18 +2,8 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { QueryClient } from '@tanstack/react-query';
 import type { HttpFetch } from '@/lib/http/types';
 
-/**
- * Trending runs off Simkl's public CDN and must resolve with zero providers
- * connected and no Trakt credentials (plan 0034 R11/KTD-8). Its `queryFn` runs
- * against a fake `fetch` (real `lib/providers/simkl/reads.ts`), not a
- * `mock.module`-replaced reads module: `reads.test.ts` imports that module by a
- * relative path, and bun's module-mock registry doesn't reconcile an
- * alias-registered mock with a relative-imported consumer, so replacing it
- * here would silently break that suite in a shared `bun test` process.
- *
- * `bun test --isolate` is the gate that must be green for this file
- * (docs/solutions/bun-test-mock-module-cross-file-leak.md).
- */
+// Fake `httpFetch` instead of mocking `simkl/reads`: Bun's mock.module leaks across
+// files when another suite imports by relative path (docs/solutions/bun-test-mock-module-cross-file-leak.md).
 
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
@@ -26,7 +16,6 @@ mock.module('react-native-mmkv', () => ({
   }),
 }));
 
-/** Routes each request by URL substring; unmatched URLs 404 (media-details.test.ts pattern). */
 let routes: Array<[match: string, body: unknown, status?: number]> = [];
 const requestedUrls: string[] = [];
 let fetchOverride: HttpFetch | undefined;
@@ -46,9 +35,6 @@ mock.module('@/lib/http/client', () => ({
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
-// `./simkl` (state/queries/simkl.ts) reaches expo-crypto via its auth
-// re-export — mirror the surface it consumes rather than load the whole expo
-// package under bun (the `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
@@ -63,10 +49,6 @@ beforeEach(() => {
   routes = [];
   requestedUrls.length = 0;
   fetchOverride = undefined;
-  // The exact no-BYO-Trakt-creds state R11 requires trending to survive:
-  // Simkl's client id stays bundled (owner-registered app), while Trakt has
-  // none at all — env credentials were removed outright in U9 (R12), so a
-  // cleared MMKV store above *is* the credential-less state.
 });
 
 describe('trending (plan 0034 R11/KTD-8)', () => {

@@ -33,8 +33,6 @@ describe('releaseStops', () => {
   });
 
   test('a date, not a kind, decides the order', () => {
-    // A re-release can put physical media ahead of a (re-)theatrical run; the
-    // rail has to read chronologically or the connector implies a false order.
     const stops = releaseStops(
       { theatrical: '2026-03-01', digital: '2025-11-04' },
       NOW,
@@ -72,9 +70,6 @@ describe('releaseStops', () => {
   });
 
   test('a release landing today counts as released, not upcoming', () => {
-    // `hasAired` compares against local midnight, so the whole release day is
-    // already "out" — a countdown reading "Today" would contradict the log
-    // button, which accepts the film from midnight on.
     const [stop] = releaseStops({ digital: '2026-07-27' }, NOW);
     expect(stop?.upcoming).toBe(false);
     expect(stop?.relative).toBeUndefined();

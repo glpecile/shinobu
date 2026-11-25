@@ -6,10 +6,9 @@ import { PresstableOpacity } from '@/components/presstable';
 import { haptics } from '@/lib/haptics';
 
 export interface WatchedAtFieldProps {
-  /** null = "just now" — the mutation omits watchedAt and Trakt records now. */
+  /** null means "just now" (omits watchedAt). */
   value: Date | null;
   onChange: (value: Date | null) => void;
-  /** The row's name. Read-intent items say "Read on". */
   label?: string;
   children?: ReactNode;
 }
@@ -22,12 +21,6 @@ function formatDate(date: Date): string {
   });
 }
 
-/**
- * "Watched on" row inside the log sheet (plan 0008): tap toggles the native
- * date picker (iOS spinner inline — the sheet's content detent grows with it;
- * Android presents its dialog). Backdating only — future watches make no
- * sense, so `maximumDate` is now.
- */
 export function WatchedAtField({ value, onChange, label = 'Watched on', children }: WatchedAtFieldProps) {
   const [open, setOpen] = useState(false);
 

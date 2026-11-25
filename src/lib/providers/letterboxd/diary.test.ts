@@ -4,9 +4,6 @@ import * as Effect from 'effect/Effect';
 import type { LetterboxdDeps } from './deps';
 import { getDiary, normalizeDiaryItem, parseDiaryFeed } from './diary';
 
-// Two verbatim (whitespace-trimmed) diary <item>s captured from a real RSS feed
-// on 2026-07-21 — the field set the parser contracts on. Second item has no
-// tmdb:movieId (the edge the parser must still normalize on title+year).
 const RSS = `<?xml version="1.0" encoding="UTF-8"?>
 <rss xmlns:letterboxd="https://letterboxd.com" xmlns:tmdb="https://themoviedb.org">
 <channel>
@@ -90,7 +87,6 @@ describe('normalizeDiaryItem', () => {
       type: 'MOVIE',
       externalIds: { letterboxd: 'the-dink', tmdb: 1361774 },
     });
-    // The item's own lastUpdated stays a real instant (the injected fetch time).
     expect(entry.item.lastUpdated).toBe(FETCHED);
   });
 

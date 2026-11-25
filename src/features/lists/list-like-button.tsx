@@ -6,7 +6,6 @@ import { toast } from '@/lib/toast';
 import { useLetterboxdListLike } from '@/state/queries/letterboxd';
 import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
 
-/** Own lists never take a like, and owner vs. username is known before any query resolves. */
 export function canLikeList(username: string | null, owner: string) {
   return username != null && username.toLowerCase() !== owner.toLowerCase();
 }

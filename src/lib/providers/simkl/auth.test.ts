@@ -108,7 +108,6 @@ describe('buildSimklAuthorizeUrl', () => {
     expect(url.searchParams.get('code_challenge')).toBe('chal-1');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(url.searchParams.get('state')).toBe('state-1');
-    // The quickstart's authorize example carries the standard params too.
     expect(url.searchParams.get('app-name')).toBe('shinobu');
     expect(url.searchParams.get('app-version')).not.toBeNull();
   });
@@ -151,7 +150,6 @@ describe('exchangeSimklCode', () => {
     expect(calls).toHaveLength(1);
     const { url, init } = calls[0]!;
     expect(url.pathname).toBe('/oauth/token');
-    // Standard params travel on the token exchange too (Simkl quickstart).
     expect(url.searchParams.get('client_id')).toBe('cid-1');
     const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
     expect(body).toEqual({

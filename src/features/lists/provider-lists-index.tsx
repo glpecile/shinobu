@@ -44,7 +44,6 @@ export function SerializdListsIndex({ username, kind }: { username: string; kind
   );
 }
 
-/** One read returns every list, so there is no next page. */
 export function HardcoverListsIndex({ kind }: { kind: HardcoverListKind }) {
   const lists = useSuspenseHardcoverListsQuery(kind);
   return (

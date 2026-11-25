@@ -92,20 +92,7 @@ export function parseCaptureMessage(data: string): CapturedRequest | null {
   };
 }
 
-/**
- * The hook, injected on **every** load — a navigation replaces `window`, so a
- * once-only injection would silently stop capturing the moment you click
- * through to a film page, which is exactly where the control lives.
- *
- * It wraps `fetch` and `XMLHttpRequest` rather than reading the network from
- * outside because the interesting part is the *request the site composes*:
- * headers and payload, not just the URL. Response bodies are read from a
- * `clone()` so the page's own handler still gets its stream — consuming the
- * original would break the very control being driven.
- *
- * Idempotent: re-injecting on a page that already has the hook is a no-op, so a
- * double `onLoadEnd` cannot produce doubled captures.
- */
+/** Inject on every load. Navigation replaces the page's window and its hooks. */
 export function buildCaptureScript(): string {
   return `(function(){
     if (window.__shinobuWatchlistCapture) return 'already-installed';

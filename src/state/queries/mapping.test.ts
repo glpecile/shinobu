@@ -40,7 +40,6 @@ mock.module('react-native-mmkv', () => ({
   }),
 }));
 
-/** Routes each request by URL substring; unmatched URLs 404 (media-details.test.ts pattern). */
 let routes: Array<[match: string, body: unknown, status?: number]> = [];
 let pendingResponse: { promise: Promise<Response>; started: () => void } | undefined;
 const requestedUrls: string[] = [];
@@ -442,7 +441,7 @@ describe('connecting a provider mid-session is a cache miss, not a stale record'
     expect(requestedUrls).toHaveLength(0);
 
     process.env.EXPO_PUBLIC_TMDB_TOKEN = 'tmdb-token';
-    clearTmdbToken(); // Bust the module-scope token cache, as saveTmdbToken would.
+    clearTmdbToken();
 
     const after = await cachedTraktTextSearch(client, 'Heat', 1995);
     expect(after?.externalIds.tmdb).toBe(949);
@@ -450,7 +449,6 @@ describe('connecting a provider mid-session is a cache miss, not a stale record'
 
   test('a token-less TMDB movie-id miss re-resolves once a token is saved', async () => {
     const client = freshClient();
-    // No route for /search/movie yet: the token-less attempt 404s → null.
     expect(
       await cachedTmdbMovieIdByTitle(client, { title: 'Heat', year: 1995 }),
     ).toBeNull();

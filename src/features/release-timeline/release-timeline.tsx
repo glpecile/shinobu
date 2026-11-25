@@ -9,21 +9,9 @@ import { useThemeColor } from '@/lib/theme-color';
 import { formatCalendarDate } from '@/lib/time/calendar-date';
 import type { NormalizedMediaItem, ReleaseCalendar } from '@/types/media';
 
-/**
- * Row geometry, shared by the dot and the trunk so the connector is
- * pixel-exact (same trick as the diary's tree connector). Rows are a fixed
- * height because every one of them is a single line — nothing here can grow.
- */
 const ROW_HEIGHT = 36;
 const ROW_CENTER = ROW_HEIGHT / 2;
 
-/**
- * How you'd actually watch it, one glyph per stop — the labels read alike
- * ("Digital"/"Physical" are both just words) while a film strip, a phone and a
- * disc are separable at a glance. Ionicons ships no popcorn, so theatrical
- * takes the film strip; every name here is font-based, so the three render
- * identically on web, iOS and Android with no per-platform fallback.
- */
 const ICONS: Record<keyof ReleaseCalendar, ComponentProps<typeof Ionicons>['name']> = {
   theatrical: 'film-outline',
   digital: 'phone-portrait-outline',
@@ -46,9 +34,6 @@ function Stop({
   return (
     <View className="flex-row items-center h-9">
       <View className="w-4 h-9 relative">
-        {/* The trunk runs the full row for a middle stop, and stops at the dot
-            on the first and last — so the rail spans the dots, never dangling
-            past either end. A lone stop gets no trunk at all. */}
         {!(first && last) && (
           <View
             className="absolute left-2 w-px bg-border"
@@ -67,8 +52,6 @@ function Stop({
           )}
         />
       </View>
-      {/* Fixed-width and centered: the three glyphs aren't the same width, and
-          the labels have to start on one line for the rail to read as a rail. */}
       <View className="w-5 items-center mr-2">
         <Ionicons
           color={iconColor}
@@ -85,8 +68,6 @@ function Stop({
       >
         {stop.label}
       </Text>
-      {/* The countdown leads on an upcoming stop: "when can I watch this" is
-          the question the date alone answers slowest. */}
       <Text
         className={cn(
           'font-sans text-sm ml-3',
@@ -102,17 +83,6 @@ function Stop({
   );
 }
 
-/**
- * "In theaters · Digital · Physical" as a rail below Studios (plan 0029),
- * replacing the single muted "Digital release · …" line that used to sit under
- * the meta line. It takes the same `mt-8` + display-heading shell as its
- * neighbours down there (Seasons, Cast, Studios, Ratings) rather than the
- * small uppercase label a header-adjacent block would use.
- *
- * Movie-only in practice: `releaseCalendar` comes from the TMDB movie
- * catalogue alone, so a TV/manga item or a tokenless page renders nothing —
- * no guard at the call site.
- */
 export function ReleaseTimeline({ item }: { item: NormalizedMediaItem }) {
   const stops = releaseStops(item.releaseCalendar);
   if (stops.length === 0) return null;

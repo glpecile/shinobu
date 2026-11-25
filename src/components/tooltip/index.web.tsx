@@ -1,17 +1,8 @@
 import { useId, useRef, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
-/** Gap between the target and the bubble, and the bubble's minimum inset from the window edge. */
 const GAP = 6;
 
-/**
- * A hover label above its target. The bubble is a manual popover, so it sits
- * in the top layer: rail clipping and transformed ancestors (`SectionEnter`)
- * can't cut it off or offset it. It flips below when there's no room above and
- * is clamped inside the window, so edge cells keep their label on screen.
- * `fill` makes the wrapper take its parent's space, for a target that is a
- * whole cell rather than a hugging control.
- */
 export function Tooltip({
   label,
   fill = false,

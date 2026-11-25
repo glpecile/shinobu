@@ -50,7 +50,6 @@ function SeasonsSkeleton() {
   );
 }
 
-/** This boundary owns catalogue loading/errors while the list subscribes to its cached rows. */
 function SeasonsHeading({ source }: { source: ShowSeasonsSource }) {
   const { data: seasons } = useSuspenseShowSeasonsQuery(source);
   const total = seriesRuntimeMinutes(seasons);
@@ -76,16 +75,10 @@ function ShowDetailsList({
 } & DetailsListProps) {
   const traktId = item.externalIds.trakt;
   const connected = useConnectedProviders();
-  // Undefined while loading: the guard stays permissive, so the skeleton
-  // heading renders exactly as before and only settled data can collapse.
   const seasonsData = useShowSeasonsQuery(source).data;
   const seasons = seasonsData ?? [];
-  // Enrichment-aware: a reverse-mapped anime TV show shows AniList too.
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
-  // A manual-only target still needs the sheet openable (plan 0022 R3) —
-  // matches LogMediaButton's gate.
   const canLog = targets.length > 0 || manualTargets.length > 0;
-  // Trakt progress takes precedence over Simkl's canonical episode view.
   const { data: traktWatched } = useTraktShowProgressQuery({
     traktId: traktId ?? undefined,
     enabled: connected.includes(Provider.Trakt) && traktId != null,
@@ -111,7 +104,6 @@ function ShowDetailsList({
   const { openLog: openLogSession } = useCatchUpControls();
   const pushRoute = usePushRoute();
   const prefetchEpisode = usePrefetchTmdbEpisode();
-  // The long-pressed row — kept (not nulled) while its sheet closes.
   const [pressed, setPressed] = useState<{
     season: NormalizedSeason;
     episode: NormalizedEpisode;
@@ -134,8 +126,6 @@ function ShowDetailsList({
     });
   }
 
-  // Pre-airing series drop the whole block: every row would read "Unaired"
-  // next to a 0/total tile that says the same thing twice.
   if (
     preAiringDisplay(
       item,
@@ -173,17 +163,11 @@ function ShowDetailsList({
             pushRoute(routes.episode(item.id, s.number, episode.number));
           },
           onMarkSeason: (s) => {
-            // Never include unaired episodes in a season-wide mark — the
-            // confirm sheet must not promise to log episodes the user couldn't
-            // have watched yet (has-aired.ts timezone-correct comparison).
             const aired = s.episodes.filter((e) => hasAired(e.firstAired));
             if (aired.length === 0) return;
             openLog({
               title: `Log ${s.title}`,
               batch: true,
-              // The subject and the size of it — the title already carried the
-              // verb, and the count is the fact the sheet couldn't otherwise
-              // give: how many writes this one press is about to make.
               description: `“${item.title}” — ${aired.length} aired ${
                 aired.length === 1 ? 'episode' : 'episodes'
               } in ${s.title}.`,
@@ -201,7 +185,6 @@ function ShowDetailsList({
         onClose={() => setActionsOpen(false)}
         onMark={() => {
           if (pressed == null) return;
-          // The confirm sheet replaces this one rather than stacking on it.
           setActionsOpen(false);
           markEpisode(pressed.season, pressed.episode);
         }}
@@ -216,7 +199,6 @@ function ShowDetailsList({
   );
 }
 
-/** TV detail list, source-routed to Trakt with BYO credentials or TMDB otherwise. */
 export function SeasonsSection({
   item,
   resetKey,

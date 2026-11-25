@@ -55,25 +55,8 @@ import {
   useWatchlistMedia,
 } from './use-watchlist-media';
 
-/**
- * The watchlist verbs' target picker (plan 0032 U3) — the sheet both the add
- * and the remove confirm through, composed from the shared `write-sheet`
- * pieces (R2/KTD-1), never a second implementation of the toggle rules.
- *
- * The sheet **stays mounted until the report settles** (R4, owner decision
- * 2026-07-29): toasts carry no press handlers (R7), so a Trakt 420, an expired
- * Letterboxd session or a reasoned skip with a `providerItemUrl` link would
- * have nowhere to land if the picker were already gone. Only a report with
- * nothing left to read (`isCleanWriteReport`) closes it — and fires the one
- * success toast, from the same predicate, so the sheet can never close on a
- * report the toast then fails to carry (KTD-3). Any other report replaces the
- * form as the drawer's next step (`WriteSheet.Step`), like the catch-up chain.
- */
-
 interface PickerHostProps {
-  /** Cancel / dismiss — the hosting surface decides what "back" means. */
   onCancel: () => void;
-  /** A clean report settled into a toast — the hosting surface closes fully. */
   onCleanClose: () => void;
 }
 
@@ -86,9 +69,6 @@ export function WatchlistAddPicker({
   const watchlist = useWatchlistMedia(item);
   const pending = useIsWatchlistWritePending(item.id);
   const split = useWriteTargetsSplit(item, 'watchlist');
-  // Who already holds it, per the gathered watchlists — read once at open
-  // (cache-only, never a fetch), so the write's own invalidation can't shift
-  // the rows mid-sheet. A cold cache holds nothing and offers every target.
   const [{ held, removal }] = useState(() => {
     const data = queryClient.getQueryData<WatchlistInputs>(
       watchlistQueryKeys.inputs(),
@@ -104,8 +84,6 @@ export function WatchlistAddPicker({
   const { manual } = split;
   const { selected, toggle, selectAll, selectNone } =
     useSelectedTargets(writable);
-  // Upfront manual rows don't block the close (plan 0033 R1) — they were on
-  // the sheet before confirm, so they aren't news.
   const step = useReportStep<WriteReportLike>((report) => {
     toast.success(addedToastTitle(item), providerLabelList(report.succeeded));
     onCleanClose();
@@ -159,8 +137,6 @@ export function WatchlistAddPicker({
       </WriteSheet.Header>
       <WriteSheet.Description>Choose where “{item.title}” is added.</WriteSheet.Description>
 
-      {/* Frozen while the fan-out runs, like `LogFormFields`: a target toggled
-          mid-write would land on some providers and not others. */}
       <View
         className={cn(pending && 'opacity-50')}
         style={{ pointerEvents: pending ? 'none' : 'auto' }}
@@ -259,22 +235,11 @@ export function WatchlistRemovePicker({
 
   const copy = unwatchlistCtaCopy(entry.item);
   const { manual, unknown } = split;
-  // Neither `manual` nor `unknown` blocks the close (plan 0033 KTD-1): both
-  // render in the same pre-confirm row slot, so they aren't news. R35's
-  // "withhold Removed" concern lives on the settled label, which reads
-  // membership, not this report.
   const step = useReportStep<WriteReportLike>((report) => {
     toast.success(removedToastTitle(entry.item), providerLabelList(report.succeeded));
     onCleanClose();
   });
 
-  // R3's explicit confirm, as the drawer's next step rather than a second
-  // stacked sheet: the first press shows, one line per selected provider,
-  // what goes — AniList's whole entry when it's CURRENT, Simkl's watch
-  // history (plan 0036) — and only the press on that step writes. Seeing the
-  // loss spelled out is what earns the `destructive` opt-in. The step holds
-  // the providers the user reviewed, so a leg that lands meanwhile can't join
-  // the write. Back returns to the selection with it intact.
   const [reviewed, setReviewed] = useState<ProviderId[] | null>(null);
   const foreground = useThemeColor('--color-foreground');
   const warned = destructiveProviders(reviewed ?? [], entry);
@@ -284,7 +249,6 @@ export function WatchlistRemovePicker({
     if (pending || providers.length === 0) return;
     haptics.destructive();
     remove.mutate(
-      // Only the providers whose own line warned lift their guard.
       { providers, destructive: warned },
       step.callbacks,
     );
@@ -337,7 +301,6 @@ export function WatchlistRemovePicker({
             const line = removalLine(provider, entry);
             return (
               <View className="flex-row items-start gap-3" key={provider}>
-                {/* Centred on the text's first line. */}
                 <View className="mt-0.5">
                   <ProviderIcon id={provider} size={20} />
                 </View>
@@ -378,8 +341,6 @@ export function WatchlistRemovePicker({
         Choose where “{entry.item.title}” is removed.
       </WriteSheet.Description>
 
-      {/* Frozen while the fan-out runs, like `LogFormFields`: a target toggled
-          mid-write would land on some providers and not others. */}
       <View
         className={cn(pending && 'opacity-50')}
         style={{ pointerEvents: pending ? 'none' : 'auto' }}
@@ -396,8 +357,6 @@ export function WatchlistRemovePicker({
             targets={split.targets}
           />
         )}
-        {/* Manual-declared holders and unknown-membership providers share the
-            row slot (plan 0032 U3): identical on screen, different reasons. */}
         <ManualWriteRows
           item={entry.item}
           manual={[...manual, ...unknown]}
@@ -432,12 +391,6 @@ export function WatchlistRemovePicker({
   );
 }
 
-/**
- * The self-hosted form, for surfaces that aren't already inside a sheet (the
- * details screen). The card-actions sheet composes the pickers directly
- * instead — its row opens the picker *in place of* itself, never a second
- * sheet stacked over the first (plan 0032 U3).
- */
 export function WatchlistAddPickerSheet({
   item,
   open,
@@ -454,12 +407,6 @@ export function WatchlistAddPickerSheet({
   );
 }
 
-/**
- * The removal's self-hosted form — what the details screen's settled CTA opens
- * (plan 0033 follow-up, owner request 2026-07-30): "On your watchlist" is an
- * entry point to removing, not a dead end. The card-actions sheet keeps
- * composing `WatchlistRemovePicker` directly, exactly like the add.
- */
 export function WatchlistRemovePickerSheet({
   entry,
   errors,

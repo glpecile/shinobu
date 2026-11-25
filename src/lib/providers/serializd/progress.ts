@@ -11,21 +11,7 @@ export interface RawProgressResponse {
   }>;
 }
 
-/**
- * `GET /user/{username}/show/{tmdbId}/progress`, **undigested** — the raw
- * `watchedSeasons` rows, season-number-keyed, before any flattening.
- *
- * Exists because the watchlist guard cannot be expressed in terms of
- * `getWatchedEpisodeKeys` (plan 0031 R21/KTD-10): that helper drops any season
- * whose `watchedEpisodes` is empty or absent, which is exactly the shape a
- * season marked watched wholesale (`POST /watched_v2`, no episode rows) takes.
- * A guard built on the flattened keys would therefore treat such a season as
- * never-touched and send it to `watchlist_v2` — failing **open** in the one
- * scenario it exists for. So the guard reads this instead and asks "does the
- * season appear in `watchedSeasons` at all?", a question the key set cannot
- * answer. `getWatchedEpisodeKeys` keeps its exact existing behaviour for the
- * log-path reconcile that wants episode granularity.
- */
+/** Keep raw watched-season rows. A season marked watched wholesale may have no episode keys. */
 export function getRawShowProgress(
   deps: SerializdDeps,
   params: { tmdbId: number },
@@ -61,7 +47,6 @@ export function getWatchedEpisodeKeys(
   });
 }
 
-/** Whether every intended episode is present in the watched key set. */
 export function serializdHasEpisodes(
   keys: ReadonlySet<string>,
   episodes: readonly { season: number; number: number }[],

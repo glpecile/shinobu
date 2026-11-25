@@ -27,7 +27,6 @@ import { useThemeColor } from '@/lib/theme-color';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
 
-/** Keep render failures inside this route so the app shell stays usable. */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return (
     <View className="flex-1 bg-background">
@@ -47,10 +46,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
 }
 
 function DiaryHeader({ children }: { children?: React.ReactNode }) {
-  // Same brand-header treatment as Home (spacing + title size) so top-level
-  // destinations share one header rhythm.
   return (
-    // Native wraps so the filter drops below the title at large text sizes.
     <View className={cn(homeHeaderClassName, 'ios:flex-wrap android:flex-wrap gap-x-4 gap-y-2')}>
       <Text
         className={cn(
@@ -65,7 +61,6 @@ function DiaryHeader({ children }: { children?: React.ReactNode }) {
   );
 }
 
-/** A glyph tile for the empty states — muted book/journal mark. */
 function StateIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['name'] }) {
   const muted = useThemeColor('--color-muted');
   return (
@@ -77,15 +72,6 @@ function StateIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['name
   );
 }
 
-/**
- * The Diary screen (plan 0016 U5): a unified, reverse-chronological, infinitely
- * scrolling list of watch/read logs aggregated across every connected provider.
- * The four R9 zero-entry states take precedence in order — no providers → a
- * mobile-only degrade → a total load failure → an honest "no logs yet" — so a
- * total failure never masquerades as emptiness (AE5). The loading/failure
- * posture is computed from several queries at once (the aggregate case AGENTS.md
- * allows), not single-query branching.
- */
 export default function DiaryTab() {
   return (
     <DeferredTab>
@@ -100,7 +86,6 @@ function DiaryScreen() {
   const diary = useDiaryFeedQuery();
   const { openActions, sheetProps } = useCardActions();
   const [picked, setPicked] = useState<DiaryFormat>('ALL');
-  // Reading earns its option only while a reading tracker is connected.
   const reading = { chapters: feedReadsType(connected, 'MANGA'), books: feedReadsType(connected, 'BOOK') };
   const options = DIARY_FORMAT_OPTIONS.filter((option) => option.value !== 'READING' || reading.chapters || reading.books);
   const format = options.some((option) => option.value === picked) ? picked : 'ALL';
@@ -109,10 +94,8 @@ function DiaryScreen() {
 
   let content: React.ReactNode;
   if (connected.length === 0) {
-    // R9 (1): no providers connected.
     content = <DiaryWelcome timeZone={diary.timeZone} />;
   } else if (diary.activeProviders.length === 0) {
-    // R9 (2): connected, but nothing readable on this platform (Letterboxd on web).
     content = (
       <View className="flex-1 justify-center pb-16">
         <EmptyStateTile
@@ -123,15 +106,10 @@ function DiaryScreen() {
       </View>
     );
   } else if (diary.isLoading) {
-    // Skeleton until every provider has answered, not until the first has:
-    // providers land ~100ms apart and each merge re-sorts the day, inserts
-    // rows between the ones on screen and re-keys collapsed rows to the
-    // higher-priority contributor. Rendering that stream reads as flicker.
-    // (docs/solutions/diary-reshuffles-while-providers-land.md)
+    // Wait for all providers before revealing so staggered arrivals don't reshuffle rows (docs/solutions/diary-reshuffles-while-providers-land.md).
     filter = formatControl;
     content = <DiaryListSkeleton />;
   } else if (diary.allFailed && diary.entryCount === 0) {
-    // R9 (3): every capable provider failed on load — never "no logs yet" (AE5).
     content = (
       <View className="flex-1 justify-center pb-16">
         <EmptyStateTile
@@ -147,8 +125,6 @@ function DiaryScreen() {
       </View>
     );
   } else if (diary.entryCount === 0 && !diary.hasNextPage) {
-    // R9 (4): loaded cleanly, genuinely nothing logged yet. With pages left,
-    // the list's empty state offers "Load more" instead.
     content = (
       <View className="flex-1 justify-center pb-16">
         <EmptyStateTile
@@ -173,7 +149,6 @@ function DiaryScreen() {
         onOpen={pushRoute}
         onRefresh={diary.refetch}
         onRetry={() => {
-          // Re-attempt the failed provider reads (initial or pagination).
           void diary.refetch();
         }}
         timeZone={diary.timeZone}
@@ -192,15 +167,9 @@ function DiaryScreen() {
           {filter}
         </View>
       </DiaryHeader>
-      {/* Keyed so the list fades and settles in over the skeleton instead of
-          cutting; the wrapper sits outside the list, never on its recycled rows. */}
       <SectionEnter className="flex-1" key={diary.isLoading ? 'skeleton' : 'content'}>
         {content}
       </SectionEnter>
-      {/* Same dialog as the feed's cards, opened by a row long-press (or the
-          web hover ⋯) — the hide row names this surface. */}
-      {/* No want-to-watch row here (plan 0031 R12): every diary entry is
-          already watched, so offering to add it is incoherent. */}
       <CardActionsSheet
         {...sheetProps}
         canWatchlist={false}

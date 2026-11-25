@@ -61,28 +61,6 @@ import {
   type DiaryDayParts,
 } from './merge';
 
-/**
- * The rail: a fixed-width left gutter every row shares, carrying one continuous
- * hairline down the diary. The date lives *in* the gutter at the top of each
- * day instead of in a band above the rows, so scroll position always states
- * what day you are in without a sticky header covering content — and the rail
- * itself is the connection between an episode run and its episodes, which is
- * why the old `├─`/`└─` tree connectors (and their pixel-exact `top-[22px]`
- * geometry) are gone.
- *
- * Kept flat, not nested in per-day containers: the list virtualizes one stream
- * of rows, so a day cannot own a wrapping View without defeating it. The rail's
- * own geometry lives with the head it shares with the filmography
- * (`components/rail-head`).
- */
-
-/**
- * The scrolled-past day pinned under the Diary header (beside its title on
- * web), standing in for the day head once it leaves the top. It covers the list rather than sitting
- * above it, so showing and hiding it never moves a row. It stays mounted and
- * keeps its last day while hidden, so the fade out never shows an empty bar.
- * Renders nothing once the day drops out of the rows (hidden or filtered).
- */
 function DiaryStickyDate({
   activity,
   day,
@@ -99,17 +77,9 @@ function DiaryStickyDate({
   return <RailHead.Pinned count={summary.label} title={formatDayDate(day, today)} visible={visible} />;
 }
 
-/**
- * The two class strings that set a row's height, named once because
- * `DiaryListSkeleton` has to reproduce it exactly — a skeleton whose rows are a
- * different height than the real ones *is* the layout shift. The poster is the
- * tallest thing in a row (54 > title + detail), so it and the vertical padding
- * are the whole geometry: 54 + 6 + 6 = 66px.
- */
 const ROW_BODY = 'flex-1 py-1.5 pr-6';
 const POSTER = 'w-9 h-13.5 rounded';
 
-/** Flattened list rows: a month's calendar, each day's gutter head, then that day's entries. */
 type DiaryListItem =
   | { kind: 'month'; key: string; month: string }
   | {
@@ -126,32 +96,17 @@ type DiaryListItem =
       key: string;
       dayKey: string;
       cluster: DiaryCluster;
-      /** Precomputed at flatten time — see `clusterView`. */
       view: ClusterView;
       expanded: boolean;
     }
   | { kind: 'child'; key: string; dayKey: string; entry: MergedDiaryEntry; last: boolean };
 
-/**
- * Everything a collapsed run's row displays, derived once per cluster instead
- * of once per render.
- *
- * This is not premature: `summarizeCluster` unions and sorts every entry's
- * episodes and providers, and `formatEpisodeDetail` sorts them again. With
- * recycling on, a cluster row is re-rendered with a different cluster every
- * time it scrolls past — profiling put one such render at 126ms, the single
- * worst frame in the session. Flattening already walks each cluster exactly
- * once, so it is the honest home for this.
- */
 interface ClusterView {
   liked: boolean;
   item: NormalizedMediaItem;
   providers: ProviderId[];
-  /** "S1E12–14", or the spelled-out count when the run has no range. */
   detail: string;
-  /** The trailing pill: "3 eps" / "4 ch". */
   runCount: string;
-  /** "Frieren, 3 episodes" — the row's accessible name. */
   label: string;
 }
 
@@ -186,7 +141,6 @@ function flattenDays(
   format: DiaryFormat,
   inlineMonths: boolean,
 ): { items: DiaryListItem[]; activity: Map<string, DaySummary> } {
-  // Hiding is one global set (feed, watchlist, Up Next, diary).
   const hiddenIds = new Set(hidden.map((item) => item.id));
   const keep = (entry: MergedDiaryEntry) =>
     !entry.sourceIds.some((id) => hiddenIds.has(id)) && matchesDiaryFormat(entry.item, format);
@@ -194,8 +148,6 @@ function flattenDays(
   const activity = new Map<string, DaySummary>();
   let month = '';
   for (const day of days) {
-    // A day left with nothing after hiding or the format filter loses its
-    // header rather than standing empty, and drops out of the calendar.
     const entries = day.entries.filter(keep);
     if (entries.length === 0) continue;
     const collapsed = collapsedDays.has(day.key);
@@ -213,10 +165,8 @@ function flattenDays(
       summary: summary.label,
       collapsed,
     });
-    // A minimized day shows its gutter head alone — its rows are omitted.
     if (collapsed) continue;
     for (const cluster of clusterDayEntries(entries)) {
-      // A lone log is an ordinary row; a run of same-show episodes collapses.
       if (cluster.entries.length === 1) {
         const entry = cluster.entries[0];
         items.push({ kind: 'entry', key: entry.id, dayKey: day.key, entry });
@@ -247,11 +197,6 @@ function flattenDays(
   return { items, activity };
 }
 
-/**
- * The hairline segment a non-header row contributes to the rail. `stop` ends it
- * halfway down — the last row of a day, so the rail terminates with the day
- * rather than running into the next one's date.
- */
 function RailLine({ stop = false }: { stop?: boolean }) {
   const reduceMotion = useReducedMotion();
   return (
@@ -271,10 +216,6 @@ function RailLine({ stop = false }: { stop?: boolean }) {
   );
 }
 
-/**
- * A day's head on the shared rail head; the whole row is the collapse target,
- * the same persisted `collapsed-diary-days` gesture as before.
- */
 function DiaryDayHead({
   parts,
   summary,
@@ -294,10 +235,6 @@ function DiaryDayHead({
   );
 }
 
-/**
- * The providers that logged this entry, as their brand marks. The wrapping
- * label still names every provider, since nothing adjacent does.
- */
 function ProviderMarks({ providers }: { providers: ProviderId[] }) {
   const names = providers.map((id) => PROVIDERS[id].label).join(', ');
   return (
@@ -312,11 +249,8 @@ function ProviderMarks({ providers }: { providers: ProviderId[] }) {
   );
 }
 
-/** The 36×54 rail poster, lazily recovered when the log arrives artless. */
 function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
   const { coverImage: providerCover, loading } = useTraktMediaImages(item);
-  // Serializd's sparse logs carry a TMDB TV ID; fall back to detail metadata
-  // once provider recovery has finished without art.
   const { data: details } = useMediaDetailsQuery(
     providerCover === '' && !loading && item.externalIds.tmdb != null ? item : undefined,
   );
@@ -324,12 +258,6 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
   return <SmallPoster uri={coverImage} recyclingKey={item.id} size="sm" />;
 }
 
-/**
- * A stack of up to three posters for a collapsed episode run — the run reads as
- * more-than-one before its count does. Only the front poster is a real image;
- * the two behind it are inert tinted plates, so a fan costs no more requests
- * than a single row.
- */
 function PosterFan({ item }: { item: NormalizedMediaItem }) {
   return (
     <View className="w-11.5 h-13.5 flex-none">
@@ -342,13 +270,6 @@ function PosterFan({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-/**
- * The right edge of every row: a heart for liked logs, the time of day (or, for
- * a collapsed run, its episode-count pill), then the provider dots. One component rather than two
- * siblings because the gap between the time and the first dot has to come from
- * somewhere — as separate children of `ActionableRow`'s trailing slot they sit
- * flush against each other and the time reads as if the dot were punctuation.
- */
 function RowTrailing({
   liked,
   providers,
@@ -383,11 +304,6 @@ function RowTrailing({
   );
 }
 
-/**
- * Where a log opens: its episode when the log is one episode the episode route
- * can address — a TV season pointer, or an anime entry number the route places
- * itself — else the show (movies, chapter logs, ranges).
- */
 function entryHref(entry: MergedDiaryEntry): string {
   const { item, season, episodes } = entry;
   const number = episodes[0];
@@ -408,7 +324,6 @@ function DiaryRow({
   entry: MergedDiaryEntry;
   timeZone: string;
   last: boolean;
-  /** The reader's unit for book progress, read once by the list. */
   inPages: boolean;
   onOpen: (href: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
@@ -453,11 +368,6 @@ function DiaryRow({
   );
 }
 
-/**
- * The collapsed head of a same-show episode run (S6E1…E10 → one row). Tapping
- * anywhere toggles the run open; the episode logs then render below as
- * `DiaryChildRow`s, indented off the same rail.
- */
 function DiaryClusterRow({
   view,
   clusterKey,
@@ -484,8 +394,6 @@ function DiaryClusterRow({
           accessibilityState: { expanded },
         }}
         className={ROW_BODY}
-        // ⌘/Ctrl+click opens the show in a new tab even though a plain press
-        // toggles the run — the modifier means the same thing on every row.
         href={routes.details(view.item.id, view.item.type)}
         item={view.item}
         leading={
@@ -515,7 +423,6 @@ function DiaryClusterRow({
   );
 }
 
-/** One episode log inside an expanded run — indented off the rail, no poster. */
 function DiaryChildRow({
   entry,
   timeZone,
@@ -560,17 +467,6 @@ function DiaryChildRow({
   );
 }
 
-/**
- * The R10 partial-failure banner: persistent (non-dismissible), names the
- * failed provider(s), tap-to-retry. Shown over the entries that did load,
- * never a blank screen (same contract as the feed and the log fan-out).
- *
- * It is a button, so it is `components/button` — a quiet pill that hugs its
- * label rather than a full-bleed bar, which is what kept reading as an alert
- * the list couldn't get rid of. The glyph is the app's retry verb; the label
- * says what failed. Centred over the list on narrow screens; on wide web it
- * heads the side calendar column, aligned to the month.
- */
 function DiaryFailureBanner({
   providers,
   onRetry,
@@ -597,12 +493,6 @@ function DiaryFailureBanner({
   );
 }
 
-/**
- * Fixed height whether or not a page is in flight. The previous version
- * swapped a 96px spacer for a ~68px spinner block, so the bottom of the list
- * jumped every time infinite scroll fired — the spinner is centred inside the
- * spacer instead, and nothing moves.
- */
 function DiaryFooter({ loading }: { loading: boolean }) {
   return (
     <View accessibilityLabel={loading ? 'Loading more entries' : undefined} className="h-24 items-center justify-center">
@@ -611,20 +501,6 @@ function DiaryFooter({ loading }: { loading: boolean }) {
   );
 }
 
-/**
- * The first-load placeholder, laid out on the same rail as the real list and
- * built from the same `ROW_BODY`/`POSTER`/`RAIL_W` constants — so switching
- * from skeleton to data moves nothing. Two things make that true: a row's
- * height comes entirely from the poster plus vertical padding (the title and
- * detail together are shorter than 54px), and the day head's height comes
- * entirely from its gutter, whose numeral and month label the bars below
- * mirror at the same sizes.
- *
- * Horizontal alignment holds on web too, where `ActionableRow` reserves a 40px
- * slot for the hover ⋯: the skeleton's bars are fixed widths rather than text,
- * so nothing reflows when that slot appears alongside real content.
- */
-/** Cycled rather than random so the placeholder is stable across renders. */
 const SKELETON_TITLE_WIDTHS = ['w-2/3', 'w-1/2', 'w-3/5', 'w-5/12'];
 
 function SkeletonRow({ index, last }: { index: number; last: boolean }) {
@@ -650,13 +526,8 @@ function SkeletonRow({ index, last }: { index: number; last: boolean }) {
   );
 }
 
-/** Day sizes that read as a plausible diary rather than a uniform block. */
 const SKELETON_DAYS = [3, 4, 3];
 
-/**
- * From here the month calendar moves out of the list into a column beside it:
- * a wide web window has the room, and full-width rows only stretch.
- */
 const SIDE_CALENDAR_MIN_WIDTH = 1024;
 const SIDE_CALENDAR = 'w-104 border-l border-border';
 
@@ -686,9 +557,7 @@ export function DiaryListSkeleton() {
 
 export interface DiaryListProps {
   days: DiaryDay[];
-  /** Narrows rows, the calendar, and its stats. */
   format: DiaryFormat;
-  /** Which Reading counts the connected trackers keep (`DiaryMonth`). */
   reading?: { chapters: boolean; books: boolean };
   timeZone: string;
   failedProviders: ProviderId[];
@@ -698,16 +567,9 @@ export interface DiaryListProps {
   onRetry: () => void;
   onRefresh: () => Promise<unknown>;
   onOpen: (href: string) => void;
-  /** Opens the card actions dialog — long-press, or the web hover ⋯. */
   onItemActions: (item: NormalizedMediaItem) => void;
 }
 
-/**
- * The virtualized diary list (plan 0016 R7), laid out on the rail: a gutter
- * head per day, rows hanging off one continuous hairline, infinite scroll via
- * `onEndReached`, pull-to-refresh, the R10 failure banner as a persistent list
- * header, and a footer spinner while a page is in flight.
- */
 export function DiaryList({
   days,
   format,
@@ -724,8 +586,6 @@ export function DiaryList({
 }: DiaryListProps) {
   const reduceMotion = useReducedMotion();
   const listRef = useRef<LegendListRef>(null);
-  // Whether the list is far enough down that "back to top" earns its pixels.
-  // Flipped only on threshold crossings, so scrolling doesn't re-render.
   const [showScrollTop, setShowScrollTop] = useState(false);
   const { expanded, toggle: toggleCluster } = useListDisclosure();
   const collapsedDays = useCollapsedDiaryDays();
@@ -780,8 +640,6 @@ export function DiaryList({
 
   const activityProps = {
     activity,
-    // Days arrive newest-first; the last is as far back as the feed has loaded.
-    // Once there's no next page, the history is complete and earlier days are empty.
     oldest: hasNextPage ? (days.at(-1)?.key ?? '') : '',
     today,
     loadingMore: isFetchingNextPage,
@@ -793,13 +651,11 @@ export function DiaryList({
     },
   };
 
-  /** A row is a day's last when the next item starts a new day (or ends it). */
   function isLastOfDay(index: number) {
     const next = items[index + 1];
     return next == null || next.kind === 'header' || next.kind === 'month';
   }
 
-  /** The topmost row's day, once its own head has scrolled away. */
   function handleViewableItemsChanged({
     viewableItems,
   }: {
@@ -810,7 +666,6 @@ export function DiaryList({
     const item = top?.item;
     if (item != null) setVisibleMonth(item.kind === 'month' ? item.month : item.dayKey.slice(0, 7));
     const day = item == null || item.kind === 'month' || item.kind === 'header' ? null : item.dayKey;
-    // Hiding keeps the last day so the bar fades out with its content.
     setSticky((previous) => {
       if (day == null) return previous.visible ? { ...previous, visible: false } : previous;
       return previous.visible && previous.day === day ? previous : { day, visible: true };
@@ -836,9 +691,7 @@ export function DiaryList({
           renderItem={({ item, index }) => {
             switch (item.kind) {
               case 'month':
-                // Older months sit under the previous day's rows, not the header.
-                // Keyed so a recycled slot remounts instead of animating from
-                // the previous month's shading and numbers.
+                // Keyed so a recycled slot remounts instead of animating from the previous month's state.
                 return <DiaryMonth className={cn(index > 0 && 'pt-6')} key={item.month} month={item.month} {...activityProps} />;
               case 'header':
                 return (
@@ -911,31 +764,13 @@ export function DiaryList({
           ListFooterComponent={
             <DiaryFooter loading={hasNextPage && isFetchingNextPage} />
           }
-          // Rows come in four very different heights (~300 month, ~72 head, 66
-          // entry, 36 child). `getItemType` lets the virtualizer keep a running
-          // average per kind instead of one blended number, so a screenful of day heads
-          // doesn't mis-estimate the scroll extent of the entries below them.
-          // Size the initial pool for a viewport of expanded children, the
-          // shortest rows. These remain estimates so larger fonts can remeasure.
           estimatedItemSize={36}
           getItemType={(item) => item.kind}
           onEndReached={hasNextPage ? onEndReached : undefined}
           onEndReachedThreshold={0.6}
           onViewableItemsChanged={handleViewableItemsChanged}
-          // The one list in the app that opts into recycling, and it is measured,
-          // not assumed: profiling a scroll over ~1,300 logs put a 332ms commit on
-          // the mount of a single screenful of rows — 45% of it in the
-          // gesture-handler pressable stack that every row re-creates from
-          // scratch. Recycling reuses those fibers instead. Safe here because
-          // every diary row derives from props: the poster resolves off the item
-          // id, day-collapse lives in MMKV and run-expansion in this component,
-          // never in a row. The one piece of row-local state is `ActionableRow`'s
-          // web hover flag, which can briefly show a stale ⋯ on a recycled row
-          // until the next pointer move.
-          // ponytail: revisit if hover ever drives anything but that button.
           recycleItems
           refreshControl={
-            // A fixed tab: this list *is* the Diary tab's surface.
             <RefreshControl onRefresh={onRefresh} tab="diary" />
           }
         />

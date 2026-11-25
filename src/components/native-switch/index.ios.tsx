@@ -11,7 +11,6 @@ import { useThemeColor } from '@/lib/theme-color';
 
 import type { NativeSwitchProps } from './index';
 
-/** SwiftUI Toggle, tinted with the accent. */
 export function NativeSwitch({ accessibilityLabel, disabled, onValueChange, value }: NativeSwitchProps) {
   const scheme = useColorScheme();
   const accent = useThemeColor('--color-accent');

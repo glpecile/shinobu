@@ -12,7 +12,6 @@ import { ExpandableTextSkeleton } from './skeleton';
 
 const BODY = 'text-foreground/90 font-sans text-base leading-relaxed';
 
-/** A titled overview box; the whole card toggles between clamped and full text. */
 export function ExpandableText({
   text,
   markdown,
@@ -24,7 +23,6 @@ export function ExpandableText({
   markdown?: string;
   title?: string;
   lines?: number;
-  /** Layout only. */
   className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);

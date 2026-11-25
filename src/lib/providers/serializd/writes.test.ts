@@ -82,7 +82,6 @@ describe('logToSerializd', () => {
       'GET /show/1396/season/1',
       'POST /episode_log/add',
       'POST /show/reviews/add',
-      // The resume check: no POST follows, as the show is on neither list.
       'GET /user/gian/paused_shows_page/1',
       'GET /user/gian/dropped_shows_page/1',
     ]);
@@ -104,7 +103,6 @@ describe('logToSerializd', () => {
       is_log: true,
       is_rewatch: true,
       like: true,
-      // Tags are trimmed of surrounding whitespace (R10).
       tags: ['binge', 'late-night'],
     });
   });
@@ -140,7 +138,6 @@ describe('logToSerializd', () => {
       status: 'skipped',
       reason: expect.stringContaining('TMDB id'),
     });
-    // No join key ⇒ no network at all.
     expect(requests).toHaveLength(0);
   });
 
@@ -204,7 +201,6 @@ describe('logToSerializd', () => {
     );
     const diary = requests.find((r) => r.url.endsWith('/show/reviews/add'))!.body!;
     expect(diary).toMatchObject({ show_id: 1396, season_id: 555, is_log: true });
-    // Season-level entry carries no episode_number.
     expect(diary.episode_number).toBeUndefined();
   });
 
@@ -294,7 +290,6 @@ describe('addToSerializdWatchlist', () => {
       addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
     );
 
-    // Enumerate, guard, write — three requests (KTD-7/KTD-10 cost model).
     expect(requestLines(requests)).toEqual([
       'GET /show/1396',
       'GET /user/gian/show/1396/progress',
@@ -344,7 +339,6 @@ describe('addToSerializdWatchlist', () => {
       addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
     );
     expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [11, 12, 13] });
-    // Nothing was *watched*, so the ok stays bare.
     expect(result).toEqual({ status: 'ok' });
   });
 

@@ -9,11 +9,6 @@ type RefreshControlProps = Omit<ComponentProps<typeof GestureRefreshControl>, 'o
   tab?: string;
 };
 
-/**
- * Pull-to-refresh whose spinner follows `onRefresh`'s promise. The pending
- * state lives here, so a pull re-renders the control, not the list it sits in.
- * Gesture-handler's, so the pull waits on the scroll gesture.
- */
 export function RefreshControl({ onRefresh, tab, ...rest }: RefreshControlProps) {
   const [refreshing, startRefresh] = useTransition();
   function refresh() {

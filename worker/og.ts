@@ -3,21 +3,13 @@ import { SERIALIZD_APP_HEADERS, SERIALIZD_UPSTREAM_BASE_URL } from '@/lib/provid
 import { SIMKL_API_BASE_URL } from '@/lib/providers/simkl/config';
 import { TMDB_API_BASE_URL, tmdbImageUrl } from '@/lib/providers/tmdb/config';
 
-/**
- * Link previews for the web app (plan 0118), after Bluesky's bskyweb +
- * bskyogcard split: the static export has one HTML shell per dynamic route, so
- * the Worker injects per-item Open Graph tags into that shell and renders the
- * card PNG at `/og/<page path>.png`. Only public metadata is read, by id parsed
- * against the allowlist below, never a user's session.
- */
+/** Inject per-route Open Graph tags into the static export's dynamic HTML shell. */
 
 export interface Card {
   title: string;
   eyebrow?: string;
   description?: string;
-  /** Portrait posters or profile photos; one for an item, up to four for a list. */
   posters: string[];
-  /** A landscape image for a card without posters, such as a Letterboxd list's collage. */
   backdrop?: string;
 }
 
@@ -193,7 +185,6 @@ async function letterboxdFilm(slug: string): Promise<Card | null> {
   return { title, eyebrow: join(['Movie', year]), description: page.og('description'), posters: poster ? [poster] : [] };
 }
 
-/** A list page's OG image is Letterboxd's own poster collage. */
 async function letterboxdList(owner: string, slug: string): Promise<Card | null> {
   const page = await letterboxdHtml(`${owner}/list/${slug}`);
   const title = page?.og('title');

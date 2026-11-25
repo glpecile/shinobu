@@ -29,7 +29,6 @@ export function listsTitle(kind: LetterboxdListKind) {
   return kind === 'liked' ? 'Liked Lists' : 'Your Lists';
 }
 
-/** One card's stack, title, and meta; blocks in one card share a delay. */
 export function ListCardSkeleton({ delay }: { delay: number }) {
   return (
     <View>
@@ -66,7 +65,6 @@ export function HardcoverListsRow({ kind }: { kind: HardcoverListKind }) {
   return <ListsRail indexHref={routes.hardcoverLists(kind)} kind={kind} lists={lists.data.map(hardcoverListSummary)} provider={Provider.Hardcover} />;
 }
 
-/** For a Hardcover session without the list scopes: no list read, and the index holds the reconnect. */
 export function HardcoverListsReconnectRow() {
   const pushRoute = usePushRoute();
   const prompt = useHardcoverListsPrompt();
@@ -82,7 +80,6 @@ export function HardcoverListsReconnectRow() {
 
 type RailItem = ListSummary | { id: 'new' };
 
-/** Your Lists leads with New list, so a member without lists still has the editor one tap away. */
 function ListsRail({ lists: allLists, provider, kind, indexHref }: {
   lists: ListSummary[];
   provider: ListSummary['provider'];
@@ -94,7 +91,6 @@ function ListsRail({ lists: allLists, provider, kind, indexHref }: {
   const { openList, sheetProps } = useListSheet();
   const title = listsTitle(kind);
   const lists = visibleByIds(allLists, useHiddenLists(), (list) => [list.href]);
-  // Gate on the unfiltered page: hiding page one must not cut off View all.
   if (allLists.length === 0 && kind === 'liked') return null;
   const items: RailItem[] = kind === 'created' ? [{ id: 'new' }, ...lists] : lists;
   return (

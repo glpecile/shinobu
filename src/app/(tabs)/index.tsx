@@ -57,30 +57,23 @@ import { useConnectedProviders, useHardcoverListsGranted } from '@/state/session
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
 
-// Only a mouse hovers; native keeps the whole first-run screen scrollable.
 const WALL_HOVER = Platform.OS === 'web';
 function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
-  // The copy staggers in once the native splash has faded, not underneath it.
   const revealed = useBootRevealed();
 
   return (
     <View className="flex-1">
       <PosterWall />
-      {/* On web the empty space passes the pointer through, so hovering a
-          poster column pauses it; touch screens keep the whole area scrollable. */}
       <GestureScrollView
         className={cn('flex-1', WALL_HOVER && 'pointer-events-none')}
         contentContainerClassName={cn('grow justify-end md:justify-center pt-4', WALL_HOVER && 'pointer-events-none')}
       >
-        {/* Phones anchor it to the bottom for thumb reach (iOS clears its floating
-            tab bar); wide viewports centre it against the wall. */}
         {revealed && (
           <View
             className="w-full max-w-2xl px-6 pb-8 ios:pb-28 md:px-16 md:pb-0"
             // Uniwind has no `pointer-events-auto`; this re-enables the copy under the pass-through.
             style={{ pointerEvents: 'auto' }}
           >
-            {/* First-run only, so it earns a staggered entrance. */}
             <HeroEnter className="mb-5">
               <HeroProviders />
             </HeroEnter>
@@ -120,35 +113,20 @@ function FeedScreen() {
   const prefetchDetails = usePrefetchMediaDetails();
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
-  // Warm each provider host's connection pool as the feed mounts — a beat ahead
-  // of the Up Next request waterfall, so its first reads skip the cold
-  // handshake. Native-only (no-op on web); self-guarded to run once.
   useEffect(() => {
     warmProviderConnections(connected);
   }, [connected]);
-  // The merged watchlist row mounts for *any* provider that contributes a
-  // watchlist read (plan 0031 R25), so a Trakt-only or AniList-only user — who
-  // never had this row — gets one.
   const watchlistConnected = watchlistReadProviders(connected).length > 0;
-  // Letterboxd keeps its own films-only row beside it (owner, 2026-07-28). The
-  // `feedProviders` gate also keeps this MMKV read out of web SSR renders
-  // (empty in the server snapshot — docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
+  // Gate on feedProviders (empty on SSR) so MMKV isn't read during web SSR (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
   const letterboxdUsername = feedProviders.includes(Provider.Letterboxd)
     ? getLetterboxdUsername()
     : null;
   const serializdUsername = feedProviders.includes(Provider.Serializd) ? getSerializdUsername() : null;
   const hardcoverListsGranted = useHardcoverListsGranted();
-  // Up Next is computed from Trakt shows, Simkl's library and AniList anime —
-  // with none connected there is nothing to compute, so the sections never
-  // mount. The predicate lives with the gather it gates (`use-unified-feed.ts`)
-  // rather than being re-derived here, which is how Simkl went missing from it.
   const upNextConnected = hasUpNextSources(connected);
   const refetchFeed = useRefetchUnifiedFeed();
-  // Bumped on pull-to-refresh so failed (boundary-hidden) rows re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
-  // The single actions dialog behind every card's long-press / web ⋯ button.
   const { openActions, sheetProps } = useCardActions();
-  // Its module graph is most of logging; nothing opens it before the reveal.
   const revealed = useBootRevealed();
   const scrollRef = useRef<ScrollViewInstance>(null);
 
@@ -167,8 +145,6 @@ function FeedScreen() {
       <CollapsibleSection.Scroll
         className="flex-1"
         ref={scrollRef}
-        // Wide web has no header (sidebar owns brand) so it needs top breathing room.
-        // Android's tab bar reserves its own space; iOS's floating bar needs clearance.
         contentContainerClassName={
           process.env.EXPO_OS === 'web'
             ? 'pt-2 pb-8 md:pt-6'
@@ -179,7 +155,6 @@ function FeedScreen() {
         onRefresh={refresh}
         tab="index"
       >
-        {/* What to watch next, above everything the user merely tracks. */}
         {upNextConnected && (
           <SuspenseSection
             fallback={<UpNextSectionSkeleton />}
@@ -191,8 +166,6 @@ function FeedScreen() {
             />
           </SuspenseSection>
         )}
-        {/* Each personal row has its own boundary so one failing source
-            doesn't hide the others. */}
         {watchlistConnected && (
           <SuspenseSection
             fallback={<FeedRowSkeleton hasAction />}
@@ -203,13 +176,11 @@ function FeedScreen() {
             />
           </SuspenseSection>
         )}
-        {/* What the user is partway through reading, after what they mean to watch. */}
         {continueReadingProviders(connected).length > 0 && (
           <SuspenseSection fallback={<ReadingRowSkeleton />} resetKey={refreshCount}>
             <ContinueReadingRow onItemActions={openActions} />
           </SuspenseSection>
         )}
-        {/* Serializd's further-out airings, after what the user means to watch. */}
         {serializdUsername != null && (
           <SuspenseSection fallback={<LandscapeRowSkeleton />} resetKey={refreshCount}>
             <ComingSoonRow
@@ -219,9 +190,6 @@ function FeedScreen() {
             />
           </SuspenseSection>
         )}
-        {/* Letterboxd's own row, restored beside the merged one (owner,
-            2026-07-28). Its own suspense boundary: a Letterboxd scrape failing
-            must not take the merged row down with it, and vice versa. */}
         {letterboxdUsername != null && (
           <SuspenseSection
             fallback={<FeedRowSkeleton hasAction />}
@@ -285,15 +253,12 @@ export default function App() {
           name="description"
         />
       </Head>
-      {/* Brand-only header. From `md` the web sidebar carries the 忍 mark, so
-          it's hidden there; a web-only class because native tablets match `md`. */}
       <View
         className={cn(
           homeHeaderClassName,
           process.env.EXPO_OS === 'web' && 'md:hidden',
         )}
       >
-        {/* Connection status lives in Settings. */}
         <Text
           className={cn(
             homeHeaderTitleSize,

@@ -7,20 +7,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import type { WatchlistRemoveDeps } from './use-unwatchlist-media';
 
-/**
- * The removal verb end to end at the function layer (plan 0031 U16). No
- * renderer — `runWatchlistRemove` *is* the behaviour and `useUnwatchlistMedia`
- * is a `useMutation` wrapper over it, exactly as the add is split.
- *
- * **The AniList refusals live with the adapter**, not here: `deleteAniListEntry`
- * guards on a *fresh* in-effect read (R36) — bare `PLANNING`/`progress: 0`
- * deletes by that read's id, `CURRENT` refuses without issuing the mutation, a
- * score/notes/custom list refuses, and a failed guard read fails closed — and
- * `src/lib/providers/anilist/writes.test.ts` asserts every one of them against
- * a recorded request log. Re-asserting them through a fake adapter here would
- * prove nothing about the guard. What this suite owns is everything *around*
- * the adapters: which of them run at all, and what the surface is told.
- */
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -41,17 +27,12 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
-// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
-// graph, whose auth import reaches expo-crypto — mirror the surface it
-// consumes instead of loading the whole expo package under bun (the
-// `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   CryptoEncoding: { BASE64: 'base64' },
   digestStringAsync: async () => 'unused',
 }));
-// Enrichment has every id it needs on these fixtures — no mapping lookups.
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: () => Promise.resolve(null),
   cachedAniListFilmId: () => Promise.resolve(null),
@@ -74,11 +55,6 @@ const { runWatchlistRemove, WATCHLIST_REMOVE_ADAPTERS } = await import(
 
 const adapterCalls: ProviderId[] = [];
 
-/**
- * The seams as fakes, injected rather than `mock.module`'d: bun's module mocks
- * are process-wide, so faking `@/lib/providers/trakt/writes` here would silently
- * replace the module its own adapter suite is testing.
- */
 function fakeDeps(): WatchlistRemoveDeps {
   return {
     adapters: {
@@ -131,7 +107,6 @@ function entryFor(item: NormalizedMediaItem, sources: ProviderId[]): WatchlistEn
   return { id: item.id, item, sources, sourceIds: [item.id] };
 }
 
-/** A real client whose invalidations are recorded rather than executed. */
 function recordingClient(): { client: QueryClient; keys: string[] } {
   const client = new QueryClient();
   const keys: string[] = [];
@@ -161,14 +136,10 @@ describe('runWatchlistRemove — the write follows `sources` (R35)', () => {
 
     expect(adapterCalls).toEqual(['trakt']);
     expect(result.succeeded).toEqual(['trakt']);
-    // ...and Serializd, connected and applicable to a TV item but with no read
-    // leg in v1, is an upfront manual row rather than a silent drop.
     expect(result.unknown).toEqual(['serializd']);
   });
 
   test('a manual-or-unknown-only plan is the deep-link affordance, never a throw', async () => {
-    // Letterboxd on web is the standing manual case (plan 0033 R7): the
-    // declaration is 'write' but the platform bans it.
     process.env.EXPO_OS = 'web';
     const { client } = recordingClient();
     const result = await runWatchlistRemove(
@@ -223,9 +194,6 @@ describe('runWatchlistRemove — invalidation, and no optimistic patch (KTD-5)',
       fakeDeps(),
     );
 
-    // No optimistic patch: a failed removal never has to be un-patched out of
-    // a list the user is looking at. The row leaves the grid when the refetch
-    // this invalidation schedules brings back a gather without it.
     const cached = client.getQueryData<{ inputs: WatchlistInput[] }>(
       watchlistQueryKeys.inputs(),
     );

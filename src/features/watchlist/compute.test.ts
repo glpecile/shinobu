@@ -5,11 +5,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { computeWatchlist, watchlistMergeKeys } from './compute';
 import type { WatchlistInput } from './types';
 
-/**
- * `computeWatchlist` is pure — no React, no Effect, no query client — so this
- * suite needs no module stubs at all. That is the point of the split.
- */
-
 function item(
   overrides: Partial<NormalizedMediaItem> & Pick<NormalizedMediaItem, 'id'>,
 ): NormalizedMediaItem {
@@ -89,7 +84,6 @@ describe('computeWatchlist', () => {
       }),
     };
     const [entry, own] = computeWatchlist([planned, volume, second], [planned.item]);
-    // Hardcover's list order isn't fixed, and the merged volume doesn't follow it.
     expect(computeWatchlist([planned, second, volume], [planned.item]).map((card) => card.id)).toEqual(['hardcover-61', 'hardcover-62']);
     expect(entry).toMatchObject({
       id: 'hardcover-61',
@@ -97,7 +91,6 @@ describe('computeWatchlist', () => {
       sourceIds: ['anilist-143703', 'hardcover-61'],
       anilistStatus: 'PLANNING',
     });
-    // Grouping only: the book's own ids never gain the AniList one.
     expect(entry.item).toMatchObject({ externalIds: { hardcover: 61 }, bridgedAniList: { id: 143703, title: 'Nisemonogatari' } });
     expect(own).toMatchObject({ id: 'hardcover-62', sources: ['hardcover'] });
   });
@@ -111,7 +104,6 @@ describe('computeWatchlist', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0].sources).toEqual(['trakt', 'letterboxd']);
     expect(entries[0].sourceIds).toEqual(['trakt-1', 'letterboxd-heat']);
-    // Trakt's copy wins over Letterboxd's: richer metadata and external ids.
     expect(entries[0].id).toBe('trakt-1');
     expect(entries[0].item.externalIds.tmdb).toBe(949);
   });
@@ -156,8 +148,6 @@ describe('computeWatchlist', () => {
     ]);
     expect(merged).toHaveLength(1);
 
-    // Two same-titled series of the same year carry no shared id, and the
-    // title leg deliberately does not apply to them.
     const shows = computeWatchlist([
       traktRow({ id: 'trakt-1', title: 'The Office', type: 'TV', year: 2005 }),
       traktRow({ id: 'trakt-2', title: 'The Office', type: 'TV', year: 2005 }),
@@ -197,7 +187,6 @@ describe('computeWatchlist', () => {
 
     expect(entries).toHaveLength(1);
     expect(entries[0].id).toBe('anilist-154587');
-    // Routing order, not gather order.
     expect(entries[0].sources).toEqual(['trakt', 'anilist']);
     expect(entries[0].sourceIds).toEqual(['trakt-9', 'anilist-154587']);
   });
@@ -230,8 +219,6 @@ describe('computeWatchlist', () => {
     expect(entries.map((entry) => entry.id)).toEqual([
       'trakt-new',
       'trakt-old',
-      // Letterboxd's page order is already most-recently-added-first, so the
-      // undated block keeps it rather than scattering.
       'letterboxd-a',
       'letterboxd-b',
     ]);
@@ -251,10 +238,6 @@ describe('computeWatchlist', () => {
   });
 
   test('a merged row carries the Simkl leg’s watch-history hint (plan 0036)', () => {
-    // The picker's destructive warning reads this off the *merged* entry, and
-    // the Simkl row loses precedence to any AniList twin. Losing the hint here
-    // would silently disarm the confirm and let a removal delete watch history
-    // unannounced.
     const [entry] = computeWatchlist([
       {
         item: item({ id: 'anilist-1', type: 'ANIME', externalIds: { tmdb: 949 } }),

@@ -4,8 +4,6 @@ import type {
   NormalizedMediaItem,
 } from '@/types/media';
 
-/** Raw AniList payload shapes — these never escape lib/providers (AGENTS.md Data Contract). */
-
 export interface AniListMediaTitle {
   english?: string | null;
   romaji?: string | null;
@@ -33,18 +31,12 @@ export interface AniListMedia {
   episodes?: number | null;
   chapters?: number | null;
   volumes?: number | null;
-  /** Only requested by the manga list read (Continue Reading, the reading list, the diary), for the reading bridge. */
   staff?: {
     nodes?: Array<{
       name?: { full?: string | null; native?: string | null; alternative?: Array<string | null> | null } | null;
     } | null> | null;
   } | null;
   idMal?: number | null;
-  /**
-   * Only requested by the currently-watching read (plan 0019 U2) — one scalar
-   * object per entry instead of a per-media airing-schedule request each.
-   * Null for finished and hiatus/unscheduled series alike.
-   */
   nextAiringEpisode?: AniListNextAiringEpisode | null;
   airingSchedule?: { nodes?: Array<AniListNextAiringEpisode | null> | null } | null;
   relations?: {
@@ -55,19 +47,14 @@ export interface AniListMedia {
   } | null;
 }
 
-/** AniList's pointer at the next episode to air. `airingAt` is Unix seconds. */
+/** `airingAt` is Unix seconds. */
 export interface AniListNextAiringEpisode {
   episode: number;
   airingAt: number;
 }
 
-/** One MediaListCollection entry (the viewer's list row for a media). */
 export interface AniListListEntry {
-  /**
-   * The MediaList row's own id — *not* the media id. Optional here because a
-   * read that has no use for it simply doesn't select it (and persisted caches
-   * written before plan 0031 U12 have no such field).
-   */
+  /** MediaList row id, not the media id. */
   id?: number | null;
   status?: string | null;
   progress?: number | null;
@@ -78,23 +65,16 @@ export interface AniListListEntry {
   media: AniListMedia;
 }
 
-/**
- * Both-ways title matching (AGENTS.md/todos/002): prefer the English title,
- * fall back to Romanized, then native — never an empty card for a title
- * that only exists in one variant.
- */
 export function anilistTitle(media: AniListMedia): string {
   const title = media.title;
   return title?.english ?? title?.romaji ?? title?.native ?? '';
 }
 
-/** "SIDE_STORY" → "Side story" — AniList enums as display text. */
 export function humanizeEnum(value: string): string {
   const lower = value.toLowerCase().replace(/_/g, ' ');
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
-/** Retain AniList's Markdown while removing its HTML-like formatting. */
 export function stripHtmlMarkup(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')
@@ -103,18 +83,15 @@ export function stripHtmlMarkup(html: string): string {
     .trim();
 }
 
-/** Plain-text variant for overviews and search/SEO descriptions. */
 export function stripHtml(html: string): string {
   return stripHtmlMarkup(html).replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1');
 }
 
-/** Inverse of the `anilist-<id>` minting below: the AniList id behind an item id, or null. */
 export function parseAniListItemId(id: string): number | null {
   const match = /^anilist-(\d+)$/.exec(id);
   return match == null ? null : Number(match[1]);
 }
 
-/** Every name AniList lists for each staff member, for the reading bridge. */
 export function staffNames(nodes: NonNullable<AniListMedia['staff']>['nodes']): string[] {
   return (nodes ?? []).flatMap((node) =>
     [node?.name?.full, node?.name?.native, ...(node?.name?.alternative ?? [])].filter(
@@ -123,11 +100,6 @@ export function staffNames(nodes: NonNullable<AniListMedia['staff']>['nodes']): 
   );
 }
 
-/**
- * AniList Media → NormalizedMediaItem. `nowIso` keeps this pure — catalogue
- * entries (trending) carry no personal timestamp, so the read effect supplies
- * the instant from Effect's Clock (same contract as trakt/normalize.ts).
- */
 export function normalizeAniListMedia(
   media: AniListMedia,
   nowIso: string,
@@ -159,8 +131,6 @@ export function normalizeAniListMedia(
       ? { ratings: [{ source: Provider.AniList, value: media.averageScore, scale: '%' }] }
       : {}),
     type,
-    // AniList's ANIME covers movie-format entries; MOVIE format is what makes
-    // an item fan out to Trakt/Letterboxd as a film (plan.md 1.3).
     ...(media.format === 'MOVIE' ? { isFilm: true } : {}),
     currentProgress: 0,
     progressUnit: type === 'MANGA' ? 'chapter' : 'episode',
@@ -175,16 +145,10 @@ export function normalizeAniListMedia(
           },
         }
       : {}),
-    // idMal rides along so Simkl anime writes can key by MAL id (plan 0034
-    // KTD-6) instead of falling to the best-effort external-id tier.
     externalIds: { anilist: media.id, ...(media.idMal != null ? { mal: media.idMal } : {}) },
   };
 }
 
-/**
- * A viewer's list entry → NormalizedMediaItem with real progress and the
- * entry's own update instant (epoch seconds → ISO).
- */
 export function normalizeAniListListEntry(
   entry: AniListListEntry,
   nowIso: string,
@@ -199,49 +163,20 @@ export function normalizeAniListListEntry(
   };
 }
 
-/**
- * A currently-watching list entry with the airing info Up Next classifies it
- * by (plan 0019 U2). Deliberately a wrapper around the item rather than extra
- * fields on `NormalizedMediaItem`: airing schedules are an AniList-shaped
- * detail, and the shared data contract stays provider-agnostic.
- */
 export interface AniListCurrentEntry {
   item: NormalizedMediaItem;
-  /**
-   * The viewer's list status for this entry. The list read asks for CURRENT
-   * and PLANNING in one request. Up Next uses this to exclude planned backlog
-   * while admitting recent premieres. The watchlist includes both statuses.
-   */
   status: 'CURRENT' | 'PLANNING';
   /**
-   * The MediaList row's own id (`MediaList.id`, not the media id) — what
-   * `DeleteMediaListEntry` deletes by.
-   *
-   * **A hint only, never evidence (plan 0031 R36).** A removal is destructive
-   * beyond the watchlist — deleting the entry drops progress, score and notes
-   * with it — so the removal path must guard on a **fresh in-effect read** of
-   * the entry and delete by *that* read's id. Do not "optimize" the guard by
-   * reading this field instead: it comes off a cached (and persisted) list
-   * snapshot that can be minutes stale, and a stale guard here destroys the
-   * whole entry. It exists so a surface can tell, cheaply and without a
-   * request, that an entry plausibly exists at all.
-   *
-   * Optional because the field is only selected by the list read that needs it
-   * and because persisted caches predating plan 0031 U12 don't carry it.
+   * `MediaList.id` (not the media id) that `DeleteMediaListEntry` deletes by.
+   * Hint only: `DeleteMediaListEntry` drops progress, score, and notes, so
+   * removal must guard on a fresh read rather than this cached field.
    */
   entryId?: number;
-  /**
-   * The next episode AniList has scheduled, as an ISO instant (KTD-4: every
-   * air time reaches `hasAired` as an instant, never a raw epoch or date).
-   * Null for finished series and for hiatus/unconfirmed schedules alike —
-   * `totalEpisodes` is what separates those two.
-   */
+  /** Next scheduled episode (`airingAt` ISO instant); null for finished and unscheduled series alike. */
   nextAiring: { episode: number; airingAt: string } | null;
   /** Episode 1's air instant, retained when the next-airing pointer advances. */
   firstAired?: string;
-  /** A planned sequel is not ready until its preceding anime is completed. */
   hasUnfinishedPrequel?: boolean;
-  /** Total episodes when AniList knows it; null while unannounced. */
   totalEpisodes: number | null;
 }
 
@@ -253,11 +188,6 @@ export function normalizeCurrentAnimeEntry(
   const premiere = entry.media.airingSchedule?.nodes?.[0];
   return {
     item: normalizeAniListListEntry(entry, nowIso),
-    // Only an explicit PLANNING is planned. The read asks for exactly these two
-    // statuses, so the fallback is unreachable in practice — and it defaults to
-    // CURRENT deliberately: PLANNING is the *restricted* status here, and
-    // guessing it for a missing/unknown value would silently drop entries the
-    // user really is watching.
     status: entry.status === 'PLANNING' ? 'PLANNING' : 'CURRENT',
     ...(entry.id != null ? { entryId: entry.id } : {}),
     hasUnfinishedPrequel: (entry.media.relations?.edges ?? []).some(
@@ -278,11 +208,6 @@ export function normalizeCurrentAnimeEntry(
   };
 }
 
-/**
- * A reading or planned manga list entry (plan 0117 M3). The list read asks for
- * three statuses in one request, and each surface slices by `status`: Continue
- * Reading takes CURRENT and REPEATING, the reading list takes PLANNING.
- */
 export interface AniListMangaEntry {
   item: NormalizedMediaItem;
   status: 'CURRENT' | 'REPEATING' | 'PLANNING';
@@ -296,21 +221,15 @@ export function normalizeCurrentMangaEntry(
 ): AniListMangaEntry {
   return {
     item: normalizeAniListListEntry(entry, nowIso),
-    // PLANNING is the restricted status, so only an explicit one is planned.
     status: entry.status === 'PLANNING' || entry.status === 'REPEATING' ? entry.status : 'CURRENT',
     ...(entry.id != null ? { entryId: entry.id } : {}),
   };
 }
 
-// ---- Diary activity (plan 0016) ----
-
 /**
- * One `ListActivity` from `Page.activities` — AniList's closest diary analogue.
- * `status` is a phrase ("watched episode", "read chapter", "completed", "plans
- * to watch", …); `progress` a number or hyphen range ("3 - 5"). AniList
- * activity reflects *list updates* (including manual progress edits), and
- * per-account/per-entry visibility settings can hide entries entirely — an
- * empty slice is never proof of no history (plan 0016 U2 / Open Questions).
+ * AniList `ListActivity`: `status` is a phrase ("watched episode", "plans to watch", …),
+ * `progress` is a number or range ("3 - 5"), and privacy settings can hide entries so an
+ * empty list does not prove there is no history.
  */
 export interface AniListListActivity {
   id: number;
@@ -321,16 +240,8 @@ export interface AniListListActivity {
   media?: AniListMedia | null;
 }
 
-// Only watch/read-shaped updates are diary logs: a "watched episode",
-// "rewatched episode", "read chapter", "reread chapter", or "completed"
-// activity. Plan/pause/drop status changes (and the "rewatching"/"rereading"
-// flip to REPEATING) are list bookkeeping, not a watch — they drop out.
 const DIARY_STATUS = /^(watched|rewatched|read|reread|completed)/i;
 
-/**
- * Parses an AniList activity `progress` string into the episode/chapter number
- * set (plan 0016 KTD2). "3 - 5" → [3, 4, 5]; "12" → [12]; empty/absent → [].
- */
 function parseActivityProgress(
   progress: string | null | undefined,
 ): number[] {
@@ -348,12 +259,6 @@ function parseActivityProgress(
   return single != null ? [Number(single[1])] : [];
 }
 
-/**
- * A media-list activity → one diary entry, or `null` for a non-diary status
- * (plans/paused/dropped) or an activity with no media. `createdAt` (epoch
- * seconds) becomes an ISO instant so day grouping stays timezone-correct
- * (plan 0016 R4). A completed *film* carries no episode detail.
- */
 export function normalizeListActivity(
   raw: AniListListActivity,
 ): NormalizedDiaryEntry | null {

@@ -4,7 +4,6 @@ import { useFloatingBackButtonClearance } from '@/components/floating-back-butto
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { CreditTimelineSkeleton } from '@/features/credit-timeline/credit-timeline';
 
-/** The studio hero on the studio screen's geometry: a square logo tile, no bio. */
 export function StudioSkeleton() {
   const headerTop = useFloatingBackButtonClearance();
   return (

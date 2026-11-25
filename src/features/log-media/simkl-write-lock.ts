@@ -14,7 +14,6 @@ interface Waiter {
   entry: SimklLogEntry;
   resolve: (result: ProviderWriteResult) => void;
   reject: (error: unknown) => void;
-  /** Failed POSTs this entry rode in, against `MAX_ATTEMPTS`. */
   attempts: number;
 }
 
@@ -22,7 +21,6 @@ export interface SimklLogQueue {
   log: (entry: SimklLogEntry) => Promise<ProviderWriteResult>;
 }
 
-/** Test seam: real timers in the app, hand-driven ones in `bun test`. */
 export interface QueueClock {
   now: () => number;
   schedule: (run: () => void, ms: number) => void;
@@ -45,39 +43,20 @@ const MAX_ATTEMPTS = 5;
  * or never will, so it isn't replayed.
  */
 function isTransient(error: unknown): boolean {
-  // A reset delay identifies a quota response, which cannot recover during
-  // this short retry window. Leave the caller its manual retry link.
+  // A Retry-After delay signals a quota limit, not the transient write lock.
   if (error instanceof ProviderRateLimitError) return error.retryAfterMs == null;
   return error instanceof ProviderNetworkError &&
     (error.status === 500 || error.status === 502 || error.status === 503);
 }
 
-/** 2s, 4s, 8s, 16s: the lock clears when Simkl finishes the previous write. */
 function backoffMs(attempts: number): number {
   return 1_000 * 2 ** attempts;
 }
 
 /**
- * Every Simkl history write in the app goes through one of these: writes that
- * arrive while the lock is engaged (or a POST is in flight) are **coalesced
- * into the next POST** rather than fired into the lock, because every Simkl
- * write endpoint takes arrays — "batch, never loop" applied across time. The
- * quick-log catch-up chain (plan 0037) is what made this necessary: five
- * confirms in ten seconds are five history writes, and without this the
- * second through fifth all failed on Simkl alone.
- *
- * Contract:
- * - No lock, nothing in flight → the entry POSTs immediately, alone.
- * - Otherwise it waits; when the lock lifts, everything waiting goes as ONE
- *   POST and every waiter resolves with that POST's result.
- * - A POST that fails transiently (`isTransient`) is re-queued after a short
- *   backoff, up to `MAX_ATTEMPTS`; then its waiters reject, which the fan-out
- *   reports as a Simkl failure with the manual link.
- * - Any other error rejects the waiters of that POST only.
- *
- * Module state is per app lifetime — the lock is Simkl's, and it outlives no
- * process. Nothing here retries inside the window (the AniList lesson,
- * docs/solutions/anilist-rate-limit-retry-storm.md).
+ * Coalesces concurrent Simkl history writes into a single batched POST after
+ * the ~20s write lock clears, retrying only transient failures outside the
+ * lock window (docs/solutions/anilist-rate-limit-retry-storm.md).
  */
 export function createSimklLogQueue(
   send: (entries: SimklLogEntry[]) => Promise<ProviderWriteResult>,
@@ -120,8 +99,6 @@ export function createSimklLogQueue(
       for (const waiter of batch) {
         if (!retry.includes(waiter)) waiter.reject(error);
       }
-      // Re-queued waiters go to the front so a bounced batch lands before
-      // anything that arrived while it was in flight.
       pending = [...retry, ...pending];
       if (retry.length > 0) {
         wait = backoffMs(Math.max(...retry.map((waiter) => waiter.attempts)));

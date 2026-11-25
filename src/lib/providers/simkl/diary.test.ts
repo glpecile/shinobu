@@ -57,7 +57,6 @@ describe('simklDiaryEntries — episodes', () => {
       }),
     );
     expect(entries).toHaveLength(2);
-    // Newest first.
     expect(entries[0]).toMatchObject({
       id: 'simkl-100-s2e5',
       provider: 'simkl',
@@ -183,7 +182,6 @@ describe('simklDiaryEntries — window', () => {
       }),
     );
     expect(entries).toHaveLength(500);
-    // The oldest 10 fell off; the newest survived.
     expect(entries[0].episodes).toEqual([510]);
     expect(entries.at(-1)?.episodes).toEqual([11]);
   });

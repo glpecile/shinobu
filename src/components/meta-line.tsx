@@ -5,14 +5,6 @@ import { Text } from 'react-native';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * "📅 2026 · 🕒 109 min · 🏷 Drama" — the parts that exist, joined by " · ". Nothing
- * when every part is missing.
- *
- * ```tsx
- * <MetaLine className="mt-1.5" parts={[year, runtime != null && <MetaLine.Part icon="time-outline">{`${runtime} min`}</MetaLine.Part>]} />
- * ```
- */
 export function MetaLine({
   parts,
   align = 'left',
@@ -28,7 +20,6 @@ export function MetaLine({
     <Text className={cn('text-muted font-sans text-sm', align === 'center' && 'text-center', className)}>
       {shown.map((part, index) => (
         <Fragment key={index}>
-          {/* Non-breaking before the dot so a wrap starts the next line at an icon. */}
           {index > 0 && '\u00A0· '}
           {part}
         </Fragment>
@@ -37,13 +28,11 @@ export function MetaLine({
   );
 }
 
-/** One part with its icon: `calendar-outline` for dates, `time-outline` for runtime, `pricetags-outline` for genres. */
 function Part({ icon, children }: { icon: ComponentProps<typeof Ionicons>['name']; children: string }) {
   const muted = useThemeColor('--color-muted');
   return (
     <>
       <Ionicons accessible={false} color={muted} name={icon} size={14} />
-      {/* Non-breaking so the icon never ends a line apart from its text. */}
       {`\u00A0${children}`}
     </>
   );

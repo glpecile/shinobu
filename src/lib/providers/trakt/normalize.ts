@@ -367,7 +367,6 @@ export function normalizeCrew(
   }));
 }
 
-/** From `/movies|shows/:id/studios`. */
 export interface TraktStudio {
   name: string;
   ids: TraktIds;
@@ -381,9 +380,6 @@ export function normalizeStudio(raw: TraktStudio): NormalizedStudio {
   };
 }
 
-// ---- Seasons / episodes (detail-screen-only structure, plan 0010) ----
-
-/** One episode inside a `/shows/:id/seasons?extended=full,episodes` payload. */
 export interface TraktSeasonEpisode {
   season: number;
   number: number;
@@ -395,7 +391,6 @@ export interface TraktSeasonEpisode {
   runtime?: number;
 }
 
-/** One season from `/shows/:id/seasons?extended=full,episodes`. */
 export interface TraktShowSeason {
   number: number;
   title?: string;
@@ -493,7 +488,6 @@ export interface TraktShowProgress {
   next_episode?: TraktNextEpisodeRaw | null;
 }
 
-/** The show's next unwatched episode, normalized (plan 0019 U1). */
 export interface TraktNextEpisode {
   season: number;
   number: number;
@@ -602,8 +596,6 @@ export function normalizeWatchedMovie(raw: TraktWatchedMovie): NormalizedMediaIt
   };
 }
 
-// ---- Diary history (plan 0016) ----
-
 /** One episode inside a `/sync/history` episode row (its own ids + numbering). */
 export interface TraktHistoryEpisode {
   season: number;
@@ -660,8 +652,6 @@ export function normalizeHistoryItem(
   }
   return null;
 }
-
-// ---- My calendars (plan 0030) ----
 
 /**
  * The episode embedded in a `/calendars/*` show row. Every field is optional

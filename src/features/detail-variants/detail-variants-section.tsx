@@ -31,15 +31,11 @@ const LABELS = {
   letterboxd: PROVIDERS[Provider.Letterboxd].label,
 } as const;
 
-/** The item's other details pages, as posters in the watchlist wall's look, collapsed until the user opens it. */
 export function DetailVariantsSection({ item }: { item: NormalizedMediaItem }) {
   const open = !useSectionCollapsed('detail-variants', true);
-  // A TMDB page resolves cold only by fetching it, which takes the token.
   const hasTmdb = useTmdbToken() !== '';
   const anilist = useAniListIdByTmdbQuery(item).data;
-  // Simkl's page is public: any foreign id names it, nothing to connect.
   const simkl = useSimklLookupQuery(simklLookupParamsFor(item)).data?.externalIds.simkl;
-  // Letterboxd's is cache-only — see `findLetterboxdTwinInCache`.
   const letterboxd = findLetterboxdTwinInCache(useQueryClient(), item)?.externalIds.letterboxd;
   const variants = detailVariants({
     ...item,
@@ -81,7 +77,6 @@ export function DetailVariantsSection({ item }: { item: NormalizedMediaItem }) {
 
 function VariantPoster({ item, variant }: { item: NormalizedMediaItem; variant: DetailVariant }) {
   const pushRoute = usePushRoute();
-  // A Letterboxd twin has no fetch; its cover is the page's own.
   const preview = useDeepLinkItem(variant.id);
 
   return (
@@ -91,7 +86,6 @@ function VariantPoster({ item, variant }: { item: NormalizedMediaItem; variant: 
         className="w-full h-full rounded-md overflow-hidden border border-border/40 bg-surface"
         onPress={() => pushRoute(routes.details(variant.id, variant.type ?? item.type))}
       >
-        {/* The page's own poster stands in until the variant's lands. */}
         <PosterFace marks={[variant.source]} uri={preview?.coverImage || item.coverImage} />
       </PresstableScale>
     </View>

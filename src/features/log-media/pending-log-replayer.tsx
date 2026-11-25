@@ -14,20 +14,12 @@ import { useLogMedia } from './use-log-media';
 const legs = () => pendingLogs().flatMap((record) => Object.values(record.legs));
 const stoppedLegs = () => legs().filter((leg) => leg.state === 'failed').length;
 
-/** The first wait before a drain that no event starts. It doubles up to the maximum while legs still wait. */
 const RETRY_MS = 60_000;
 const MAX_RETRY_MS = 15 * 60_000;
 
-/** One drain at a time in this app. Web tabs share the queue and take the lock below. */
 let draining = false;
 
-/**
- * Sends the queue through `log`, oldest first and one record at a time.
- * AniList keeps one progress counter, so episode 5 sent before episode 3
- * would make 3 look logged. A leg that could succeed later holds its
- * provider's later legs until the next drain, which keeps the order and keeps
- * a replay out of that provider's rate limit. The other providers go on.
- */
+/** Sequential oldest-first: AniList tracks a single progress counter, so sending episode 5 before 3 would make 3 look logged. */
 async function drain(
   log: (variables: LogMediaVariables) => Promise<LogMediaResult>,
   trackBusy: (itemId: string, work: Promise<unknown>) => void,
@@ -46,18 +38,15 @@ async function drain(
     const write = log({
       ...record.variables,
       providers: [...unsent, ...uncertain],
-      // Nobody confirms a replay, so it never becomes a rewatch.
       retryOf: { rewatch: false, unsent, unanswered: uncertain },
       replay: id,
     });
     trackBusy(record.variables.item.id, write);
-    // The record leaves the queue before its refetch lands. This covers the gap.
     trackLog(loggedWatch(record.variables), write.then((result) => result.settled));
     let result: LogMediaResult;
     try {
       result = await write;
     } catch {
-      // The plan itself failed for now, before any provider was asked. Every record waits as it was.
       break;
     }
     if (result.succeeded.length > 0) logged += 1;
@@ -65,7 +54,6 @@ async function drain(
       if (outcome.status === 'error' && outcome.transient != null) held.add(outcome.provider);
     }
   }
-  // Only a leg that stopped in this drain: an old one must not toast on every foreground.
   if (stoppedLegs() > stoppedBefore) {
     toast.error('Not every saved log was sent', 'Open Pending logs in your diary.');
   } else if (logged > 0) {
@@ -73,7 +61,6 @@ async function drain(
   }
 }
 
-/** Sends the pending queue now, unless a drain already runs or the device is offline. */
 export function useDrainPendingLogs(): () => void {
   const { mutateAsync } = useLogMedia();
   const { trackBusy, trackLog } = useCatchUpControls();
@@ -93,12 +80,6 @@ export function useDrainPendingLogs(): () => void {
   };
 }
 
-/**
- * Mounted once at the app root: sends the pending queue at launch, when the
- * connection returns and when the app comes to the foreground. While a leg
- * still waits it also sends on a timer, because a log that got no answer on a
- * device that reports a connection has no event to wait for. Renders nothing.
- */
 export function PendingLogReplayer(): null {
   const drainNow = useDrainPendingLogs();
 

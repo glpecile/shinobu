@@ -3,18 +3,10 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 export interface DetailVariant {
   source: 'tmdb' | typeof Provider.AniList | typeof Provider.Simkl | typeof Provider.Letterboxd;
-  /** A normalized item ID accepted by `routes.details`. */
   id: string;
-  /** Only needed when a linked entry uses a different logging model. */
   type?: 'TV' | 'MOVIE';
 }
 
-/**
- * The item's other details pages. TMDB, AniList and Simkl ids all resolve
- * cold (`useResolvedMediaItem`); a Letterboxd slug is only ever known from the
- * user's own cached Letterboxd rows, so the caller supplies it or it isn't
- * offered. A linked TV record is metadata, not a movie-side identity.
- */
 export function detailVariants(
   item: Pick<NormalizedMediaItem, 'id' | 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant'>,
   letterboxdVariant?: string,

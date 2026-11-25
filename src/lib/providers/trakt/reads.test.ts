@@ -64,7 +64,6 @@ function pagedDeps(pages: unknown[][], requested: string[]) {
 describe('getWatchedShows pagination (2026 Trakt API change)', () => {
   test('requests extended=progress and stops after a short page', async () => {
     const requested: string[] = [];
-    // Page 1 full (100 items), page 2 short — loop must stop at page 2.
     const pages = [
       Array.from({ length: 100 }, (_, i) => watchedShow(i + 1)),
       [watchedShow(101)],
@@ -83,7 +82,6 @@ describe('getWatchedShows pagination (2026 Trakt API change)', () => {
   });
 });
 
-/** Serves a fixed body/status for `/sync/history`, recording the request URL. */
 function historyDeps(
   handler: (page: number) => Response,
   requested: string[],
@@ -187,9 +185,6 @@ describe('getHistory (diary source, plan 0016)', () => {
   });
 })
 
-// ---- My calendars (plan 0030 U3) ----
-
-/** Serves one fixed calendar body, recording the requested path+query. */
 function calendarDeps(body: unknown, requested: string[]): TraktDeps {
   return {
     tokens: TOKENS,
@@ -259,7 +254,6 @@ describe('getMyShowsCalendar', () => {
           episode: { season: 2, number: 4, title: 'Aura the Guillotine' },
           show: { title: 'Frieren', ids: { trakt: 300 } },
         },
-        // No air date — unbucketable, so it drops without failing the read.
         {
           episode: { season: 1, number: 1 },
           show: { title: 'Nameless', ids: { trakt: 301 } },
@@ -306,7 +300,6 @@ describe('the movie calendars', () => {
   });
 });
 
-/** One `/sync/watchlist` movie row, added on the given day. */
 function watchlistMovie(traktId: number, listedAt: string) {
   return {
     rank: traktId,

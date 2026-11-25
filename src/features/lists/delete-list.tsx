@@ -42,7 +42,6 @@ function DeleteConfirm({ id, title, url, onCancel }: { id: string; title: string
   );
 }
 
-/** The owner's delete control for a Hardcover list's toolbar, and the confirm it opens. Icon-only on a phone, as `RenameList`. */
 export function DeleteList({ id, title, url }: { id: string; title: string; url: string }) {
   const [open, setOpen] = useState(false);
   const compact = useWindowDimensions().width < 640;

@@ -32,7 +32,6 @@ import {
   type AniListMedia,
 } from './normalize';
 
-/** Fields used by cards, search hits and related titles. */
 export const CARD_FIELDS = `
   id
   idMal
@@ -56,7 +55,6 @@ export const MEDIA_FIELDS = `${CARD_FIELDS}
   genres
 `;
 
-/** The authenticated account: its id, and the handle and avatar to show for it. */
 export interface AniListViewer {
   id: number;
   name: string;
@@ -100,28 +98,8 @@ function collectionEntries(data: MediaListCollectionResponse): AniListListEntry[
 }
 
 /**
- * The viewer's watching **and** planned anime (`MediaListCollection(status_in:
- * [CURRENT, PLANNING])` — plan.md 1.2, widened by plan 0030 R12), flattened
- * across AniList's custom lists and normalized. Feeds the "Your Anime" row and,
- * through the same single request, Up Next's anime half (plan 0019 U2):
- * `nextAiringEpisode` rides along on each media instead of costing one
- * airing-schedule request per series, which the 30 req/min budget cannot afford
- * (docs/solutions/anilist-rate-limit-retry-storm.md). `status_in` is why the
- * widening stayed **one** request rather than a second PLANNING read — the same
- * budget forbids doubling this call.
- *
- * The two statuses are not interchangeable and are *not* separated here: every
- * consumer takes its own slice of one cached list. Up Next admits planned
- * premieres but excludes old backlog, and the cross-provider watchlist
- * takes CURRENT ∪ PLANNING (`fetchWatchlistAnime`) — which is only possible
- * because `normalizeCurrentAnimeEntry` carries `status` through (KTD-3). Adding
- * the watchlist consumer cost **zero** extra requests for exactly this reason;
- * see `docs/solutions/anilist-shared-list-query-status-gate.md` for the gate the
- * slices have to keep. Sorted most-recently-updated first to match the Trakt
- * watched feed's ordering.
- *
- * The entry `id` rides along as `entryId` for the removal path (plan 0031 U12).
- * It is a hint, never a guard — see `AniListCurrentEntry.entryId` (R36).
+ * Fetch Current and Planning in one AniList read. The watchlist keeps both while Continue
+ * Watching gates on status.
  */
 export function getCurrentAnime(
   deps: AniListDeps,
@@ -349,11 +327,9 @@ export function getSeasonalAnime(
   });
 }
 
-/** A staff or studio search hit, reduced to what a deep link needs. */
 export interface AniListNamedEntity {
   id: number;
   name: string;
-  /** Staff headshot, for the search screen's people results. */
   image?: string;
 }
 
@@ -417,7 +393,6 @@ export function searchAniListStaff(
   );
 }
 
-/** The studio half of `searchAniListStaff` — same contract, flatter payload. */
 export function searchAniListStudio(
   deps: AniListDeps,
   params: { name: string },
@@ -812,15 +787,7 @@ export interface AniListEntryState {
     /** Manga only: the volumes read, which a bridged Hardcover book writes (plan 0117 B5). */
     progressVolumes: number;
     repeat: number;
-    /**
-     * The four fields below exist for one caller: `deleteAniListEntry`
-     * (plan 0031 R36.2). `DeleteMediaListEntry` destroys the *whole* entry, so
-     * "bare PLANNING" has to mean bare in every sense — a `PLANNING` entry with
-     * `progress: 0` can still carry a score, notes, a start date or custom-list
-     * membership, which is exactly the entry content KTD-2 refuses to *write
-     * over* on the add side. Deleting it would be the same loss by another
-     * route, so the removal guard needs to see them.
-     */
+    /** Select the fields needed to recognize a bare MediaList entry before a delete. */
     /** 0 when unscored — AniList reports the viewer's own score format. */
     score: number;
     notes: string | null;

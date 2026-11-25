@@ -30,17 +30,8 @@ import {
 import { useSeriesNextEpisode } from './use-series-next-episode';
 
 /**
- * Resolves the next log and its release gate, then opens the app-level logging
- * session. A book takes `LogBookButton`. Films and manga chapters confirm once; series share the Continue
- * Watching catch-up chain. When no next episode can be named, the season
- * picker takes over.
- *
- * `onOpenRequest` intercepts the built request before it opens the app-level
- * session, so a host that is already a sheet (the card-actions sheet) can
- * render the log form in place of its own rows instead: a second native
- * sheet can't co-present over the first — it settles closed and its `onSettle`
- * immediately closes the session again, so the tap reads as dead — while web
- * Modals stack.
+ * Pass `onOpenRequest` when rendered inside a sheet to swap inline: a second
+ * native bottom sheet cannot co-present over an open one.
  */
 export function LogMediaButton(props: { item: NormalizedMediaItem; onOpenRequest?: (request: LogRequest) => void }) {
   return props.item.type === 'BOOK' ? <LogBookButton {...props} /> : <LogWatchButton {...props} />;
@@ -51,8 +42,6 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
   const { openLog } = useCatchUpControls();
   const busy = useQuickLogBusy(item.id);
   const watchedInfo = useWatchedInfo(item);
-  // The details screen's "Watched · date" line reads these dated plays too
-  // (Letterboxd's RSS among them), so the button can't contradict it.
   const filmPlays = useFilmPlaysQuery(item);
   const anilistEntry = useAniListEntryStateQuery({
     type: item.type,
@@ -65,8 +54,6 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
   });
   const seriesNextState = useSeriesNextEpisode(item);
   const isAnimeSeries = item.type === 'ANIME' && item.isFilm !== true;
-  // Manga counts chapters on its AniList entry the way an anime series counts
-  // episodes, minus the airing gate: AniList publishes no chapter schedule.
   const isManga = item.type === 'MANGA';
   // Only an item that names its own Simkl entry: a TMDB id is shared by every
   // season of an anime, so matching on it would read a sibling's progress.
@@ -89,34 +76,21 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
     isSeries && (seriesNext?.rewatch === true || seriesNext?.unaired === true);
   const seasons = useShowSeasonsQuery(upcomingNeeded ? seasonsSource : null);
   const upcoming = upcomingNeeded ? firstUnairedEpisode(seasons.data) : null;
-  // A manual-only target (e.g. Letterboxd on web) still needs the button and
-  // its "log manually" row (plan 0022 R3) — only hide when there's truly
-  // nothing to offer.
   if (
     (!isFilmLike && !isAnimeSeries && !isSeries && !isManga) ||
     (targets.length === 0 && manualTargets.length === 0) ||
-    // Naming an episode is the whole affordance for a series: without one
-    // there's nothing to put on the button, so the season picker takes over.
     (isSeries && seriesNextState.status === 'unavailable')
   ) {
     return null;
   }
 
   const seriesLabel = seriesNext == null ? '' : seriesEpisodeLabel(seriesNext);
-  // The one action the series button performs, reused by the confirm sheet's
-  // title and confirm label so all three read identically. A finished show
-  // says "rewatch" rather than naming S1E1 as if it were up next — the same
-  // word the movie path uses for the same situation.
   const seriesAction =
     seriesNext == null
       ? 'Log next episode'
       : seriesNext.rewatch
         ? 'Rewatch'
         : `Log ${seriesLabel}`;
-  // The series analogue of `filmReleaseStatus` (plan 0035 R18). A show with
-  // zero aired episodes shares Trakt's `next_episode: null` with a *finished*
-  // show; the rewatch copy below gates on `rewatch`, which stays false here,
-  // so an unaired show never offers a rewatch.
   const seriesUnaired = seriesNext?.unaired === true;
 
   const anilistStatus = anilistEntry.data?.entry?.status;
@@ -127,36 +101,20 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
     anilistStatus === 'COMPLETED' ||
     anilistStatus === 'REPEATING';
 
-  // Anime series and manga log the next unwatched episode or unread chapter.
-  // Prefer the provider's live entry over the item's own progress, which is a
-  // snapshot of wherever the tap came from: 0 on a trending card or a
-  // cold-resolved Simkl page.
   const total = anilistEntry.data?.total ?? item.totalEpisodes;
   const currentProgress =
     anilistProgress ?? simklAnimeEntry.data?.item.currentProgress ?? item.currentProgress;
-  // A finished entry wraps to unit 1 and says so, like the series path.
   const entryRepeat =
     (isAnimeSeries || isManga) && total != null && total > 0 && currentProgress >= total;
   const nextEpisode = entryRepeat ? 1 : currentProgress + 1;
-  // A manga log can run through a later chapter in the same write, except a
-  // reread's restart and the last chapter, which have nothing to run to.
   const chapterRange =
     isManga && !entryRepeat && (total == null || total > nextEpisode)
       ? { from: nextEpisode, ...(total != null ? { total } : {}) }
       : null;
 
-  // Never offer to log an episode that hasn't aired yet (todos/006).
-  // Only evaluate aired status once the episodes query has successfully loaded.
-  // While loading/pending/error, treat as not aired (disable button).
-  // Once loaded:
-  // - Episode not in schedule → not aired (new anime, episode not yet scheduled)
-  // - Episode in schedule but no air date → aired if the show has started
-  // - Episode in schedule with air date → use hasAired
   const episodeData = anilistEpisodes.data?.episodes.find(
     (e) => e.number === nextEpisode,
   );
-  // Without an AniList id that schedule never loads, so the Simkl entry is
-  // the evidence instead, and failing that the show's own release.
   const nextEpisodeAired =
     !isAnimeSeries ||
     (item.externalIds.anilist == null
@@ -175,26 +133,13 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
             ? hasStartedAiring(item, anilistEpisodes.data.episodes)
             : hasAired(episodeData.firstAired)));
 
-  // The movie counterpart of that gate: a film that isn't out yet can't be
-  // watched, so it can't be logged — and unlike the episode rule above, an
-  // *unknown* release date blocks too (see `filmReleaseStatus`).
   const releaseStatus = isFilmLike ? filmReleaseStatus(item) : 'released';
   const released = releaseStatus === 'released';
-  // Same gate on the TV side, from Trakt's air date rather than AniList's.
-  // The rewatch wrap to S1E1 reads as "aired"; `upcoming` is the episode this
-  // user is actually waiting on.
   const seriesEpisodeAired =
     !isSeries || (seriesNext?.aired === true && upcoming == null);
-  // A search card's progress is 0: logging chapter 1 over real progress would
-  // reconcile as a reread and reset the entry. Cached data survives a failed
-  // refetch, so only a missing entry blocks. Anime gets this from its airing gate.
   const mangaProgressKnown = !isManga || anilistEntry.data !== undefined;
   const canLog = nextEpisodeAired && released && seriesEpisodeAired && mangaProgressKnown;
 
-  // The one string this whole flow speaks: the CTA's label, the confirm
-  // sheet's title, and its confirm button. These were three ternary chains
-  // that had already drifted — the movie CTA read "Mark as watched" and
-  // opened a sheet titled "Log watch" over a button saying the same.
   const action = isSeries
     ? seriesAction
     : isAnimeSeries
@@ -209,15 +154,11 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
           ? 'Rewatch'
           : 'Mark as watched';
 
-  // Why the action can't run yet, when it can't — the only thing that ever
-  // replaces it on the CTA (the sheet can't open in these states at all).
   const blocked = isSeries
     ? upcoming != null
       ? unairedEpisodeLabel(seriesEpisodeLabel(upcoming), upcoming.firstAired)
       : seriesUnaired
-        ? // No layout named a date either, so naming an episode would imply a
-          // schedule the show doesn't have.
-          'Hasn’t aired yet'
+        ? 'Hasn’t aired yet'
         : seriesNext != null && !seriesNext.rewatch && !seriesNext.aired
           ? unairedEpisodeLabel(seriesLabel, seriesNext.firstAired)
           : null
@@ -233,9 +174,6 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
             ? unreleasedFilmLabel(item.releaseDate)
             : null;
 
-  // The subject, never the verb a second time: the title above already says
-  // what this does, so the line under it says what it does it *to* — the
-  // shape the catch-up sheet already uses.
   const description =
     isSeries && seriesNext?.rewatch === true
       ? `You’ve watched every aired episode of “${item.title}” — this starts a rewatch at ${seriesLabel}.`
@@ -250,28 +188,12 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
           : `“${item.title}”`;
 
   return (
-    // `mb-3`, not `mb-6`: the want-to-watch CTA renders directly beneath this
-    // at both call sites (details screen, card sheet) and the two belong to one
-    // item. At 24px they read as unrelated blocks; at 12px they read as two
-    // options, and the watchlist button's own `mb-6` still separates the pair
-    // from whatever follows.
     <View className="mb-3">
-      {/* morphLabel: this label changes in place as the user logs — "Mark as
-          watched" → "Log episode 4" → "Log rewatch" — which is exactly what
-          MorphText is for. */}
       <Button
         variant="log"
         disabled={!canLog}
-        // `eye` once it's in your history, `eye-outline` before — the same
-        // filled/outline pairing the watchlist CTA uses for its own settled
-        // state, so "already done" reads identically on both buttons.
         icon={<Button.Icon name={isRewatch ? 'eye' : 'eye-outline'} />}
         label={blocked ?? action}
-        // The episode number arrives with Trakt's progress read — a spinner
-        // says "resolving which episode", not "your tap did nothing". Manga
-        // also waits out the refetch a log starts: until it lands, the cached
-        // entry names a chapter the log already covered, and confirming that
-        // one reconciles as a reread that lowers the counter.
         loading={
           seriesNextState.status === 'loading' ||
           (upcomingNeeded && seasons.isLoading) ||

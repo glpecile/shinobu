@@ -22,7 +22,6 @@ import {
 import type { WatchlistEntry } from './types';
 import type { WatchlistView } from '@/state/prefs/watchlist-view';
 
-/** Filtered → the control carries its own way out, so clearing is one tap. */
 function FilterPill({
   active,
   onOpen,
@@ -55,7 +54,6 @@ function FilterPill({
     );
   }
 
-  // Clearing stays outside the menu trigger so it never opens the picker.
   return (
     <View className="flex-row items-center rounded-full bg-surface border border-border">
       <NativePickerMenu onSelect={onSelect} options={options} title="Show titles from" value={active}>
@@ -88,9 +86,6 @@ function FilterPill({
   );
 }
 
-/** `count` is 0 only for a deep-linked filter whose leg failed this gather —
- *  see `watchlistFilterOptions`. `partial` renders `46+`: the leg has pages it
- *  hasn't read. */
 function FilterOption({
   provider,
   count,
@@ -103,9 +98,6 @@ function FilterOption({
   const label = provider == null ? 'All trackers' : PROVIDERS[provider].label;
   return (
     <PickerSheet.Option
-      // The `+` is punctuation a screen reader drops or reads as "plus", so
-      // the row spells the claim out — the whole point of the glyph is that
-      // the number is a floor.
       accessibilityLabel={`${label}, ${count}${partial ? ' or more' : ''}`}
       count={formatWatchlistCount(count, partial)}
       icon={provider == null ? undefined : <ProviderIcon id={provider} size={18} />}
@@ -118,10 +110,6 @@ function FilterOption({
 export interface WatchlistToolbarProps {
   /** The **unfiltered** entries — the option counts describe the whole list. */
   entries: readonly WatchlistEntry[];
-  /**
-   * Legs that succeeded but haven't read every page. Their counts render as a
-   * floor (`46+`) rather than a total the app can't stand behind.
-   */
   incomplete: readonly ProviderId[];
   provider: ProviderId | null;
   onProviderChange: (provider: ProviderId | null) => void;

@@ -37,7 +37,6 @@ const SHELF_TITLE: Record<SeasonShelf, string> = {
   rest: 'New to you',
 };
 
-/** The home rails' glyphs for the same ideas, the posters' watched eye, and discovery for the rest. */
 const SHELF_ICON = {
   watching: 'play-circle-outline',
   planned: 'bookmark-outline',
@@ -45,10 +44,8 @@ const SHELF_ICON = {
   rest: 'compass-outline',
 } as const satisfies Record<SeasonShelf, string>;
 
-/** A head is `RailHead.Icon`'s fixed frame: `pt-5`, the 32px ring, `pb-3`. */
 const HEAD_HEIGHT = 64;
 
-/** What the user's libraries say about a title beyond its progress. */
 function libraryStatus(item: NormalizedMediaItem, libraries: ProgressLibraries): LibraryStatus {
   const anilist = libraries.connected.includes(Provider.AniList) && libraries.indexes.anilist != null
     ? findAniListProgress(item, libraries.indexes.anilist)?.status
@@ -63,20 +60,14 @@ function libraryStatus(item: NormalizedMediaItem, libraries: ProgressLibraries):
 
 function countLabel(row: Extract<SeasonRow, { kind: 'head' }>, now: Date): string {
   const count = `${row.count} ${row.count === 1 ? 'title' : 'titles'}`;
-  // An open shelf's first title already says when it airs.
   return !row.open && row.next != null ? `${count} · next ${airingWhen(row.next.airingAt, now)}` : count;
 }
 
-/**
- * Whether a session can put a season's titles on shelves: AniList and Simkl
- * key anime by AniList and MAL ids. Trakt and Letterboxd records carry neither,
- * so their users get the plain wall.
- */
+/** Only AniList and Simkl key anime by AniList/MAL ids; Trakt and Letterboxd records carry neither. */
 function canShelve(connected: readonly ProviderId[]): boolean {
   return connected.includes(Provider.AniList) || connected.includes(Provider.Simkl);
 }
 
-/** The season's loading state: shelves for a session that will show them, the plain wall otherwise. */
 export function SeasonSkeleton({ animated }: { animated: boolean }) {
   return canShelve(useConnectedProviders()) ? <ShelvesSkeleton animated={animated} /> : <WallSkeleton animated={animated} />;
 }
@@ -85,17 +76,6 @@ function newDate(): Date {
   return new Date();
 }
 
-/**
- * One cour of the explorer, the user's titles first: Watching, On your
- * watchlist and Seen fold above New to you on the filmography's rail
- * heads, and each title says when its next episode airs. Folds persist per
- * shelf, across seasons, and start open.
- *
- * Shelves come from the library snapshots list progress already reads, one
- * request per connected provider, never one per title. The wall waits on its
- * skeleton until they settle, so a title never paints in New to you and
- * then jumps to its shelf.
- */
 export function SeasonList({
   items,
   nextAiring,
@@ -108,7 +88,6 @@ export function SeasonList({
 }: {
   items: readonly NormalizedMediaItem[];
   nextAiring: Readonly<Record<string, NextAiring>>;
-  /** Whether this is the pager's selected season. */
   active: boolean;
   footer: ReactElement;
   onEndReached: (() => void) | undefined;
@@ -120,14 +99,12 @@ export function SeasonList({
   const { columns, rowHeight } = useWallMetrics();
   const libraries = useProgressLibraries(items);
   const progress = useItemProgress(items, libraries);
-  // Fixed calls, not a loop over the shelves: each is a hook.
   const folded = new Set<SeasonShelf>();
   if (useSectionCollapsed('anime-seasons-watching')) folded.add('watching');
   if (useSectionCollapsed('anime-seasons-planned')) folded.add('planned');
   if (useSectionCollapsed('anime-seasons-seen')) folded.add('seen');
   if (useSectionCollapsed('anime-seasons-rest')) folded.add('rest');
-  // State, not an ambient `new Date()`, which React Compiler would cache. It
-  // wakes at the soonest airing, so that title drops its note, and at midnight.
+  // State instead of `new Date()` so React Compiler doesn't cache the timestamp across renders.
   const [now, refreshNow] = useReducer(newDate, undefined, newDate);
   const soonest = Math.min(
     localDayAt(1, now).getTime(),
@@ -135,8 +112,6 @@ export function SeasonList({
   );
   useWakeAt(soonest, now, refreshNow);
 
-  // Only the libraries that can shelve a title; Trakt's watched films never
-  // match an AniList film, so waiting on them would only delay the wall.
   const settling = [libraries.queries.anilist, libraries.queries.simkl].some((query) => query.isEnabled && query.isPending);
   if (settling) return <SeasonSkeleton animated={active} />;
   const failedLibraries = [libraries.queries.anilist, libraries.queries.simkl].filter((query) => query.isEnabled && query.isError);
@@ -154,28 +129,21 @@ export function SeasonList({
 
   return (
     <ShelfList
-      // Remount on a view switch: containers sized for poster rows run
-      // short for list rows, as two separate lists never did.
+      // Remount on view switch so recycled container sizes from poster rows don't carry into list rows.
       key={view}
       className="flex-1"
       contentContainerStyle={{ paddingTop: 4 }}
       data={rows}
       now={now}
-      // Warm the selected grid for a cold fling; neighboring seasons keep a small buffer.
       drawDistance={view === 'grid' ? rowHeight * (active ? 8 : 2) : ROW_HEIGHT * 4}
       estimatedItemSize={view === 'grid' ? rowHeight : ROW_HEIGHT}
-      // Exact for heads, so a screen of short heads doesn't outrun the
-      // containers a poster-row estimate allotted.
       getFixedItemSize={(row) => (row.kind === 'head' ? HEAD_HEIGHT : undefined)}
       getItemType={(row) => row.kind}
       keyExtractor={(row) => row.key}
       ListFooterComponent={footer}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
-      // Recycled like the poster wall: mounting a screenful of fresh cells
-      // is what blanks a fling (docs/solutions/diary-scroll-jank-is-row-mount-cost.md).
-      // Rows are prop-derived, and poster cells are keyed by column so a
-      // recycled row reuses them instead of remounting.
+      // docs/solutions/diary-scroll-jank-is-row-mount-cost.md — poster cells are keyed by column for reuse.
       recycleItems
       ListHeaderComponent={failedLibraries.length > 0 ? (
         <View className="items-center mt-3 mb-4">
@@ -231,11 +199,6 @@ export function SeasonList({
   );
 }
 
-/**
- * The season's list and the shelf head pinned over it. A fling moves the pin
- * across shelves, so its state lives here, below the progress reads of every
- * title: a pin change re-renders only this and keeps the list's rows.
- */
 function ShelfList({ data, now, ...props }: Omit<ListProps<SeasonRow>, 'data' | 'onViewableItemsChanged'> & { data: readonly SeasonRow[]; now: Date }) {
   const [pinned, setPinned] = useState<{ shelf: SeasonShelf | null; visible: boolean }>({ shelf: null, visible: false });
   const shelved = data.some((row) => row.kind === 'head');
@@ -247,7 +210,6 @@ function ShelfList({ data, now, ...props }: Omit<ListProps<SeasonRow>, 'data' | 
     let top = viewableItems[0];
     for (const token of viewableItems) if (token.index < top.index) top = token;
     const shelf = top == null || top.item.kind === 'head' || !shelved ? null : top.item.shelf;
-    // Hiding keeps the last shelf so the bar fades out with its title.
     setPinned((previous) => {
       if (shelf == null) return previous.visible ? { ...previous, visible: false } : previous;
       return previous.visible && previous.shelf === shelf ? previous : { shelf, visible: true };

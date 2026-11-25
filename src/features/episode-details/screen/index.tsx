@@ -36,7 +36,6 @@ import type { EpisodeRef } from '@/features/episode-details/episode-neighbours';
 import { useEpisode } from '@/features/episode-details/use-episode';
 import { useEpisodeLogs } from '@/features/episode-details/use-episode-logs';
 
-/** Mirrors index.web.tsx — keep both variants' props identical. */
 export interface EpisodeScreenProps {
   item: NormalizedMediaItem;
   season: number;
@@ -44,25 +43,10 @@ export interface EpisodeScreenProps {
   onBack: () => void;
 }
 
-/** How far off a page boundary a resting offset may sit. */
 const BOUNDARY_TOLERANCE = 2;
 
-/**
- * Native (and the tsc default): a full-screen push shaped like the show's
- * own details screen — the still runs full-bleed under the status bar and
- * fades into the page, the heading sits over the fade, the back button floats.
- *
- * Episodes are horizontal pages of a native paging scroll view
- * (`features/anime-seasons/season-pager.tsx` is the pattern): the swipe, its
- * velocity and the rubber-band at either end are the platform's. Every episode
- * of the sequence owns the slot at `index * width`, but only the settled one
- * and its neighbours are mounted — the rest is two spacers, so a mounted page
- * never moves when the window does. The URL follows the pager with
- * `setParams`: one screen instance, so back still returns to the show.
- */
 export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenProps) {
   const view = useEpisode(item, season, number);
-  // A long-running show's seasons list can arrive well after this episode.
   if (view.isLoading) {
     return <EpisodeScreenSkeleton onBack={onBack} />;
   }
@@ -90,10 +74,6 @@ function EpisodePager({
   );
   const order = found === -1 ? [{ season, number }] : fullOrder;
   const index = Math.max(found, 0);
-  // The episode the scroll last rested on: what the mounted window is centred
-  // on and where `contentOffset` points. Not `index` — that moves when a button
-  // step starts, and a changed `contentOffset` would cut its scroll short. An
-  // episode rather than a page, so it stays put when the order loads around it.
   const [settledEpisode, setSettledEpisode] = useState<EpisodeRef>({ season, number });
   const settled = Math.max(
     order.findIndex(
@@ -101,7 +81,6 @@ function EpisodePager({
     ),
     0,
   );
-  // Neighbours mount in a deferred pass, so the opened page commits alone first.
   const reach = useDeferredValue(1, 0);
 
   function commit(target: EpisodeRef) {
@@ -169,10 +148,6 @@ function EpisodePager({
   );
 }
 
-/**
- * One episode's page: its own reads, so a neighbour is complete before the
- * swipe reveals it.
- */
 function EpisodePage({
   item,
   season,
@@ -185,12 +160,8 @@ function EpisodePage({
   const view = useEpisode(item, season, number);
   const logs = useEpisodeLogs(item, season, number, view.episode?.firstAired);
   const insets = useSafeAreaInsets();
-  // `useCSSVariable`, not `useThemeColor`: this colour is *composed* into the
-  // gradient's transparent stop (`${background}00`), and web's `var(--token)`
-  // cannot be concatenated. The prerender has no DOM to read, so the first
-  // page a visitor loads fades to this dark fallback even in the light theme
-  // — the scrim sits under a hero image, and it corrects on the next
-  // navigation. docs/solutions/web-prerender-bakes-js-resolved-colors.md
+  // `useCSSVariable`, not `useThemeColor`: composed into `${background}00`; web's `var(--token)` cannot be concatenated.
+  // Fallback handles prerender with no DOM (docs/solutions/web-prerender-bakes-js-resolved-colors.md).
   const backgroundVariable = useCSSVariable('--color-background');
   const background =
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
@@ -244,20 +215,12 @@ function EpisodePage({
   );
 }
 
-/**
- * The whole screen as placeholders, block for block, so the content blurs in
- * over the same geometry. Rendered by the route while the item resolves and
- * by the screen while the episode loads — one shape for both, so the two
- * phases are indistinguishable. Its `exiting` fade runs over the arriving
- * content: the crossfade Emil's blur bridges, with no timer on this side.
- */
 export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
   return (
     <AnimatedView className="flex-1 bg-background" exiting={FadeOut.duration(DURATION.exit)}>
       <Skeleton className="h-64 w-full" delay={staggerDelay(0)} />
       <View className="px-6 -mt-10 pb-12">
         <EpisodeHeaderSkeleton />
-        {/* The log button fills the column here (no `self-start`, unlike web). */}
         <Skeleton className="h-12 w-full rounded-full mt-5" delay={staggerDelay(1)} />
         <ExpandableText.Skeleton className="mt-6" lines={4} />
         <PeopleSectionsSkeleton />

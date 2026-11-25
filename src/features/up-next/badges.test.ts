@@ -53,8 +53,6 @@ describe('isNewEpisode', () => {
   });
 
   test('an episode with no air instant is never new', () => {
-    // AniList back-episodes are aired by construction but carry no instant —
-    // absence must not read as "aired just now".
     expect(isNewEpisode(entry(), NOW)).toBe(false);
   });
 });
@@ -87,7 +85,6 @@ describe('calendarBadges', () => {
   });
 
   test('a date-only air date keeps the day badge and drops the time', () => {
-    // Local midnight is the right ordering key but the wrong thing to show.
     expect(calendarBadges(entry({ firstAired: '2026-07-24' }), NOW)).toEqual(
       [{ label: 'Tomorrow', tone: 'accent' }],
     );

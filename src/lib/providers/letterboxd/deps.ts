@@ -1,60 +1,35 @@
 import type { HttpFetch } from '@/lib/http/types';
 
 /**
- * A captured signed-in web session — what writes ride on (plan 0012,
- * session-capture path). Harvested from the login WebView's cookie jar; the
- * username itself comes from the `letterboxd.signed.in.as` cookie
- * (docs/solutions/letterboxd-no-api-fallback.md).
+ * Signed-in web session harvested from the login WebView's cookie jar; username
+ * comes from `letterboxd.signed.in.as` (docs/solutions/letterboxd-no-api-fallback.md).
  */
 export interface LetterboxdSession {
-  /** The full `Cookie:` header value for letterboxd.com (session + CSRF). */
   cookie: string;
   /** Mirrors `com.xk72.webparts.csrf`; echoed as the `__csrf` body param. */
   csrf: string;
   /**
-   * The `User-Agent` the login WebView ran under. Letterboxd binds the session
-   * to it, so every write must replay it verbatim or the origin treats the
-   * request as signed-out (plan 0012, docs/solutions/letterboxd-no-api-fallback.md).
+   * Letterboxd binds the session to the login WebView's `User-Agent`; writes
+   * must replay it verbatim or the origin treats them as signed-out
+   * (docs/solutions/letterboxd-no-api-fallback.md).
    */
   userAgent?: string;
 }
 
-/**
- * Every Letterboxd effect takes this as its first argument — same
- * deps-injection-without-Layers pattern as TraktDeps/AniListDeps (plan 0006
- * decision 4). Reads only need the public `username`; writes additionally
- * need a captured `session` (absent = read-only connection, the write fails
- * with a dead-session auth error rather than posting anonymously).
- */
 export interface LetterboxdDeps {
   fetch: HttpFetch;
-  /** The connected public username, or null while disconnected. */
   username: string | null;
-  /** Present once a web login was captured; required for writes only. */
   session?: LetterboxdSession | null;
   /**
-   * Same-origin write transport that runs *inside* the authenticated login
-   * WebView (native only). Replaying the captured cookies over nitro-fetch does
-   * NOT reconstitute the login — Letterboxd's origin still treats those requests
-   * as signed-out (proven empirically, plan 0012 /
-   * docs/solutions/letterboxd-no-api-fallback.md). The only channel that carries
-   * the real session is the WebView itself, so writes go through here. Absent on
-   * web (read-only) and in tests that don't exercise the write path.
+   * Native same-origin WebView write transport: replaying captured cookies over
+   * nitro-fetch is rejected as signed-out by Letterboxd
+   * (docs/solutions/letterboxd-no-api-fallback.md).
    */
   webFetch?: LetterboxdWebFetch;
-  /** Tampermonkey's browser-session transport; needs a username, not captured cookies. */
   userscriptFetch?: LetterboxdWebFetch;
-  /** Browser-session watchlist transport; no captured cookies required. */
   userscriptWatchlistFetch?: LetterboxdWatchlistWebFetch;
-  /**
-   * Same-origin *watchlist* transport, running in the same authenticated
-   * WebView as `webFetch` (plan 0033 KTD-4). A separate field rather than a
-   * generalized one because each transport's injected script implements one
-   * documented endpoint — never a generic "run any script" surface.
-   */
   watchlistWebFetch?: LetterboxdWatchlistWebFetch;
   listMembershipFetch?: LetterboxdListMembershipFetch;
-  /** The WebView on native, the userscript (bridge 10) on web. */
   listCreateFetch?: LetterboxdListCreateFetch;
   listRenameFetch?: LetterboxdListRenameFetch;
   listLikeWebFetch?: LetterboxdListLikeWebFetch;
@@ -62,28 +37,20 @@ export interface LetterboxdDeps {
 }
 
 /**
- * A diary write executed inside the authenticated Letterboxd WebView. The bridge
- * navigates the WebView to `filmPath` first — the film page carries the live
- * `window.supermodelCSRF` token and the `production:identifier` meta (the film
- * LID) the write needs. It then POSTs Letterboxd's modern same-origin JSON API
- * `/api/v0/production-log-entries` (the legacy `/s/save-diary-entry` form endpoint
- * is dead and 404s — docs/solutions/letterboxd-no-api-fallback.md).
+ * Diary write via `POST /api/v0/production-log-entries` (the legacy
+ * `/s/save-diary-entry` form endpoint 404s; docs/solutions/letterboxd-no-api-fallback.md).
+ * Requires loading `filmPath` first for `window.supermodelCSRF` and the
+ * `production:identifier` meta (film LID).
  */
 export interface LetterboxdWebRequest {
-  /** Film page to render so the CSRF token + LID meta are in the session, e.g. `/film/tuner/`. */
   filmPath: string;
   /** `letterboxd.com`-local YYYY-MM-DD diary date. */
   viewingDateStr: string;
-  /** Diary tags (the API takes a JSON string array), possibly empty. */
   tags: string[];
-  /** Whether to mark the entry a rewatch. */
   rewatch: boolean;
-  /** Like the film with this diary entry; omitted = false. */
   liked?: boolean;
 }
 
-/** The status + text body the WebView `fetch` observed, relayed back over the
- * `postMessage` bridge. */
 export interface LetterboxdWebResponse {
   status: number;
   body: string;
@@ -94,17 +61,12 @@ export type LetterboxdWebFetch = (
 ) => Promise<LetterboxdWebResponse>;
 
 /**
- * A watchlist state set executed inside the authenticated Letterboxd WebView
- * (plan 0033 R3, endpoint capture: docs/solutions/letterboxd-watchlist-write.md).
- * The bridge navigates to `filmPath` (the LID meta lives there), fetches a
- * fresh CSRF token from `POST /ajax/letterboxd-metadata/`, then PATCHes
- * `/api/v0/me/watchlist/{lid}` with `{"inWatchlist": true|false}` — a
- * declarative state set, not a toggle, so a repeat add is idempotent (KTD-5).
+ * Watchlist write via `PATCH /api/v0/me/watchlist/{lid}` with a fresh CSRF
+ * token from `POST /ajax/letterboxd-metadata/` (docs/solutions/letterboxd-watchlist-write.md).
+ * Declarative state set, not a toggle (idempotent).
  */
 export interface LetterboxdWatchlistWebRequest {
-  /** Film page to render so the LID meta is in the session, e.g. `/film/tuner/`. */
   filmPath: string;
-  /** The target membership state — the body of the PATCH, verbatim. */
   inWatchlist: boolean;
 }
 

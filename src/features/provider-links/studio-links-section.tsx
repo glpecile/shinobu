@@ -12,18 +12,6 @@ import { useConnectedProviders } from '@/state/session';
 
 import { ProviderLinkRows } from './provider-link-row';
 
-/**
- * The `PersonLinksSection` sibling for studios (plan 0035 R8/R10) — same pills,
- * same rules, different subject. Only Letterboxd and AniList have an addressable
- * studio surface; Trakt, Serializd and Simkl have none at all, so this gates on
- * connected providers alone.
- *
- * Letterboxd's link is a slug built from the name. AniList's needs a numeric id:
- * an AniList-sourced studio already carries one (`NormalizedStudio.anilistId`,
- * free — the credits payload always had it), and everything else resolves by
- * name search behind `enabled`. Unresolved or no confident match → **no AniList
- * pill**, never a search URL (R13).
- */
 export function StudioLinksSection({
   studio,
   enabled = true,
@@ -32,14 +20,10 @@ export function StudioLinksSection({
 }: {
   studio: UrlStudio;
   enabled?: boolean;
-  /** `'pills'` on a page, `'rows'` inside a sheet — see `ProviderLinkRow`. */
   variant?: 'pills' | 'rows';
-  /** Forwarded to the rows variant (native-only sheet dismissal). */
   onOpened?: () => void;
 }) {
   const connected = useConnectedProviders();
-  // Skipped entirely for a studio that already knows its id, and for a user
-  // with no AniList connected (the pill wouldn't render either way).
   const studioId = useAniListStudioIdQuery({
     name: studio.name,
     enabled: enabled && connected.includes(Provider.AniList) && studio.anilistId == null,

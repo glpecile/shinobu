@@ -19,14 +19,11 @@ function film(id: string, title: string): NormalizedMediaItem {
   };
 }
 
-/** The gather's cached value, exactly as `fetchWatchlistInputs` returns it. */
 function seed(): QueryClient {
   const client = new QueryClient();
   client.setQueryData([...WATCHLIST_QUERY_ROOT, 'inputs'], {
     inputs: [
       { item: film('trakt-1', 'Heat'), source: 'trakt', addedAt: '2026-07-20' },
-      // Same film, the other provider's copy — the merge's precedence winner is
-      // the Trakt row above, and this one must still resolve.
       { item: film('letterboxd-heat', 'Heat'), source: 'letterboxd' },
       { item: film('anilist-5', 'Perfect Blue'), source: 'anilist' },
     ],
@@ -54,9 +51,6 @@ describe('findInWatchlistCache (plan 0031 U14)', () => {
     expect(findLetterboxdTwinInCache(client, show)).toBeUndefined();
   });
   test('resolves a Trakt-sourced watchlist item that belongs to no feed slot', () => {
-    // The regression it exists for: after R25 the merged row carries Trakt and
-    // AniList items, and anything the details chain cannot resolve renders
-    // "Not found".
     expect(findInWatchlistCache(seed(), 'trakt-1')?.title).toBe('Heat');
     expect(findInWatchlistCache(seed(), 'anilist-5')?.title).toBe('Perfect Blue');
   });

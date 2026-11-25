@@ -13,7 +13,6 @@ import { haptics } from '@/lib/haptics';
 
 import type { NativePickerMenuProps } from './types';
 
-/** Compose's leading slot can host the same full-color logos as the app. */
 export function NativePickerMenu<T extends string | number | null>({
   title,
   value,

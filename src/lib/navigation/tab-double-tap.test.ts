@@ -12,7 +12,6 @@ import {
  * would let one test's last press pair with the next test's first.
  */
 
-/** Collects the tabs that fired into `seen`; returns the unsubscribe. */
 function subscribe(seen: string[]): () => void {
   return onTabDoubleTap((tab) => seen.push(tab));
 }
@@ -37,7 +36,6 @@ describe('emitTabPress', () => {
   });
 
   test('two different tabs are never a double tap', () => {
-    // Bouncing between Home and Diary is two intents, not a refresh.
     const seen: string[] = [];
     const stop = subscribe(seen);
     emitTabPress('home', 0);

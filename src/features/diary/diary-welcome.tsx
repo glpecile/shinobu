@@ -18,17 +18,8 @@ import type { DiaryDay, MediaType, MergedDiaryEntry } from '@/types/media';
 import { DiaryList } from './diary-list';
 import { dayKeyForInstant } from './merge';
 
-/** One log lands per beat until the evening is complete, which then holds. */
 const BEAT = 1800;
 
-/**
- * The diary before any tracker is connected: the real list (calendar
- * included), faded and inert, fed sample logs that land one by one as if
- * someone were logging tonight's binge. Progress is state, so leaving the tab
- * pauses it and coming back resumes it; it never rewinds while mounted. Being the real list, the
- * sample follows every change to the diary's design. Phones anchor the copy
- * low for thumb reach; wide screens centre it left of the sample, as Home does.
- */
 export function DiaryWelcome({ timeZone }: { timeZone: string }) {
   // `useCSSVariable`, not `useThemeColor`: the fades compose a transparent stop.
   const background = useCSSVariable('--color-background');
@@ -52,7 +43,6 @@ export function DiaryWelcome({ timeZone }: { timeZone: string }) {
 
   return (
     <View className="flex-1 overflow-hidden">
-      {/* Wide screens pin the sample to the right edge, the copy to the left. */}
       <View
         aria-hidden
         accessibilityElementsHidden
@@ -120,7 +110,6 @@ export function DiaryWelcome({ timeZone }: { timeZone: string }) {
   );
 }
 
-/** Real TMDB posters; ids keep the shape the list expects. */
 interface SampleLog {
   tmdb: number;
   type: MediaType;
@@ -136,7 +125,6 @@ const BEBOP = { tmdb: 30991, type: 'TV', title: 'Cowboy Bebop', poster: '/xDiXDf
 
 const bebop = (episode: number): SampleLog => ({ ...BEBOP, providers: [...BEBOP.providers], episode });
 
-/** Tonight's logs, in the order they land: a film, then a binge with a break. */
 const LIVE: SampleLog[] = [
   { tmdb: 78, type: 'MOVIE', title: 'Blade Runner', poster: '/63N9uy8nd9j7Eog2axPQ8lbr3Wj.jpg', providers: [Provider.Letterboxd, Provider.Trakt], liked: true },
   ...Array.from({ length: 13 }, (_, index) => bebop(index + 1)),
@@ -181,10 +169,8 @@ function sampleEntry(log: SampleLog, id: string, at: Date): MergedDiaryEntry {
   };
 }
 
-/** Three weeks of past logs, plus the first `landed` of tonight's, newest first. */
 function sampleDiaryDays(now: Date, timeZone: string, landed: number): DiaryDay[] {
   const tonight = LIVE.slice(0, landed)
-    // Spaced back from now so the last to land is the newest.
     .map((log, index) => sampleEntry(log, `live-${index}`, new Date(now.getTime() - (landed - index) * 5 * 60_000)))
     .toReversed();
   const days = new Map<string, MergedDiaryEntry[]>();

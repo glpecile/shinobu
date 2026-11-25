@@ -1,10 +1,6 @@
 import { Provider, type ProviderDescriptor, type ProviderId } from './types';
 
-/**
- * The single provider registry. Routing (routing.ts) derives everything from
- * these declarations — adding or degrading a provider happens here, never via
- * scattered `if (provider === ...)` checks.
- */
+/** The provider capability registry. Routing derives its read and write targets here. */
 export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
   [Provider.Trakt]: {
     id: Provider.Trakt,
@@ -12,13 +8,9 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     mediaTypes: ['TV', 'MOVIE'],
     canRead: true,
     canWrite: true,
-    // `POST /sync/watchlist` and `/sync/watchlist/remove` — both documented,
-    // both symmetric with the diary write's ids and auth wrapper (plan 0031
-    // R1/R34).
     watchlistWrite: 'write',
     watchlistRemove: 'write',
-    // Trakt has no pause. Its whole-show `POST /users/hidden/dropped` exists,
-    // but its effect on history and progress is undocumented
+    // Trakt's hidden/dropped endpoint has unverified effects on history and progress
     // (docs/solutions/tracking-status-provider-support.md).
     trackingStatus: 'manual',
     communityScore: false,
@@ -29,14 +21,9 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     mediaTypes: ['ANIME', 'MANGA'],
     canRead: true,
     canWrite: true,
-    // `SaveMediaListEntry(status: PLANNING)` / `DeleteMediaListEntry(id)`, both
-    // confirmed by live introspection. The add is guarded read-then-decide and
-    // never overwrites an existing status (plan 0031 R8/KTD-2) — that guard
-    // lives in the adapter, not here: the capability is "possible", not
-    // "unconditional".
+    // The adapter adds Planning only after reading the current list status.
     watchlistWrite: 'write',
     watchlistRemove: 'write',
-    // `SaveMediaListEntry(status: PAUSED | DROPPED)` changes only the status.
     trackingStatus: 'write',
     // `averageScore`, a percentage.
     communityScore: true,
@@ -49,100 +36,45 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     mediaTypes: ['MOVIE'],
     canRead: true,
     canWrite: true,
-    // Web defaults to manual. Routing lifts this for logs and watchlist writes
-    // when the supporting bridge is detected (plans 0042/0043); proxies remain GET-only.
+    // Web defaults to manual. Routing enables each write supported by the detected userscript.
     unsupportedWritePlatforms: ['web'],
-    // Both verbs verified by plan 0031 U6's account-bound capture
-    // (docs/solutions/letterboxd-watchlist-write.md): `PATCH
-    // /api/v0/me/watchlist/{lid}` is a **declarative state set**
-    // (`inWatchlist: true|false`), not a toggle, so KTD-6's data-loss hazard
-    // (a wrong idempotency guess *removing* a film while reporting success)
-    // does not exist on this endpoint and a repeat add is idempotent. The
-    // adapter uses the native WebView session or a supporting web userscript. Standing
-    // rollback: revert both tokens to 'manual' if the endpoint regresses.
+    // Letterboxd sets watchlist membership explicitly, making repeat adds idempotent
+    // (docs/solutions/letterboxd-watchlist-write.md).
     watchlistWrite: 'write',
     watchlistRemove: 'write',
     trackingStatus: 'none',
     // The film page's JSON-LD `aggregateRating`, out of 5.
     communityScore: true,
   },
-  // Unofficial JSON API (plan 0017), TMDB-keyed TV tracking. Symmetric
-  // read+write like Trakt: a TV (or TMDB-enriched anime series) log fans out
-  // to it and its diary feeds the unified diary. `canWrite` replays a bearer
-  // token from plain HTTP (native) or the same-origin CORS proxy (web), so —
-  // unlike Letterboxd — no in-session WebView write bridge is needed. Reads
-  // and writes both work on web via the proxy (docs/solutions/web-cors-serializd.md).
+  // Serializd tracks TV by TMDB id. Native uses its bearer API directly and web uses the
+  // same-origin relay.
   [Provider.Serializd]: {
     id: Provider.Serializd,
     label: 'Serializd',
     mediaTypes: ['TV'],
     canRead: true,
     canWrite: true,
-    // `watchlist_v2` / `watchlist/remove_v2` exist and are authorised (plan
-    // 0031 R6): the Worker's two exact-match POST rules, the season-id guard
-    // (`serializd/writes.ts`) and both adapters landed in U9.
-    //
-    // - `watchlistWrite` is `'write'`: U10 probed KTD-10's named risk and found
-    //   **no hazard** — watched and watchlisted coexist per-season on the live
-    //   API (13 shows on a real account hold one season id in both lists at
-    //   once), so the exclusivity Serializd's copy claims is a UI convention.
-    //   Stop-condition (c) does not fire. The same probe found `/progress` has
-    //   been removed upstream, so the season filter now runs without input and
-    //   is kept for its copy, not as a data-loss guard. Both findings, with
-    //   their verification, are in `docs/solutions/
-    //   serializd-watchlist-clears-watched.md`.
-    // - `watchlistRemove` stays gated on the **Serializd read leg** (R32/R35):
-    //   with no read, Serializd can never appear in a `WatchlistEntry`'s
-    //   `sources`, so a `'write'` declaration would be an unreachable adapter
-    //   behind a silent drop. The upfront `Remove on Serializd` link is the
-    //   honest surface until that leg lands.
-    //
-    // Reverting either token back to `'manual'` is the standing rollback
-    // (KTD-9) if the probe's finding or the read ever regresses.
+    // Serializd remove stays manual until its watchlist read can supply membership. Its
+    // season-scoped add can coexist with watched progress
+    // (docs/solutions/serializd-watchlist-clears-watched.md).
     watchlistWrite: 'write',
     watchlistRemove: 'manual',
-    // `POST paused_shows` / `dropped_shows` with `{ show_id }`, taken from
-    // serializd.com's own client. Reverting to `'manual'` is the rollback
-    // (`docs/solutions/tracking-status-provider-support.md`).
+    // Serializd pauses and drops whole shows by show_id
+    // (docs/solutions/tracking-status-provider-support.md).
     trackingStatus: 'write',
     // Its API has no average; only the www page shows one (#318).
     communityScore: false,
   },
-  // Official OAuth API (plan 0034), TMDB/IMDB/MAL-keyed TV + movie + anime
-  // tracking — the Trakt-detachment provider. Landed **capability-gated**
-  // (Letterboxd plan-0033 verify-then-flip precedent) in U1; each token flips
-  // only when its leg is verified live. Reverting a token is the standing
-  // rollback, exactly like Serializd's (KTD-9 precedent).
   [Provider.Simkl]: {
     id: Provider.Simkl,
     label: 'Simkl',
-    // TV + MOVIE like Trakt, plus ANIME natively — Simkl is the only provider
-    // that matches an *unmapped* anime series/film directly (routing.ts's
-    // `effectiveTypes` needs no special case for it).
+    // Simkl can match an unmapped anime series or film directly.
     mediaTypes: ['TV', 'MOVIE', 'ANIME'],
-    // Flipped by U7: the read leg (all-items sync + normalize, U3) now feeds
-    // the unified feed's `yourShows` merge, the watchlist gather, and the
-    // trending rows — `providersForFeed` includes Simkl from here on.
     canRead: true,
-    // Flipped by U6: the U4 adapters (`simkl/writes.ts`) are wired into the
-    // log fan-out (`simklLogAdapter` in use-log-media.ts) — a TV/movie/anime
-    // log now routes to Simkl exactly as it does to Trakt.
     canWrite: true,
-    // Flipped by U6 with canWrite: `addToSimklWatchlist` joined
-    // WATCHLIST_ADAPTERS, so the add is a real fan-out target.
     watchlistWrite: 'write',
-    // Flipped by plan 0036 after the live probe U4 asked for. The hazard the
-    // gate named is **real and permanent** — `/sync/history/remove` is the only
-    // removal Simkl documents, there is no status-only variant, and a
-    // whole-item body deletes the plan-to-watch entry, the watch history and
-    // the rating together. What changed is that the hazard is now *guarded
-    // rather than avoided*: `removeFromSimklWatchlist` does a fresh
-    // `plantowatch` read immediately before the write (plan 0031 R36's
-    // invariant, until now AniList-only) and refuses any row that still holds
-    // watch history unless the picker took an explicit second confirm. A
-    // plan-to-watch row with no history — which, under Simkl's one-status-per-
-    // item model, is very nearly all of them — removes cleanly with nothing to
-    // lose. Standing rollback stays a one-token revert to 'manual'.
+    // Simkl's only removal endpoint also clears history and ratings. The adapter checks the
+    // current entry and requires separate confirmation before deleting a row with history.
     watchlistRemove: 'write',
     // `/sync/add-to-list` with `to: 'hold' | 'dropped'`. A history add
     // re-files the item on its own, so a new log resumes it.
@@ -150,19 +82,14 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // `/ratings` also carries the IMDb (movies, TV) or MAL (anime) score.
     communityScore: true,
   },
-  // Hardcover (plan 0117), the book provider. A book routes here only when
-  // it carries a Hardcover id (`routing.ts`). It reads the library into
-  // Continue Reading and the reading list, and the reading journal into the
-  // diary.
+  // Hardcover handles books carrying a Hardcover id.
   [Provider.Hardcover]: {
     id: Provider.Hardcover,
     label: 'Hardcover',
     mediaTypes: ['BOOK'],
     canRead: true,
     canWrite: true,
-    // Want to Read, status 1. The add writes only when the book is not in the
-    // library, and the removal deletes only a bare Want to Read entry
-    // (`hardcover/writes.ts`).
+    // Want to Read is status 1. The adapter deletes only a bare entry of that status.
     watchlistWrite: 'write',
     watchlistRemove: 'write',
     // Paused (4) and Did Not Finish (5) through `update_user_book`.

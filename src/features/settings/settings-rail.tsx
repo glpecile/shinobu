@@ -23,7 +23,6 @@ import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
-/** Where a titled section sits in the scroll content, and its glyph, for the index. */
 type Placement = { y: number; icon: IconName };
 
 const OpenContext = createContext<{ open: boolean; toggle: () => void }>({
@@ -34,43 +33,13 @@ const OpenContext = createContext<{ open: boolean; toggle: () => void }>({
 const ScrollContext = createContext<{
   scrollY: SharedValue<number>;
   place: (title: string, placement: Placement | null) => void;
-  /** The section whose title is pinned, for the index's highlight. */
   pin: (title: string) => void;
 }>({ scrollY: makeMutable(0), place: () => undefined, pin: () => undefined });
 
-/**
- * How far into a section the scroll must be before its title pins: the head
- * (`RailHead` row, 64px) has all but left the top, the threshold Diary uses
- * when it pins a day only once its head has scrolled out.
- */
 const HEAD_PASSED = 48;
 
-/** The width that fits the content column and the "On this page" index beside it. */
 const INDEX_MIN_WIDTH = 1024;
 
-/**
- * Settings on the diary's rail: each section is a rail head with its glyph on
- * the line, folding its rows the way a diary day does. Inside a
- * `SettingsRail.Scroll`, a section given `title` and `count` pins them under
- * the header once its head scrolls away, and lists itself in the wide-web index.
- *
- * ```tsx
- * <SettingsRail.Section title="Trackers" count="2 of 5 connected" icon="link-outline">
- *   <SettingsRail.Head label="Trackers, 2 of 5 connected">
- *     <RailHead.Icon name="link-outline">Trackers</RailHead.Icon>
- *     <RailHead.Count>2 of 5 connected</RailHead.Count>
- *   </SettingsRail.Head>
- *   <SettingsRail.Row>
- *     <SettingsRail.Lead><ProviderIcon id="simkl" size={22} /></SettingsRail.Lead>
- *     <SettingsRail.Text>
- *       <SettingsRail.Title>Simkl</SettingsRail.Title>
- *       <SettingsRail.Subtitle>gian</SettingsRail.Subtitle>
- *     </SettingsRail.Text>
- *     <Button … />
- *   </SettingsRail.Row>
- * </SettingsRail.Section>
- * ```
- */
 function SettingsRailSection({
   children,
   title,
@@ -80,7 +49,6 @@ function SettingsRailSection({
   children: ReactNode;
   title: string;
   count: string;
-  /** The head's glyph again, for the wide-web index. */
   icon: IconName;
 }) {
   const [open, setOpen] = useState(true);
@@ -88,7 +56,6 @@ function SettingsRailSection({
   const top = useSharedValue(0);
   const height = useSharedValue(0);
 
-  // The index drops a section that stops rendering (the last hidden item shown again).
   useEffect(() => {
     return () => place(title, null);
   }, [place, title]);
@@ -110,13 +77,6 @@ function SettingsRailSection({
   );
 }
 
-/**
- * The section's title and count held at the top of the viewport while its rows
- * scroll under it, the Diary's `DiaryStickyDate` look. It lives inside the
- * section and follows the scroll on the UI thread, so it covers rows without
- * moving them, and leaves with the section's last row instead of overlapping
- * the next head. React only hears about it when it pins or unpins.
- */
 function SettingsRailPinned({
   title,
   count,
@@ -195,11 +155,7 @@ function SettingsRailPinned({
   );
 }
 
-/**
- * The screen's scroll, feeding the sections' pinned titles. Put the sections
- * in one column `View` as its first child, so their layout offsets are scroll
- * offsets. Wide web adds an "On this page" index beside it.
- */
+/** Put sections in one column `View` as the first child so `onLayout` `y` matches scroll offsets. */
 function SettingsRailScroll({ children, ...props }: ComponentProps<typeof RefreshableScrollView>) {
   const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollY = useSharedValue(0);
@@ -218,8 +174,6 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
     scrollY.set(event.contentOffset.y);
   });
 
-  // Created once, so a section's unmount cleanup (which depends on it) runs
-  // only when the section actually leaves, not on every render of this scroll.
   const [place] = useState(() => (title: string, placement: Placement | null) => {
     setOffsets((previous) => {
       if (placement == null) {
@@ -248,7 +202,6 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
           {children}
         </RefreshableScrollView>
         {showIndex && (
-          // Diary's side-calendar column: same width and edge, so the two tabs line up.
           <View className="w-104 px-6 pt-5 border-l border-border">
             <Eyebrow className="mb-3">On this page</Eyebrow>
             {sections.map(([title, { y, icon }]) => (
@@ -281,7 +234,6 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
   );
 }
 
-/** The section's fold toggle; compose `RailHead.Icon` and `RailHead.Count` inside. */
 function SettingsRailHead({ label, children }: { label: string; children: ReactNode }) {
   const { open, toggle } = useContext(OpenContext);
   return (
@@ -291,17 +243,12 @@ function SettingsRailHead({ label, children }: { label: string; children: ReactN
   );
 }
 
-/**
- * One row on the rail, omitted while its section is folded. A row that opens
- * something wraps its lead and text in `SettingsRail.Target`, leaving any
- * trailing button outside it (a button can't sit inside another on web).
- */
+/** Put trailing buttons outside `SettingsRail.Target`; HTML forbids nested buttons on web. */
 function SettingsRailRow({
   children,
   dimmed = false,
 }: {
   children: ReactNode;
-  /** Rows a parent switch has turned off, still shown so the switch has context. */
   dimmed?: boolean;
 }) {
   const { open } = useContext(OpenContext);
@@ -318,7 +265,6 @@ function SettingsRailRow({
   );
 }
 
-/** The pressable part of a row: its lead and text, stretched to the trailing button. */
 function SettingsRailTarget({
   children,
   onPress,
@@ -340,7 +286,6 @@ function SettingsRailTarget({
   );
 }
 
-/** A fixed-width slot for the row's glyph or provider mark, so titles align down the section. */
 function SettingsRailLead({ children }: { children: ReactNode }) {
   return <View className="w-9 shrink-0 items-center">{children}</View>;
 }
@@ -357,7 +302,6 @@ function SettingsRailTitle({ children }: { children: ReactNode }) {
   );
 }
 
-/** One line by default; give an instruction the user has to act on two. */
 function SettingsRailSubtitle({ children, lines = 1 }: { children: ReactNode; lines?: 1 | 2 }) {
   return (
     <Text className="text-muted font-sans text-xs mt-0.5" numberOfLines={lines}>

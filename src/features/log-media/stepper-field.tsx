@@ -9,11 +9,6 @@ import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * A log form's "how far" field: a number typed in the middle or stepped with
- * the button either side, over a note that an error replaces. The caller owns
- * the value and its bounds, and disables a button at each end.
- */
 export function StepperField({
   label, backLabel, forwardLabel, value, onChangeText, onStep, onBlur,
   canStepBack, canStepForward, note, error, pending, className,

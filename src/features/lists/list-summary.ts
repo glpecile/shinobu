@@ -6,7 +6,6 @@ import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/** One list as cards, rails, and the list sheet show it, whichever provider holds it. */
 export type ListSummary = {
   id: string;
   title: string;
@@ -46,7 +45,6 @@ export function hardcoverListSummary(list: HardcoverList): ListSummary {
   };
 }
 
-/** "12 films · by gian", for labels and the sheet's subtitle. */
 export function listMeta(list: Pick<ListSummary, 'count' | 'owner'>) {
   return list.count === '' ? `by ${list.owner}` : `${list.count} · by ${list.owner}`;
 }

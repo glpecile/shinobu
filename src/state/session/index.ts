@@ -31,7 +31,6 @@ export {
 
 let cachedConnected: ProviderId[] | null = null;
 
-/** What `useConnectedProviders` returns while the prerendered web page hydrates. */
 export const SERVER_CONNECTED_PROVIDERS: ProviderId[] = [];
 
 function isServer(): boolean {
@@ -39,10 +38,8 @@ function isServer(): boolean {
 }
 
 function readConnected(): ProviderId[] {
-  // useSyncExternalStore compares snapshots by reference — recompute only on
-  // storage change (subscribe below invalidates), not on every render.
-  // Lazy-initialize so importing this module on the server (SSR) does not
-  // touch MMKV/localStorage before React has a chance to use the server snapshot.
+  // Cache useSyncExternalStore snapshots by identity. Lazy reads keep MMKV and localStorage
+  // out of SSR.
   if (cachedConnected == null && !isServer()) {
     cachedConnected = usableProviderIds();
   }
@@ -50,8 +47,6 @@ function readConnected(): ProviderId[] {
 }
 
 function getServerSnapshot(): ProviderId[] {
-  // During server rendering there is no session state; hydration will pick up
-  // the client's real tokens on the client.
   return SERVER_CONNECTED_PROVIDERS;
 }
 
@@ -64,17 +59,7 @@ function subscribe(onStoreChange: () => void): () => void {
   });
 }
 
-/**
- * Which providers are currently connected (their token *is* the session —
- * AGENTS.md "Providers, Sessions & Log Fan-Out") AND usable. Reactive to MMKV
- * changes, so OAuth completion anywhere in the app updates every subscriber.
- *
- * "Usable" is the plan 0034 U9 gate: a Trakt token whose client id no longer
- * resolves (MigrationNeeded — see `trakt-migration.ts`) is excluded here,
- * which is the single choke point keeping it out of every read leg (feed,
- * up-next, watchlist, diary) and the write fan-out at once. The trackers
- * screen shows the migration banner for that state instead of a dead card.
- */
+/** Connected and usable providers, updated when the session or its credentials change. */
 export function useConnectedProviders(): readonly ProviderId[] {
   return useSyncExternalStore(subscribe, readConnected, getServerSnapshot);
 }
@@ -119,7 +104,6 @@ export function useHardcoverListsGranted(): boolean {
   );
 }
 
-/** Reactive `hardcoverListsRefused`: the prompt names the registration, not a reconnect. */
 export function useHardcoverListsRefused(): boolean {
   return useSyncExternalStore(
     subscribe,
@@ -129,42 +113,28 @@ export function useHardcoverListsRefused(): boolean {
 }
 
 /**
- * The usable providers at call time, for a fetch. A connect invalidates the
- * active gathers (`syncQueryCacheWithSessions`) before React re-renders them,
- * so a list captured at render would refetch without the new provider.
- * Usable, not merely connected: a MigrationNeeded Trakt session can only 401.
- * Prerendering has no storage and reads the hook's server snapshot.
+ * Read usable providers at fetch time. A connect can invalidate gathers before React renders
+ * their new provider set.
  */
 export function currentUsableProviders(): readonly ProviderId[] {
   return isServer() ? SERVER_CONNECTED_PROVIDERS : usableProviderIds();
 }
 
-/** Every cache a provider's session backs: its own root and the merged gathers. */
 export function purgeProviderQueries(queryClient: QueryClient, id: ProviderId): void {
   // Drop the provider's cached reads with its session — every provider's
   // query-key root is its id. Reconnecting (possibly as a different account)
   // must not serve the old account's data; the AniList viewer id is even
   // cached forever (state/queries/anilist.ts).
   queryClient.removeQueries({ queryKey: [id] });
-  // Up Next is the exception to "every root is a provider id": it merges both
-  // providers under one key, so the line above can't reach it and its entry
-  // is persisted to disk (state/queries/up-next-cache.ts explains why here).
+  // Up Next uses a shared persisted key, so removing the provider root alone leaves its rows
+  // cached.
   queryClient.removeQueries({ queryKey: [...UP_NEXT_QUERY_ROOT] });
-  // The second exception, for the same reason (plan 0031 U13): the merged
-  // watchlist holds every provider's rows under one key that names none of
-  // them. Without this, disconnecting Trakt leaves that account's rows on the
-  // surface for the whole stale window — and on disk, since it is persisted.
+  // Also purge the merged watchlist. Its key does not name individual sessions.
   queryClient.removeQueries({ queryKey: [...WATCHLIST_QUERY_ROOT] });
-  // The third exception: the unified diary's key names the provider set and
-  // two usernames, not the Trakt/AniList/Simkl account, and it is persisted
-  // on native. Reconnecting as another account must not restore it.
+  // The persisted diary can share a key across accounts on the same provider.
   queryClient.removeQueries({ queryKey: [...DIARY_QUERY_ROOT] });
 }
 
-/**
- * The disconnect itself, extracted from the hook so the purge contract is
- * testable without React (plan 0034 U5 added the Simkl leg).
- */
 export function disconnectProvider(queryClient: QueryClient, id: ProviderId): void {
   // A pending PKCE verifier/state pair is scoped to a connect attempt, not a
   // session, but disconnecting mid-flow must not leave material around that

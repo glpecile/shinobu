@@ -7,11 +7,6 @@ import { useThemeColor } from '@/lib/theme-color';
 
 const TURN = { down: '180deg', forward: '90deg' } as const;
 
-/**
- * The muted chevron beside a toggle, turning over as it opens rather than
- * swapping glyphs: one arrow rotating reads as a single reversible thing.
- * `from` is its closed direction — `down` flips up, `forward` turns down.
- */
 export function DisclosureChevron({
   open,
   from = 'down',
@@ -21,7 +16,6 @@ export function DisclosureChevron({
   open: boolean;
   from?: 'down' | 'forward';
   size: number;
-  /** Layout only. */
   className?: string;
 }) {
   const muted = useThemeColor('--color-muted');

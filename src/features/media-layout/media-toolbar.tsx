@@ -10,7 +10,6 @@ import { setWatchlistView, useWatchlistView, type WatchlistView } from '@/state/
 
 import { MediaSortControl } from './media-sort-control';
 
-/** Filters scroll together; the layout control never moves offscreen. */
 export function MediaToolbar({ children, view, notice }: {
   children: ReactNode;
   view?: WatchlistView;
@@ -31,10 +30,6 @@ export function MediaToolbar({ children, view, notice }: {
   );
 }
 
-/**
- * Render preference controls at their intrinsic sizes while data loads.
- * Only data-dependent actions need placeholders.
- */
 export function MediaToolbarSkeleton({ filter = false, labelled = false, actions = 0, layout = false, scope = 'watchlist' }: { filter?: boolean; labelled?: boolean; actions?: number; layout?: boolean; scope?: MediaSortScope }) {
   const view = useWatchlistView();
   const sort = useMediaSort(scope);

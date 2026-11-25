@@ -5,16 +5,8 @@ import { getClientIdForProvider } from './provider-config';
 import { connectedProviderIds, getProviderSession } from './tokens';
 
 /**
- * Trakt detachment derived state (plan 0034 U9, R13).
- *
- * After R12 removed the bundled `EXPO_PUBLIC_TRAKT_*` credentials, an
- * existing user can hold a stored Trakt token with no way to use it: every
- * Trakt request carries `trakt-api-key` — exactly the removed credential —
- * so reads cannot survive detachment, and the token itself is bound to the
- * old client id. That state is `MigrationNeeded` in the plan's state diagram:
- * the token is kept as evidence (it drives the migration banner and must
- * never be silently cleared), but the provider is unusable until the user
- * completes the guided BYO setup and a fresh OAuth round-trip.
+ * A stored Trakt session without BYO credentials is connected but unusable. Keep it so the
+ * reconnect banner can appear.
  */
 
 /**
@@ -67,7 +59,6 @@ export function hardcoverListsRefused(): boolean {
   return getProviderSession(Provider.Hardcover)?.scopes != null && !hardcoverListsGranted();
 }
 
-/** `connectedProviderIds()` minus providers in the MigrationNeeded state. */
 export function usableProviderIds(): ProviderId[] {
   return connectedProviderIds().filter(providerIsUsable);
 }

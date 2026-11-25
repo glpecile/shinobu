@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { normalizeAllItems } from '@/lib/providers/simkl/normalize';
 import { simklEpisodeIsWatched } from '@/lib/providers/simkl/episode-state';
 
-// Import-time stubs only: MMKV, the native fetch client and react-native's
-// entry point don't load under bun. Nothing here goes near the network.
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -20,9 +18,6 @@ mock.module('@/lib/http/client', () => ({
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
-// simkl/auth.ts (reached via ./simkl's exchange re-wiring) imports expo-crypto
-// at module load, which pulls the whole expo package under bun — mirror the
-// surface it consumes instead (lib/providers/simkl/auth.test.ts pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
@@ -53,10 +48,6 @@ describe('simklDeps (plan 0034 U5)', () => {
   });
 });
 
-// The lookup behind `useSimklWatchedInfo` (owner report 2026-08-01: a movie
-// logged to Simkl still offered "Mark as watched"). The `completed` snapshot
-// is where a watched film lives, and it must be searched by the item's own
-// type — TMDB numbers movies and TV separately, so a flat scan cross-matches.
 const item = (
   id: string,
   type: 'MOVIE' | 'TV' | 'ANIME',
@@ -178,7 +169,6 @@ describe('canonical Simkl episode state', () => {
     expect(findLibraryProgress(snapshot, item('show', 'TV', { simkl: 1, tmdb: 42 }))).toBe(24);
     expect(findLibraryProgress(snapshot, item('cour', 'ANIME', { simkl: 1, tmdb: 42 }))).toBe(12);
     expect(findLibraryProgress(snapshot, item('unknown', 'TV', { tmdb: 99 }))).toBeNull();
-    // A new snapshot, as a refetch gives: the index is cached per snapshot object.
     const withParallel = { ...snapshot, shows: [...snapshot.shows, normalizeAllItems({ shows: [
       { status: 'completed', watched_episodes_count: 24,
         show: { title: 'Parallel TV entry', ids: { simkl: 4, tmdb: 42 } } },
@@ -209,8 +199,6 @@ describe('canonical Simkl episode state', () => {
         show: { title: 'Unrelated film ID collision', ids: { simkl: 4, tmdb: 69346 } },
       },
     ] }, '2026-09-27T00:00:00Z');
-    // Both a search result and a TV-shaped detail enriched with a cour ID
-    // need the same full-show episode view.
     for (const ids of [{ tmdb: 69346 }, { tmdb: 69346, simkl: 555226 }]) {
       const state = findLibraryEpisodeState(snapshot, item('tanya', 'TV', ids));
       expect(simklEpisodeIsWatched(state, 1, 11, '2017-01-01')).toBe(true);

@@ -29,7 +29,6 @@ function legInputs(results: ReadonlyArray<{ data: Leg }>): NormalizedMediaItem[]
   return results.map((result) => result.data.inputs);
 }
 
-/** The connected providers that feed Continue Reading. */
 export function continueReadingProviders(connected: readonly ProviderId[]): ProviderId[] {
   return providersForFeed(connected).filter(
     (provider) => provider === Provider.AniList || provider === Provider.Hardcover,

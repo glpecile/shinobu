@@ -4,12 +4,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import type { LogRequest } from './log-request';
 
-/**
- * The log a Continue Reading card opens. The item comes from the reader's own
- * AniList list or Hardcover shelf, so its progress is the live entry's and
- * needs no second read: the next chapter for a manga, the page reached for a
- * book. The form can change either.
- */
 function readingLogRequest(item: NormalizedMediaItem): LogRequest | null {
   const description = `“${item.title}”`;
   const total = item.totalEpisodes != null && item.totalEpisodes > 0 ? item.totalEpisodes : undefined;
@@ -43,7 +37,6 @@ function readingLogRequest(item: NormalizedMediaItem): LogRequest | null {
   }
 }
 
-/** Continue Reading's log button: the Continue Watching button's shape on a reading item. */
 export function ReadingLogButton({ item }: { item: NormalizedMediaItem }) {
   const { openLog } = useCatchUpControls();
   const busy = useQuickLogBusy(item.id);

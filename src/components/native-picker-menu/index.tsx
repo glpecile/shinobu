@@ -5,7 +5,6 @@ import { haptics } from '@/lib/haptics';
 
 import type { NativePickerMenuProps } from './types';
 
-/** The native menu owns presses; the wrapped button is only its visual label. */
 export function NativePickerMenu<T extends string | number | null>({
   title,
   value,

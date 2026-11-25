@@ -14,7 +14,6 @@ import { isServer, prefsStorage } from './storage';
  */
 const KEY = 'recentTags';
 
-/** Enough to fill a chip row several times over; bounded so the value stays tiny. */
 const MAX_RECENT_TAGS = 30;
 
 /** Shared identity so an empty result never changes reference between renders. */
@@ -70,7 +69,6 @@ export function recordRecentTags(tags: string[]): void {
   cachedRecent = next;
 }
 
-/** The recent tags, most-recent-first — the imperative read. */
 export function getRecentTags(): string[] {
   return read();
 }
@@ -98,7 +96,6 @@ function subscribe(onStoreChange: () => void): () => void {
   return () => subscription.remove();
 }
 
-/** The recent tags, most-recent-first — reactive, for the tag picker. */
 export function useRecentTags(): string[] {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

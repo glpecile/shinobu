@@ -16,15 +16,9 @@ import { usePushRoute } from '@/lib/navigation';
 import type { NormalizedStudioDetails } from '@/lib/providers/tmdb/normalize';
 import { routes } from '@/lib/routes';
 
-/**
- * The studio page itself, shared by `/studio/[id]` and `/studio/lookup` — the
- * two differ only in how the company id was resolved. The person page's
- * timeline with no roles: the format pill is the film/TV split.
- */
 export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
   const headerTop = useFloatingBackButtonClearance();
   const pushRoute = usePushRoute();
-  // Same per-card actions dialog as the home feed.
   const { openActions, sheetProps } = useCardActions();
   const filmography = catalogueFilmography(rows.flatMap((row) => row.items));
 
@@ -44,10 +38,6 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
           <View className="px-6 pb-6" style={{ paddingTop: headerTop }}>
             <View className="flex-row items-center gap-5">
               {company.logo !== '' ? (
-                // Logos are wide transparent PNGs: contain, on the light logo
-                // tile so dark marks stay visible in dark mode. Not
-                // zoomable: blowing a small vector-ish logo up full-screen looks
-                // broken, unlike posters/headshots.
                 <Image
                   source={{ uri: company.logo }}
                   className="w-28 h-28 rounded-lg bg-logo-tile p-2"

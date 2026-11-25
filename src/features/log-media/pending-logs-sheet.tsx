@@ -16,7 +16,6 @@ import {
   type PendingLog,
 } from './pending-logs';
 
-/** "S2 E5", "Episode 5", "3 chapters": what the record logs, beside its title. */
 function watchLabel({ item, episode, episodes, entryEpisodes }: PendingLog['variables']): string | null {
   const unit = isReadIntent(item) ? 'chapter' : 'episode';
   const seasoned = episodes ?? (episode != null ? [episode] : []);
@@ -27,16 +26,10 @@ function watchLabel({ item, episode, episodes, entryEpisodes }: PendingLog['vari
   return null;
 }
 
-/**
- * The logs saved on this device and not on a provider yet, behind one button
- * that shows only while some wait. Each record names where it still has to go,
- * and a stopped one keeps its reason, its provider link and a retry.
- */
 export function PendingLogs() {
   const records = usePendingLogs();
   const [open, setOpen] = useState(false);
   const drainNow = useDrainPendingLogs();
-  // Closed for good once the queue empties, so a later log does not reopen it.
   if (open && records.length === 0) setOpen(false);
 
   return (

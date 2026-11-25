@@ -21,8 +21,6 @@ export {
 
 const provider = Provider.Simkl;
 
-// --- PKCE (plan 0034 KTD-1) -------------------------------------------------
-
 const STATE_LENGTH = 32;
 
 export {
@@ -30,8 +28,6 @@ export {
   deriveCodeChallenge as deriveSimklCodeChallenge,
   type PkcePair as SimklPkcePair,
 } from '@/lib/providers/pkce';
-
-// --- Authorize URL ----------------------------------------------------------
 
 /**
  * `https://simkl.com/oauth/authorize?response_type=code&…` with the S256 PKCE
@@ -78,8 +74,6 @@ export async function beginSimklAuthFlow(params: {
     state,
   });
 }
-
-// --- Token exchange ---------------------------------------------------------
 
 interface SimklTokenResponse {
   access_token: string;

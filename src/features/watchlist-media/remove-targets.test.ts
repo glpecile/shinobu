@@ -4,14 +4,6 @@ import type { WatchlistEntry } from '@/features/watchlist/types';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * R35's routing rules, as pure functions (plan 0031 U16). The distinction this
- * suite exists to hold: **absence from `sources` is not proof of absence.**
- * `sources` records "providers whose read leg returned this item", so some
- * connected-and-applicable cases can never appear in it — Serializd (no leg in
- * v1), and any leg that errored or read only part of its list on this gather —
- * and each of them is `unknown`, not known-absent.
- */
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -32,10 +24,6 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
-// `./remove-targets` imports `@/state/queries/watchlist`, which imports
-// `./simkl` (plan 0034 U7), whose auth re-export reaches expo-crypto —
-// mirror the surface it consumes instead of loading the whole expo package
-// under bun (the `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
@@ -66,7 +54,6 @@ function film(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem
   };
 }
 
-/** A TV series — the shape that reaches Serializd, the provider with no read leg. */
 function series(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return film({
     id: 'trakt-9',
@@ -84,7 +71,6 @@ function entryFor(
   return { id: item.id, item, sources, sourceIds: [item.id] };
 }
 
-// Plan 0117 B6: a book reaches AniList only through the entry its card holds.
 describe('a grouped book’s removal', () => {
   const book = film({
     id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61, anilist: 999 },
@@ -119,9 +105,6 @@ describe('hasWatchlistReadLeg — who can prove absence (R35)', () => {
   });
 
   test('a leg that read only part of the list has not proven absence', () => {
-    // Letterboxd's scrape is paginated behind `onEndReached` and never
-    // auto-paged, so a film on page 3 of a 600-film watchlist is missing from
-    // `sources` for a reason that has nothing to do with membership.
     expect(hasWatchlistReadLeg('letterboxd', CONNECTED, [], [])).toBe(true);
     expect(
       hasWatchlistReadLeg('letterboxd', CONNECTED, [], ['letterboxd']),
@@ -138,16 +121,12 @@ describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => 
       'ios',
       [],
     );
-    // AniList and Letterboxd are not applicable to a TV item at all, so they are
-    // absent from every bucket — routing, not R35, excluded them.
     expect(split.targets).toEqual(['trakt']);
     expect(split.manual).toEqual([]);
     expect(split.unknown).toEqual(['serializd']);
   });
 
   test('a provider with a healthy leg that did not return the item is skipped silently', () => {
-    // Letterboxd is connected, applicable to a film and read successfully; it
-    // simply does not hold this one. That is the *only* known-absent case.
     const split = splitWatchlistRemoveTargets(film(), ['trakt'], CONNECTED, 'ios', []);
     expect(split.targets).toEqual(['trakt']);
     expect(split.manual).toEqual([]);
@@ -158,7 +137,6 @@ describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => 
     const split = splitWatchlistRemoveTargets(film(), ['letterboxd'], CONNECTED, 'ios', [
       { provider: 'trakt', message: '502' },
     ]);
-    // Letterboxd holds it and (plan 0033) removes via the fan-out on native.
     expect(split.targets).toEqual(['letterboxd']);
     expect(split.manual).toEqual([]);
     expect(split.unknown).toEqual(['trakt']);
@@ -204,26 +182,18 @@ describe('shouldOfferWatchlistAdd — R12 as amended for /watchlist', () => {
   });
 
   test('a provider with unknown membership is not "missing the item" (R35)', () => {
-    // Regression from the first live run of the sheet: a Trakt-sourced series
-    // rendered a disabled "On your watchlist", an "Add on Serializd" row, a
-    // "Remove from watchlist" button and a "Remove on Serializd" row — the same
-    // provider pointed both ways. "Add on Serializd" asserts Serializd does not
-    // have the show, and Serializd has no read leg to have established that.
     const entry = entryFor(series(), ['trakt']);
     expect(shouldOfferWatchlistAdd(entry, CONNECTED, 'ios')).toBe(false);
   });
 
   test('an errored or partially-read leg suppresses the add row the same way', () => {
     const entry = entryFor(film(), ['trakt']);
-    // Healthy Letterboxd leg that did not return the film: genuinely missing.
     expect(shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios')).toBe(true);
-    // Same entry, leg down — now it is unknown, not missing.
     expect(
       shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios', [
         { provider: 'letterboxd', message: '502' },
       ]),
     ).toBe(false);
-    // Same entry, leg read only page 1.
     expect(
       shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios', [], ['letterboxd']),
     ).toBe(false);

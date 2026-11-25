@@ -1,7 +1,4 @@
-// Gives the Android adaptive icon a black background in dark mode, matching
-// ios-icon-dark.png. Expo writes `iconBackground` (app.json
-// adaptiveIcon.backgroundColor) only to values/colors.xml; this overrides it in
-// values-night. Launchers re-read it on a theme change.
+// Expo writes `iconBackground` only to values/colors.xml; override it in values-night.
 const { AndroidConfig, withAndroidColorsNight } = require('expo/config-plugins');
 
 module.exports = (config) =>

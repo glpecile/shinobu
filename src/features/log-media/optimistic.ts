@@ -2,23 +2,13 @@ import type { UpNextEntry, UpNextEpisode, UpNextEpisodeEntry } from '@/features/
 import type { NormalizedMediaItem } from '@/types/media';
 import type { LogMediaVariables } from './fan-out';
 
-/**
- * A log the user confirmed that no provider read shows yet: its write is in
- * flight, its refetch has not landed, or it waits in the pending queue. The
- * screens draw it as watched now. It is display state only. A failed write
- * drops it, and the screens return to what the providers say.
- */
 export interface LoggedWatch {
   item: NormalizedMediaItem;
-  /** Canonical episodes the log covers. */
   episodes: readonly { season: number; number: number }[];
-  /** Entry-relative episodes the log covers (AniList, Simkl anime). */
   entryEpisodes: readonly number[];
-  /** The next aired, unwatched episode, when the catch-up chain proved one. */
   next?: Pick<UpNextEpisode, 'season' | 'number' | 'title'>;
 }
 
-/** Null for a film or a book: only episodes are drawn ahead of the providers. */
 export function loggedWatch(
   variables: Pick<LogMediaVariables, 'item' | 'episode' | 'episodes' | 'entryEpisodes'>,
   next?: LoggedWatch['next'],
@@ -29,11 +19,7 @@ export function loggedWatch(
   return { item: variables.item, episodes, entryEpisodes, ...(next != null ? { next } : {}) };
 }
 
-/**
- * The same show on any tracker. TMDB ids are left out: every AniList cour of
- * one show can carry the show's TMDB id, and a log of one cour is not a log
- * of the others.
- */
+/** Excludes TMDB ids: multiple AniList cours share one TMDB show id. */
 function sameMedia(a: NormalizedMediaItem, b: NormalizedMediaItem): boolean {
   if (a.id === b.id) return true;
   const x = a.externalIds;
@@ -53,13 +39,6 @@ function covers(watches: readonly LoggedWatch[], episode: Pick<UpNextEpisode, 's
   );
 }
 
-/**
- * The episode a card moves to after its own was logged, or null when none is
- * provable. A guessed episode is never shown: the chain's proven next wins,
- * then an unseasoned entry counts forward while its backlog count lasts. A
- * seasoned entry can't count forward, because the next number may belong to
- * another season.
- */
 function advance(entry: UpNextEpisodeEntry, watches: readonly LoggedWatch[]): UpNextEpisodeEntry | null {
   const proven = watches.map((watch) => watch.next).find((next) => next != null && !covers(watches, next));
   const behind = entry.episodesBehind;
@@ -77,11 +56,6 @@ function advance(entry: UpNextEpisodeEntry, watches: readonly LoggedWatch[]): Up
   return left < 1 ? null : { ...entry, episode: { number }, episodesBehind: left };
 }
 
-/**
- * Continue Watching with the logged episodes applied: a card whose episode
- * was logged moves to the next provable one, or leaves the rail. Returns
- * `entries` itself when no card changes.
- */
 export function withLoggedEpisodes(entries: UpNextEntry[], logged: readonly LoggedWatch[]): UpNextEntry[] {
   if (logged.length === 0) return entries;
   let changed = false;
@@ -98,11 +72,6 @@ export function withLoggedEpisodes(entries: UpNextEntry[], logged: readonly Logg
   return changed ? next : entries;
 }
 
-/**
- * `watched` plus the logged episodes of `item`, as `season-number` keys. An
- * entry-relative episode keys under season 1, as the anime rows do. Returns
- * `watched` itself when nothing is added.
- */
 export function withLoggedKeys(
   watched: ReadonlySet<string>,
   item: NormalizedMediaItem,

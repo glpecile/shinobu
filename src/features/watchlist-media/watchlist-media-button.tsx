@@ -35,50 +35,6 @@ import {
   useLatestWatchlistResult,
 } from './use-watchlist-media';
 
-/**
- * The want-to-watch CTA (plan 0031 U8, reshaped by plan 0032 KTD-4) — a
- * **sibling** of `LogMediaButton`, never a branch inside it. That component
- * `return null`s for a series whose next episode can't be named, which is
- * exactly an item this one exists for.
- *
- * Since plan 0032 the button **opens the target picker; it does not write**
- * (KTD-4). The three inline result families that used to render under it live
- * on the picker sheet now (R11) — which is what finally let the standing
- * "Add on …" rows leave the details screen: there is no longer a surface under
- * the button a report has to be rendered into.
- *
- * **The settled label is derived from data, not from the mutation** (plan 0031
- * U15, KTD-14). `useIsWatchlisted(item)` reads the gathered watchlists out of
- * the cache, so "On your watchlist" is right after an app restart, right for
- * an item added on another device, and right for one added on the provider's
- * own site. That read **never fetches**: `undefined` (surface never opened) is
- * a first-class answer meaning "we haven't read the watchlist" and renders as
- * the unsettled label, never as a claim of absence.
- *
- * **Settled means "on every watchlist it can reach", not "on one"** (owner
- * report 2026-08-01). `useIsWatchlisted` answers a whole-item question and the
- * CTA asks a per-provider one, so `useWatchlistAddStillOffered` decides it
- * alongside — see `isWatchlistCtaSettled`. Consequence worth naming: a
- * partially-listed item shows the **add**, so the self-hosted remove entry
- * point below only appears once every applicable provider actually holds it.
- * That is the right trade for one button — `/watchlist` keeps its own removal
- * row either way, and an item on one tracker of three has an add to offer and
- * a removal that would only be partial.
- *
- * **The settled state is an entry point, not a lock** (plan 0033 follow-up,
- * owner request 2026-07-30): pressing "On your watchlist" opens the *remove*
- * picker, with the entry derived from the same gathered cache the label reads
- * (`findWatchlistRemoval` — cache-only, read at press time). Only the
- * self-hosted form does this: a host that is already a sheet (the card-actions
- * sheet) has its own removal row wired to the gather it owns, and a second
- * sheet stacked over the first is exactly what plan 0032 U3 bans — so in host
- * mode a settled press stays inert.
- *
- * R18's shared pending guard is untouched and must stay: pressto's debounce is
- * per-instance, a card and the sheet over it are two instances, and the picker
- * is now a third — precisely the cross-mount case the shared `mutationKey`
- * guard exists for.
- */
 export function WatchlistMediaButton({
   item,
   onOpenPicker,
@@ -86,44 +42,24 @@ export function WatchlistMediaButton({
 }: {
   item: NormalizedMediaItem;
   className?: string;
-  /**
-   * Supplied by a host that is *already a sheet* (the card-actions sheet): the
-   * press hands the picker to the host to render in place of its own content,
-   * never a second sheet stacked over the first (plan 0032 U3). Without it the
-   * button hosts `WatchlistAddPickerSheet` itself (the details screen).
-   */
   onOpenPicker?: () => void;
 }) {
   const queryClient = useQueryClient();
   const pending = useIsWatchlistWritePending(item.id);
   const result = useLatestWatchlistResult(item.id);
   const [open, setOpen] = useState(false);
-  // Remounts the picker per open so the selection resets to all-selected (R1).
   const [openNonce, setOpenNonce] = useState(0);
-  // The removal target is snapshotted at press time (cache-only read), so the
-  // open sheet keeps rendering a consistent entry even while the removal's own
-  // invalidation rewrites the gathered cache underneath it.
   const [removal, setRemoval] = useState<WatchlistRemovalTarget | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
 
   const onList = useIsWatchlisted(item);
-  // Per-provider membership, not the whole-item boolean: a film still on one
-  // watchlist but missing from another has an add left to offer (owner report
-  // 2026-08-01). False whenever the answer is unknown, so R35 holds.
   const stillOffered = useWatchlistAddStillOffered(item);
 
   const copy = watchlistCtaCopy(item);
   const view = result == null ? null : watchlistResultView(result, item);
-  // R14/U15's single expression behind one local — membership first, with the
-  // mixed-report exception (a failed provider keeps the CTA actionable as a
-  // retry entry). The rule lives in `copy.ts` so it is testable without a
-  // renderer.
   const settled = isWatchlistCtaSettled(onList, view, stillOffered);
 
   function openRemovePicker() {
-    // `settled` implies the gathered cache holds a matching input (that is what
-    // `useIsWatchlisted` read), so a null here is a race, and no-op is the
-    // honest answer — never a fetch (`useIsWatchlisted`'s discipline).
     const data = queryClient.getQueryData<WatchlistInputs>(
       watchlistQueryKeys.inputs(),
     );
@@ -140,9 +76,6 @@ export function WatchlistMediaButton({
   function openPicker() {
     if (pending) return;
     if (settled) {
-      // Host mode has no surface for the remove picker that wouldn't stack a
-      // second sheet (plan 0032 U3) — the card-actions sheet composes its own
-      // removal row instead, so this press is only live when self-hosted.
       if (onOpenPicker == null) openRemovePicker();
       return;
     }
@@ -157,15 +90,6 @@ export function WatchlistMediaButton({
 
   return (
     <View className={cn('mb-6', className)}>
-      {/* morphLabel: "Add to watchlist" → "On your watchlist" is a label that
-          changes in place from user state, which is exactly what MorphText is
-          for. The settled state now opens the remove picker instead of locking
-          the button (plan 0033 follow-up). */}
-      {/* `quiet` — neutral border, foreground label — the same treatment
-          Manage Trackers' Disconnect uses (`provider-card.tsx`), chosen by the
-          owner. Never `primary`: this sits directly under the log CTA, and two
-          accent-filled blocks of identical weight made "watch it" and "watch it
-          later" read as the same decision. */}
       <Button
         disabled={settled && onOpenPicker != null}
         icon={<Button.Icon name={settled ? 'bookmark' : 'bookmark-outline'} />}
@@ -198,37 +122,23 @@ export function WatchlistMediaButton({
   );
 }
 
-/**
- * Whether a host renders `WatchlistMediaButton` for this item. The button
- * doesn't check it, so a host gates the button and drops the empty slot.
- */
 export function useWatchlistCtaShown(item: NormalizedMediaItem): boolean {
   const { writable, manual } = useWriteTargetsSplit(item, 'watchlist');
   const connected = useConnectedProviders();
-  // The entry read `LogMediaButton` already holds for this manga, so it costs
-  // no request of its own.
   const anilistEntry = useAniListEntryStateQuery({
     type: item.type,
     mediaId: item.externalIds.anilist,
     enabled: isReadIntent(item) && connected.includes(Provider.AniList),
   });
-  // A manga's only add target is AniList, which never writes over an entry it
-  // already has (plan 0031 KTD-2). Once the manga is being read, finished or
-  // shelved there, the add could only be refused.
   const trackedManga =
     isReadIntent(item) &&
     anilistEntry.data?.entry != null &&
     anilistEntry.data.entry.status !== 'PLANNING';
-  // A book's only add target is Hardcover, which writes Want to Read only on
-  // a book not in the library. The details screen's `LogBookButton` makes
-  // the same read, so there the two share one request.
   const hardcoverEntry = useHardcoverBookEntryQuery({
     bookId: item.externalIds.hardcover,
     enabled: connected.includes(Provider.Hardcover),
   });
   const trackedBook =
     hardcoverEntry.data != null && hardcoverEntry.data.statusId !== HardcoverStatus.WantToRead;
-  // Nothing connected can take this item — the same silence `LogMediaButton`
-  // keeps rather than offering an action that can only fail.
   return (writable.length > 0 || manual.length > 0) && !trackedManga && !trackedBook;
 }

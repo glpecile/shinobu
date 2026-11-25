@@ -2,7 +2,6 @@ import { hasAired } from '@/lib/time/has-aired';
 import type { NormalizedMediaItem, NormalizedSeason } from '@/types/media';
 import type { LogRequest } from './log-request';
 
-/** A whole-series log requires catalogue completion, never just an empty next pointer. */
 export function letterboxdCompletionRequest(
   show: NormalizedMediaItem,
   film: NormalizedMediaItem | null | undefined,
@@ -18,7 +17,6 @@ export function letterboxdCompletionRequest(
     .flatMap((season) => season.episodes.map((episode) => ({ ...episode, season: season.number })));
   if (episodes.length < catalogue.totalEpisodes! || !episodes.every((episode) => hasAired(episode.firstAired))) return null;
   const complete = (keys: ReadonlySet<string>) => episodes.every((episode) => keys.has(`${episode.season}-${episode.number}`));
-  // A rewatch's first episode must not create another whole-series diary entry.
   if (confirmed.length > 0 && complete(watched)) return null;
   const after = new Set(watched);
   for (const episode of confirmed) {

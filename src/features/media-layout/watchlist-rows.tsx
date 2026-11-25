@@ -16,13 +16,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import type { MediaLayoutProps } from './types';
 
-/**
- * List layout for watchlists and catalogues, with 48×72 posters, type labels,
- * and optional provider/watched marks. Shares ActionableRow's interaction
- * shell with the diary, not its smaller posters, log details, or day grouping.
- * Screens own data, paging, filtering, and failure states.
- */
-
 const TYPE_LABEL: Record<NormalizedMediaItem['type'], string> = {
   MOVIE: 'Film',
   TV: 'Series',
@@ -31,22 +24,15 @@ const TYPE_LABEL: Record<NormalizedMediaItem['type'], string> = {
   BOOK: 'Book',
 };
 
-/**
- * "Film" / "Series" / "Anime film". Anime films are `ANIME` with `isFilm`
- * (never a fifth MediaType), and the distinction is worth surfacing: it is
- * what routes them to the movie targets on a log.
- */
 export function mediaKindLabel(item: NormalizedMediaItem): string {
   return item.type === 'ANIME' && item.isFilm === true ? 'Anime film' : TYPE_LABEL[item.type];
 }
 
-/** `2024 · Film`, degrading cleanly when the year is missing. */
 export function watchlistRowDetail(item: NormalizedMediaItem): string {
   const kind = mediaKindLabel(item);
   return item.year == null ? kind : `${item.year} · ${kind}`;
 }
 
-/** The 48×72 poster, lazily recovered when the provider row arrives artless. */
 function RowPoster({ item }: { item: NormalizedMediaItem }) {
   // Trakt sync endpoints dropped images in 2026, so a Trakt-sourced watchlist
   // row has no art until this resolves it.
@@ -54,13 +40,9 @@ function RowPoster({ item }: { item: NormalizedMediaItem }) {
   return <SmallPoster uri={coverImage} recyclingKey={item.id} size="md" />;
 }
 
-/** Shared, so a row without provenance keeps the same props across renders. */
 const NO_SOURCES: readonly ProviderId[] = [];
 
-/** The provider marks holding this row, with a wrapping a11y label — like the
- *  diary's, no adjacent text names them. */
 function ProviderCluster({ providers }: { providers: readonly ProviderId[] }) {
-  // A catalogue list (the seasons explorer) has no provenance to show.
   if (providers.length === 0) return null;
   const names = providers.map((id) => PROVIDERS[id].label).join(', ');
   return (
@@ -82,13 +64,11 @@ export function WatchlistRow({
   note,
 }: {
   item: NormalizedMediaItem;
-  /** The providers holding it; a catalogue list (the seasons explorer) has none. */
   sources?: readonly ProviderId[];
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
   watched?: MediaProgress;
   showActions?: boolean;
-  /** Replaces the year and kind line, e.g. with when the next episode airs. */
   note?: string;
 }) {
   const prefetchDetails = usePrefetchMediaDetails();
@@ -129,7 +109,6 @@ export function WatchlistRow({
   );
 }
 
-/** Row height incl. padding — feeds `estimatedItemSize` only. */
 export const ROW_HEIGHT = 92;
 
 export function WatchlistRows({
@@ -150,21 +129,16 @@ export function WatchlistRows({
       data={entries}
       extraData={watched}
       itemLayoutAnimation={itemLayoutAnimation}
-      // Four rows ahead so a fast fling doesn't outrun the mounts — see
-      // poster-wall.tsx.
       drawDistance={ROW_HEIGHT * 4}
       estimatedItemSize={ROW_HEIGHT}
       keyExtractor={(entry) => entry.id}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
-      // Recycle to avoid row mount cost, as in the diary
-      // (docs/solutions/diary-scroll-jank-is-row-mount-cost.md); the same
-      // stale-hover residual applies.
+      // docs/solutions/diary-scroll-jank-is-row-mount-cost.md
       recycleItems
       refreshControl={
         <RefreshControl onRefresh={onRefresh} />
       }
-      // No `entering` on rows — see poster-wall.tsx.
       renderItem={({ item: entry }) => (
         <WatchlistRow item={entry.item} sources={entry.sources} onActions={onItemActions} onPress={onItemPress} showActions={showActions} watched={watched?.(entry.item)} />
       )}

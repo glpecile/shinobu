@@ -7,22 +7,8 @@ import { showToast } from './sonner';
 const DURATION_MS = { success: 2000, error: 3500 } as const;
 
 /**
- * The only allowed import of the toast library (oxlint-enforced, the same
- * wrapper rule as `@legendapp/list`, `@glpecile/norph` and `cn`). One call
- * surface across web, iOS and Android: sonner-native renders native, web
- * sonner renders web — the split lives in `./sonner`, never at a call site
- * (owner decision 2026-08-03, replacing burnt: its Android leg was an
- * unstyleable system `ToastAndroid` that dropped the message line entirely).
- *
- * Both platforms need `ToastHost` mounted in `app/_layout`
- * (`@/components/toast-host`) — without its `<Toaster />` the calls silently
- * no-op. sonner-native ships native peer deps (react-native-svg), so
- * adding/upgrading needs a clean rebuild.
- *
- * The haptic fires *here*, once, via the app's own vocabulary (R10):
- * `@/lib/haptics` no-ops on web and covers Android. Call sites must not add
- * their own `haptics.success()`/`.error()` next to a toast — that is the
- * double-fire R10 removed.
+ * Mount ToastHost once in the layout. This wrapper also plays the haptic, so call sites only
+ * send the toast.
  */
 export const toast = {
   /** The committed action succeeded — ephemeral, no recourse needed (R7). */

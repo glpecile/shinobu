@@ -11,15 +11,9 @@ import { DURATION, EASE_IN_OUT } from '@/lib/motion';
 
 import { ExpandableTextSkeleton } from './skeleton';
 
-/** `text-base` (16) × `leading-relaxed` (1.625) — keep in sync with the class. */
 const LINE_HEIGHT = 26;
 
-/**
- * A titled overview box; the whole card toggles between clamped and full text.
- * The box owns the clamp so opening is one height transition. Browsers lay the
- * paragraph out in full and let it overflow the box, which is what makes the
- * measurement honest here and not on native (see index.tsx).
- */
+/** Browsers lay out overflowing children at full height inside a clipped parent, unlike native (see index.tsx). */
 export function ExpandableText({
   text,
   markdown,
@@ -31,7 +25,6 @@ export function ExpandableText({
   markdown?: string;
   title?: string;
   lines?: number;
-  /** Layout only. */
   className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);

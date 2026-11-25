@@ -50,21 +50,12 @@ function uniqueById<T extends { id: string }>(items: readonly T[]): T[] {
   return items.filter((item) => (seen.has(item.id) ? false : (seen.add(item.id), true)));
 }
 
-/** "All" first: it is the home row's shape and the entry the row already cached. */
 const FORMAT_OPTIONS = [
   { value: 'ALL', label: 'All' },
   { value: 'TV', label: 'TV', accessibilityLabel: 'TV series' },
   { value: 'MOVIE', label: 'Films' },
 ] as const satisfies readonly { value: AnimeFormatFilter; label: string; accessibilityLabel?: string }[];
 
-/**
- * The AniList seasons explorer: the home feed's seasonal row, widened to any
- * cour of any year and narrowable by format. Same query and cache entry as the
- * row for the unfiltered current season, so opening it costs no request.
- * Signed in, the user's own titles fold above the catalogue (`SeasonList`).
- * Grid ⇄ list rides the watchlist's device preference: it is the same taste
- * on both surfaces, not a per-screen setting.
- */
 function SeasonWall({
   window,
   format,
@@ -79,16 +70,12 @@ function SeasonWall({
   const pushRoute = usePushRoute();
   const pages = useSuspenseSeasonalAnimePagesQuery(window, format);
   const { columns } = useWallMetrics();
-  // Three rows of the wall the device actually has: what the swap waits on
-  // before it may paint, so a phone must not queue a desktop's worth.
   useWarmPosters(
     anilistQueryKeys.seasonalAnimePages(window, format),
     pages.data.pages[0]?.items ?? [],
     columns * 3,
   );
-  // AniList's popularity sort is not stable across pages, so a title can sit
-  // on the tail of one page and the head of the next; the list needs unique
-  // keys, so the first occurrence wins.
+  // AniList's popularity sort isn't stable across pages, so duplicates can span page boundaries.
   const items = useVisibleItems(uniqueById(pages.data.pages.flatMap((page) => page.items)));
   const nextAiring = Object.assign({}, ...pages.data.pages.map((page) => page.nextAiring ?? {}));
   const reduceMotion = useReducedMotion();
@@ -105,16 +92,8 @@ function SeasonWall({
   }
 
   return (
-    // The entrance (`wall-entrance`, per platform) plays once per mount, on
-    // the *container* — a virtualized list re-mounts cells as they scroll
-    // back into view, and a per-cell entrance replays on every fast scroll
-    // (docs/solutions/entering-animation-on-virtualized-cells-replays.md). A
-    // CSS keyframes rule rather than a layout `entering`: presets have no
-    // blur and a custom Keyframe pins the element on web.
-    //
-    // Once per mount, and a window or format change is a mount: the boundary
-    // above is keyed by both, so the wall plays this on the way in behind its
-    // skeleton rather than hard-cutting under the old posters.
+    // Container-level CSS keyframes: per-cell entering replays on virtualized scroll
+    // (docs/solutions/entering-animation-on-virtualized-cells-replays.md) and Reanimated Keyframe pins web layout.
     <AnimatedView
       className="flex-1"
       style={
@@ -152,11 +131,6 @@ function SeasonWall({
   );
 }
 
-/**
- * One boundary per wall, so a failing cour degrades to its own page's notice
- * and the pager's other pages stay up. The boundary resets on a window
- * change, so the next window gets a fresh attempt.
- */
 function WallBoundary({
   window,
   format,
@@ -194,29 +168,6 @@ function WallBoundary({
   );
 }
 
-/**
- * The format the cours *behind the edges* switch to, a pill's slide after the
- * one in front of the user — and as a transition, so each of those walls keeps
- * its posters while the new ones load.
- *
- * The pager deliberately keeps the neighbouring cours mounted, so a format tap
- * is three walls re-reading AniList, re-warming three screens of posters and
- * re-rendering three lists of cells. On web that is free — the pill is a
- * composited CSS transition and nothing on the main thread can reach it. On
- * native the same transition runs on the UI thread, which is also the thread
- * that renders those cells, so the two walls the user cannot see were landing
- * on the frames of the one animation they were looking at. Staggering them
- * costs nothing visible: a swipe takes longer to start than the slide takes to
- * finish, so a neighbour is never reached before it has caught up.
- *
- * An effect and not the press handler, which is where react.dev would put
- * anything caused by an interaction: the format lives in the URL, so it also
- * changes on Back, on a shared link, and on any other `setParams` — and a
- * stagger scheduled only from the tap would leave those walls on a format the
- * user left behind. The delay is a timer, which is a side effect wherever it
- * is written; syncing it to the prop is what makes it correct for every way
- * the prop can change.
- */
 function useTrailingFormat(format: AnimeFormatFilter): AnimeFormatFilter {
   const [trailing, setTrailing] = useState(format);
   useEffect(() => {
@@ -238,22 +189,9 @@ export default function AnimeSeasonsScreen() {
   const format = parseAnimeFormatFilter(params.format);
   const view = useWatchlistView();
   const { openActions, sheetProps } = useCardActions();
-  // The web season strip follows the pager's continuous cour index; native
-  // controls let their platform animate the settled selection.
   const progress = useSharedValue(ANIME_SEASONS.indexOf(window.season));
-  // The wall in front of the user takes the new format immediately, and the
-  // boundaries below are *keyed* by it as they already were by year: a router
-  // param update is a React transition, which by default keeps the old posters
-  // revealed until the new ones load, and a fresh boundary is React's
-  // documented opt-out from that. Holding a different catalogue's posters up
-  // reads as the tap having been ignored and then the wall silently swapping —
-  // true of last year's titles, and just as true of the series you filtered
-  // out. The skeleton is the answer to the tap; it is also what web has been
-  // doing all along, because its router update is not a transition there.
   const trailingFormat = useTrailingFormat(format);
 
-  // `setParams`, not a push: a different season is not a new destination,
-  // and Back should leave the screen, not walk every season tried.
   function setWindow(next: AnimeSeasonWindow) {
     router.setParams({ season: next.season, year: String(next.year) });
   }
@@ -271,9 +209,6 @@ export default function AnimeSeasonsScreen() {
       <Head>
         <title>{`${animeSeasonLabel(window)} Anime — Shinobu`}</title>
       </Head>
-      {/* "Anime", not "Anime Seasons": the season strip says the rest, and the
-          short title leaves a phone room for the year beside it. From `sm`
-          the season strip joins the toolbar row. */}
       <View
         className={cn(
           'flex-row items-center gap-3 px-6',
@@ -302,17 +237,11 @@ export default function AnimeSeasonsScreen() {
           </MediaToolbar>
         </View>
       </View>
-      {/* Every format is cour-scoped, films included: the pager is the only
-          wall host. The controls stay outside the boundaries — an AniList
-          outage on one season must not take them with it. */}
       <Pager
         onSettle={(season) => router.setParams({ season })}
         options={ANIME_SEASONS}
         progress={progress}
         renderPage={(season) => {
-          // Keyed by the format this page is actually showing, not by the URL's:
-          // an off-screen cour trails, and a key that ran ahead of its prop
-          // would remount it onto the format it already had.
           const pageFormat = season === window.season ? format : trailingFormat;
           return (
             <WallBoundary
@@ -331,7 +260,6 @@ export default function AnimeSeasonsScreen() {
   );
 }
 
-/** Route-level containment for render-time faults; query failures are caught above. */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (

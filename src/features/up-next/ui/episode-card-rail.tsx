@@ -10,19 +10,10 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { CardSlot } from './card-slot';
 import { episodeCardRailHeight, STACK_OFFSET } from './metrics';
 
-// Stacked card backs sit `STACK_OFFSET * 2` above the face card; a horizontal
-// scroll view clips at its own frame. Paid whether or not a stack is present,
-// so a season drop doesn't push every card down.
 export const STACK_HEADROOM = STACK_OFFSET * 2;
 
-/**
- * A virtualized row of Up Next cards, one per group, keyed per show so a
- * quick-log advance updates the card in place. Continue Watching, This Week's
- * day and Coming Soon differ only in what each card says and carries.
- */
 export function EpisodeCardRail({ groups, stacked = false, badges, action, arrival, onPress, onActionsPress }: {
   groups: readonly UpNextGroup[];
-  /** Reserve headroom for a stacked group's card backs. */
   stacked?: boolean;
   badges: (group: UpNextGroup) => CardBadge[];
   action?: (group: UpNextGroup) => ReactNode;

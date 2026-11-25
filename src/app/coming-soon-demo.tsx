@@ -12,7 +12,6 @@ import { localDayAt } from '@/lib/time/relative-day';
 import { serializdQueryKeys } from '@/state/queries/serializd';
 
 const tmdb = (path: string) => `https://image.tmdb.org/t/p/w780${path}`;
-/** Local `YYYY-MM-DD`, `offset` days from today: Serializd's bare air date. */
 function day(offset: number): string {
   const date = localDayAt(offset);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -31,15 +30,12 @@ function episode(showId: number, title: string, fields: Partial<SerializdUpcomin
   };
 }
 
-// The live signed-out payload (2026-10-31), re-dated to stay upcoming.
 const DEMO = [
   episode(259909, 'Dexter: Resurrection', { season: 2, number: 1, title: 'Risky Business', airDate: day(1), isPremiere: true, still: tmdb('/iOxWqj1jM5ROPvlfKYHqvONdqVi.jpg') }),
   episode(213375, 'VisionQuest', { number: 7, title: 'Immolation', airDate: day(3), still: tmdb('/hhLuAHSGLZ5MSkN9UMjkhGu1zxN.jpg') }),
   episode(292741, 'Nocturne', { number: 3, title: 'Eyes on the Inside', airDate: day(5), still: tmdb('/zb9wrAzO5GV8Cx62Mi95K91VoOE.jpg') }),
 ];
 
-// Serializd bounds none of these: names are TMDB strings, numbers are ints,
-// and nothing promises one episode per show or a date within a year.
 const DROP = Array.from({ length: 8 }, (_, index) =>
   episode(93405, 'Squid Game', { season: 3, number: index + 1, airDate: day(2), isPremiere: index === 0 }));
 const WORST: SerializdUpcomingEpisode[] = [
@@ -59,14 +55,12 @@ const STATES = { demo: DEMO, worst: WORST, empty: [], one: WORST.slice(0, 1), ma
 }) };
 type State = keyof typeof STATES;
 
-/** Dev-only stress preview of the Coming Soon row; fixtures enter through its query cache. */
 export default function ComingSoonDemo() {
   const { data = 'demo' } = useLocalSearchParams<{ data?: State }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   if (!__DEV__) return <Redirect href={routes.home} />;
   const username = `demo-${data}`;
-  // Seeded before the row's suspense query reads it; never fetched (staleTime).
   if (queryClient.getQueryData(serializdQueryKeys.upcoming(username)) == null) {
     queryClient.setQueryData(serializdQueryKeys.upcoming(username), STATES[data] ?? DEMO);
   }

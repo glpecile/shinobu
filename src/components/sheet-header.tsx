@@ -4,21 +4,6 @@ import { Text, View } from 'react-native';
 import { Eyebrow } from '@/components/eyebrow';
 import { Sheet } from '@/components/sheet';
 
-/**
- * What a long-press sheet is about: artwork beside `SheetHeader.Content`. The
- * title wraps past the clamp that made the sheet worth opening.
- *
- * ```tsx
- * <SheetHeader>
- *   <SheetPoster item={item} />
- *   <SheetHeader.Content>
- *     <SheetHeader.Eyebrow>S01E02</SheetHeader.Eyebrow>
- *     <SheetHeader.Title>{title}</SheetHeader.Title>
- *     <SheetHeader.Subtitle>{meta}</SheetHeader.Subtitle>
- *   </SheetHeader.Content>
- * </SheetHeader>
- * ```
- */
 export function SheetHeader({ children }: { children: ReactNode }) {
   return (
     <Sheet.Header>

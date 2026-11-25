@@ -8,15 +8,10 @@ import { heldKeyframes, sectionFading } from '@/components/section-enter';
 import { EASE_OUT } from '@/lib/motion';
 import { PROVIDERS } from '@/lib/providers/registry';
 
-/** Delay between consecutive `HeroEnter` blocks. */
 export const COPY_STAGGER = 60;
 const HERO_ENTER_DURATION = 450;
 
-/**
- * Blur clears as the copy rises, on web only: a native `filter` re-rasterizes
- * the view every frame it animates
- * (docs/solutions/season-switch-jank-remount-and-blur-on-native.md).
- */
+/** Native `filter` re-rasterizes the view every frame it animates (docs/solutions/season-switch-jank-remount-and-blur-on-native.md). */
 const heroEntering = process.env.EXPO_OS === 'web'
   ? {
       '0%': { opacity: 0, filter: 'blur(4px)', transform: [{ translateY: 8 }] },
@@ -27,10 +22,6 @@ const heroEntering = process.env.EXPO_OS === 'web'
       '100%': { opacity: 1, transform: [{ translateY: 0 }] },
     };
 
-/**
- * The staggered entrance of a first-run screen's copy (Home, Diary): longer
- * than `SectionEnter` so the blur reads. Step `delay` by `COPY_STAGGER`.
- */
 export function HeroEnter({
   children,
   className,
@@ -55,7 +46,6 @@ export function HeroEnter({
   );
 }
 
-/** Every provider's mark in a tile, heading a first-run screen's copy. */
 export function HeroProviders() {
   return (
     <View className="flex-row gap-1.5">

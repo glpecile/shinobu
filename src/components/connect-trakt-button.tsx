@@ -35,9 +35,6 @@ const discovery = {
 
 type ConnectionStatus = 'idle' | 'connecting' | 'error';
 
-// Trakt's client id and secret are both 64-char hex strings. The check can't
-// tell the two apart (same shape), but it does catch the common paste
-// mistakes: URLs, app names, partial selections.
 const hex64 = (label: string) =>
   z
     .string()
@@ -55,7 +52,6 @@ const credentialsSchema = z.object({
 
 type CredentialsForm = z.infer<typeof credentialsSchema>;
 
-/** Selectable value the user copies into a field of Trakt's application form. */
 function CopyValue({ value, hint }: { value: string; hint?: string }) {
   return (
     <View className="flex-row items-center gap-2">
@@ -100,25 +96,6 @@ function CredentialInput({
   );
 }
 
-/**
- * Trakt OAuth trigger. BYO-only credential model (plan 0034 R12): builds ship
- * no Trakt credentials, so the guided setup form (the user's own client id +
- * secret) is the one and only activation path. On native, auth opens in an
- * embedded browser session via expo-web-browser and returns to the app, and
- * this component finishes the code exchange. On web, the current window
- * navigates to Trakt and is redirected back to the home route with ?code=...,
- * where `useOAuthCallback` exchanges it.
- *
- * Completing the exchange *overwrites* the stored session
- * (`exchangeCodeForSession` → `tokens.set`), so a MigrationNeeded token — one
- * bound to the removed client id (R13) — is discarded by the fresh connect
- * with no extra clearing step.
- *
- * `useTraktConnect` is the trigger without UI, extracted so the Manage
- * Trackers row can connect directly once credentials are stored instead of
- * opening a sheet whose only content is a button. The button below consumes
- * the same hook, so there is exactly one copy of the flow.
- */
 export function useTraktConnect() {
   const [credentials, saveCredentials, clearCredentials] =
     useProviderCredentials(Provider.Trakt);
@@ -131,8 +108,6 @@ export function useTraktConnect() {
     if (id === '') return;
 
     setStatus('connecting');
-    // Built on demand (rather than via useAuthRequest) so just-saved
-    // credentials can connect immediately, without waiting for a re-render.
     let request;
     try {
       request = await loadAsync(
@@ -157,10 +132,6 @@ export function useTraktConnect() {
     }
 
     if (Platform.OS === 'web') {
-      // On web the most reliable flow is a same-window redirect: Trakt sends
-      // the user back to the home route with ?code=..., where
-      // useOAuthCallback exchanges it. This avoids popup blockers and
-      // orphaned auth windows.
       beginOAuthFlow(Provider.Trakt, request.state);
       window.location.assign(request.url);
       return;
@@ -168,7 +139,6 @@ export function useTraktConnect() {
 
     const result = await openAuthSessionAsync(request.url, redirectUri);
     if (result.type !== 'success') {
-      // User-cancelled/dismissed — not an error worth alarming about.
       setStatus('idle');
       return;
     }
@@ -176,7 +146,6 @@ export function useTraktConnect() {
     const url = new URL(result.url);
     const code = url.searchParams.get('code');
     if (code == null) {
-      // Trakt redirected back without a code (?error=...): a real failure.
       setStatus('error');
       return;
     }
@@ -197,7 +166,6 @@ export function useTraktConnect() {
     clearCredentials,
     clientId,
     redirectUri,
-    /** True when connecting first requires the client id + secret form. */
     needsSetup: credentials == null,
   };
 }
@@ -223,18 +191,12 @@ export function ConnectTraktButton() {
     },
     resolver: zodResolver(credentialsSchema),
   });
-  // Saving the credentials means the user wants to connect — go straight into
-  // the OAuth flow instead of asking for an extra tap on Connect.
   const submitCredentials = handleSubmit(async (values) => {
     saveCredentials(values);
     await connect(values.clientId);
   });
 
-  // The guided BYO wizard is Trakt's only connect path (plan 0034 R12) — it
-  // renders whenever no credentials are stored yet.
   if (credentials == null) {
-    // If web dev runs on a non-default port the device URI won't be in the
-    // canonical list — surface it so the user registers the one that matters.
     const redirectUris = TRAKT_REDIRECT_URIS.includes(redirectUri)
       ? TRAKT_REDIRECT_URIS
       : [...TRAKT_REDIRECT_URIS, redirectUri];

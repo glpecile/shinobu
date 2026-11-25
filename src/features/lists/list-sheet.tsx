@@ -18,7 +18,6 @@ import { ListLikeButton } from './list-like-button';
 import { listMeta, type ListSummary } from './list-summary';
 import { PosterStack } from './poster-stack';
 
-/** The sheet's state for a screen of list cards; `list` survives closing so it never empties mid-animation. */
 export function useListSheet() {
   const [list, setList] = useState<ListSummary | null>(null);
   const [open, setOpen] = useState(false);
@@ -28,11 +27,6 @@ export function useListSheet() {
   };
 }
 
-/**
- * A list card's long-press: what the clamped card cut off, then where to go.
- * Like appears only for another member's Letterboxd list, as on its page.
- * Hide drops it from rails and grids until unhidden in Settings.
- */
 export function ListSheet({ list, open, onClose }: { list: ListSummary | null; open: boolean; onClose: () => void }) {
   const pushRoute = usePushRoute();
   const letterboxdUsername = useConnectedProviders().includes(Provider.Letterboxd) ? getLetterboxdUsername() : null;

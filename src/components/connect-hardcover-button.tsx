@@ -11,18 +11,9 @@ import { HARDCOVER_GOODREADS_IMPORT_URL } from '@/lib/providers/external-urls';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { exchangeHardcoverCode } from '@/state/queries/hardcover';
 
-/**
- * Hardcover's connect button: authorization code with PKCE on the bundled
- * public client id. On native the auth session returns the redirect to this
- * button, which exchanges the code. On web the window goes to Hardcover and
- * comes back to the home route as `?oauth=hardcover&code=…`, where
- * `useOAuthCallback` exchanges it. Also the reconnect path: a new session
- * overwrites one that can't refresh again.
- */
 export function ConnectHardcoverButton() {
   const clientId = hardcoverClientId();
   const connect = useMutation({
-    // Never paused offline: a connect that can't reach Hardcover fails now.
     networkMode: 'always',
     mutationFn: async () => {
       const redirectUri = getHardcoverRedirectUri();
@@ -35,7 +26,6 @@ export function ConnectHardcoverButton() {
 
       const result = await openAuthSessionAsync(url, redirectUri);
       if (result.type !== 'success') {
-        // Cancelled or dismissed. The pending flow ends with it.
         clearHardcoverAuthFlow();
         return;
       }

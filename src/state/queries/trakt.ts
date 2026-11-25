@@ -31,9 +31,7 @@ import {
   getClientSecretForProvider,
 } from '@/state/session/provider-config';
 
-// Module-level singleton (not rebuilt per traktDeps() call): the auth layer
-// coalesces concurrent token refreshes per token store, so the store's object
-// identity must be stable across queries.
+// Trakt refresh coalesces by token-store identity. Keep this object stable across calls.
 const tokenStore: TokenStore = {
   get: () => getProviderSession(Provider.Trakt),
   set: (session) => setProviderSession(Provider.Trakt, session),
@@ -83,13 +81,10 @@ export const traktQueryKeys = {
   searchRoot: () => [...SEARCH_QUERY_ROOTS.trakt],
   search: (query: string, limit: number) =>
     [...traktQueryKeys.searchRoot(), query, limit] as const,
-  /** Full seasons + episodes for one show (plan 0010). */
   seasons: (traktId: number) =>
     [...traktQueryKeys.all, 'seasons', traktId] as const,
-  /** Per-episode watched completion for one show (plan 0010). */
   showProgress: (traktId: number) =>
     [...traktQueryKeys.all, 'show-progress', traktId] as const,
-  /** Lazy poster/backdrop recovery for artless watched items. */
   images: (type: MediaType, traktId: number) =>
     [...traktQueryKeys.all, 'images', type, traktId] as const,
   item: (type: 'MOVIE' | 'TV' | undefined, traktId: number | null) =>
@@ -120,7 +115,6 @@ export const traktQueryKeys = {
    * so an invalidation names the prefix.
    */
   watchlistRoot: () => [...traktQueryKeys.all, 'watchlist'] as const,
-  /** One `/sync/watchlist/{type}/{sortBy}/{sortHow}` read. */
   watchlist: (
     type: 'all' | 'movies' | 'shows',
     sortBy: 'rank' | 'added' | 'released' | 'title',
@@ -205,11 +199,6 @@ export function useTraktShowProgressQuery(params: {
 }
 
 /**
- * Authenticated read of the user's watched shows. Disabled until Trakt is
- * connected; enabling flips from false → true on OAuth completion, which
- * triggers an automatic fetch.
- */
-/**
  * The connected Trakt account's username, for "connected as who" on Manage
  * Trackers. Cached forever: it can't change under a live session, and this is
  * a settings-screen nicety that must not cost a request per visit.
@@ -232,10 +221,6 @@ export function useWatchedShowsQuery(options: { enabled?: boolean } = {}) {
   });
 }
 
-/**
- * Authenticated read of the user's watched movies — same enable-on-connect
- * contract as `useWatchedShowsQuery`.
- */
 export function useWatchedMoviesQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: traktQueryKeys.watchedMovies(),

@@ -21,7 +21,6 @@ import {
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { SEARCH_MIN_QUERY_LENGTH } from '@/state/queries/trakt';
 
-/** Real dependency wiring for TMDB effects (same shape as `traktDeps`). */
 export function tmdbDeps(): TmdbDeps {
   return {
     fetch: httpFetch,
@@ -31,42 +30,28 @@ export function tmdbDeps(): TmdbDeps {
 
 export const tmdbQueryKeys = {
   all: ['tmdb'] as const,
-  /** Prefix for every person page — details/[id] scans this for cache hits. */
   personRoot: () => [...tmdbQueryKeys.all, 'person'] as const,
   person: (tmdbId: number) => [...tmdbQueryKeys.personRoot(), tmdbId] as const,
   personSearch: (name: string) =>
     [...tmdbQueryKeys.all, 'person-search', name] as const,
-  /** Prefix for every studio page — details/[id] scans this too. */
   studioRoot: () => [...tmdbQueryKeys.all, 'studio'] as const,
   studio: (tmdbId: number) => [...tmdbQueryKeys.studioRoot(), tmdbId] as const,
   studioSearch: (name: string) =>
     [...tmdbQueryKeys.all, 'studio-search', name] as const,
-  /**
-   * One title's catalogue record (`getMediaCatalogue`). Keyed by kind *and* id
-   * because TMDB numbers movies and shows in separate spaces — id 550 is a film
-   * and a series, and one key would serve one as the other.
-   */
+  /** Keyed by kind and id because TMDB numbers movies and TV in separate id spaces. */
   catalogue: (kind: 'movie' | 'tv', tmdbId: number) =>
     [...tmdbQueryKeys.all, 'catalogue', kind, tmdbId] as const,
-  /** Full seasons + episodes for one show (`getTvSeasons`) — the Trakt-less
-   *  leg of `state/queries/show-seasons.ts`. */
   seasons: (tmdbId: number) =>
     [...tmdbQueryKeys.all, 'seasons', tmdbId] as const,
-  /** The episodes one person's TV credit covers (`getCreditEpisodes`). */
   creditEpisodes: (creditId: string) =>
     [...tmdbQueryKeys.all, 'credit-episodes', creditId] as const,
-  /** One episode's still, rating and credits (`getTvEpisode`). */
   episode: (tmdbId: number, season: number, number: number) =>
     [...tmdbQueryKeys.all, 'episode', tmdbId, season, number] as const,
-  /** Derived from SEARCH_QUERY_ROOTS so the details cache scan finds results. */
   search: (query: string) => [...SEARCH_QUERY_ROOTS.tmdb, query] as const,
 };
 
-// People's filmographies barely churn — a day of staleness is invisible, and
-// it keeps back-navigation between a filmography and its person page free.
 const PERSON_STALE_TIME_MS = 24 * 60 * 60 * 1000;
 
-/** Bio + role-grouped credit rows for the `/person/[id]` route. */
 export function useSuspenseTmdbPersonQuery(params: { tmdbId: number }) {
   return useSuspenseQuery({
     queryKey: tmdbQueryKeys.person(params.tmdbId),
@@ -77,12 +62,6 @@ export function useSuspenseTmdbPersonQuery(params: { tmdbId: number }) {
   });
 }
 
-/**
- * The non-suspending sibling: the credit sheet opens on a long-press with no
- * route transition behind it, so it must render its header instantly from the
- * credit it was handed and let the bio arrive after. Same key and staleness as
- * the route query, so opening the sheet warms the person page and vice versa.
- */
 export function useTmdbPersonQuery(params: {
   tmdbId: number | undefined;
   enabled?: boolean;
@@ -98,7 +77,6 @@ export function useTmdbPersonQuery(params: {
   });
 }
 
-/** Which episodes a director, writer or guest star worked on, for the filmography's long-press sheet. */
 export function useTmdbCreditEpisodesQuery(params: { creditId: string; enabled: boolean }) {
   return useQuery({
     queryKey: tmdbQueryKeys.creditEpisodes(params.creditId),
@@ -118,14 +96,11 @@ function episodeQueryOptions(params: {
   return {
     queryKey: tmdbQueryKeys.episode(params.tmdbId, params.season, params.number),
     queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getTvEpisode(tmdbDeps(), params), { signal }),
-    // Credits and stills for an aired episode don't move — same budget as a
-    // person page, so sheet → screen → back costs one request, not three.
     staleTime: PERSON_STALE_TIME_MS,
     gcTime: PERSON_STALE_TIME_MS,
   };
 }
 
-/** Starts an episode's TMDB read on press, so the episode screen's credits load during the push. */
 export function usePrefetchTmdbEpisode() {
   const queryClient = useQueryClient();
   return (params: { tmdbId: number | undefined; season: number; number: number }) => {
@@ -135,7 +110,6 @@ export function usePrefetchTmdbEpisode() {
   };
 }
 
-/** Still + rating + credits for the episode screen's credit sections. */
 export function useSuspenseTmdbEpisodeQuery(params: {
   tmdbId: number;
   season: number;
@@ -144,11 +118,6 @@ export function useSuspenseTmdbEpisodeQuery(params: {
   return useSuspenseQuery(episodeQueryOptions(params));
 }
 
-/**
- * The non-suspending sibling: the episode sheet and the screen header render
- * instantly from the seasons list they were opened from and sharpen (still,
- * TMDB overview) when this answers. Same key as the suspense read.
- */
 export function useTmdbEpisodeQuery(params: {
   tmdbId: number | undefined;
   season: number;
@@ -166,12 +135,6 @@ export function useTmdbEpisodeQuery(params: {
   });
 }
 
-/**
- * Movie+TV fuzzy search for the search tab, the section's
- * primary source — same debounce/keepPreviousData contract as the Trakt
- * search it replaces. Disabled without a TMDB token; the screen falls back
- * to Trakt search only when a Trakt client key is active.
- */
 export function useTmdbSearchQuery(params: {
   query: string;
   enabled?: boolean;
@@ -187,11 +150,6 @@ export function useTmdbSearchQuery(params: {
   });
 }
 
-/**
- * People and studios by name for the search tab's scopes. Same contract as
- * `useTmdbSearchQuery`, and the same keys as the `/lookup` routes' suspense
- * reads below, so a name searched here is already resolved there.
- */
 export function useTmdbPersonSearchQuery(params: {
   query: string;
   enabled: boolean;
@@ -220,7 +178,6 @@ export function useTmdbStudioSearchQuery(params: {
   });
 }
 
-/** Name → candidate people, for the `/person/lookup` resolution route. */
 export function useSuspenseTmdbPersonSearchQuery(params: { name: string }) {
   return useSuspenseQuery({
     queryKey: tmdbQueryKeys.personSearch(params.name),
@@ -231,7 +188,6 @@ export function useSuspenseTmdbPersonSearchQuery(params: { name: string }) {
   });
 }
 
-/** Company profile + works rows for the `/studio/[id]` route. */
 export function useSuspenseTmdbStudioQuery(params: { tmdbId: number }) {
   return useSuspenseQuery({
     queryKey: tmdbQueryKeys.studio(params.tmdbId),
@@ -242,7 +198,6 @@ export function useSuspenseTmdbStudioQuery(params: { tmdbId: number }) {
   });
 }
 
-/** Name → candidate companies, for the `/studio/lookup` resolution route. */
 export function useSuspenseTmdbStudioSearchQuery(params: { name: string }) {
   return useSuspenseQuery({
     queryKey: tmdbQueryKeys.studioSearch(params.name),

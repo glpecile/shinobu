@@ -3,11 +3,6 @@ export interface CookiePair {
   value: string;
 }
 
-/**
- * Web/default: there is no WebView sign-in on web — providers connect via a
- * form (Serializd) or a public username (Letterboxd). Renders nothing so call
- * sites can mount it unconditionally. The real modal lives in index.native.tsx.
- */
 export function ProviderSigninWebView<T>(
   _props: {
     visible: boolean;

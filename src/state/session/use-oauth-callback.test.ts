@@ -58,7 +58,6 @@ const { beginOAuthFlow } = await import('./oauth-flow');
 const { setProviderClientId, setProviderClientSecret, setProviderSession } =
   await import('./tokens');
 
-/** Minimal window stand-in: a real URL for location, a recorder for history. */
 const replacedUrls: string[] = [];
 function stubWindow(href: string) {
   (globalThis as { window?: unknown }).window = {

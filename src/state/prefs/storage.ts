@@ -1,11 +1,6 @@
 import { createMMKV } from 'react-native-mmkv';
 
-/**
- * Local-only UI preferences (collapsed feed rows, hidden feed items).
- * Deliberately a separate MMKV file from `state/session` — preferences are
- * cosmetic and must never touch auth state; disconnect/reconnect flows leave
- * them alone.
- */
+/** Keep cosmetic preferences in their own MMKV file, separate from session data. */
 export const prefsStorage = createMMKV({ id: 'prefs' });
 
 /**

@@ -30,8 +30,6 @@ import {
 
 type ConnectionStatus = 'idle' | 'connecting' | 'error';
 
-// Simkl client ids are long hex strings — catch pasted URLs/names/secrets
-// with spaces, not a specific length.
 const clientIdSchema = z.object({
   clientId: z
     .string()
@@ -45,27 +43,6 @@ const clientIdSchema = z.object({
 
 type ClientIdForm = z.infer<typeof clientIdSchema>;
 
-/**
- * Simkl's OAuth trigger, without any of its UI.
- *
- * Hybrid client-id model (owner decision 2026-08-01, superseding plan 0034
- * U5's "no BYO wizard"): builds that bundle a PKCE client id
- * (`EXPO_PUBLIC_SIMKL_CLIENT_ID` — no secret exists, KTD-1) connect in one
- * tap; a build without one falls back to an AniList-style one-time form that
- * takes the user's own Simkl app client id (a single field — PKCE has no
- * secret to pair it with). `beginSimklAuthFlow` persists the PKCE
- * verifier/state pair for the return leg. On native, auth opens in an embedded
- * browser session and this hook finishes the code exchange from the returned
- * URL — the same in-button return handling as Trakt's code flow; the exchange
- * validates `state` against the persisted flow internally. On web, the current
- * window navigates to Simkl and comes back to the home route as
- * `?oauth=simkl&code=…`, where `useOAuthCallback` exchanges it (both legs read
- * the stored override via `getClientIdForProvider`).
- *
- * Extracted so the Manage Trackers row can connect in one tap without opening
- * a sheet whose only content would be this button; the button below consumes
- * the same hook, so there is exactly one copy of the flow.
- */
 export function useSimklConnect() {
   const [storedClientId, setStoredClientId] = useState<string | null>(() =>
     typeof window === 'undefined' ? null : getProviderClientId(Provider.Simkl),
@@ -73,7 +50,6 @@ export function useSimklConnect() {
   const [status, setStatus] = useState<ConnectionStatus>('idle');
 
   const embeddedClientId = simklClientId();
-  // Override-first, matching provider-config's simkl resolver.
   const clientId = storedClientId ?? embeddedClientId;
   const redirectUri = getSimklRedirectUri();
 
@@ -91,18 +67,12 @@ export function useSimklConnect() {
     }
 
     if (Platform.OS === 'web') {
-      // Same-window redirect: Simkl sends the user back to the home route
-      // with ?oauth=simkl&code=..., where useOAuthCallback exchanges it. This
-      // avoids popup blockers and orphaned auth windows (the Trakt shape).
       window.location.assign(url);
       return;
     }
 
     const result = await openAuthSessionAsync(url, redirectUri);
     if (result.type !== 'success') {
-      // User-cancelled/dismissed — not an error worth alarming about. The
-      // pending PKCE flow is dead with it; don't leave it around to validate
-      // some future stray code.
       clearSimklAuthFlow();
       setStatus('idle');
       return;
@@ -112,7 +82,6 @@ export function useSimklConnect() {
     const code = returned.searchParams.get('code');
     const state = returned.searchParams.get('state');
     if (code == null) {
-      // Simkl redirected back without a code (?error=...): a real failure.
       clearSimklAuthFlow();
       setStatus('error');
       return;
@@ -134,7 +103,6 @@ export function useSimklConnect() {
     embeddedClientId,
     storedClientId,
     setStoredClientId,
-    /** True when connecting first requires the one-time client-id form. */
     needsSetup: clientId === '',
   };
 }
@@ -157,7 +125,6 @@ export function ConnectSimklButton() {
     defaultValues: { clientId: '' },
     resolver: zodResolver(clientIdSchema),
   });
-  // Saving the id means the user wants to connect — go straight into OAuth.
   const submitClientId = handleSubmit(async (values) => {
     setProviderClientId(Provider.Simkl, values.clientId);
     setStoredClientId(values.clientId);

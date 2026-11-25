@@ -26,7 +26,6 @@ function subscribe(onStoreChange: () => void): () => void {
   return () => subscription.remove();
 }
 
-/** Whether the sidebar is collapsed to icons — reactive. */
 export function useSidebarCollapsed(): boolean {
   // Booleans compare by value, so no snapshot caching is needed (see
   // collapsed-sections.ts for the same contract).

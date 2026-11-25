@@ -4,23 +4,9 @@ import {
 } from '@/lib/providers/letterboxd/config';
 
 /**
- * The Letterboxd same-origin reads proxy (plan 0018) — the repo's second
- * bounded exception to the AGENTS.md "never proxied" policy, modeled on
- * worker/serializd-proxy.ts. It forwards ONLY allowlisted public, unauthenticated
- * GET paths: watchlists, RSS, tags, created/liked list indices, list films and public film pages,
- * attaches no client headers, caps upstream latency, relays only
- * HTML/XML bodies under a script-killing CSP + `nosniff`, maps the Cloudflare
- * challenge page to a clean 502, emits no `Access-Control-Allow-Origin`, and
- * stores/logs nothing. Everything else falls through to static-asset serving
- * (worker/index.ts).
- *
- * Why GET-only: every state-changing Letterboxd POST (log writes, sign-in) is
- * behind Cloudflare client/TLS fingerprinting that no server-side fetch can
- * fake (docs/solutions/letterboxd-web-proxy.md) — writes stay on the native
- * authenticated WebView. A POST rule may ONLY be added if the 2026-07-22
- * Workers-egress re-spike (worker/letterboxd-write-spike.ts) proves otherwise.
- *
- * Pure helpers (no Cloudflare bindings) so the security boundary is unit-tested.
+ * Approved same-origin relay for allowlisted public Letterboxd reads. GET only, with no client
+ * headers or cookies, no redirects, and no CORS headers. Serve only approved HTML or RSS with
+ * a restrictive CSP.
  */
 
 const PROXY_PREFIX = `${LETTERBOXD_WEB_PROXY_BASE_URL}/`;
@@ -45,21 +31,11 @@ const RULES: Array<{ match: (path: string) => boolean }> = [
   // Exact public identities and member watch records, never authenticated AJAX.
   { match: (p) => /^tmdb\/[1-9][0-9]{0,14}\/$/.test(p) },
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/film\/(?=.{1,200}\/$)[a-z0-9]+(?:-[a-z0-9]+)*\/$/.test(p) },
-  // The optional `page/N/` suffix (plan 0024 U9) is the ONE widening this rule
-  // has taken: the watchlist grid pages past the first 28 films. Still one
-  // username, still the watchlist path, still GET-only and unauthenticated —
-  // `N` is bounded to 1–9999 so no unbounded path segment reaches upstream, and
-  // `page/0/` (and any non-numeric suffix) stays a 404.
+  // A public watchlist also permits the same path with a page/N suffix.
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/watchlist\/(page\/[1-9][0-9]{0,3}\/)?$/.test(p) },
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/rss\/$/.test(p) },
-  // The member's public tag index — the vocabulary the log sheet's tag picker
-  // suggests from. Spiked 2026-07-25 (`GET /{user}/tags/`, browser UA):
-  // **200, ~69 KB, NOT Cloudflare-challenged**, unlike the deeper diary pages
-  // in docs/solutions/letterboxd-diary-html-cloudflare-walled.md. Stays inside
-  // the plan 0018 contract exactly as the two rules above do: one username, one
-  // public page, GET-only, unauthenticated, no new headers. The trailing slash
-  // is required, so the deeper filtered shapes (`/tags/films/by/name/`) stay
-  // 404s — this rule never widens into the tag *browse* surface.
+  // The public tags index supplies tag suggestions. Deeper diary HTML is
+  // Cloudflare-challenged.
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/tags\/$/.test(p) },
   // Public list reads (plan 0061); the explicit liked page-1 URL avoids the
   // challenged bare URL. No filtered/detail/edit/likes or API subpaths.
@@ -131,15 +107,11 @@ function isCloudflareChallenge(status: number, body: string): boolean {
   return status === 403 && body.includes('Just a moment');
 }
 
-/** Is this request for the Letterboxd proxy (vs static assets)? */
 export function isLetterboxdProxyRequest(url: URL): boolean {
   return url.pathname.startsWith(PROXY_PREFIX);
 }
 
-/**
- * Relay an allowlisted Letterboxd read. `upstreamFetch` is injectable so the
- * boundary is testable; production passes the Worker's global `fetch`.
- */
+/** Relay an allowlisted public read through the Worker. */
 export async function handleLetterboxdProxy(
   request: Request,
   upstreamFetch: (input: string, init?: RequestInit) => Promise<Response> = globalThis.fetch,
@@ -169,7 +141,6 @@ export async function handleLetterboxdProxy(
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
   } catch {
-    // Timeout / network failure. Nothing sensitive exists to log.
     return jsonError(504, 'upstream unavailable');
   }
 

@@ -5,33 +5,18 @@ import { useLetterboxdPosterQuery } from '@/state/queries/letterboxd';
 
 import { DURATION } from '@/lib/motion';
 
-/**
- * The one place expo-image is imported. Uniwind resolves `className` natively
- * only for components wrapped in `withUniwind` — on a raw third-party
- * component the prop is silently dropped on iOS/Android (it only "works" on
- * web because the class name lands in the DOM where real CSS applies), which
- * left every poster sized 0×0 and invisible on native. Enforced by
- * no-restricted-imports in .oxlintrc.json.
- */
+/** Uniwind silently drops `className` on unwrapped third-party components on native. */
 const StyledImage = withUniwind(ExpoImage);
 
-/**
- * Artwork crossfades in rather than snapping, on the same beat a resolved
- * `SuspenseSection` uses. A default, not a per-call-site prop: every image here
- * arrives over the network, and a cached one paints before the fade can run.
- */
 const DEFAULT_TRANSITION: ImageProps['transition'] = {
   duration: DURATION.swap,
   effect: 'cross-dissolve',
 };
 
 /**
- * `memory-disk`, not expo-image's `disk` default: on Android `disk` sets
- * Glide's `skipMemoryCache(true)`, so a poster is decoded from disk again
- * (40–110ms each) every time its card is re-mounted or recycled — the home
- * carousels' "posters die while scrolling". Glide's memory cache is a bounded
- * LRU sized from the screen, so this costs no unbounded memory.
- * docs/solutions/android-home-carousel-fling-remounts-every-card.md
+ * On Android, expo-image's `disk` default sets Glide's `skipMemoryCache(true)`
+ * and re-decodes from disk on every remount
+ * (docs/solutions/android-home-carousel-fling-remounts-every-card.md).
  */
 const DEFAULT_CACHE_POLICY: ImageProps['cachePolicy'] = 'memory-disk';
 
@@ -44,7 +29,6 @@ function uriOf(source: ImageComponentProps['source']): string | undefined {
     : source != null && typeof source === 'object' && 'uri' in source ? source.uri : undefined;
 }
 
-/** Only a Letterboxd poster pays for the poster-recovery query; rails mount hundreds of images. */
 export function Image(props: ImageComponentProps) {
   return uriOf(props.source)?.startsWith(LETTERBOXD_POSTER_PREFIX) === true
     ? <LetterboxdPosterImage {...props} />
@@ -70,9 +54,4 @@ function LetterboxdPosterImage(props: ImageComponentProps) {
   );
 }
 
-/**
- * Warm the image cache for a batch of URIs (expo-image's disk/memory cache on
- * native, the browser's on web). Resolves once every image has loaded, or as
- * soon as one fails — callers only wait on it, never read the result.
- */
 export const prefetchImages = (uris: string[]): Promise<boolean> => ExpoImage.prefetch(uris);

@@ -24,11 +24,7 @@ import { EpisodeCard } from './episode-card';
 const CARD_LAYOUT =
   Platform.OS === 'ios' ? LinearTransition.duration(DURATION.swap) : undefined;
 
-/**
- * Off-web, where an exit clone reparents the card out of the rail
- * (docs/solutions/reanimated-web-exiting-pulls-child-out-of-flow.md). Exported
- * for the block wrappers, whose exit has to outlive their last card's.
- */
+/** Off-web, where an exit clone reparents the card out of the rail (docs/solutions/reanimated-web-exiting-pulls-child-out-of-flow.md). */
 export const CARD_EXIT =
   Platform.OS === 'web' ? undefined : FadeOut.duration(DURATION.exit);
 
@@ -36,16 +32,11 @@ interface CardSlotProps {
   group: UpNextGroup;
   badges?: CardBadge[];
   action?: ReactNode;
-  /** Shared by the rail so remounted cards do not repeat their entrance. */
   arrival?: { id: string; seen: Set<string> };
   onPress: (item: NormalizedMediaItem) => void;
   onActionsPress: (item: NormalizedMediaItem) => void;
 }
 
-/**
- * An `EpisodeCard` in a rail, carrying the row's exit and layout transitions.
- * Only a new arrival rises in: on load the section rises in as one.
- */
 export function CardSlot({
   group,
   badges,

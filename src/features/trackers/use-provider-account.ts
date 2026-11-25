@@ -8,37 +8,15 @@ import { getProviderSession } from '@/state/session/tokens';
 
 export interface ProviderAccount {
   username?: string;
-  /** Profile picture URL. Absent for providers that don't expose one. */
   avatar?: string;
-  /** The account's public page, once the provider has named it. */
   profileUrl?: string;
-  /** The provider read behind username and avatar is in flight. */
   loading?: boolean;
 }
 
-/**
- * Which account a provider is connected as.
- *
- * The providers answer this two different ways, and the card shouldn't
- * care which: Letterboxd and Serializd capture a username at sign-in and keep
- * it on the session, while Trakt, AniList, Simkl and Hardcover hand back only
- * an OAuth token, so their handle and avatar are read back from the provider.
- * The remote reads are cached forever under their provider's query root (which
- * disconnect purges), so this costs at most one request per provider per
- * session — and usually zero, since AniList's viewer read is the same one the
- * list feeds prime.
- *
- * `loading` is true while the open provider's read is in flight. If the read
- * fails, the fields are absent and the caller falls back to "Connected" and an
- * initial, never an error. A settings label is not worth a Suspense boundary
- * that could blank the card.
- */
 export function useProviderAccount(
   id: ProviderId,
   connected: boolean,
 ): ProviderAccount {
-  // Every hook runs unconditionally (fixed hook count) and is gated by
-  // `enabled` — the same shape `useDiaryFeed` uses for its per-provider reads.
   const trakt = useTraktViewerQuery({ enabled: connected && id === Provider.Trakt });
   const anilist = useAniListViewerQuery({ enabled: connected && id === Provider.AniList });
   const simkl = useSimklUserSettingsQuery({ enabled: connected && id === Provider.Simkl });
@@ -46,9 +24,6 @@ export function useProviderAccount(
 
   if (!connected) return {};
 
-  // Exhaustive by ProviderId, so a new provider has to declare where its
-  // account comes from instead of silently rendering none. `handle` is what
-  // `providerProfileUrl` keys the profile by.
   const remote: Record<ProviderId, ProviderAccount & { handle?: string | number }> = {
     [Provider.Trakt]: { username: trakt.data?.username ?? undefined, avatar: trakt.data?.avatar, handle: trakt.data?.slug, loading: trakt.isLoading },
     [Provider.AniList]: { username: anilist.data?.name, avatar: anilist.data?.avatar?.medium ?? undefined, handle: anilist.data?.name, loading: anilist.isLoading },

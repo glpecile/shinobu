@@ -23,14 +23,12 @@ function listsUrl(provider: ListSummary['provider'], username: string, kind: Lis
   }
 }
 
-/** Each neighbour loads and recovers independently, without remounting the pager. */
 export function ProviderListsPager({ provider, username, kind }: {
   provider: ListSummary['provider'];
   /** Hardcover reads by token: its username only builds the link, and is '' until the viewer loads. */
   username: string;
   kind: ListsKind;
 }) {
-  // A phone has room for the switch's labels or the link's, not both.
   const compact = useWindowDimensions().width < 640;
   const actionUrl = listsUrl(provider, username, kind);
   return <ListsPager action={actionUrl != null && <ProviderListLink iconOnly={compact} provider={provider} size="sm" url={actionUrl} />} kind={kind} renderKind={(pageKind) => {
@@ -48,7 +46,6 @@ export function ProviderListsPager({ provider, username, kind }: {
         </ListsPage>;
       }
       case Provider.Hardcover:
-        // The link is not the content's identity: the username lands after the lists can.
         return <ListsPage contentKey={provider} embedded fallback={<ListsGridSkeleton />} index provider={provider} url={hardcoverListsUrl(username)}>
           <HardcoverListsIndex kind={pageKind} />
         </ListsPage>;

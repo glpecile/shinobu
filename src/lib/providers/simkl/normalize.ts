@@ -119,7 +119,6 @@ export interface SimklWatchedEpisode {
   watchedAt?: string;
 }
 
-/** The next unwatched episode, air instant included when Simkl knows it. */
 export interface SimklNextToWatch {
   /** Absent for anime — Simkl numbers anime absolutely (AniDB convention). */
   season?: number;
@@ -164,8 +163,6 @@ export interface SimklLibrary {
   movies: SimklLibraryEntry[];
   anime: SimklLibraryEntry[];
 }
-
-// ---- Calendar (CDN JSON, plan 0034 KTD-4) ----
 
 export interface SimklCalendarEpisodeRaw {
   season?: number;
@@ -223,8 +220,6 @@ export interface SimklCalendarEntry {
   totalEpisodes?: number;
 }
 
-// ---- Trending (CDN JSON, plan 0034 KTD-8) ----
-
 /** One item of `/discover/trending/{kind}/{interval}_100.json`. */
 export interface SimklTrendingItem {
   title?: string;
@@ -242,8 +237,6 @@ export interface SimklTrendingItem {
 
 export type SimklTrendingKind = 'movies' | 'tv' | 'anime';
 
-// ---- Ratings ----
-
 interface SimklScore {
   rating?: number | null;
   votes?: number | null;
@@ -255,8 +248,6 @@ export interface SimklRatingsRaw {
   IMDB?: SimklScore | null;
   MAL?: (SimklScore & { rank?: number | null }) | null;
 }
-
-// ---- Search by id ----
 
 /** One `/search/id` match — its `ids` carry only `simkl` + `slug`. */
 export interface SimklSearchIdMatch {
@@ -270,8 +261,6 @@ export interface SimklSearchIdMatch {
   /** MAL bridge object, distinct from `ids` in this response only. */
   mal?: { id?: number | string } | null;
 }
-
-// ---- Activities ----
 
 interface SimklActivityBucketRaw {
   all?: string | null;
@@ -298,8 +287,6 @@ export interface SimklActivities {
   movies: SimklActivityBucket;
 }
 
-// ---- User settings ----
-
 export interface SimklUserSettingsRaw {
   user?: { name?: string | null; avatar?: string | null } | null;
   account?: {
@@ -315,8 +302,6 @@ export interface SimklUserSettings {
   accountId?: number;
   timezone?: string;
 }
-
-// ---- Image URLs ----
 
 /**
  * Simkl image fragments compose against the simkl.in CDN with a size suffix
@@ -336,8 +321,6 @@ export function simklFanartUrl(fragment: string | null | undefined): string {
   return `https://simkl.in/fanart/${fragment}_mobile.webp`;
 }
 
-// ---- Shared helpers ----
-
 /**
  * CDN surfaces send numeric ids as strings, and at least one field has shipped
  * corrupted (a trending `anidb` carrying prose — live probe 2026-07-31), so a
@@ -353,7 +336,6 @@ function simklIdFrom(ids: SimklIds | undefined): number | undefined {
   return numericId(ids?.simkl ?? ids?.simkl_id);
 }
 
-/** Inverse of the `simkl-<id>` minting below: the Simkl id behind an item id, or null. */
 export function parseSimklItemId(id: string): number | null {
   const match = /^simkl-(\d+)$/.exec(id);
   return match == null ? null : Number(match[1]);
@@ -390,8 +372,6 @@ function mediaTypeFor(
   if (bucket === 'shows') return { type: 'TV' };
   return animeType === 'movie' ? { type: 'ANIME', isFilm: true } : { type: 'ANIME' };
 }
-
-// ---- Library (all-items) ----
 
 /** "S02E05" → { season: 2, episode: 5 }; anything else is unusable. */
 function parseEpisodePointer(
@@ -523,8 +503,6 @@ export function normalizeAllItems(
   return { shows: bucket('shows'), movies: bucket('movies'), anime: bucket('anime') };
 }
 
-// ---- Calendar ----
-
 const FINALE_TYPES: Record<number, SimklFinaleType> = {
   1: 'midseason',
   2: 'season',
@@ -573,8 +551,6 @@ export function normalizeCalendarFile(raw: SimklCalendarFile): SimklCalendarEntr
   }
   return entries;
 }
-
-// ---- Trending ----
 
 const TRENDING_MEDIA_TYPE: Record<SimklTrendingKind, SimklLibraryBucket> = {
   movies: 'movies',
@@ -628,8 +604,6 @@ export function normalizeTrendingItem(
   };
 }
 
-// ---- Ratings ----
-
 function simklScore(
   source: typeof Provider.Simkl | 'imdb' | 'mal',
   score: SimklScore | null | undefined,
@@ -653,8 +627,6 @@ export function normalizeRatings(raw: SimklRatingsRaw | null): NormalizedRating[
     ...simklScore('mal', raw?.MAL, raw?.MAL?.rank),
   ];
 }
-
-// ---- Search by id ----
 
 export function normalizeSearchIdMatch(
   raw: SimklSearchIdMatch,
@@ -698,8 +670,6 @@ export function normalizeSearchIdMatch(
   };
 }
 
-// ---- Activities ----
-
 function activityBucket(
   raw: SimklActivityBucketRaw | null | undefined,
 ): SimklActivityBucket {
@@ -717,8 +687,6 @@ export function normalizeActivities(raw: SimklActivitiesRaw): SimklActivities {
     movies: activityBucket(raw.movies),
   };
 }
-
-// ---- User settings ----
 
 /**
  * Null username rather than a failure when the payload doesn't carry one —

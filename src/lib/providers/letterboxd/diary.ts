@@ -28,9 +28,7 @@ export interface LetterboxdDiaryItem {
   year?: number;
   /** Bare `YYYY-MM-DD` diary date (no time — see plan 0016 KTD4). */
   watchedDate: string;
-  /** `letterboxd:rewatch` = Yes. */
   rewatch: boolean;
-  /** RSS `letterboxd:memberLike` = Yes. */
   liked?: boolean;
   /** `tmdb:movieId` — the cross-provider identity that lets a fanned-out log collapse. */
   tmdbId?: number;
@@ -136,15 +134,7 @@ export function normalizeDiaryItem(
   };
 }
 
-/**
- * The user's public diary from the RSS feed (plan 0016 U3). Only page 1 has
- * data — RSS is a single recent window and deeper HTML pages are Cloudflare-
- * walled (docs/solutions/letterboxd-diary-html-cloudflare-walled.md) — so later
- * pages return `[]` (exhaustion), dropping Letterboxd out of the watermark merge
- * early. A 404 (or a non-feed body) is a private/renamed/deleted profile: a
- * tagged provider error surfaced under the diary's failure banner, never a
- * silent empty diary. Native-only on web (no CORS) — gated in the query layer.
- */
+/** Letterboxd diary history is one RSS page. Deeper HTML is Cloudflare-walled. */
 export function getDiary(
   deps: LetterboxdDeps,
   params: { page: number },

@@ -76,7 +76,6 @@ describe('parseTagsPage', () => {
   });
 });
 
-/** Records the requested URL so path construction is assertable. */
 function recordingDeps(
   response: () => Response,
   urls: string[],
@@ -102,8 +101,6 @@ describe('getUserTags', () => {
     expect(tags[0]).toEqual({ name: 'criterion collection', count: 11 });
   });
 
-  // The only caller maps every failure to no suggestions, so the error
-  // class is not a contract here.
   test('a failing page fails rather than resolving an empty vocabulary', async () => {
     const exit = await Effect.runPromiseExit(
       getUserTags(recordingDeps(() => new Response('', { status: 500 }), [])),

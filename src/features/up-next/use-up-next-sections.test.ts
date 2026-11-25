@@ -5,10 +5,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import type { UpNextEntry } from './types';
 
-// Import-time stubs only: this module sits next to the Suspense hook, so it
-// pulls in the query layer's MMKV, native-fetch and react-native imports, none
-// of which load under bun. Nothing the filter *does* is mocked — it takes its
-// hidden list as an argument, which is the whole reason it is a pure export.
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -25,10 +21,6 @@ mock.module('@/lib/http/client', () => ({
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
-// `@/state/queries/up-next` imports `./mapping`, which imports `./simkl`
-// (plan 0034 U7), whose auth re-export reaches expo-crypto — mirror the
-// surface it consumes instead of loading the whole expo package under bun
-// (the `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
@@ -37,13 +29,6 @@ mock.module('expo-crypto', () => ({
 }));
 
 const { visibleEntries } = await import('./use-up-next-sections');
-
-/**
- * The hidden-items half of plan 0030 U8 (R8). The hook itself is one line of
- * store plumbing; the contract worth guarding is what the pure filter does with
- * a *film*, whose two release rows share a single media id — the one shape the
- * entry union introduced that this filter never had to handle before.
- */
 
 function film(slug: string): NormalizedMediaItem {
   return {
@@ -109,8 +94,6 @@ describe('visibleEntries', () => {
 
     const visible = visibleEntries(entries, [hide(dune)]);
 
-    // Both rows share the film's media id, and hiding a film means the film —
-    // leaving the streaming row standing would be the hide half-applied.
     expect(visible.map((entry) => entry.id)).toEqual(['trakt-severance-s1e1']);
   });
 

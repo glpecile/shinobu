@@ -18,29 +18,12 @@ import { Badge } from './badge';
 import { useCardArt } from './use-card-art';
 import { STACK_OFFSET } from './metrics';
 
-/**
- * The landscape Up Next card (plan 0019 U5) — art (see `useCardArt`), title,
- * the entry line (`groupLabel`: an episode code, a film's release kind, or a
- * batch's season and count), a badge slot over the art and an optional trailing
- * action. Per-episode stills are deferred follow-up work; the show backdrop
- * stands in.
- *
- * A group of more than one episode renders as a **stack**: two dimmed card
- * backs peeking out behind the face card, plus a count chip. Depth carries the
- * meaning — the row still reads as one slot per show, which is the whole point
- * of collapsing a season drop. The stack is not expandable; tapping it opens the
- * show, where the episodes already live. A single episode the episode route can
- * address (`episodeHref`) opens that episode instead.
- */
 interface EpisodeCardProps {
   group: UpNextGroup;
   badges?: CardBadge[];
-  /** Trailing action — the quick-log button; Calendar cards have none. */
   action?: ReactNode;
-  /** Opens the show — the stack, release and unaddressable-episode fallback. */
   onPress?: (item: NormalizedMediaItem) => void;
   onActionsPress?: (item: NormalizedMediaItem) => void;
-  /** Card width class; the agenda row overrides the carousel default. */
   className?: string;
 }
 
@@ -55,37 +38,28 @@ export function EpisodeCard({
   const { lead, entries } = group;
   const title = lead.item.title.trim() || 'Untitled';
   const pushRoute = usePushRoute();
-  // The episode screen places the episode from the show's details.
   const prefetchDetails = usePrefetchMediaDetails();
   const art = useCardArt(lead.item);
   const label = groupLabel(group);
   const stacked = entries.length > 1;
   const href = stacked ? undefined : episodeHref(lead);
-  // Web-only hover ⋯, as on the media card; it takes the stack count's corner.
   const [hovered, setHovered] = useState(false);
   const showActionsButton =
     onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
 
   return (
     <View className={className}>
-      {/* The ⋯ is a sibling of the pressable so its click can't bubble into the
-          card press. */}
       <View
         className="w-full h-36"
         onPointerEnter={() => setHovered(true)}
         onPointerLeave={() => setHovered(false)}
       >
         <PresstableScale
-          // The badges carry information that exists nowhere else on the card —
-          // the air time above all — so they belong in the spoken label too.
           accessibilityLabel={[
             title,
             label,
             ...badges.map((badge) => badge.label),
           ].join(', ')}
-          // No `overflow-hidden` here any more: the card backs sit *outside* this
-          // box (up and to the right) and clipping them would erase the stack.
-          // The art below keeps its own rounding and clipping instead.
           className="w-full h-36"
           onLongPress={
             onActionsPress == null ? undefined : () => onActionsPress(lead.item)
@@ -100,10 +74,6 @@ export function EpisodeCard({
           }}
         >
           {stacked && (
-            // Drawn before the art so the art paints over them. Flat surface
-            // fills rather than copies of the poster: they read as "more cards
-            // behind this one", and repeating the artwork three times at three
-            // opacities is the visual noise this whole change removes.
             <>
               <View
                 className="absolute inset-0 rounded-lg border border-border/50 bg-surface opacity-30"
@@ -145,10 +115,6 @@ export function EpisodeCard({
           </View>
 
           {stacked && !showActionsButton && (
-            // Sits on the face card's own corner rather than on the backs, so it
-            // stays legible whatever the artwork behind it does. The count is
-            // already in the label below and in the accessibility label, so this
-            // is decoration for the eye, not the only place the number appears.
             <View className="absolute top-2 right-2 rounded-full bg-black/70 border border-border/60 px-2 py-0.5">
               <Text className="text-accent-foreground font-sans-semibold text-xs">
                 {entries.length}
@@ -174,9 +140,6 @@ export function EpisodeCard({
           >
             {title}
           </Text>
-          {/* Morphs in place when a quick-log advances the card. One line, like
-              the title: an episode title can be a paragraph and the card's
-              height is the row's. */}
           <MorphText
             className="text-muted font-sans text-xs mt-0.5"
             numberOfLines={1}

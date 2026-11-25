@@ -3,19 +3,6 @@ import { Text, View } from 'react-native';
 
 import { cn } from '@/lib/cn';
 
-/**
- * A titled page section. `className` is layout only.
- *
- * ```tsx
- * <Section>
- *   <Section.Header>
- *     <Section.Title>Filmography</Section.Title>
- *     <Section.Count>208 titles</Section.Count>
- *   </Section.Header>
- *   {children}
- * </Section>
- * ```
- */
 export function Section({
   className,
   children,

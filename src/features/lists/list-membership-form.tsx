@@ -31,10 +31,8 @@ import { traktQueryKeys } from '@/state/queries/trakt';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/** What search and recovery need of a list, which a list being created also has. */
 type ListSearchTarget = Pick<ListEditTarget, 'provider' | 'title' | 'url'>;
 
-/** Opens the list on its provider. A failed Hardcover write passes `item`, and opens the book instead. */
 function ListRecovery({ target, item }: { target: ListSearchTarget; item?: NormalizedMediaItem }) {
   const itemUrl = target.provider === Provider.Hardcover && item != null ? providerItemUrl(target.provider, item) : null;
   return <Button icon={<Button.Icon name="open-outline" />} label={`Open on ${PROVIDERS[target.provider].label}`} onPress={() => void openExternalUrl(itemUrl ?? target.url)} variant="quiet" />;
@@ -51,7 +49,6 @@ function copy(provider: ListSearchTarget['provider']) {
   }
 }
 
-/** Shared inline confirmation for add search and the per-entry actions sheet. */
 export function ListMembershipForm({ target, item, present, entryId, subtitle, onBack, onDone }: {
   target: ListEditTarget;
   item: NormalizedMediaItem;
@@ -120,7 +117,6 @@ function ResultRows({ query, results, items, onSelect }: ResultsProps & { result
   return <List
     data={results}
     estimatedItemSize={76}
-    // The list editor keeps search open while picking, so rows follow `items`.
     extraData={items}
     keyExtractor={(item) => item.id}
     keyboardShouldPersistTaps="handled"
@@ -152,7 +148,6 @@ function ResultRows({ query, results, items, onSelect }: ResultsProps & { result
   />;
 }
 
-/** Search films, shows or books for a list; `items` marks what it already holds. */
 export function ListSearch({ target, items, onSelect, onClose }: {
   target: ListSearchTarget;
   items: readonly NormalizedMediaItem[];
@@ -163,7 +158,6 @@ export function ListSearch({ target, items, onSelect, onClose }: {
   const query = useDeferredValue(text.trim());
   const token = useTmdbToken();
   const source = token != null && token !== '' ? 'tmdb' : getClientIdForProvider(Provider.Trakt) ? Provider.Trakt : null;
-  // Hardcover searches its own catalogue, so books need neither source.
   const books = target.provider === Provider.Hardcover;
   const fetching = useIsFetching({ queryKey: books ? hardcoverQueryKeys.search(query) : source === Provider.Trakt ? traktQueryKeys.search(query, 20) : tmdbQueryKeys.search(query), exact: true }) > 0;
   const { noun, add, find } = copy(target.provider);

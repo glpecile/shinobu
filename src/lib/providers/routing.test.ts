@@ -17,7 +17,6 @@ const ALL: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd'];
 const ALL4: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
 const ALL5: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd', 'simkl'];
 
-/** Routing inputs are enriched items — externalIds drive cross-provider matches. */
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
 
 // Letterboxd writes movies as diary entries (registry canWrite: true, plan
@@ -94,10 +93,6 @@ describe('reading items route by the id they carry', () => {
   });
 });
 
-// Plan 0022: Letterboxd's diary write needs the native sign-in WebView
-// session, so its write is unsupported on web (registry
-// unsupportedWritePlatforms) — routing splits it into a manual target there,
-// not out of the target list entirely.
 describe("splitWriteTargets('log')", () => {
   it('allows supported userscript-backed web logs and watchlist writes', () => {
     const item = { type: 'MOVIE' as const, ...ids({ tmdb: 348 }) };
@@ -131,14 +126,6 @@ describe("splitWriteTargets('log')", () => {
   });
 });
 
-// Plan 0031 R5/R6/R7/KTD-1: watchlist targets come from `watchlistWrite`, never
-// from `canWrite`. All four providers declare 'write' for the add — Trakt and
-// AniList from the start, Letterboxd since plan 0033 (U6's capture), Serializd
-// since U10's probe discharged KTD-10
-// (docs/solutions/serializd-watchlist-clears-watched.md). Serializd's *remove*
-// stays 'manual' (gated on its read leg, R32/R35) — so it is a manual row
-// there, never absent. Letterboxd's web ban is platform-level
-// (`unsupportedWritePlatforms`), not a declaration.
 describe("splitWriteTargets('watchlist')", () => {
   it('a movie with all four connected: Trakt + Letterboxd writable (ios)', () => {
     expect(
@@ -171,7 +158,6 @@ describe("splitWriteTargets('watchlist')", () => {
       expect(
         splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL4, 'ios', 'watchlist'),
       ).toEqual({ writable: ['trakt'], manual: [] });
-      // …and the log verb is untouched by the watchlist declaration.
       expect(
         splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL4, 'ios', 'log'),
       ).toEqual({ writable: ['trakt', 'serializd'], manual: [] });
@@ -181,7 +167,6 @@ describe("splitWriteTargets('watchlist')", () => {
   });
 });
 
-// #227: pause and drop reach series and books only, from their own declaration.
 describe("splitWriteTargets('tracking')", () => {
   it('a series: AniList, Serializd and Simkl write, Trakt is a manual link', () => {
     expect(
@@ -256,27 +241,19 @@ describe('every applicable provider lands in exactly one bucket', () => {
 
   for (const { name, item, types } of fixtures) {
     for (const capability of capabilities) {
-      // Platform only moves a target between buckets, never out of both.
       it(`${name} / ${capability}`, () => {
         const { writable, manual } = splitWriteTargets(item, ALL5, 'web', capability);
         const applicable = ALL5.filter((id) =>
           types.some((type) => PROVIDERS[id].mediaTypes.includes(type)),
         );
 
-        // No provider whose mediaTypes apply is missing from the report…
         expect([...writable, ...manual].toSorted()).toEqual(applicable.toSorted());
-        // …and none is in both.
         expect(writable.filter((id) => manual.includes(id))).toEqual([]);
       });
     }
   }
 });
 
-// Plan 0034 U6/U7: the write leg landed in U6 (`canWrite: true`,
-// `watchlistWrite: 'write'`) and the read leg in U7 (`canRead: true`) — the
-// only capability still gated is the watchlist *remove* (U4's live-probe gate
-// on `/sync/history/remove`'s whole-library semantics). The full fan-out
-// expectations now hold for both writes and feed aggregation.
 describe('Simkl write + read fan-out (plan 0034 U6/U7)', () => {
   it('TV logs fan out to Trakt + Serializd + Simkl', () => {
     expect(providersForWrite({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'log')).toEqual([

@@ -35,43 +35,11 @@ interface FeedRowCallbacks {
   onItemActions: (item: NormalizedMediaItem) => void;
 }
 
-/**
- * The home feed rows, one per feed slot. Each is a self-contained suspense
- * section (AGENTS.md "Loading & Error States"): it owns its query, applies
- * the hidden-items filter, and is mounted by the screen under its own
- * `SuspenseSection` — one provider failing or loading slowly never blocks or
- * blanks the rows around it.
- */
-
-/**
- * The row whose source is **every** connected provider's watchlist, merged
- * (plan 0031 R25). No `provider` mark and no `username`: it is not one
- * provider's row, which is why a Trakt-only or AniList-only user sees it at
- * all. Its single `SuspenseSection` is unchanged and still correct — one row is
- * one slot; the merged *grid*'s per-leg failure handling is the divergence, and
- * it lives on the screen (KTD-12).
- *
- * It does **not** replace `LetterboxdWatchlistRow` below. Plan 0031 originally
- * had it do so; the owner reversed that on 2026-07-28, and the reason holds up:
- * merged with Trakt shows and AniList plans, a curated Letterboxd film list
- * stops being browsable as itself. Two rows, two questions.
- *
- * It was titled "Up Next to Watch" until 2026-08-01 (owner). Two problems with
- * that: it named an *agenda*, which is `UpNextRow`'s job and a different
- * question (`features/watchlist/types.ts` is emphatic that a watchlist is not
- * the agenda), and it shared no vocabulary with the `/watchlist` screen behind
- * its own "View all". "Your Watchlist" is the possessive of the two watchlist
- * rows because this is the canonical one — the Letterboxd row below is a slice
- * of it and reads as "[mark] Watchlist".
- */
 export function YourWatchlistRow({
   onItemActions,
 }: FeedRowCallbacks) {
   const { entries } = useSuspenseWatchlistQuery();
   const pushRoute = usePushRoute();
-  // Capped like the other unbounded personal row: a Trakt watchlist is
-  // routinely hundreds of items and this is browse, not the archive — the
-  // whole list is one "View all" away.
   const items = capFeedRow(entries.map((entry) => entry.item));
   return (
     <MediaCarousel
@@ -85,12 +53,6 @@ export function YourWatchlistRow({
   );
 }
 
-/**
- * The manga the user is reading or rereading on AniList and the books they are
- * reading on Hardcover, most recently updated first (plan 0117 M3, B2). Cards
- * follow Continue Watching's layout and read "Ch 12 / 59" under the cover,
- * or "p. 142 / 380" or "37%" in the reader's unit. The row is capped like the other personal rows.
- */
 export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
   const items = capFeedRow(useVisibleItems(useSuspenseContinueReadingQuery()));
   const arrivalHistory = useArrivalHistory(items.map((item) => item.id));
@@ -112,7 +74,6 @@ export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
         estimatedItemSize={140}
         extraData={inPages}
         keyExtractor={(item) => item.id}
-        // The cover is 48px taller than the episode art.
         style={{ height: episodeCardRailHeight(fontScale, 48) }}
         renderItem={({ item }) => (
           <View className="mr-3">
@@ -126,30 +87,6 @@ export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
   );
 }
 
-/**
- * Letterboxd's own films-only watchlist row (restored 2026-07-28 by owner
- * decision — plan 0031 R25 had folded it into the merged row above).
- *
- * Distinct from that row in every way that matters to a reader: it keeps the
- * `provider` mark — which is also why the title does **not** name Letterboxd
- * (the icon beside it already does; owner note 2026-07-29) — and it carries its
- * own `collapseKey` so collapsing one never collapses the other. The overlap is
- * the point, not a bug — a Letterboxd film appears in both, answering "what's on
- * my Letterboxd" here and "what am I meaning to watch" above.
- *
- * It gave up "Your Watchlist" to the merged row on 2026-08-01 and reads as
- * "[mark] Watchlist" now. The possessive belongs to the row that holds every
- * tracker; this one is one tracker's slice of it, and the mark says which.
- *
- * Its "View all" used to open a whole second screen (`/watchlist/letterboxd`);
- * since 2026-08-01 it opens the merged grid pre-filtered to Letterboxd, which
- * is the same view without the duplicate surface — and the user can widen it
- * from there.
- *
- * Reads page 1 only (28 films); the rest lives behind the paginated grid
- * (plan 0024 U9). No extra request — the merged gather already reads this same
- * cache entry.
- */
 export function LetterboxdWatchlistRow({
   username,
   onItemActions,
@@ -207,8 +144,6 @@ export function SeasonalAnimeRow({
 }: FeedRowCallbacks & { season: AnimeSeasonWindow }) {
   const { data } = useSuspenseSeasonalAnimeQuery(season);
   const pushRoute = usePushRoute();
-  // The query reads AniList's full page (50) for the seasons explorer; the
-  // row stays the browse size of the trending rows.
   const items = capFeedRow(useVisibleItems(data));
   return (
     <MediaCarousel
@@ -222,14 +157,6 @@ export function SeasonalAnimeRow({
   );
 }
 
-/**
- * The cour's anime films (owner, 2026-09-10) — "Films of Summer 2026" under
- * the AniList mark, where "Anime Movies of …" said the same thing twice and
- * truncated for it. The same cour as the series row above it, so the two read
- * as one season rather than a season next to a year; "View all" opens the
- * explorer on that cour with the film filter on — the same list, one cache
- * entry.
- */
 export function AnimeMoviesRow({
   season,
   onItemActions,
@@ -249,10 +176,6 @@ export function AnimeMoviesRow({
   );
 }
 
-/**
- * The feed's sign-off. `arrow-up` is the FAB's glyph for the same verb
- * (`components/scroll-to-top-fab`).
- */
 export function FeedEnd({ onPress }: { onPress: () => void }) {
   return (
     <View className="items-center gap-3 mt-2 px-4">

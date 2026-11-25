@@ -10,7 +10,6 @@ import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import { airedAnimeEpisodes, catalogueCatchUpQueue, type CatchUpEpisode } from './queue';
 
-/** A detail-page log uses the same catalogue and watched evidence as its season rows. */
 export function useEpisodeLogQueue(request: LogRequest): CatchUpEpisode[] | null {
   const { item } = request;
   const first: CatchUpEpisode = request.episodes?.[0] ?? { number: request.entryEpisodes![0] };
@@ -43,7 +42,6 @@ export function useEpisodeLogQueue(request: LogRequest): CatchUpEpisode[] | null
     trakt.isLoading || simkl.isLoading || simklAnime.isLoading || canonicalAnilist.isLoading) return null;
   if (canonicalAnilist.isError) return [first];
 
-  // A failed progress read cannot prove which later episodes are unwatched.
   if (canonical
     ? connected.includes(Provider.Trakt) && item.externalIds.trakt != null
       ? trakt.isError
@@ -80,8 +78,6 @@ export function useEpisodeLogQueue(request: LogRequest): CatchUpEpisode[] | null
   const total = entry?.item.totalEpisodes;
   const airedCount = total != null && entry?.notAiredEpisodes != null
     ? total - entry.notAiredEpisodes : null;
-  // Simkl-only anime has no AniList schedule. Its own aired count and watched
-  // keys are the same evidence the Continue Watching chain already trusts.
   if (item.externalIds.anilist == null && airedCount != null) {
     for (let number = first.number + 1; number <= Math.min(airedCount, first.number + 200); number++) {
       if (number <= progress || entry?.watchedKeys.has(`1-${number}`)) continue;

@@ -13,10 +13,8 @@ import { withUniwind } from '@/lib/with-uniwind';
  */
 export const AnimatedView = withUniwind(Animated.View);
 
-/** Same wrapper for text whose colour transitions (a selected-state crossfade). */
 export const AnimatedText = withUniwind(Animated.Text);
 
-/** Same wrapper for a scroll view whose offset drives a shared value (a pager). */
 export const AnimatedScrollView = withUniwind(Animated.ScrollView);
 
 /**
@@ -36,10 +34,7 @@ const ScrollView = withUniwind(
 );
 type GestureScrollViewProps = ComponentProps<typeof ScrollView>;
 
-/**
- * Hands its `refreshControl` the scroll offset the pull is drawn from. Android
- * has no top overscroll: the refresh control moves the content itself.
- */
+/** Android has no top overscroll, so the refresh control wraps and moves the scroll content. */
 const PullScrollView = withUniwind(function PullScrollView({
   ref,
   overScrollMode = 'never',
@@ -82,7 +77,6 @@ function assignRef<T>(ref: Ref<T> | undefined, node: T) {
   else if (ref != null) ref.current = node;
 }
 
-/** Same wrapper for a field whose border transitions on focus. */
 export const AnimatedTextInput = withUniwind(
   Animated.createAnimatedComponent(TextInput),
 );

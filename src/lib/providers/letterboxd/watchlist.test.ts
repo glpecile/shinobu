@@ -97,7 +97,6 @@ describe('getWatchlist', () => {
   });
 });
 
-/** Records the requested URL so page-path construction is assertable. */
 function recordingDeps(
   response: () => Response,
   urls: string[],

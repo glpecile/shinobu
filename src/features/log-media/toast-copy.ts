@@ -2,24 +2,14 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import type { LogMediaResult } from './fan-out';
 
-/**
- * The log verb's clean-report toast (plan 0032 R9): fired only when
- * `isCleanWriteReport` lets the sheet close, so a reconcile skip is the one
- * extra fact it can carry ("AniList already had it") — a failure or a
- * reasoned skip never reaches a toast, because a toast can't carry the link
- * that is the recourse (R7). Pure, so the copy is testable without the toast library.
- */
 const list = (ids: readonly ProviderId[]) =>
   ids.map((id) => PROVIDERS[id].label).join(', ');
 
 export function logToastCopy(
   report: Pick<LogMediaResult, 'rewatch' | 'succeeded' | 'skipped'> & { queued?: readonly ProviderId[] },
-  /** What a repeat of this item is called: manga is reread, not rewatched. */
   repeat: 'rewatch' | 'reread' = 'rewatch',
-  /** A manga chapter range, e.g. "chapters 6–12", which the title names. */
   span?: string,
 ): { title: string; message: string } {
-  // A queued provider is not logged yet, and the toast must not say it is.
   const later =
     report.queued != null && report.queued.length > 0
       ? `${list(report.queued)} when you are back online`
@@ -37,10 +27,6 @@ export function logToastCopy(
   };
 }
 
-/**
- * A catch-up episode's toast when its report isn't clean but the sheet was
- * already dismissed. Report where it landed and preserve provider notes.
- */
 export function episodeNoticeToastCopy(
   code: string,
   report: Pick<LogMediaResult, 'succeeded' | 'failed' | 'outcomes'>,

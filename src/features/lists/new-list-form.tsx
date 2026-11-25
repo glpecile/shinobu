@@ -38,7 +38,6 @@ import { fitsProvider, newListSchema, type ListProvider, type NewListForm as New
 
 export type { ListProvider };
 
-/** Where each provider's own editor lives: the recovery when Shinobu can't save. Hardcover's is the member's lists page. */
 function editorUrl(provider: ListProvider, username: string) {
   switch (provider) {
     case Provider.Letterboxd:
@@ -63,7 +62,6 @@ const SHARING_OPTIONS: readonly { value: LetterboxdListSharing; label: string }[
   { value: 'You', label: 'Private' },
 ];
 
-/** Letterboxd's own descriptions, from its editor's `sharePolicyDetails`. */
 const SHARING_NOTE: Record<LetterboxdListSharing, string> = {
   Public: 'Anyone, and it appears on your profile.',
   Anyone: 'Anyone with the share link.',
@@ -77,7 +75,6 @@ const HARDCOVER_SHARING_OPTIONS: readonly { value: LetterboxdListSharing; label:
   { value: 'You', label: 'Private' },
 ];
 
-/** `Anyone` is a choice carried over from Letterboxd, which the schema rejects for Hardcover. */
 const HARDCOVER_SHARING_NOTE: Record<LetterboxdListSharing, string> = {
   Public: 'Anyone, and it appears on your profile.',
   Anyone: 'Hardcover has no link-only lists. Pick another.',
@@ -123,23 +120,13 @@ function SwitchRow({ label, note, value, onChange, disabled }: { label: string; 
   );
 }
 
-/**
- * Letterboxd's list editor, for whichever list provider is connected: details,
- * who sees it, ranking, and the first titles. `sharing` holds Letterboxd's and
- * Hardcover's privacy, `isPrivate` Serializd's. `newListSchema` holds the rules;
- * errors appear on submit and then follow each edit. A list only Letterboxd can
- * show (anything but Public) ends on a confirmation instead of a page Shinobu
- * can't read.
- */
 export function NewListForm({ providers, initialProvider, initialItems }: {
-  /** Connected list providers and their accounts, at least one. */
   providers: readonly { provider: ListProvider; username: string }[];
   initialProvider: ListProvider;
   initialItems: NormalizedMediaItem[];
 }) {
   const router = useRouter();
   const { control, handleSubmit, getValues, setValue, formState: { errors, isSubmitted } } = useForm<NewListFormValues, unknown, NewList>({
-    // Every pick stays across a provider switch; each provider takes what fits it.
     defaultValues: { provider: initialProvider, name: '', description: '', tags: 'shinobu, ', sharing: 'Public', isPrivate: false, ranked: false, allowsComments: false, items: initialItems },
     resolver: zodResolver(newListSchema),
   });
@@ -159,7 +146,6 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
   const writable = provider !== Provider.Letterboxd || (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
   const busy = mutation.isPending;
 
-  // Read through getValues: recycled search rows can hold an older render's callback.
   function setItems(next: (current: NormalizedMediaItem[]) => NormalizedMediaItem[]) {
     setValue('items', next(getValues('items')), { shouldValidate: isSubmitted });
   }
@@ -219,7 +205,6 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
     haptics.confirm();
     mutation.mutate(list, {
       onSuccess: (result) => {
-        // The list exists either way; Hardcover names the books it did not take.
         const failed = result.provider === Provider.Hardcover ? result.failed : [];
         if (failed.length > 0) toast.error('List created, but some books were not added', failed.join(', '));
         else toast.success('List created', list.draft.name);
@@ -351,11 +336,9 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
   );
 }
 
-/** The editor's frame: header and document title over the form, or a way to connect. */
 export function NewListScreen({ providers, initialProvider, initialItems = [] }: {
   providers: readonly { provider: ListProvider; username: string }[];
   initialProvider: ListProvider | null;
-  /** The title the editor was opened for, such as from a details screen's Add to list. */
   initialItems?: NormalizedMediaItem[];
 }) {
   const pushRoute = usePushRoute();

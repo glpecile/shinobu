@@ -1,87 +1,4 @@
-/**
- * U10 — Serializd watched/watchlisted mutual-exclusivity probe
- * (plan 0031, KTD-10 named risk, stop-condition (c)).
- *
- * The sibling of `worker/letterboxd-write-spike.ts`: a **standing harness**, not
- * a one-off. It exists because KTD-10's whole guard rests on an inference from
- * Serializd's product copy — that a show cannot be watchlisted and watched at
- * once — and shipping a data-loss guard against an inference is how a data
- * contract rots. This turns it into a recorded fact.
- *
- * It is account-bound and cannot run in CI: it needs a real token and a real
- * show whose watched state you are willing to lose.
- *
- * ## Run `--exclusivity` first — it usually answers the question for free
- *
- * ```
- * bun scripts/serializd-watchlist-spike.ts --exclusivity --user <username>
- * ```
- *
- * That mode needs **no credentials and writes nothing**: it intersects the two
- * public account-wide lists (`watchedpage_v2` / `watchlistpage_v2`, both of which
- * return `items[].seasonIds`) and reports any season id present in both. One
- * such season disproves API-level exclusivity outright, because it could not
- * exist if a watchlist write cleared watched state — which is exactly what the
- * destructive steps below were written to find out. On 2026-07-30 this found 13
- * of them and settled U10 without a single write
- * (`docs/solutions/serializd-watchlist-clears-watched.md`).
- *
- * Reach for the authenticated steps only if that mode finds **no** overlap, i.e.
- * the question is genuinely still open.
- *
- * ## Known drift: steps 1/3/4b/5b cannot run as written
- *
- * They all read `GET /user/{username}/show/{tmdbId}/progress`, which has been
- * **removed from Serializd's API** — 404 for every show, absent from the
- * DEBUG-exposed URL map, no per-show replacement. The steps are left intact
- * (they come back to life if it returns) and the harness now says so rather than
- * silently reporting an empty `watchedSeasons` as "S1 didn't survive".
- *
- * ## Running it
- *
- * ```
- * # Read-only by default — captures bodies, writes nothing.
- * SERIALIZD_EMAIL=… SERIALIZD_PASSWORD=… bun scripts/serializd-watchlist-spike.ts --tmdb 1396
- *
- * # Or with a token you already have (skips the login POST):
- * SERIALIZD_TOKEN=… SERIALIZD_USERNAME=… bun scripts/serializd-watchlist-spike.ts --tmdb 1396
- *
- * # Steps 2–3: the *safe* write — S2's id only, S1 must survive.
- * … --tmdb 1396 --write
- *
- * # Steps 4–6: the destructive cases. Only on a throwaway show.
- * … --tmdb 1396 --write --destructive
- * ```
- *
- * Output is a markdown report on stdout, ready to land at
- * `docs/solutions/serializd-watchlist-clears-watched.md` — which is the actual
- * deliverable, per AGENTS.md § Compound Knowledge. Pipe it:
- * `… > docs/solutions/serializd-watchlist-clears-watched.md`.
- *
- * ## Preparing the account (do this first, by hand, on serializd.com)
- *
- * Pick a show with **at least two regular seasons** that you do not care about.
- * Mark **season 1 watched using the site's season-level control** — not
- * episode-by-episode. That distinction is a stated precondition of
- * stop-condition (c): if a wholesale-marked season is absent from `/progress`'s
- * `watchedSeasons`, the guard has no input that can see it and fails *open*,
- * which is worse than the hazard it guards. Step 1 checks exactly that and
- * refuses to continue if it doesn't hold.
- *
- * ## Reading the result
- *
- * - (3) preserves S1 and (4) destroys it → KTD-10's filter is exactly right;
- *   flip `watchlistWrite` to `'write'` in `registry.ts`.
- * - (3) *also* destroys S1 → the API clears at show level regardless of
- *   `season_ids`; the filter protects nothing, **stop-condition (c) fires**, and
- *   Serializd stays `'manual'`.
- * - neither destroys anything → keep the filter anyway (it still produces the
- *   honest "already watched" skip rather than a silent `ok`) and record that the
- *   exclusivity is a UI convention, not an API one.
- *
- * No RN/Expo imports here, deliberately — this runs under plain bun, so it
- * shares only the header/base constants the Worker also shares (KTD4).
- */
+// Standing Serializd watchlist/watched exclusivity probe (docs/solutions/serializd-watchlist-clears-watched.md).
 import {
   SERIALIZD_APP_HEADERS,
   SERIALIZD_UPSTREAM_BASE_URL,
@@ -116,7 +33,7 @@ interface ListItem {
   seasonIds: number[];
 }
 
-/** One account-wide list, every page. `sort_by` is mandatory — omitting it 500s. */
+// Serializd 500s if `sort_by` is omitted.
 async function allPages(username: string, list: string): Promise<ListItem[]> {
   const items: ListItem[] = [];
   let page = 1;
@@ -134,11 +51,6 @@ async function allPages(username: string, list: string): Promise<ListItem[]> {
   return items;
 }
 
-/**
- * The credential-free, write-free decisive test (see the header): a season id
- * present in BOTH the watched and the watchlisted list cannot exist if a
- * watchlist write clears watched state.
- */
 async function exclusivityCheck(username: string) {
   const [watched, watchlisted] = await Promise.all([
     allPages(username, 'watchedpage_v2'),
@@ -186,7 +98,6 @@ async function exclusivityCheck(username: string) {
   );
 }
 
-/** Every request the probe makes, logged verbatim — the report *is* the evidence. */
 const log: string[] = [];
 
 function record(heading: string, body: unknown) {
@@ -212,13 +123,11 @@ async function call(
   try {
     body = JSON.parse(text) as unknown;
   } catch {
-    // Non-JSON bodies are themselves a finding (Render cold-start HTML) — keep
-    // the text rather than throwing it away.
+    // Serializd on Render can return cold-start HTML; keep raw text.
   }
   return { status: response.status, body };
 }
 
-/** `{ [seasonNumber]: watchedEpisodeCount }` — the one shape both diffs compare. */
 function watchedShape(progress: unknown): Record<string, number> {
   const seasons =
     (progress as { watchedSeasons?: Array<Record<string, unknown>> } | null)
@@ -236,7 +145,6 @@ function watchedShape(progress: unknown): Record<string, number> {
 async function main() {
   const argv = process.argv.slice(2);
 
-  // The cheap decisive mode first — no auth, no writes (see the header).
   if (argv.includes('--exclusivity')) {
     const username = flagValue(argv, '--user') ?? process.env.SERIALIZD_USERNAME;
     if (username == null) {
@@ -248,7 +156,6 @@ async function main() {
 
   const args = parseArgs(argv);
 
-  // --- auth -----------------------------------------------------------------
   let token = process.env.SERIALIZD_TOKEN ?? null;
   let username = process.env.SERIALIZD_USERNAME ?? null;
   if (token == null) {
@@ -269,18 +176,12 @@ async function main() {
     }
     token = raw.token;
     username = username ?? raw.username ?? raw.user?.username ?? null;
-    // The login body is deliberately **never** recorded: it carries the bearer
-    // token, and this report is meant to be committed.
     log.push(`### Auth\n\nLogged in as \`${username ?? '(username not in response)'}\`.\n`);
   }
   if (username == null) {
     throw new Error('SERIALIZD_USERNAME is required to read the progress endpoint.');
   }
 
-  // --- step 0: the show body ------------------------------------------------
-  // U9's season enumeration and KTD-10's `seasonNumber` ↔ `id` join both assume
-  // this body carries per-season `id` and `episodeCount`. If it doesn't, the
-  // 2 + N `resolveSeasonId` fallback is chosen here or not at all.
   const show = await call(`show/${args.tmdb}`, token);
   record(`Step 0 — \`GET show/${args.tmdb}\` (verbatim)`, show);
 
@@ -301,7 +202,6 @@ async function main() {
   const s2 = regular.find((season) => season.seasonNumber === 2);
   const specials = seasons.find((season) => season.seasonNumber === 0);
 
-  // --- step 1: the precondition --------------------------------------------
   const progressPath = `user/${username}/show/${args.tmdb}/progress`;
   const before = await call(progressPath, token);
   record(`Step 1 — \`GET ${progressPath}\` after marking S1 watched wholesale (verbatim)`, before);
@@ -309,8 +209,6 @@ async function main() {
   const beforeShape = watchedShape(before.body);
   const s1Visible = Object.hasOwn(beforeShape, '1');
   if (before.status === 404) {
-    // Known drift as of 2026-07-30 — see the header. Say so rather than letting
-    // an empty shape read as "the season wasn't there".
     log.push(
       '**`/progress` responded 404 — the endpoint has been removed from the API.**\n',
       'Every step below that reads it is inert. Run `--exclusivity` instead; it\n',
@@ -343,7 +241,6 @@ async function main() {
     return;
   }
 
-  // --- steps 2–3: the safe write, which the shipped filter actually performs -
   const safeAdd = await call('watchlist_v2', token, {
     method: 'POST',
     body: JSON.stringify({ showId: args.tmdb, season_ids: [s2.id] }),
@@ -371,7 +268,6 @@ async function main() {
     return;
   }
 
-  // --- step 4: the destructive case, observed rather than inferred ----------
   const unsafeAdd = await call('watchlist_v2', token, {
     method: 'POST',
     body: JSON.stringify({ showId: args.tmdb, season_ids: [s1.id, s2.id] }),
@@ -393,8 +289,6 @@ async function main() {
     }\n`,
   );
 
-  // --- step 5: the remove path, R34's named risk ---------------------------
-  // Re-mark S1 by hand before trusting this one if step 4 cleared it.
   const remove = await call('watchlist/remove_v2', token, {
     method: 'POST',
     body: JSON.stringify({ showId: args.tmdb, season_ids: [s1.id] }),
@@ -402,8 +296,6 @@ async function main() {
   record(`Step 5 — \`POST watchlist/remove_v2\` with **S1 included** (\`${s1.id}\`)`, remove);
   record('Step 5b — progress after the remove', watchedShape((await call(progressPath, token)).body));
 
-  // --- step 6: what a specials id does -------------------------------------
-  // Decides whether one ineligible id can fail an otherwise-valid add.
   if (specials?.id != null) {
     const specialsAdd = await call('watchlist_v2', token, {
       method: 'POST',

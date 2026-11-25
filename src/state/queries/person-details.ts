@@ -33,7 +33,6 @@ export function useSuspensePersonByNameQuery(params: { name: string }) {
   });
 }
 
-/** `/person/anilist/<id>`: an AniList credit's own profile, no name search. Public. */
 export function useSuspenseAniListStaffQuery(params: { id: number }) {
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.staff(params.id),

@@ -36,7 +36,7 @@ describe('season/series runtime sums', () => {
     episodes: [
       { number: 1, title: 'A', runtime: 45 },
       { number: 2, title: 'B', runtime: 50 },
-      { number: 3, title: 'C' }, // runtime absent — skip
+      { number: 3, title: 'C' },
     ],
   };
 

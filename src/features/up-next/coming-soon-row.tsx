@@ -16,7 +16,6 @@ import { groupDayEntries } from './group';
 import type { UpNextEpisodeEntry } from './types';
 import { EpisodeCardRail } from './ui/episode-card-rail';
 
-/** "Tomorrow" while it orients, then "Sun, Nov 1", with the year once it isn't this one. */
 function dayLabel(airDate: string, now: Date): string {
   const offset = localDayOffset(airDate, now);
   if (offset === 0) return 'Today';
@@ -34,7 +33,6 @@ function marker(episode: SerializdUpcomingEpisode | undefined): string | null {
 function toEntry(episode: SerializdUpcomingEpisode): UpNextEpisodeEntry {
   return {
     id: `${episode.item.id}/${episode.season}/${episode.number}`,
-    // The still is this episode's own art; the show backdrop is the fallback.
     item: { ...episode.item, backdropImage: episode.still ?? episode.item.backdropImage },
     status: 'upcoming',
     source: Provider.Serializd,
@@ -53,10 +51,6 @@ function newDate(): Date {
   return new Date();
 }
 
-/**
- * Serializd's "Coming soon" under the watchlist: each followed show's next air
- * day, on This Week's cards. No View all; the first page is the row.
- */
 export function ComingSoonRow({ username, onItemActions, onItemPress }: {
   username: string;
   onItemActions: (item: NormalizedMediaItem) => void;
@@ -66,8 +60,6 @@ export function ComingSoonRow({ username, onItemActions, onItemPress }: {
   const hidden = useHiddenItems();
   const [now, refreshNow] = useReducer(newDate, undefined, newDate);
   useWakeAt(localDayAt(1, now).getTime(), now, refreshNow);
-  // One card per show at its next air day, so a season drop stacks as it does
-  // on This Week; already-aired entries belong to Continue Watching.
   const byEntry = new Map<string, SerializdUpcomingEpisode>();
   const entries: UpNextEpisodeEntry[] = [];
   const shows = new Map<string, string>();

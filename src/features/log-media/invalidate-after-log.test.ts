@@ -3,9 +3,6 @@ import { describe, expect, mock, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
-// Same edge stubs as the other query-layer suites: MMKV, the native fetch
-// client, the Serializd transport and react-native's entry point don't load
-// under bun. The invalidation logic under test is untouched.
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -26,10 +23,6 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
-// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
-// graph, whose auth import reaches expo-crypto — mirror the surface it
-// consumes instead of loading the whole expo package under bun (the
-// `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
@@ -57,7 +50,6 @@ function film(externalIds: NormalizedMediaItem['externalIds']): NormalizedMediaI
   return { ...ITEM, type: 'MOVIE', externalIds };
 }
 
-/** Records the keys a run invalidated, joined so they read as paths. */
 function recordingClient(): { client: QueryClient; keys: string[] } {
   const keys: string[] = [];
   const client = {
@@ -74,12 +66,7 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     const { client, keys } = recordingClient();
     invalidateAfterLog(client, ITEM, ['trakt']);
     expect(keys).toContain('up-next/inputs');
-    // The per-show progress the sections are computed from still refreshes too.
     expect(keys).toContain('trakt/show-progress/1');
-    // Trakt auto-removes a watched show from the watchlist server-side, so the
-    // cached read is stale the moment the log lands — and the prefix is what
-    // gets named, because this path can't know the type/sort the surface used
-    // (plan 0031 U11/KTD-5).
     expect(keys).toContain('trakt/watchlist');
     expect(keys).toContain('watchlist/inputs');
     expect(keys).toContain('trakt/watched-shows');
@@ -98,16 +85,12 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     const { client, keys } = recordingClient();
     invalidateAfterLog(client, ITEM, ['anilist']);
     expect(keys).toContain('up-next/inputs');
-    // The derived slices re-derive from the entries key — invalidating only
-    // them would read a stale cache (U2).
     expect(keys).toContain('anilist/current-anime-entries');
     expect(keys).toContain('watchlist/inputs');
   });
 
   test('an AniList manga log refreshes the manga read only', () => {
     const { client, keys } = recordingClient();
-    // Continue Reading moves the card and the reading list drops a manga whose
-    // first chapter was logged; the anime read can't have changed.
     invalidateAfterLog(client, { ...ITEM, type: 'MANGA' }, ['anilist']);
     expect(keys).toContain('anilist/current-manga-entries');
     expect(keys).not.toContain('anilist/current-anime-entries');
@@ -153,7 +136,6 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     const byTmdb = letterboxdQueryKeys.filmWatch('u', film({ tmdb: 27205 }));
     const otherFilm = letterboxdQueryKeys.filmWatch('u', film({ letterboxd: 'heat' }));
     for (const queryKey of [bySlug, byTmdb, otherFilm]) client.setQueryData(queryKey, {});
-    // Both directions share the cached TMDB-to-slug mapping.
     client.setQueryData(letterboxdQueryKeys.slug(27205), 'inception');
 
     for (const externalIds of [{ letterboxd: 'inception' }, { tmdb: 27205 }]) {
@@ -168,13 +150,8 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
 
   test('recomputes Up Next last, after every provider cache it reads', () => {
     const { client, keys } = recordingClient();
-    // Order is load-bearing, not cosmetic. `invalidateQueries` starts the
-    // active Up Next refetch synchronously, and `fetchUpNextInputs` reaches
-    // its per-provider `fetchQuery` calls before the *next* statement here
-    // runs — so a provider invalidated after this line is still fresh when the
-    // gather reads it, and Continue Watching recomputes on pre-write data.
-    // That is what stranded Simkl-sourced cards until a manual pull-to-refresh
-    // (owner report 2026-08-18) while Trakt/AniList cards advanced fine.
+    // `invalidateQueries` triggers active refetches synchronously, so Up Next
+    // reads stale provider caches if invalidated before them.
     invalidateAfterLog(client, ITEM, ['trakt', 'anilist', 'simkl', 'serializd']);
     const watchlistIndex = keys.indexOf('watchlist/inputs');
     expect(watchlistIndex).toBeGreaterThan(keys.indexOf('trakt/watchlist'));
@@ -185,14 +162,8 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
 
   test('an all-skip log still recomputes Up Next — the provider is ahead of the sections', () => {
     const { client, keys } = recordingClient();
-    // A reconcile-skip means the provider already records the watch, so the
-    // computed sections are stale even though nothing was written. The
-    // quick-log card advances on skipped-or-succeeded (`resolveQuickLog`);
-    // gating on `succeeded` alone stranded it with no refetch to settle
-    // against (owner report 2026-08-02).
     invalidateAfterLog(client, ITEM, [], ['trakt']);
     expect(keys).toContain('up-next/inputs');
-    // Per-provider caches stay untouched: reconcile just read them fresh.
     expect(keys).not.toContain('trakt/show-progress/1');
     expect(keys).not.toContain('watchlist/inputs');
   });

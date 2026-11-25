@@ -1,8 +1,4 @@
-# Applies a release-notes category label from the PR's conventional-commit
-# title prefix (feat:/fix:/chore:/...). Exists because GitHub's own
-# .github/release.yml auto-generated notes categorize by label only, never by
-# title (docs/plans/0021 R7/KTD-4) — this is the missing glue, using nothing
-# but the preinstalled `gh` CLI (no third-party actions, matching KTD-4).
+# Map Conventional Commit prefixes to the categories in .github/release.yml.
 name: PR labels
 
 on:

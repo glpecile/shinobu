@@ -8,7 +8,6 @@ import type { HttpFetch } from '@/lib/http/types';
  * exchanges email/password at `/login` through the proxy.
  */
 export interface SerializdSession {
-  /** The bearer token — sent as `Authorization: Bearer {token}` on every call. */
   accessToken: string;
   username: string;
 }

@@ -292,7 +292,6 @@ export function useLetterboxdFilmQuery(slug: string | null) {
   return useQuery(letterboxdFilmQuery(slug, useTmdbToken() !== ''));
 }
 
-/** The public film page behind the details Ratings section's Letterboxd score. */
 export function useSuspenseLetterboxdFilmQuery(slug: string) {
   const { queryKey, queryFn, staleTime, retry } = letterboxdFilmQuery(slug, useTmdbToken() !== '');
   return useSuspenseQuery({ queryKey, queryFn, staleTime, retry });
@@ -411,7 +410,6 @@ export function useLetterboxdWatchlistPagesQuery() {
   });
 }
 
-/** Page 1 of the watchlist: the feed row, Up Next's releases, and page 1 of the grid. */
 export function letterboxdWatchlistOptions(username: string) {
   return {
     queryKey: letterboxdQueryKeys.watchlist(username),
@@ -457,19 +455,8 @@ const WATCHLIST_STALE_MS = 15 * 60_000;
 const CATALOGUE_STALE_MS = 15 * 60_000;
 
 /**
- * The two-call resolve behind Calendar's Letterboxd releases (plan 0030 KTD-5).
- *
- * Leg 1 is title+year → TMDB id, forever-cached and — critically — *year-gated*:
- * `cachedTmdbMovieIdByTitle` runs `pickMovieMatch`, which returns `null` rather
- * than the popular same-title classic when the year disagrees or the ±1 window
- * is ambiguous (docs/solutions/trakt-text-search-wrong-movie-match.md). A
- * dropped candidate is a missing agenda row; a guessed one puts the wrong film
- * in the user's week, so this leg never guesses.
- *
- * Leg 2 is the catalogue read, whose `release_dates` append carries the
- * `releaseCalendar` this whole resolve exists to learn. Merging rather than
- * replacing keeps the Letterboxd item's identity (its slug id routes the card)
- * while picking up the TMDB id and the dates.
+ * Resolve watchlist films by title and year, then read TMDB release dates. The year gate keeps
+ * a same-title film from supplying the wrong releases.
  */
 function resolveWatchlistFilm(
   queryClient: QueryClient,
@@ -494,15 +481,8 @@ function resolveWatchlistFilm(
 }
 
 /**
- * Calendar's Letterboxd film releases — the watchlist's first page, year-
- * filtered and capped before any resolve runs (KTD-5). **First page only**, on
- * purpose: Letterboxd orders a watchlist most-recently-added first, so page 1
- * is where the films a user just put on their radar live, and paging the whole
- * 600-film list would trade ~22 HTML page fetches per gather for candidates the
- * year filter drops anyway.
- *
- * Without a TMDB token there is no resolve to run, so the source contributes
- * nothing rather than firing a fan that can only fail.
+ * Resolve only the newest Letterboxd watchlist page, filtering by year and capping the fan-out
+ * before requesting metadata.
  */
 export function fetchLetterboxdReleaseInputs(
   queryClient: QueryClient,

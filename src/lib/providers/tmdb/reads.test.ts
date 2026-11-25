@@ -3,7 +3,6 @@ import * as Effect from 'effect/Effect';
 
 import { getMediaCatalogue, getTvEpisode, getTvSeasons, searchMovie } from './reads';
 
-/** Records every requested URL and answers with an empty result set. */
 function recordingFetch(urls: string[]) {
   return (input: RequestInfo | URL): Promise<Response> => {
     urls.push(String(input));

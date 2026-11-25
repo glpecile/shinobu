@@ -99,14 +99,11 @@ const PROGRESS: TraktShowProgressResult = {
   nextEpisode: { season: 1, number: 2, firstAired: '2026-07-22T00:00:00.000Z' },
 };
 
-/** Trakt's calendar segment — the key's third element (`myCalendar`). */
 type CalendarType = 'shows' | 'movies' | 'streaming' | 'dvd';
 
-/** The Simkl legs' cacheable reads, as the fake client keys them. */
 type SimklLibraryStatus = 'watching' | 'plantowatch';
 type SimklCalendarFileKind = 'tv' | 'anime' | 'movie_release';
 
-/** One Simkl library entry with only the fields the Up Next legs consume. */
 function simklEntry(
   simklId: number,
   overrides: Omit<Partial<SimklLibraryEntry>, 'item'> & {
@@ -137,7 +134,6 @@ function simklLibrary(partial: Partial<SimklLibrary> = {}): SimklLibrary {
   return { shows: [], movies: [], anime: [], ...partial };
 }
 
-/** One rolling-file airing, in the shape `normalizeCalendarFile` emits. */
 function simklCalendarEntry(
   simklId: number,
   overrides: Partial<SimklCalendarEntry> = {},
@@ -156,21 +152,13 @@ function simklCalendarEntry(
 interface Scenario {
   shows?: NormalizedMediaItem[];
   anime?: AniListCurrentEntry[];
-  /** `/calendars/my/shows` rows — Calendar's Trakt half (plan 0030 KTD-2). */
   calendarShows?: TraktCalendarEpisode[];
-  /** Per-calendar movie rows, keyed by Trakt's segment name. */
   calendarMovies?: Partial<Record<CalendarType, TraktCalendarRelease[]>>;
-  /** The two `/sync/all-items` snapshots the Simkl legs read (plan 0034 U8). */
   simklLibraries?: Partial<Record<SimklLibraryStatus, SimklLibrary>>;
-  /** The rolling CDN calendar files, keyed by kind (KTD-4). */
   simklCalendars?: Partial<Record<SimklCalendarFileKind, SimklCalendarEntry[]>>;
-  /** Providers whose top-level read rejects. */
   failing?: Array<'trakt' | 'anilist'>;
-  /** Trakt ids whose per-show progress read rejects. */
   failingProgress?: number[];
-  /** Calendars whose read rejects — each settles on its own (R7). */
   failingCalendars?: CalendarType[];
-  /** Simkl reads that reject, by snapshot status or calendar kind. */
   failingSimkl?: Array<SimklLibraryStatus | SimklCalendarFileKind>;
 }
 
@@ -261,7 +249,6 @@ describe('fetchUpNextInputs', () => {
     expect(inputs.progress.map((input) => input.item.externalIds.trakt)).toEqual([
       1, 3,
     ]);
-    // A single failed show is not a slot-level failure.
     expect(inputs.errors).toEqual([]);
   });
 
@@ -289,7 +276,6 @@ describe('fetchUpNextInputs', () => {
     await fetchUpNextInputs(client, ['trakt']);
 
     expect(progressRequests).toHaveLength(20);
-    // Most recently watched first — show 25 is in, show 1 is not.
     expect(progressRequests).toContain(25);
     expect(progressRequests).not.toContain(1);
   });
@@ -349,7 +335,6 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
 
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
-    // Continue Watching's fan is untouched by the new source (R4).
     expect(inputs.progress).toHaveLength(1);
     expect(inputs.calendar).toEqual([{ ...airing, source: 'trakt' }]);
   });
@@ -488,7 +473,6 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
       simklLibraries: {
         watching: simklLibrary({
           shows: [
-            // 4 watched, 10 total, 2 unaired → 8 aired: behind, proven aired.
             simklEntry(2, {
               item: { totalEpisodes: 10 },
               notAiredEpisodes: 2,
@@ -501,7 +485,6 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
               notAiredEpisodes: 2,
               nextToWatch: { season: 1, episode: 9, date: null },
             }),
-            // No counts at all → unknown is not "aired" (the Trakt rule).
             simklEntry(4, {
               nextToWatch: { season: 1, episode: 5, date: null },
             }),
@@ -716,7 +699,7 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
             date: '2026-08-05T04:00:00Z',
             episode: undefined,
           }),
-          simklCalendarEntry(8888, { episode: undefined }), // untracked → dropped
+          simklCalendarEntry(8888, { episode: undefined }),
         ],
       },
     });
@@ -733,7 +716,6 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
         source: 'simkl',
       },
     ]);
-    // A tracked movie is not an episode source.
     expect(inputs.calendar).toEqual([]);
   });
 
@@ -767,9 +749,7 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
 
     const inputs = await fetchUpNextInputs(client, ['simkl']);
 
-    // Continue Watching's pointers survive the calendar outage…
     expect(inputs.progress).toHaveLength(1);
-    // …and the failure is named, not swallowed.
     expect(inputs.errors).toEqual([
       { provider: 'simkl', message: 'tv calendar down' },
     ]);

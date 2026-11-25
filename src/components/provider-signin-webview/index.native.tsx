@@ -28,35 +28,16 @@ export interface CookiePair {
 }
 
 interface ProviderSigninWebViewProps<T> {
-  /** Controlled visibility — the parent owns the trigger button + open state. */
   visible: boolean;
   onClose: () => void;
-  /** Modal heading. */
   title: string;
-  /** The sign-in page to load (e.g. serializd.com/login). */
   uri: string;
-  /** Cookie jar to read on every settled navigation (e.g. the site's base URL). */
   cookieDomain: string;
-  /**
-   * Turn the cookie jar (and optionally the WebView User-Agent) into a
-   * provider-specific captured payload, or `null` while the user hasn't
-   * finished signing in. The shape is the provider's own (Serializd: a token;
-   * Letterboxd: cookie + CSRF + UA) — this component never inspects it (KTD5).
-   */
   extractSession: (cookies: CookiePair[], userAgent?: string) => T | null;
   onCaptured: (captured: T) => void;
-  /** Read the WebView's User-Agent before extracting (Letterboxd binds to it). */
   captureUserAgent?: boolean;
 }
 
-/**
- * The shared provider sign-in surface (plan 0017 KTD5): a modal WebView that
- * polls the cookie jar on every settled navigation and fires `onCaptured` once
- * the provider's `extractSession` returns a payload. Extracted from the
- * Letterboxd connect button so both it and Serializd ride the same one-shot
- * capture mechanics — detection is cookie-based, not URL-based, so a post-login
- * redirect anywhere is expected. The web variant (index.tsx) renders null.
- */
 export function ProviderSigninWebView<T>({
   visible,
   onClose,
@@ -71,8 +52,6 @@ export function ProviderSigninWebView<T>({
   // React Compiler rejects. A sign-in sheet opened once gains nothing from memo.
   'use no memo';
   const webViewRef = useRef<NitroWebViewType | null>(null);
-  // The capture must fire exactly once even though several navigation events
-  // race after login. Reset when each open mounts a fresh WebView.
   const capturedRef = useRef(false);
   const userAgentRef = useRef<string | undefined>(undefined);
   const injectUserAgent = captureUserAgent && Platform.OS === 'ios';
@@ -94,7 +73,6 @@ export function ProviderSigninWebView<T>({
     }
     if (capturedRef.current || webViewRef.current !== ref || !visible) return;
     const captured = extractSession(cookies, userAgent);
-    // Not signed in yet — leave the WebView open for the user to finish.
     if (captured == null) return;
 
     capturedRef.current = true;
@@ -103,7 +81,6 @@ export function ProviderSigninWebView<T>({
   };
 
   const onNavigationStateChange = (state: WebViewNavigationState) => {
-    // `loading` guards against reading a half-written cookie jar mid-nav.
     if (!state.loading) void tryCapture();
   };
 
@@ -127,7 +104,6 @@ export function ProviderSigninWebView<T>({
     } catch {
       return;
     }
-    // The message can arrive after load-end, so either event can finish capture.
     void tryCapture();
   };
 

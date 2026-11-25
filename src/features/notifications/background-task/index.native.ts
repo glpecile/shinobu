@@ -4,22 +4,12 @@ import * as TaskManager from 'expo-task-manager';
 
 import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
 
-/**
- * The Android WorkManager / iOS BGTaskScheduler background refresh (plan
- * 0020 R6, KTD-4). `defineTask` must run at module-evaluation time — even for
- * a headless background launch, no component tree exists yet — so this
- * module is imported for its side effect from `app/_layout.tsx`, never
- * called directly.
- */
-
+// expo-task-manager requires defineTask at module-evaluation time for headless background launches; imported for side effects from app/_layout.tsx.
 export const NOTIFICATIONS_BACKGROUND_TASK = 'shinobu-notifications-refresh';
 
-/** ~12h (R6) — the OS treats this as a minimum, not a schedule. */
 const MINIMUM_INTERVAL_MINUTES = 720;
 
-// The React-mounted QueryClient doesn't exist in a headless background
-// launch, so the task gets its own — provider reads are cache-through, not
-// cache-shared, across the two (KTD-1).
+// Headless background launches have no React tree, so this uses its own QueryClient.
 const backgroundQueryClient = new QueryClient();
 
 TaskManager.defineTask(NOTIFICATIONS_BACKGROUND_TASK, async () => {

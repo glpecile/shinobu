@@ -46,7 +46,6 @@ function editTarget(list: ListSummary, username: string): ListEditTarget {
   }
 }
 
-/** The account whose lists the picker reads, null when there is none. Hardcover reads by its token, so it names no one. */
 function listUsername(provider: ListProvider) {
   switch (provider) {
     case Provider.Letterboxd:
@@ -69,7 +68,6 @@ function emptyBody(provider: ListProvider) {
   }
 }
 
-/** `entryIds` maps each list that already holds the item to its entry there. */
 function ListRows({ provider, lists, entryIds, hasNextPage = false, isFetchingNextPage = false, fetchNextPage, onSelect, onCreate }: {
   provider: ListProvider;
   lists: readonly ListSummary[];
@@ -150,7 +148,6 @@ function SerializdListRows({ username, onSelect, onCreate }: PickerProps) {
   />;
 }
 
-/** The member's own lists, each marked when it already holds the book. */
 function HardcoverListRows({ bookId, onSelect, onCreate }: Omit<PickerProps, 'username'> & { bookId: number }) {
   const { data } = useSuspenseHardcoverListMembershipQuery(bookId);
   return <ListRows
@@ -169,7 +166,6 @@ function ProviderListRows({ provider, item, ...props }: PickerProps & { provider
     case Provider.Serializd:
       return <SerializdListRows {...props} />;
     case Provider.Hardcover:
-      // `listProviderFor` names Hardcover only for a book that carries its id.
       return item.externalIds.hardcover == null ? null : <HardcoverListRows bookId={item.externalIds.hardcover} onCreate={props.onCreate} onSelect={props.onSelect} />;
   }
 }
@@ -222,11 +218,9 @@ function ListPicker({ provider, item, username, onSelect, onCreate, onClose }: P
   </WriteSheet.Step>;
 }
 
-/** Shared picker content for a detail sheet or the card-actions sheet. */
 export function AddToListPicker({ item, onClose, onBack = onClose }: { item: NormalizedMediaItem; onClose: () => void; onBack?: () => void }) {
   const pushRoute = usePushRoute();
   const provider = listProviderFor(item, useConnectedProviders());
-  // `entryId` is set when the chosen list already holds the item, which makes the choice a removal.
   const [selected, setSelected] = useState<{ target: ListEditTarget; entryId?: string } | null>(null);
   const username = provider == null ? null : listUsername(provider);
   if (provider == null || username == null) return null;
@@ -242,7 +236,6 @@ export function AddToListPicker({ item, onClose, onBack = onClose }: { item: Nor
     : <ListMembershipForm entryId={selected.entryId} item={item} onBack={() => setSelected(null)} onDone={onClose} present={selected.entryId == null} target={selected.target} />;
 }
 
-/** Whether a connected provider keeps lists that can hold `item`. */
 export function useCanAddToList(item: NormalizedMediaItem): boolean {
   const provider = listProviderFor(item, useConnectedProviders());
   return provider != null && listUsername(provider) != null;

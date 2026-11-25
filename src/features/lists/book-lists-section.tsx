@@ -28,7 +28,6 @@ function BookListsRail({ bookId }: { bookId: number }) {
   const lists = visibleByIds(data.map(hardcoverListSummary), useHiddenLists(), (list) => [list.href]);
   if (lists.length === 0) return null;
   return (
-    // Pulls the section's own `px-4` header and 16px gutter out to the column's `px-6`, as the Similar books rail.
     <View className="-mx-4 -mb-6 mt-8">
       <CollapsibleSection collapseKey="details-book-lists" leading={<ProviderIcon id={Provider.Hardcover} size={16} />} title="Lists">
         <VirtualizedRail
@@ -61,10 +60,6 @@ function BookListsSkeleton() {
   );
 }
 
-/**
- * The most-liked public Hardcover lists that include a book. Reads only with a
- * Hardcover session that holds the lists grant, and shows nothing for a book in no list.
- */
 export function BookListsSection({ item, resetKey }: { item: NormalizedMediaItem; resetKey?: unknown }) {
   const connected = useConnectedProviders().includes(Provider.Hardcover);
   const granted = useHardcoverListsGranted();

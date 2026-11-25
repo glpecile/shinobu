@@ -60,26 +60,9 @@ export function mergeCatalogueMetadata(
 }
 
 /**
- * The TMDB-first inverse of `mergeCatalogueMetadata` (plan 0014): `primary`
- * (the TMDB catalogue record) WINS for pure *text* display fields when it has
- * them — overview, genres, its score, runtime, year, release dates — because TMDB
- * is the source of truth for metadata. AniList series entries are the exception:
- * each is a separate cour, while the TMDB record covers the whole show, so only
- * missing artwork and external identity are merged there. Fill-only for `totalEpisodes` (provider
- * totals drive the progress UI and must agree with `currentProgress`), and
- * identity/user state (id, type, progress, lastUpdated) plus external-id
- * precedence stay exactly as in `mergeCatalogueMetadata`. A null primary is
- * the failover case: the item passes through untouched.
- *
- * **Artwork is the deliberate exception — fill-only, never an override**
- * (owner decision, 2026-07-27). Posters and backdrops are the one field the
- * viewer has already *seen* before this merge runs: they tapped a card whose
- * poster was painted from the feed/search item, and the details screen renders
- * that same poster instantly, then TMDB answers a beat later. Overriding it
- * swapped the hero and the poster under the viewer mid-read for no gain — the
- * provider art is already correct, only different. So TMDB art now lands only
- * where the item carries none (a Trakt watched row, a Letterboxd slug), which
- * is the case it was actually valuable for.
+ * Prefer TMDB display metadata while keeping provider progress and identity. Fill missing art
+ * so the opened card keeps its poster. AniList cours only take missing art and external ids
+ * from whole-series records.
  */
 export function applyPrimaryMetadata(
   item: NormalizedMediaItem,

@@ -16,16 +16,6 @@ import {
 import { routes } from '@/lib/routes';
 import { useSuspensePersonByNameQuery } from '@/state/queries/person-details';
 
-/**
- * Name → person page for credits whose origin provider carries no TMDB person
- * id (AniList voice actors and staff — there is no id bridge for people).
- *
- * It **renders the page here** rather than redirecting to an ID route: an
- * AniList-resolved person has no TMDB id to redirect to, and the redirect was
- * a second screen transition on top of the first — the push faded in this
- * route's skeleton, then the replace faded the stack through black and started
- * a *second* skeleton before the page landed.
- */
 function LookupContent({ name, onGoBack }: { name: string; onGoBack: () => void }) {
   const { data } = useSuspensePersonByNameQuery({ name });
 
@@ -65,8 +55,6 @@ export default function PersonLookupScreen() {
   );
 }
 
-/** Route-level containment — a failed search shows the not-found view with
- * a retry instead of taking the whole app down via the root boundary. */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (

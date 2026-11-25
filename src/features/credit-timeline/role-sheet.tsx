@@ -1,10 +1,5 @@
 import { PickerSheet } from '@/components/picker-sheet';
 
-/**
- * The role picker behind the filmography's role button: every department
- * the person holds under the current format, with its title count. One
- * control on the page instead of a strip of chips competing with the pill.
- */
 export function RoleSheet({
   open,
   onClose,
@@ -15,7 +10,6 @@ export function RoleSheet({
   open: boolean;
   onClose: () => void;
   roles: readonly { role: string; count: number }[];
-  /** Null is every role. */
   value: string | null;
   onSelect: (role: string | null) => void;
 }) {

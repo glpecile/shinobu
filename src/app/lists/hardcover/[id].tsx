@@ -18,7 +18,6 @@ export default function HardcoverListScreen() {
   const shareHref = valid ? routes.hardcoverList(id) : undefined;
   return (
     <ListsPage
-      // The list's own address is unknown until it loads, so a failed load links to the member's lists.
       contentKey={valid ? id : undefined} fallback={<HardcoverListSkeleton shareHref={shareHref} />} provider={Provider.Hardcover} shareHref={shareHref}
       unavailable={!valid ? 'invalid' : connected ? 'reconnect' : 'connect'}
       url={!ready ? null : username == null ? 'https://hardcover.app' : hardcoverListsUrl(username)}

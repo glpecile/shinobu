@@ -55,14 +55,10 @@ describe('isTagSelected', () => {
 describe('toggleTag', () => {
 
   test('always leaves a trailing separator, so the picker filter resets', () => {
-    // The whole point: `activeTagFragment` of the result must be empty,
-    // otherwise tapping a chip would leave the suggestions filtered by the tag
-    // that was just added.
     for (const input of ['', 'imax', 'imax, rewatch-night', 'shinobu, ']) {
       expect(activeTagFragment(toggleTag(input, 'horror'))).toBe('');
     }
     expect(toggleTag('', 'horror')).toBe('horror, ');
-    // "imax" here is an uncommitted tail, so the chip replaces it.
     expect(toggleTag('imax', 'horror')).toBe('horror, ');
     expect(toggleTag('imax, ', 'horror')).toBe('imax, horror, ');
   });
@@ -70,8 +66,6 @@ describe('toggleTag', () => {
   test('add then remove restores the prefill convention', () => {
     const prefill = 'shinobu, ';
     expect(toggleTag(toggleTag(prefill, 'horror'), 'horror')).toBe(prefill);
-    // Committed values round-trip; an uncommitted tail does not, because the
-    // first press consumed it by design.
     expect(toggleTag(toggleTag('imax, ', 'horror'), 'horror')).toBe('imax, ');
   });
 
@@ -80,8 +74,6 @@ describe('toggleTag', () => {
   });
 
   test('pressing the chip for a tag you are mid-way through typing commits it', () => {
-    // Not a removal: "horror" with no trailing comma is still a query, so its
-    // chip reads unselected and the press finishes the word.
     expect(isTagSelected('horror', 'horror')).toBe(false);
     expect(toggleTag('horror', 'horror')).toBe('horror, ');
   });
@@ -92,7 +84,6 @@ describe('toggleTag', () => {
   });
 
   test('replaces what is being typed rather than keeping it as a tag', () => {
-    // The reported bug: typing "net" then pressing netflix left a stray "net".
     expect(toggleTag('shinobu, net', 'netflix')).toBe('shinobu, netflix, ');
     expect(toggleTag('net', 'netflix')).toBe('netflix, ');
     expect(toggleTag('shinobu, netfl', 'netflix')).toBe('shinobu, netflix, ');
@@ -126,7 +117,6 @@ describe('filterTagSuggestions', () => {
   });
 
   test('prefix matches rank above mere substring matches', () => {
-    // "p" prefixes "p" itself; the others only contain it.
     expect(filterTagSuggestions(all, 'p')).toEqual([
       'p',
       'cinepolis-recoleta',

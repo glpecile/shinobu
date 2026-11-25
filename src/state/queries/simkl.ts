@@ -34,24 +34,14 @@ import {
 import { getClientIdForProvider } from '@/state/session/provider-config';
 import { useConnectedProviders } from '@/state/session';
 
-// Module-level singleton for the same reason as trakt.ts/anilist.ts: effects
-// compare the store by identity, and MMKV's change listener contract expects
-// one writer path. No refresh machinery hangs off it — a Simkl 401 is a dead
-// session (plan 0034 KTD-2), never a refresh trigger.
+// Keep the token-store identity stable for auth and MMKV subscriptions.
 const tokenStore: TokenStore = {
   get: () => getProviderSession(Provider.Simkl),
   set: (session) => setProviderSession(Provider.Simkl, session),
   clear: () => clearProviderSession(Provider.Simkl),
 };
 
-/**
- * Real dependency wiring for Simkl effects — the state → lib/providers
- * boundary, mirroring `traktDeps()`. No web branch: Simkl's API and CDN both
- * send `access-control-allow-origin: *` (plan 0034 KTD-9,
- * docs/solutions/web-cors-simkl.md territory), so the platform http client
- * works everywhere with no Worker proxy. Unlike TraktDeps there is no
- * `clientSecret` — Simkl is a public PKCE client (KTD-1).
- */
+/** Simkl API and CDN reads use the same transport on native and web. */
 export function simklDeps(): SimklDeps {
   return {
     fetch: httpFetch,
@@ -60,13 +50,6 @@ export function simklDeps(): SimklDeps {
   };
 }
 
-/**
- * Authorization-code → session exchange, run at the Effect boundary so
- * components and session hooks never touch Effect directly (AGENTS.md
- * containment rule). `state` is validated against the persisted PKCE flow
- * inside the effect (`lib/providers/simkl/auth.ts`); success persists the
- * session, which flips `useConnectedProviders` for every subscriber.
- */
 export function exchangeSimklCode(params: {
   code: string;
   state: string;
@@ -81,11 +64,7 @@ export function exchangeSimklCode(params: {
 
 export const simklQueryKeys = {
   all: [Provider.Simkl] as const,
-  /**
-   * One `/sync/all-items` snapshot per type/status filter. The unfiltered read
-   * rides the `all/all` segments so "whole library" and "one bucket" can never
-   * collide under one cache entry.
-   */
+  /** The all/all key distinguishes a whole-library snapshot from a single bucket. */
   allItems: (type?: SimklLibraryBucket, status?: SimklWatchStatus) =>
     [...simklQueryKeys.allItemsRoot(), type ?? 'all', status ?? 'all'] as const,
   /**
@@ -98,10 +77,8 @@ export const simklQueryKeys = {
   /** `/sync/activities` — the cheap delta signal that gates `allItems`
    *  refetches (plan 0034 KTD-5). */
   activities: () => [...simklQueryKeys.all, 'activities'] as const,
-  /** One rolling CDN calendar file per kind (KTD-4). */
   calendar: (kind: SimklCalendarKind) =>
     [...simklQueryKeys.all, 'calendar', kind] as const,
-  /** Public Most Watched CDN file — the trending rows' Trakt replacement (R11). */
   trending: (kind: SimklTrendingKind, interval?: 'today' | 'week' | 'month') =>
     [...simklQueryKeys.all, 'trending', kind, interval ?? 'week'] as const,
   /** The connected account itself — cached forever; disconnect purges the
@@ -110,11 +87,7 @@ export const simklQueryKeys = {
   ratings: (lookup: SimklLookupParams | null) => [...simklQueryKeys.all, 'ratings', lookup] as const,
 };
 
-/**
- * How long the `watching` snapshot rides the cache — progress moves only when
- * the user logs, and a log already invalidates `simklQueryKeys.allItemsRoot()`
- * explicitly, so between logs it stays warm (the Trakt show-progress window).
- */
+/** Writes invalidate the snapshot. Staleness covers edits made elsewhere. */
 export const SIMKL_WATCHING_STALE_MS = 15 * 60_000;
 
 /**
@@ -166,7 +139,6 @@ function indexSimklLibrary(library: SimklLibrary): SimklLibraryIndex {
   return index;
 }
 
-/** Locate one item in a library snapshot. */
 export function findLibraryEntry(library: SimklLibrary, item: NormalizedMediaItem): SimklLibraryEntry | null {
   return findIndexedEntry(indexSimklLibrary(library), item);
 }
@@ -226,33 +198,7 @@ export function useSimklEpisodeStateQuery(params: {
   });
 }
 
-/**
- * The **whole** library snapshot — every status in one request. The single
- * source behind every per-item Simkl read on a details screen: the season
- * accordion's checkmarks, the watched line, the one-tap log button, and
- * `useSimklWatchedInfo` below.
- *
- * This replaces a status-filtered chain (`watching`, then `plantowatch` on a
- * miss, plus a `completed` read for films) whose real flaw was that a
- * **finished** show was in none of them. Doctor Who — 153/153 watched —
- * rendered every episode with an unticked "Mark as watched", and opened fresh
- * showed `0 / 153` and "Log S1E1" (owner report 2026-08-01). Simkl holds
- * exactly one status per item, so any filtered read is a guess about which
- * bucket the user parked a show in; `hold` and `dropped` were invisible for
- * the same reason, and `completed` shows were the documented degrade in
- * docs/solutions/simkl-only-tv-details-trakt-gated.md.
- *
- * One unfiltered read is also **fewer requests** than the chain it replaces —
- * one, not up to three sequential round trips, each waiting on the previous
- * one's miss — and one cache entry for every details surface. It rides the
- * same `allItemsRoot` invalidation prefix, so a log fan-out refreshes it and
- * nothing polls it (docs/solutions/simkl-rate-limits-and-write-lock.md).
- *
- * Up Next deliberately keeps the narrow `watching` snapshot above: Continue
- * Watching treats every entry it reads as a candidate, so widening *that* read
- * would put finished and dropped shows on the home feed. Two entries, each
- * shaped for its surface.
- */
+/** All item-level Simkl details share the unfiltered library snapshot. */
 export function simklLibraryQuery() {
   return {
     queryKey: simklQueryKeys.allItems(),

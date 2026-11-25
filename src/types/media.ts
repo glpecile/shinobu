@@ -1,35 +1,12 @@
-/**
- * The normalized data contract (`plan.md` 2.2, AGENTS.md "Data Contract").
- * Every provider response (Trakt REST, AniList GraphQL, Letterboxd REST) is
- * mapped into this shape before it reaches components — components never see
- * raw provider payloads. This file is the source of truth; the snippet in
- * `plan.md` 2.2 mirrors it.
- */
-
-// Type-only import — erased at build, so the (media ↔ providers/types) type
-// cycle never becomes a runtime one. Kept because a diary entry's provider is
-// part of the normalized contract, alongside the item it embeds.
 import type { Provider, ProviderId } from '@/lib/providers/types';
 
-// Extension point for future domains (e.g. 'GAME' | 'BOOK' | 'ALBUM').
-// Widen this union + the provider registry (lib/providers/registry.ts) only —
-// never branch on new types inline in hooks or components.
 export type MediaType = 'TV' | 'MOVIE' | 'ANIME' | 'MANGA' | 'BOOK';
 
-// What `currentProgress` counts. Future domains bring their own units
-// (e.g. 'page' | 'minute' | 'listen'), so progress is never assumed to be
-// an episode index.
 export type ProgressUnit = 'episode' | 'chapter' | 'page';
 
-/** What a book's diary entry records: a read started, progress on it, or its end. */
 export type ReadingEvent = 'started' | 'progressed' | 'finished';
 
-/**
- * When a film became available, by how you'd watch it — each the earliest
- * **worldwide** date TMDB knows, as a bare `YYYY-MM-DD`, absent when no region
- * has published that kind of release. Ordered as released, which is the order
- * the details timeline renders them in.
- */
+/** Earliest worldwide TMDB release dates as bare `YYYY-MM-DD`; absent when unpublished. */
 export interface ReleaseCalendar {
   /** In cinemas — TMDB release types 2 (limited) and 3 (wide), earliest of the two. */
   theatrical?: string;
@@ -39,7 +16,6 @@ export interface ReleaseCalendar {
   physical?: string;
 }
 
-/** Where a community score comes from. Only Simkl, AniList, Letterboxd and Hardcover are providers. */
 export type RatingSource =
   | 'tmdb'
   | typeof Provider.Simkl
@@ -51,18 +27,13 @@ export type RatingSource =
   | 'rottenTomatoes'
   | 'metacritic';
 
-/**
- * One source's community score, kept on the scale that source publishes
- * (#318): never rescaled, so a Letterboxd 4.2 reads as /5 and a Tomatometer as
- * a percentage.
- */
+/** Community score kept on the source's native scale, never rescaled. */
 export interface NormalizedRating {
   source: RatingSource;
   value: number;
   /** `%` for Rotten Tomatoes' Tomatometer and AniList's average score. */
   scale: 10 | 5 | 100 | '%';
   votes?: number;
-  /** MAL's overall rank. */
   rank?: number;
   /** The date a Wikidata score was recorded (`P585`), a bare `YYYY-MM-DD`. */
   asOf?: string;
@@ -74,72 +45,34 @@ export interface NormalizedMediaItem {
   /** Unique combined identifier: `${providerId}-${nativeId}`, e.g. `trakt-12345`. */
   id: string;
   title: string;
-  /**
-   * The other names this title goes by — AniList's romaji/english/native
-   * trio, TMDB's `original_title`/`original_name` as `native`. Any of them
-   * may repeat `title`; the details header dedupes.
-   */
+  /** Alternate titles (TMDB maps `original_title`/`original_name` to `native`); entries may repeat `title`. */
   titles?: { romaji?: string; english?: string; native?: string };
-  /** Provider-supplied alternate names and abbreviations, used for discussion lookup. */
   titleAliases?: string[];
   coverImage: string;
-  /** Wide hero/fanart image for detail views; '' when the provider has none. */
   backdropImage?: string;
   overview?: string;
   year?: number;
   /** Minutes: whole film for MOVIE/anime films; typical episode for series. Not total/remaining series time; absent for manga. */
   runtime?: number;
   genres?: string[];
-  /** Community scores, one per source, each on that source's own scale. */
   ratings?: NormalizedRating[];
   type: MediaType;
   /** Display-only TMDB TV relationship for a whole-entry Letterboxd film log. */
   tmdbTvVariant?: number;
-  /** TMDB's ended/canceled status; absent when the catalogue cannot establish it. */
   seriesEnded?: boolean;
-  /**
-   * Anime films (AniList `format: MOVIE`) are `ANIME` here but count as a
-   * `MOVIE` for Trakt/Letterboxd routing (`plan.md` 1.3). This flag — not a
-   * fifth MediaType — is what lets `providersForWrite` fan out to all three.
-   */
+  /** True for anime films (AniList `format: MOVIE`): `type` stays `ANIME`, while routing also targets movie providers. */
   isFilm?: boolean;
-  /**
-   * First release: a movie's theatrical release date, a show's first air date.
-   * ISO instant with offset/Z, or the bare `YYYY-MM-DD` calendar date TMDB
-   * sends; absent when the source carries none. Same contract as
-   * `NormalizedEpisode.firstAired` — compare it through `lib/time/has-aired`
-   * (a bare date parses as *local* midnight), never with a naive `new Date`.
-   */
+  /** ISO instant with offset/Z or bare `YYYY-MM-DD` (TMDB). Compare via `lib/time/has-aired` (bare dates parse as local midnight), never `new Date`. */
   releaseDate?: string;
-  /**
-   * Theatrical/digital/physical release dates for a film — what the details
-   * screen's release timeline renders, and what the agenda dates an unreleased
-   * film by (plan 0030). Absent for every TV/manga item. TMDB's `release_dates`
-   * fills all three slots at once; Trakt's per-kind movie calendars fill
-   * exactly the one slot they answer for, so a partly-populated value is
-   * normal — never read an absent slot as "no such release".
-   */
+  /** Partial values are normal (Trakt per-kind calendars populate one slot at a time); never read an absent slot as "no such release". */
   releaseCalendar?: ReleaseCalendar;
   currentProgress: number;
   progressUnit: ProgressUnit;
   totalEpisodes?: number;
-  /**
-   * A Hardcover book that the reading bridge matched to an AniList entry
-   * (`externalIds.anilist`): which volume of that entry it is (plan 0117 B5).
-   */
+  /** Volume number of the matched `externalIds.anilist` entry for a bridged Hardcover book. */
   anilistVolume?: number;
-  /**
-   * What the reading bridge compares, from the read that loaded the item
-   * (plan 0117 B6): credited people, an AniList entry's format and volume
-   * count, and a Hardcover book's series.
-   */
   readingCredits?: { people: string[]; format?: string; volumes?: number; series?: string };
-  /**
-   * A screen's grouping of a Hardcover book under the AniList entry it is a
-   * volume of (plan 0117 B6). It groups cards. A log never reads it: it asks
-   * the B5 bridge. A removal reads it only on a merged card whose AniList
-   * source proves the entry (`removalItem`), and names that entry first.
-   */
+  /** Display-only grouping of a Hardcover book under its AniList entry; logs must not read it. */
   bridgedAniList?: { id: number; title: string };
   /** ISO 8601 instant (with offset/Z) — never a bare date string. */
   lastUpdated: string;
@@ -147,132 +80,78 @@ export interface NormalizedMediaItem {
     tmdb?: number;
     trakt?: number;
     anilist?: number;
-    /** Letterboxd film IDs are opaque slugs, not numeric. */
     letterboxd?: string;
-    /** TVDB/IMDB bridge ids — how anime maps across providers (plan 0011). */
     tvdb?: number;
     imdb?: string;
-    /**
-     * MyAnimeList id — Simkl keys anime by `mal` (plan 0034 KTD-6), so it is a
-     * bridge id like tvdb/imdb, not a fifth tracker.
-     */
+    /** Simkl keys anime by MAL id. */
     mal?: number;
-    /** Simkl's own numeric id (plan 0034). */
     simkl?: number;
-    /** Hardcover's book id. */
     hardcover?: number;
   };
 }
 
-/**
- * A cast credit on a detail view, normalized like everything else — raw
- * provider people payloads never reach components.
- */
 export interface NormalizedCastMember {
   /** Unique combined identifier: `${providerId}-person-${nativeId}`. */
   id: string;
   name: string;
-  /** Character name(s); '' when the provider omits it. */
   character: string;
-  /** Headshot URL; '' when unavailable — render an initials fallback. */
   headshot: string;
-  /**
-   * TMDB person id when the origin provider carries one (Trakt does) — the
-   * person route is keyed by TMDB. Absent (AniList people) means the route
-   * opens by `anilistId` instead, or by name search when neither is known.
-   */
   tmdbId?: number;
-  /** AniList staff id (AniList voice actors) — opens their AniList profile directly. */
   anilistId?: number;
 }
 
-/** A crew credit — one entry per person, jobs merged across departments. */
+/** One entry per person, with jobs merged across departments. */
 export interface NormalizedCrewMember {
   /** Unique combined identifier: `${providerId}-person-${nativeId}`. */
   id: string;
   name: string;
-  /** Job title(s), e.g. "Director" or "Editor, Producer"; '' when omitted. */
   job: string;
-  /** Headshot URL; '' when unavailable — render an initials fallback. */
   headshot: string;
-  /** See NormalizedCastMember.tmdbId. */
   tmdbId?: number;
-  /** See NormalizedCastMember.anilistId. */
   anilistId?: number;
-  /** Hardcover author id, for a book's credits. */
   hardcoverId?: number;
 }
 
-/** A character in print (AniList manga, Hardcover books), which has no voice actors to credit. */
 export interface NormalizedCharacter {
   /** Unique combined identifier: `${providerId}-character-${nativeId}`. */
   id: string;
   name: string;
-  /** "Main", "Supporting", "Background"; '' when omitted. */
   role: string;
-  /** '' when unavailable — render an initials fallback. */
   image: string;
 }
 
-/**
- * The person behind a cast/crew credit, backing `/person/[id]` and the
- * `/person/lookup` resolution route. TMDB is the primary source; an
- * AniList-only person (voice actors, musicians, most anime staff) resolves
- * through the lookup route's failover, which is why neither id is required.
- */
 export interface NormalizedPerson {
   tmdbId?: number;
   anilistId?: number;
   hardcoverId?: number;
-  /** The author's page on hardcover.app is keyed by slug. */
   hardcoverSlug?: string;
   name: string;
-  /** Display headshot URL; '' when unavailable — render an initials fallback. */
   headshot: string;
-  /** Full-resolution headshot for the zoom viewer; '' when unavailable. */
   headshotFull: string;
   biography?: string;
-  /** AniList biography with its Markdown formatting and link targets intact. */
   biographyMarkdown?: string;
   /** Bare calendar date (YYYY-MM-DD) as TMDB sends it — display only. */
   birthday?: string;
   /** Bare calendar date (YYYY-MM-DD) as TMDB sends it — display only. */
   deathday?: string;
   birthplace?: string;
-  /** TMDB department, e.g. "Acting" — that row leads on the person screen. */
   knownForDepartment?: string;
 }
 
-/**
- * A production company/studio backing the `/studio/[id]` route — TMDB-keyed
- * for the same single-source-of-truth reason as NormalizedPerson.
- */
 export interface NormalizedCompany {
   tmdbId: number;
   name: string;
-  /** Logo URL; '' when unavailable — render the 忍 placeholder. */
   logo: string;
   headquarters?: string;
   homepage?: string;
 }
 
-/** One role-grouped row of a person's previous work ("Acting", "Directing", …). */
 export interface PersonCreditRow {
   role: string;
   items: NormalizedMediaItem[];
-  /**
-   * Per-item credit detail keyed by item id — character name(s) on the
-   * Acting row, job title(s) on crew rows ("Director"). Lives beside `items`
-   * rather than on NormalizedMediaItem: the role is a fact about this
-   * person's credit, not about the media.
-   */
+  /** Credit detail keyed by `item.id` (includes year prefix). */
   details: Record<string, string>;
-  /**
-   * The same credit without the year prefix `details` carries — the role on its
-   * own, for surfaces that already state the year (the card-actions sheet's
-   * header line is "MOVIE · 2026", so its credit line says "as Frank Castle"
-   * and not "2026 · Frank Castle" a second time).
-   */
+  /** Credit role keyed by `item.id`, without the year prefix `details` carries. */
   roles: Record<string, string>;
 }
 
@@ -280,135 +159,64 @@ export interface NormalizedStudio {
   /** Unique combined identifier: `${providerId}-studio-${nativeId}`. */
   id: string;
   name: string;
-  /**
-   * TMDB company id when the origin carries one — the studio route is keyed
-   * by TMDB only. Absent (AniList studios) means name lookup instead.
-   */
   tmdbId?: number;
-  /**
-   * AniList studio id, when the payload carried one (plan 0035 R12). AniList
-   * anime credits ship it and it used to be discarded; carrying it means an
-   * anime studio's "Open in AniList" link resolves for free, with no name
-   * search against the 30 req/min budget.
-   */
   anilistId?: number;
-  /** TMDB logo URL. Absent when the source has no logo (AniList, Trakt). */
   logo?: string;
 }
 
-/**
- * One episode within a `NormalizedSeason`. Detail-screen-only structure — these
- * never reach the unified feed (which stays the flat `NormalizedMediaItem`).
- */
 export interface NormalizedEpisode {
   /** Season-relative episode number. */
   number: number;
   title: string;
   overview?: string;
-  /**
-   * ISO instant with offset/Z (Trakt) or a bare `YYYY-MM-DD` date (TMDB, which
-   * carries no air time); absent when the source has no air date. Consumers
-   * compare it through `lib/time/has-aired.ts`, which handles both forms.
-   */
+  /** ISO instant with offset/Z (Trakt) or bare `YYYY-MM-DD` (TMDB). Compare via `lib/time/has-aired.ts`. */
   firstAired?: string;
   /** Minutes. */
   runtime?: number;
 }
 
-/**
- * One season of a TV show. `number: 0` is Trakt's "Specials" bucket; the
- * normalizer reorders seasons so specials render last instead of first.
- */
+/** `number: 0` is Specials, ordered last by the normalizer. */
 export interface NormalizedSeason {
   number: number;
-  /** "Season N"; "Specials" for season 0. */
   title: string;
   episodes: NormalizedEpisode[];
 }
 
-/**
- * One per-log history entry (the Diary contract, plan 0016). Every provider's
- * history payload normalizes to this before it reaches the merge/grouping
- * layer — components never see raw history shapes (AGENTS.md Data Contract).
- *
- * A diary entry is a *log*, not a media item: the same film logged twice is two
- * entries. Cross-provider same-day collapse and day-header grouping are derived
- * by pure functions in `features/diary/` and never stored here.
- */
 export interface NormalizedDiaryEntry {
-  /**
-   * Stable per-log id `${provider}-${nativeLogId}` — the dedup key that lets
-   * page N+1 re-return the tail of page N (prepend-mutable histories) without
-   * showing a row twice.
-   */
+  /** Stable per-log id `${provider}-${nativeLogId}`. */
   id: string;
   provider: ProviderId;
-  /**
-   * ISO 8601 instant of the log. Trakt/AniList carry a true instant; Letterboxd
-   * RSS carries only a bare calendar date (`YYYY-MM-DD`), flagged by `dateOnly`
-   * so grouping parses it as local midnight and orders it after instant-bearing
-   * entries within the same day (plan 0016 KTD4).
-   */
+  /** ISO 8601 instant, or bare `YYYY-MM-DD` for Letterboxd RSS (flagged by `dateOnly`, parsed as local midnight). */
   watchedAt: string;
-  /** True when `watchedAt` is a bare date (Letterboxd), not a full instant. */
   dateOnly?: boolean;
-  /** Provider-reported like; absent when the provider does not expose one. */
   liked?: boolean;
-  /** The logged media — the *show* for an episode log, the film for a movie. */
   item: NormalizedMediaItem;
-  /**
-   * Episode/chapter numbers this one log covers, sorted ascending (plan 0016
-   * KTD2): an AniList "watched episode 3 - 5" activity is one entry carrying
-   * `[3, 4, 5]`; a movie carries none. This set is the fan-out signature two
-   * cross-provider entries must share to collapse into one row.
-   */
+  /** Episode/chapter numbers covered by this log, sorted ascending (AniList ranges expand into one array). */
   episodes?: number[];
-  /** Season number for a TV episode log (Trakt), for the "S2E5" detail line. */
   season?: number;
-  /** A book's journal event (Hardcover), for the detail line. */
   readingEvent?: ReadingEvent;
-  /** The pages a progress update covers, for the detail line. */
   pages?: { from: number; to: number };
-  /** The same update in percent of the book, Hardcover's own figure. */
   percent?: { from: number; to: number };
 }
 
-/**
- * The presentation-side collapse of same-day, same-item logs from *different*
- * providers into one row (plan 0016 KTD4). Derived by `groupDiaryEntries`,
- * never stored. Two logs from the same provider never merge (a binge day / a
- * same-day rewatch stay distinct rows).
- */
 export interface MergedDiaryEntry {
-  /** Row key — the highest-precedence contributor's log id. */
   id: string;
-  /** Every provider that logged this item on this day, precedence-ordered. */
   providers: ProviderId[];
-  /** Display item: merge-metadata precedence across contributors. */
   item: NormalizedMediaItem;
-  /** Every contributor's item id. The hide filter checks all of them. */
+  /** Every contributor's `item.id`. */
   sourceIds: string[];
-  /** Union of every contributor's episode numbers, sorted ascending. */
   episodes: number[];
-  /** Season number when contributors carry one (TV). */
   season?: number;
-  /** Representative instant (or date) for within-day ordering. */
   watchedAt: string;
-  /** True when every contributor is date-only (Letterboxd-only merge). */
   dateOnly: boolean;
-  /** True when any contributing log is liked. */
   liked?: boolean;
-  /** The book's journal event, when the row is a book's. */
   readingEvent?: ReadingEvent;
-  /** The pages a book's progress update covers. */
   pages?: NormalizedDiaryEntry['pages'];
-  /** The same update in percent of the book. */
   percent?: NormalizedDiaryEntry['percent'];
 }
 
-/** One day bucket in the diary, newest-first, under a `YYYY-MM-DD` local key. */
 export interface DiaryDay {
-  /** Local calendar day key `YYYY-MM-DD` — the header derives from this. */
+  /** Local calendar day `YYYY-MM-DD`. */
   key: string;
   entries: MergedDiaryEntry[];
 }

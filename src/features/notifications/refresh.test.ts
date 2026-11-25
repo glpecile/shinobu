@@ -2,9 +2,6 @@ import { describe, expect, mock, test } from 'bun:test';
 
 import type { UpNextInputs } from '@/features/up-next/types';
 
-// Import-time stubs only (see state/queries/up-next.test.ts): MMKV and
-// react-native's entry point don't load under bun. `refreshNotifications`
-// itself takes fully injected deps below, so nothing here is exercised.
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -21,10 +18,6 @@ mock.module('@/lib/http/client', () => ({
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
-// `./refresh` reaches `@/state/queries/up-next` → `./mapping` → `./simkl`
-// (plan 0034 U7), whose auth re-export reaches expo-crypto — mirror the
-// surface it consumes instead of loading the whole expo package under bun
-// (the `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
