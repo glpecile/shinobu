@@ -196,13 +196,7 @@ export async function runProviderWrites<V>(
         }
         return { provider, status: 'ok' };
       } catch (error) {
-        const transient = transientKind(error);
-        return {
-          provider,
-          status: 'error',
-          message: errorMessage(error),
-          ...(transient != null ? { transient } : {}),
-        };
+        return { provider, status: 'error', message: errorMessage(error), transient: transientKind(error) };
       }
     }),
   );

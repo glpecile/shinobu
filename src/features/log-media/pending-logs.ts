@@ -203,9 +203,8 @@ export function checkLegs(
 export function sendablePendingLog(
   id: string,
   usable: readonly ProviderId[],
-  now = Date.now(),
 ): { record: PendingLog; unsent: ProviderId[]; uncertain: ProviderId[] } | null {
-  update(id, (record) => checkLegs(record, now, providerSessionEpoch, usable));
+  update(id, (record) => checkLegs(record, Date.now(), providerSessionEpoch, usable));
   const record = pendingLogs().find((candidate) => candidate.id === id);
   if (record == null) return null;
   const waiting = (state: WaitingLeg['state']) =>
@@ -288,10 +287,10 @@ export function settleReplay(
 }
 
 /** Puts a record's failed legs back in the queue, under the sessions connected now. */
-export function retryPendingLog(id: string, now = Date.now()): void {
+export function retryPendingLog(id: string): void {
   update(id, (record) => ({
     ...record,
-    queuedAt: now,
+    queuedAt: Date.now(),
     legs: Object.fromEntries(
       legEntries(record).map(([provider, leg]): [ProviderId, PendingLeg] => [
         provider,
