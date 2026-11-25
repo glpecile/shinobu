@@ -7,7 +7,6 @@ import { Spinner } from '@/components/spinner';
 import { Tooltip } from '@/components/tooltip';
 import type { useMediaProgress } from '@/state/queries/media-progress';
 
-/** Loaded titles only: an unrequested next page is never silently counted as unwatched. */
 export function ListProgress({ state, countLabel, partial = false }: { state: ReturnType<typeof useMediaProgress>; countLabel: string; partial?: boolean }) {
   const { items, progress, connected, loading, failed, incomplete, retry } = state;
   const films = items.every((item) => item.type === 'MOVIE' || item.isFilm === true);

@@ -1,4 +1,3 @@
-/** Resolve only absolute HTTP(S) destinations from untrusted Markdown. */
 export function httpUrl(target: string): string | undefined {
   try {
     const url = new URL(target);

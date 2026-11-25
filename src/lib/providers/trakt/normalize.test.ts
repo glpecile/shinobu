@@ -323,7 +323,6 @@ describe('normalizeWatchedProgress', () => {
    */
   test('carries Trakt’s aired count through, including 0', () => {
     expect(normalizeWatchedProgress({ ...PROGRESS_PAYLOAD, aired: 12 }).aired).toBe(12);
-    // 0 is the whole point and must survive the "is it falsy" trap.
     expect(normalizeWatchedProgress({ ...PROGRESS_PAYLOAD, aired: 0 }).aired).toBe(0);
   });
 
@@ -364,7 +363,6 @@ describe('normalizeWatchedProgress next_episode (plan 0019 U1)', () => {
       next_episode: null,
     });
     expect(result.nextEpisode).toBeUndefined();
-    // The watched-key half is unaffected by the pointer's absence.
     expect(result.watchedKeys.has('1-6')).toBe(true);
   });
 
@@ -450,7 +448,6 @@ describe('normalizeHistoryItem', () => {
     });
     expect(entry?.item.type).toBe('MOVIE');
     expect(entry?.item.id).toBe('trakt-100');
-    // A movie log carries no episode detail.
     expect(entry?.episodes).toBeUndefined();
     expect(entry?.season).toBeUndefined();
   });
@@ -472,7 +469,6 @@ describe('normalizeHistoryItem', () => {
       season: 2,
       episodes: [5],
     });
-    // The media item is the show, not the episode.
     expect(entry?.item.type).toBe('TV');
     expect(entry?.item.id).toBe('trakt-200');
   });
@@ -486,8 +482,6 @@ describe('normalizeHistoryItem', () => {
     expect(normalizeHistoryItem(raw)).toBeNull();
   });
 });
-
-// ---- My calendars (plan 0030 U3) ----
 
 const NOW_ISO = '2026-07-27T12:00:00.000Z';
 
@@ -578,7 +572,6 @@ describe('normalizeCalendarShowRow', () => {
     const airing = '2026-07-29T01:00:00.000Z';
     const episode = { season: 1, number: 1 };
 
-    // No show at all.
     expect(
       normalizeCalendarShowRow({ first_aired: airing, episode }, NOW_ISO),
     ).toBeNull();
@@ -589,7 +582,6 @@ describe('normalizeCalendarShowRow', () => {
         NOW_ISO,
       ),
     ).toBeNull();
-    // No episode numbering to render or log against.
     expect(
       normalizeCalendarShowRow({ first_aired: airing, show: CALENDAR_SHOW }, NOW_ISO),
     ).toBeNull();
@@ -599,7 +591,6 @@ describe('normalizeCalendarShowRow', () => {
         NOW_ISO,
       ),
     ).toBeNull();
-    // A numbering of the wrong type is as unusable as an absent one.
     expect(
       normalizeCalendarShowRow(
         {
@@ -610,7 +601,6 @@ describe('normalizeCalendarShowRow', () => {
         NOW_ISO,
       ),
     ).toBeNull();
-    // Nothing to bucket the entry on any day by.
     expect(
       normalizeCalendarShowRow({ episode, show: CALENDAR_SHOW }, NOW_ISO),
     ).toBeNull();
@@ -639,7 +629,6 @@ describe('normalizeCalendarMovieRow', () => {
   });
 
   test('a malformed row drops instead of throwing', () => {
-    // No date to release on.
     expect(
       normalizeCalendarMovieRow({ movie: CALENDAR_MOVIE }, 'theatrical', NOW_ISO),
     ).toBeNull();
@@ -659,7 +648,6 @@ describe('normalizeCalendarMovieRow', () => {
         NOW_ISO,
       ),
     ).toBeNull();
-    // No movie, or one Trakt can't identify.
     expect(
       normalizeCalendarMovieRow({ released: '2026-07-31' }, 'theatrical', NOW_ISO),
     ).toBeNull();

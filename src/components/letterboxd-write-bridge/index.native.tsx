@@ -10,16 +10,9 @@ import {
 import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
 
 /**
- * A hidden bridge that mounts a page WebView per in-flight write, so film and
- * list writes can run *inside* it (plan 0012), and unmounts it once the write
- * settles so no Letterboxd page keeps running in the background. It shares the same WKWebView /
- * Android cookie store the login flow populated, so it is authenticated without
- * any cookie replay — the one thing that works, since replayed cookies land as
- * signed-out at the origin (docs/solutions/letterboxd-no-api-fallback.md).
- *
- * Mounted once at the app root (`app/_layout.tsx`) and rendered only while a
- * write session exists, so disconnecting tears the WebView (and its live
- * session) down. Web uses the optional userscript transport instead.
+ * Runs Letterboxd writes inside a WebView sharing the native login cookie
+ * store; replayed cookies land as signed-out at the origin
+ * (docs/solutions/letterboxd-no-api-fallback.md).
  */
 export function LetterboxdWriteBridge() {
   const hasSession = useHasLetterboxdWriteSession();
@@ -38,8 +31,7 @@ function ConnectedWriteBridge() {
   }, []);
 
   return (
-    // Off-screen and untouchable, but still laid out so the WebView actually
-    // loads (a 0x0 view can be skipped). Kept out of the a11y tree.
+    // 1x1 off-screen so native layout does not skip loading the WebView (0x0 can be skipped).
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
@@ -52,7 +44,6 @@ function ConnectedWriteBridge() {
         left: -9999,
       }}
     >
-      {/* The native cookie store is shared across instances, so each is signed in. */}
       {pages.map((page) => (
         <NitroWebView
           key={page.id}

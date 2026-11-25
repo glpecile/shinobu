@@ -5,32 +5,13 @@ import { haptics } from '@/lib/haptics';
 import { dismissKeyboardNow } from '@/lib/keyboard';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * Shared wiring for the per-card actions dialog (quick log / view details /
- * hide). Every card surface — the home feed plus the person and studio
- * filmographies — needs the same moving parts: the `openActions` handler passed
- * to a card row's `onItemActions`, and the `item`/`open`/`onClose` props for one
- * `CardActionsSheet`. Spread `sheetProps` straight onto the sheet:
- *
- *   const { openActions, sheetProps } = useCardActions();
- *   …onItemActions={openActions}…
- *   <CardActionsSheet {...sheetProps} />
- *
- * `item` is kept (not nulled) while closing so its content doesn't vanish
- * mid-animation.
- */
 export function useCardActions() {
   const [item, setItem] = useState<NormalizedMediaItem | null>(null);
   const [credit, setCredit] = useState<CardCredit | null>(null);
   const [open, setOpen] = useState(false);
 
-  /**
-   * `credit` is the filmography context (whose page this is, and their role on
-   * the item) — passed by `/person`, omitted everywhere else.
-   */
   function openActions(next: NormalizedMediaItem, nextCredit?: CardCredit) {
     haptics.selection();
-    // Long-press on a search result can come with the keyboard up.
     dismissKeyboardNow();
     setItem(next);
     setCredit(nextCredit ?? null);

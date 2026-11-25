@@ -38,12 +38,6 @@ interface DiscussionChrome {
   onOpenChange: (open: boolean) => void;
 }
 
-/**
- * Renders nothing until a 4chan board or the subreddit returns a matching
- * thread. Reddit reads sit behind their own boundary, so 4chan cards show
- * while Reddit loads or fails. A rate-limited search shows no Reddit cards
- * until Refresh in the sheet.
- */
 export function DiscussionSection({ item, episode }: {
   item: NormalizedMediaItem; episode?: { season: number; number: number };
 }) {
@@ -52,7 +46,6 @@ export function DiscussionSection({ item, episode }: {
   const queryClient = useQueryClient();
   const { data: anilistId, isLoading: mappingLoading } = useAniListIdByTmdbQuery(item);
   const animeId = item.externalIds.anilist ?? anilistId ?? null;
-  // AniList-origin items already carry the titles and aliases this read supplies.
   const { data: anime, isLoading: animeLoading } = useAnimeByIdQuery(item.id.startsWith('anilist-') ? null : animeId);
   const searchItem = {
     ...item,
@@ -98,7 +91,6 @@ function RedditDiscussions({ fourchan, item, episode, ...chrome }: DiscussionChr
   fourchan: Discussion[]; item: NormalizedMediaItem; episode?: { season: number; number: number };
 }) {
   const reddit = useSuspenseRedditDiscussionsQuery(chrome.subreddit, chrome.term, item, episode?.season, episode?.number);
-  // 4chan cards already on screen in the fallback must not fade in again.
   return <DiscussionBody {...chrome} fade={fourchan.length === 0} threads={[...fourchan, ...reddit]} />;
 }
 

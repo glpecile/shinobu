@@ -4,7 +4,6 @@ import * as Effect from 'effect/Effect';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { HardcoverDeps } from './deps';
 
-// The transport reaches the PKCE flow store, which is MMKV.
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({ getString: () => undefined, set: () => {}, remove: () => {} }),
 }));
@@ -39,10 +38,6 @@ interface Mutation {
   variables: Record<string, unknown>;
 }
 
-/**
- * A one-book Hardcover library. Reads answer from `entry`. A status change to
- * Currently Reading opens a read, as the server does. Mutations are recorded.
- */
 function library(initial: Entry | null, options: { mutationError?: string; readFails?: boolean } = {}) {
   let entry = initial;
   const mutations: Mutation[] = [];

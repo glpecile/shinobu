@@ -3,20 +3,12 @@ import { Text, View } from 'react-native';
 
 import { MorphText } from '@/components/morph-text';
 
-/**
- * One stat tile of the detail screen's row (Progress / Total / Total time) —
- * a single shell so Trakt- and AniList-sourced pages render identical tiles.
- * Value and caption are deliberately stacked (not inline): the tiles are too
- * narrow for "22 episodes" on one line, and an inline wrap leaves a full 2xl
- * line-height gap above the unit.
- */
 export function StatTile({
   label,
   value,
   caption,
 }: {
   label: string;
-  /** Preformatted number/duration, or a skeleton while it loads. */
   value: ReactNode;
   caption?: string;
 }) {
@@ -24,8 +16,6 @@ export function StatTile({
     <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
       <Text className="text-muted text-xs font-sans uppercase">{label}</Text>
       {typeof value === 'string' || typeof value === 'number' ? (
-        // self-start keeps the morph span shrink-wrapped so its width
-        // animation doesn't fight the tile's stretch alignment.
         <MorphText className="text-foreground text-2xl font-sans-semibold mt-0.5 self-start">
           {value}
         </MorphText>

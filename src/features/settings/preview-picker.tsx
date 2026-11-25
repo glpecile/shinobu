@@ -11,19 +11,6 @@ const GroupContext = createContext<{ value: string; select: (next: string) => vo
 });
 const CheckedContext = createContext(false);
 
-/**
- * Settings radio group of preview cards with a label under each, like
- * Appearance and App icon. Selecting the current option is a no-op.
- *
- * ```tsx
- * <PreviewPicker label="Theme" value={preference} onSelect={setThemePreference}>
- *   <PreviewPicker.Option value="dark">
- *     <PreviewPicker.Preview className="aspect-4/5">…</PreviewPicker.Preview>
- *     <PreviewPicker.Label>Dark</PreviewPicker.Label>
- *   </PreviewPicker.Option>
- * </PreviewPicker>
- * ```
- */
 export function PreviewPicker<T extends string>({
   children,
   label,
@@ -72,15 +59,12 @@ function Option({ children, value }: { children: ReactNode; value: string }) {
   );
 }
 
-/** The card; `className` sizes it (e.g. an aspect ratio) when its content doesn't. */
 function Preview({ children, className }: { children: ReactNode; className?: string }) {
   const checked = useContext(CheckedContext);
   return (
-    // Transparent when unselected so selecting doesn't shift the layout.
     <View className={cn('w-full rounded-2xl border-2 border-transparent p-0.5', checked && 'border-foreground')}>
       <View className={cn('w-full overflow-hidden rounded-xl', className)}>
         {children}
-        {/* Drawn last so the edge stays visible over a preview matching the background. */}
         <View className="absolute inset-0 rounded-xl border border-border" style={{ pointerEvents: 'none' }} />
       </View>
     </View>

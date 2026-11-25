@@ -9,11 +9,7 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedStudio } from '@/types/media';
 
-/**
- * A studio's logo tile and name, for a details screen's Studios rail. Long
- * press (web: the hover ⋯) runs `onActions`. The ⋯ is a sibling of the
- * pressable, because nested gesture-handler buttons let a press bubble.
- */
+/** Keep the hover actions button a sibling of `PresstableScale`; nested gesture-handler buttons bubble presses. */
 export function StudioCard({
   studio,
   onPress,

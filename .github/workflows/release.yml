@@ -1,12 +1,4 @@
-# Otraku-style release channel (docs/plans/0021): tag `vX.Y.Z` builds signed
-# Android APKs and attaches them to a GitHub Release; `workflow_dispatch` runs
-# the same build unsigned (falls back to debug signing, KTD-2) and uploads
-# the APKs as workflow artifacts instead of publishing — the agent-verifiable
-# dry-run path (never creates a tag or release itself). No EAS, no paid
-# services: plain `expo prebuild` + gradle on ubuntu runners (KTD-1).
-# Build caches are read-only here and warmed from `main` by
-# `android-warm.yml`: GitHub scopes caches per ref, so a tag run can never see
-# another tag's cache (docs/solutions/android-ci-tag-cache-scoping.md).
+# Tags publish Android APKs. Manual runs produce workflow artifacts. Restore build caches from android-warm.yml.
 name: Release
 
 on:
@@ -26,9 +18,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # Must match android-warm.yml exactly — CMake >= 3.17 initializes
-      # CMAKE_<LANG>_COMPILER_LAUNCHER from these, routing the NDK C++ compile
-      # (the dominant share of a cold build) through ccache (KTD-3).
+      # Match android-warm.yml so the build can reuse its cached outputs.
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_COMPILERCHECK: content
       CCACHE_MAXSIZE: 1.5G
@@ -53,7 +43,6 @@ jobs:
         id: version
         run: echo "value=$(bun -e "console.log(require('./app.json').expo.version)")" >> "$GITHUB_OUTPUT"
 
-      # Tag runs only (R3) — workflow_dispatch has no tag to compare against.
       - name: Verify tag matches expo.version
         if: github.event_name == 'push'
         run: |
@@ -62,10 +51,7 @@ jobs:
             exit 1
           fi
 
-      # No keystore secret -> unsigned dry-run build (debug signing fallback,
-      # R5). This is independent of trigger type: a tag push with no secret
-      # configured yet also produces an -unsigned-debug build rather than
-      # failing, so early tags before the owner runs the runbook (U5) still work.
+      # A missing keystore uses debug signing, even on tag pushes.
       - name: Determine signing mode
         id: signing
         env:
@@ -79,15 +65,7 @@ jobs:
             echo "suffix=-unsigned-debug" >> "$GITHUB_OUTPUT"
           fi
 
-      # Builder-supplied provider credentials (AGENTS.md: TMDB is
-      # "builder-supplied"; Trakt/AniList follow the same one-tap-connect
-      # pattern) baked into the shipped APK via Expo's standard
-      # EXPO_PUBLIC_* env handling — the same file Metro reads locally
-      # (.env.local). Explicit list: whatever is named here ships inside a
-      # public APK, so adding a provider credential is a deliberate workflow
-      # edit (keep it in step with .env.template). A missing secret writes no
-      # line, which every consumer already treats as "ship without this
-      # credential" (falls back to per-user guided setup, never a build failure).
+      # Expo embeds these public provider values in the APK. Keep the list aligned with .env.template.
       - name: Write provider credentials
         env:
           EXPO_PUBLIC_SIMKL_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_SIMKL_CLIENT_ID }}
@@ -112,10 +90,7 @@ jobs:
           fi
           ccache --version
 
-      # Restore-only: a save from a tag run is invisible to every future run
-      # (per-ref cache scoping) and would only burn the 10 GB repo quota.
-      # `android-warm.yml` is the sole writer. The run_id-suffixed key never
-      # hits exactly; the prefix restore-keys pick up the warm entry.
+      # Only android-warm.yml writes this cache. Restore its latest entry by prefix.
       - name: Restore ccache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
@@ -128,29 +103,20 @@ jobs:
       - name: Reset ccache stats
         run: ccache -z
 
-      # `cache-read-only: true` is explicit, not inherited from the default
-      # (write-on-default-branch): workflow_dispatch dry-runs execute on `main`
-      # *with* signing secrets in the environment, and the secretless warm
-      # workflow must stay the only cache writer (KTD-1 integrity invariant).
-      # `gradle-home-cache-strict-match` stays unset so entries written under
-      # the warm workflow's job correlator are still restored here.
+      # Keep cache access read-only on manual runs too. They can sign APKs on main.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
           cache-read-only: true
 
-      # Signing material appears only here, after `bun install`, prebuild and
-      # Gradle setup, so their dependency code never sees it. The plugin reads
-      # these properties when Gradle evaluates app/build.gradle, not at prebuild.
+      # Expose signing material after dependency install, prebuild, and Gradle setup.
       - name: Decode release keystore
         if: steps.signing.outputs.signed == 'true'
         env:
           KEYSTORE: ${{ secrets.SHINOBU_KEYSTORE_BASE64 }}
         run: printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.keystore"
 
-      # Only set when signed — leaving these unset (rather than set-but-empty)
-      # is what makes `plugins/with-release-signing.js`'s
-      # `project.hasProperty(...)` fallback to debug signing actually fire.
+      # Leave signing properties unset for debug signing. The plugin checks hasProperty.
       - name: Configure release signing properties
         if: steps.signing.outputs.signed == 'true'
         env:
@@ -165,10 +131,7 @@ jobs:
             echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_KEY_PASSWORD=$KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 
-      # `--build-cache` reuses task outputs warmed on `main`; the daemon is left
-      # running so the arm64 invocation below reuses it; the heap override
-      # replaces the generated `-Xmx2048m` default. Flags, not edits to
-      # `android/gradle.properties` — that file is CNG output (KTD-4).
+      # Match the warm workflow build flags and reuse the Gradle daemon for arm64.
       - name: Build universal release APK
         working-directory: android
         run: ./gradlew :app:assembleRelease --build-cache -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
@@ -196,8 +159,6 @@ jobs:
         working-directory: dist
         run: for f in *.apk; do sha256sum "$f" > "$f.sha256"; done
 
-      # workflow_dispatch never creates a tag or release (Goal Capsule stop
-      # condition) — the dry-run path is inspecting these workflow artifacts.
       - name: Upload dry-run artifacts
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

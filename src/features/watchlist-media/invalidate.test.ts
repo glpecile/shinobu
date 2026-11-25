@@ -3,9 +3,6 @@ import { describe, expect, mock, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
-// The usual query-layer edge stubs: MMKV, the native fetch client and the
-// Serializd transport don't load under bun. The invalidation logic under test
-// is untouched by them.
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -26,10 +23,6 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
-// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
-// graph, whose auth import reaches expo-crypto — mirror the surface it
-// consumes instead of loading the whole expo package under bun (the
-// `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
@@ -39,9 +32,7 @@ mock.module('expo-crypto', () => ({
 const { invalidateAfterWatchlist, shouldRefreshNotifications } = await import(
   './invalidate'
 );
-// Real sessions against the faked MMKV store, rather than module mocks: both
-// session modules export more than the username getter, and replacing them
-// wholesale breaks every other importer in the process.
+// Real sessions against faked MMKV: bun's mock.module is process-global and would break other test files importing these modules.
 const { connectLetterboxd } = await import('@/state/session/letterboxd');
 const { connectSerializd } = await import('@/state/session/serializd');
 connectLetterboxd('gian');
@@ -58,7 +49,6 @@ const SHOW: NormalizedMediaItem = {
   externalIds: { trakt: 1, anilist: 9, tmdb: 77 },
 };
 
-/** Records the keys a run invalidated, joined so they read as paths. */
 function recordingClient(): { client: QueryClient; keys: string[] } {
   const keys: string[] = [];
   const client = {
@@ -69,7 +59,6 @@ function recordingClient(): { client: QueryClient; keys: string[] } {
   return { client, keys };
 }
 
-/** A bare `YYYY-MM-DD` `days` from now, the shape a release calendar carries. */
 function localDate(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -82,8 +71,6 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
   test('Trakt invalidates the calendar and watchlist *prefixes*, never a per-window key', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, ['trakt']);
-    // A write path cannot know the calendar's `startDate`/`days` or the
-    // watchlist's sort arguments — naming one would silently refresh nothing.
     expect(keys).toContain('trakt/my-calendar');
     expect(keys.some((key) => key.startsWith('trakt/my-calendar/'))).toBe(false);
     expect(keys).toContain('trakt/watchlist');
@@ -94,7 +81,6 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, ['anilist']);
     expect(keys).toContain('anilist/current-anime-entries');
-    // KTD-2's guard reads this before the next write.
     expect(keys.some((key) => key.startsWith('anilist/entry-state/9/'))).toBe(true);
     expect(keys).toContain('anilist/relations/9');
   });
@@ -129,8 +115,6 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
   test('the gatherers are invalidated after the provider keys, not before', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, ['trakt', 'anilist']);
-    // Invalidating a gather key alone would re-serve the provider payloads from
-    // cache for up to 15 minutes; ordering is the contract, so assert it.
     expect(keys.indexOf('watchlist/inputs')).toBe(keys.length - 1);
     expect(keys.indexOf('up-next/inputs')).toBe(keys.length - 2);
     expect(keys.indexOf('trakt/my-calendar')).toBeLessThan(keys.indexOf('up-next/inputs'));
@@ -153,8 +137,6 @@ describe('shouldRefreshNotifications (plan 0031 R19/R20)', () => {
       releaseDate: '1997-08-05',
       releaseCalendar: { theatrical: '1997-08-05', physical: '1998-09-01' },
     };
-    // The same judgement Calendar makes: nothing in today…today+6, so the item
-    // cannot produce a notification candidate and a full regather is pure cost.
     expect(shouldRefreshNotifications(film, 'ios')).toBe(false);
   });
 

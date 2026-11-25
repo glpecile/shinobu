@@ -5,12 +5,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { entryLabel, episodeHref } from './entry';
 import type { UpNextEntry, UpNextEpisode, UpNextRelease } from './types';
 
-/**
- * The two accessors that cross the `kind` union (plan 0030 KTD-1). Everything
- * downstream — ordering, day buckets, badges, the card's second line — reads an
- * entry through these, so a wrong answer here is wrong in four places at once.
- */
-
 const SHOW: NormalizedMediaItem = {
   id: 'trakt-1',
   title: 'Show',
@@ -68,9 +62,6 @@ describe('entryLabel', () => {
   });
 
   test('a seasonless AniList entry reads E7, never a fabricated S1E7', () => {
-    // Plan 0027: an AniList entry counts its own episodes and carries no
-    // canonical season — stamping "S1" here is the fabrication that wrote
-    // phantom season-1 history for every sequel-season anime.
     expect(entryLabel(episodeEntry({ season: undefined, number: 7 }))).toBe('E7');
   });
 });

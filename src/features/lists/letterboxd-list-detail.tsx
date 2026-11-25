@@ -31,7 +31,6 @@ import { ListProgress } from './list-progress';
 import { ListsLoadError } from './lists-page';
 
 const membershipLayout = LinearTransition.duration(DURATION.swap);
-/** Shared, so a film's cell keeps the same props until its own data changes. */
 const NO_SOURCES: ProviderId[] = [];
 
 export function LetterboxdListFilms({ username, owner, slug, url }: { username: string | null; owner: string; slug: string; url: string }) {
@@ -43,8 +42,6 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
   const reducedMotion = useReducedMotion();
   const Layout = view === 'grid' ? PosterWall : WatchlistRows;
   const loaded = [...new Map((pages.data?.pages.flatMap((page) => page.items) ?? []).map((item) => [item.id, item])).values()];
-  // Progress already resolves these film records; sorting observes that same
-  // read instead of treating every scraped duration as unknown.
   const progress = useMediaProgress(loaded);
   const items = progress.items;
   const progressById = new Map(items.map((item, index) => [item.id, progress.progress[index]]));
@@ -98,9 +95,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
   );
 }
 
-/** Mirrors the header, toolbar, and persisted grid/row view without a layout jump. */
 export function ListFilmsSkeleton({ likeButton, owned, shareHref }: { likeButton: boolean; owned: boolean; shareHref?: string }) {
-  // Rename drops its label on a phone (`RenameList`).
   const compact = useWindowDimensions().width < 640;
   return (
     <View className="flex-1">

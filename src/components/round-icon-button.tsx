@@ -4,14 +4,7 @@ import { View } from 'react-native';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 
-/**
- * The 40px round glyph floating over content — back, close, the sidebar
- * toggle. Not a `Button`: that is a labelled pill, and this has no label to
- * draw, a translucent fill, and callers that bring non-Ionicons glyphs.
- *
- * The box sits on an inner View because a border on the pressable itself is
- * never drawn on Android (docs/solutions/pressto-border-not-drawn-on-android.md).
- */
+/** Inner View holds the border because pressto never draws borders on Android (docs/solutions/pressto-border-not-drawn-on-android.md). */
 export function RoundIconButton({
   icon,
   label,
@@ -20,10 +13,8 @@ export function RoundIconButton({
   style,
 }: {
   icon: ReactNode;
-  /** Announced, not drawn. */
   label: string;
   onPress: () => void;
-  /** Layout only. */
   className?: string;
   style?: ComponentProps<typeof PresstableOpacity>['style'];
 }) {

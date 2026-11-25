@@ -21,7 +21,6 @@ const LISTS = {
   dropped: 'dropped_shows_page',
 } as const;
 
-/** TMDB show ids on each of the account's three status lists. */
 type SerializdTrackingLists = Record<keyof typeof LISTS, number[]>;
 
 /**

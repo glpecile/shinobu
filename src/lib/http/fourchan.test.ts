@@ -12,7 +12,6 @@ const item: NormalizedMediaItem = {
   coverImage: '', currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: {},
 };
 
-// Opening-post fields captured from /a/thread/291481805 on 2026-10-09.
 const exampleFetch: HttpFetch = async () => new Response(JSON.stringify([{ threads: [{
     no: 291481805,
     sub: 'Sekai Saikyou no Majo, Hajimemashita / The World&#039;s Strongest Witch',

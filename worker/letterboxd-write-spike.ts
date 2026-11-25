@@ -1,23 +1,8 @@
 import { LETTERBOXD_BASE_URL } from '@/lib/providers/letterboxd/config';
 
 /**
- * THROWAWAY — plan 0018 phase-0 re-spike (todos/011), NOT production code.
- *
- * The 2026-07-20 spike proved every state-changing Letterboxd POST is 403
- * "Just a moment…"-challenged from server-side fetch (EAS Hosting/undici,
- * residential + datacenter IPs alike) — TLS/client fingerprinting. This route
- * re-runs exactly that test from **Workers egress**, whose TLS fingerprint is
- * Cloudflare's own and is the one transport the prior spike never tried.
- *
- * It replays ONE path — `POST /api/v0/production-log-entries` — forwarding the
- * caller's `Cookie` / `User-Agent` / `X-CSRF-TOKEN` verbatim (the caller IS the
- * session owner; same trust model as the native app holding the cookie) and
- * classifies the upstream response: challenged (403 + "Just a moment") vs
- * reached-Rails (anything else). Never logs Cookie/CSRF/body values.
- *
- * Delete this file after the verdict: either the write rule gets promoted into
- * worker/letterboxd-proxy.ts's allowlist (writes GO) or this was the final
- * confirmation that writes stay native-WebView-only.
+ * Letterboxd Workers-egress diagnostic (plan 0018, todos/011).
+ * The Worker dispatches it separately from the GET-only public read relay.
  */
 
 const SPIKE_PATH = '/api/letterboxd/spike/production-log-entries';

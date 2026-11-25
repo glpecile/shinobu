@@ -47,7 +47,6 @@ const mutationResult = Schema.Record(
   ),
 );
 
-/** One mutation. Fails when Hardcover reports an `error` or returns no row id. */
 function mutate(
   deps: HardcoverDeps,
   document: string,
@@ -87,29 +86,19 @@ function bookIdOf(item: NormalizedMediaItem): Effect.Effect<number, ProviderErro
 }
 
 export interface HardcoverLogOptions {
-  /** The whole book, or the page reached. Page 0 only starts the read. */
+  /** Page 0 only starts the read. */
   reading: { finished: true } | { finished: false; page: number };
   /** The reader's calendar day for the log, `YYYY-MM-DD` in their time zone. */
   date: string;
   /** The chosen instant, when the log is backdated. It dates the journal entry. */
   at?: string;
-  /** The book is already Read and this log is another read of it. */
   reread?: boolean;
 }
 
 /**
- * Logs reading on a book. It reads the library entry first and picks the
- * write from what is there, so a book that is not in the library gets
- * `insert_user_book` and a retry after a half-finished log continues from the
- * step that landed.
- *
- * - Finished: status Read on `date`. On a book that is already Read, a
- *   reread adds a finished read, unless a read already ended on `date`.
- *   Anything else is a skip, so a repeated request never records a second read.
- * - Page reached: status Currently Reading when the book is not Currently
- *   Reading (on a Read book this opens a reread), then the page on its read
- *   in progress. A Read book can hold an imported read with no end date, so
- *   only a Currently Reading entry's open read takes the page as it is.
+ * Reads the library entry first so retries resume safely. A Read book can hold
+ * an imported read with no end date, so only a Currently Reading entry's open
+ * read accepts page updates.
  */
 export function logToHardcover(
   deps: HardcoverDeps,
@@ -167,7 +156,6 @@ export function logToHardcover(
   });
 }
 
-/** Hardcover's own name for each status, as its app shows it. */
 export const STATUS_NAMES: Record<number, string> = {
   [HardcoverStatus.WantToRead]: 'Want to Read',
   [HardcoverStatus.Reading]: 'Currently Reading',
@@ -178,10 +166,8 @@ export const STATUS_NAMES: Record<number, string> = {
 };
 
 /**
- * Want to Read, the reading-list add. It writes only when the book is not in
- * the library: an entry holds one status, so writing Want to Read over
- * Reading or Read would move the book back. A failed entry read fails the
- * effect and no mutation is sent.
+ * Writes only when absent: a Hardcover entry holds a single status, so writing
+ * Want to Read over Reading or Read would regress it.
  */
 export function addToHardcoverReadingList(
   deps: HardcoverDeps,
@@ -207,10 +193,8 @@ export function addToHardcoverReadingList(
 }
 
 /**
- * The reading-list removal. Deleting a library entry also deletes its reads,
- * rating, review and notes, so this deletes only an entry that a new read of
- * the library shows as Want to Read with nothing else on it. A failed entry
- * read fails the effect and no mutation is sent.
+ * Hardcover's `delete_user_book` cascades to reads, ratings, reviews, and
+ * notes, so only bare Want to Read entries are deleted.
  */
 export function removeFromHardcoverReadingList(
   deps: HardcoverDeps,
@@ -244,12 +228,6 @@ const HARDCOVER_TRACKING_STATUS = {
   dropped: HardcoverStatus.DidNotFinish,
 } as const;
 
-/**
- * Pause, or Did Not Finish for a drop. It changes only `status_id`, so the
- * reads, pages, rating, review, notes and lists stay. Never Ignored and never
- * a delete. A book not in the library, or Want to Read or Read, is a skip.
- * The next page log sets Currently Reading again (`logToHardcover`).
- */
 export function setHardcoverTrackingStatus(
   deps: HardcoverDeps,
   item: NormalizedMediaItem,

@@ -1,7 +1,6 @@
 import type { HttpFetch } from '@/lib/http/types';
 import { SERIALIZD_APP_HEADERS } from './config';
 
-/** Normalize any `HeadersInit` the caller passed into a plain record. */
 function toRecord(headers?: HeadersInit): Record<string, string> {
   if (headers == null) return {};
   if (headers instanceof Headers) return Object.fromEntries(headers.entries());

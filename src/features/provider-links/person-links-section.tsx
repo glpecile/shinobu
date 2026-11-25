@@ -11,27 +11,6 @@ import { useConnectedProviders } from '@/state/session';
 
 import { ProviderLinkRows } from './provider-link-row';
 
-/**
- * The details `RatingsSection`'s link pills, for `/person/[id]` — same pill treatment,
- * same `openExternalUrl` hand-off, different subject. A person has no *source*
- * provider (TMDB is the single source of truth for people, and TMDB is a
- * metadata source, never a link target), so unlike the item section this gates
- * purely on connected providers: only Letterboxd and AniList have an
- * addressable person surface, and each is linked only while connected.
- *
- * Letterboxd's link derives synchronously from the name. AniList's does not:
- * its staff pages are numeric-id keyed (plan 0035 R11), so the id is resolved by
- * a name search behind `enabled` — and while it is unresolved, or when nothing
- * matched, **the AniList pill simply is not there**. No spinner, no placeholder,
- * and above all no fallback to a name-search URL, which is what this replaces:
- * most TMDB people have no AniList entry, so that link overwhelmingly opened an
- * empty search page (R13).
- *
- * `enabled` defaults on for the person route (mounted = wanted). A sheet passes
- * its own open flag so a rail of 20 cards costs 0 requests until one is
- * long-pressed — and `variant="rows"`, so the links land as full-width action
- * rows continuing the stack above them instead of a pill cluster.
- */
 export function PersonLinksSection({
   person,
   enabled = true,
@@ -40,14 +19,10 @@ export function PersonLinksSection({
 }: {
   person: UrlPerson;
   enabled?: boolean;
-  /** `'pills'` on a page, `'rows'` inside a sheet — see `ProviderLinkRow`. */
   variant?: 'pills' | 'rows';
-  /** Forwarded to the rows variant (native-only sheet dismissal). */
   onOpened?: () => void;
 }) {
   const connected = useConnectedProviders();
-  // Only while AniList is connected *and* the section wants links: an
-  // unconnected AniList renders no pill, so resolving its id would buy nothing.
   const staffId = useAniListStaffIdQuery({
     name: person.name,
     enabled:
@@ -58,7 +33,6 @@ export function PersonLinksSection({
   });
   const anilistId = person.anilistId ?? staffId.data ?? undefined;
 
-  // A Hardcover author is known by id, so a name-keyed link could open a namesake.
   const providers = person.hardcoverId == null ? connected : [Provider.Hardcover];
   const links: ProviderLink[] = [];
   for (const provider of providers) {

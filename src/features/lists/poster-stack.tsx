@@ -6,20 +6,12 @@ import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { cn } from '@/lib/cn';
 
 const SLOTS = 5;
-/** Each poster's share of the stack's width; the five overlap to fill it. */
 const POSTER_WIDTH = 32;
 const STEP = (100 - POSTER_WIDTH) / (SLOTS - 1);
-/** Width over height for five 2:3 posters at POSTER_WIDTH. */
 export const POSTER_STACK_RATIO = 100 / (POSTER_WIDTH * 1.5);
 
-/**
- * A list's first films fanned left to right, the first on top, as Letterboxd
- * shows lists. Slots without a film stay as empty frames, so a short or empty
- * list keeps the same footprint. `children` overlays the stack (New list's +).
- */
 export function PosterStack({ previews, className, children }: {
   previews: readonly { id: string; coverImage: string }[];
-  /** Layout only. */
   className?: string;
   children?: ReactNode;
 }) {

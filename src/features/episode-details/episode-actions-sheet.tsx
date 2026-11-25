@@ -15,12 +15,7 @@ import { EpisodeLogs, EpisodeStill } from './episode-sections';
 import { useEpisode } from './use-episode';
 import { useEpisodeLogs } from './use-episode-logs';
 
-/**
- * Which row was long-pressed — kept (not nulled) while the sheet closes.
- * `season`/`number` are the **tracker's** (TMDB/Trakt) numbering, which for an
- * anime entry differs from the row's own entry-relative number; `episode` is
- * the row as listed, for instant title/overview/air date.
- */
+/** `season`/`number` use TMDB/Trakt numbering (which differs from an anime entry's relative number). */
 export interface EpisodePointer {
   season: number;
   number: number;
@@ -28,14 +23,12 @@ export interface EpisodePointer {
 }
 
 interface EpisodeActionsSheetProps {
-  /** Entry-relative airing evidence when the anime row has no date. */
   aired?: boolean;
   item: NormalizedMediaItem;
   pointer: EpisodePointer | null;
   watched: boolean;
   open: boolean;
   onClose: () => void;
-  /** Opens the shared confirm sheet for this episode (the parent owns it). */
   onMark: () => void;
 }
 
@@ -49,8 +42,6 @@ function SheetBody({
 }: Omit<EpisodeActionsSheetProps, 'open' | 'pointer'> & { pointer: EpisodePointer }) {
   const pushRoute = usePushRoute();
   const { season, number } = pointer;
-  // The row already holds title/overview; this only adds the still and TMDB's
-  // fuller text, and warms the episode screen's cache for the "View" row.
   const view = useEpisode(item, season, number);
   const episode = view.episode ?? pointer.episode;
   const logs = useEpisodeLogs(item, season, number, episode.firstAired);
@@ -95,8 +86,6 @@ function SheetBody({
           />
         ) : (
           <Text className="text-muted font-sans text-sm">
-            {/* The date is already on the meta line above, so this says how
-                soon — the same countdown the details CTA speaks. */}
             {airsIn == null ? 'Not aired yet' : `Airs ${airsIn.toLowerCase()}`} —
             it can be logged once it&apos;s out.
           </Text>
@@ -117,12 +106,6 @@ function SheetBody({
   );
 }
 
-/**
- * The long-press dialog behind a season-accordion row — the same shape as the
- * card-actions and credit sheets: what you grabbed (still, code, unclamped
- * title), whether and where it's logged, the overview, the one write the row
- * offers, and the route to the full episode screen one row away.
- */
 export function EpisodeActionsSheet({
   aired,
   item,

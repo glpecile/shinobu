@@ -1,10 +1,4 @@
-# Probes the provider URLs the app depends on (setup pages, OAuth/API
-# endpoints) so a dead link is noticed days after it rots, not months later
-# when a user hits it. Daily because the checks are time-driven — see
-# scripts/check-external-urls.ts for the manifest and the Trakt precedent.
-# Also runs on PRs that touch the provider layer, so a URL change is probed
-# in the same PR that makes it. Note: the schedule only fires once this file
-# is on the default branch.
+# Probe provider URLs daily and when a PR changes the provider layer.
 name: Link health
 
 on:
@@ -16,7 +10,6 @@ on:
       - 'scripts/check-external-urls.ts'
       - 'src/lib/providers/**'
 
-# Read-only token: the probes fetch public URLs and need nothing but the source.
 permissions:
   contents: read
 

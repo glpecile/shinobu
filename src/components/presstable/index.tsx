@@ -7,40 +7,14 @@ import { longPressAction, usePressHandler, type PressBehaviorProps } from './pre
 
 export { longPressAction, type PressBehavior } from './press-behavior';
 
-/*
- * The app's pressables on native — pressto (gesture-handler + reanimated,
- * animated on the UI thread) instead of react-native's core Pressable, with a
- * built-in repeat protection by default: the first press fires immediately,
- * repeats within 500 ms are dropped. Disclosures use `pressBehavior="immediate"`
- * so every press toggles, even during an animation. Both raw imports are
- * oxlint-banned; `withUniwind` because className on a raw third-party
- * component is silently dropped on native
- * (docs/solutions/uniwind-classname-third-party-components.md). Web uses
- * react-native-web's Pressable instead (`index.web.tsx`).
- */
+// `withUniwind` is required because Uniwind drops `className` on raw third-party components
+// on native (docs/solutions/uniwind-classname-third-party-components.md).
 
-/**
- * Android only, and the reason it's here rather than at a call site: pressto
- * renders RNGH's `BaseButton`, which on Android carries the platform's
- * `selectableItemBackground` ripple. That ripple is masked by the *button's*
- * own border radius — zero unless someone repeats the child's radius on the
- * pressable — so it paints a rectangle of highlight behind whatever rounded
- * thing the pressable actually wraps
- * (docs/solutions/android-ripple-ignores-child-radius.md).
- *
- * Nobody asked for it. The app's press feedback is pressto's own opacity dim
- * and scale, which are the shape of the content by construction and identical
- * on iOS and web. Turning the ripple off is one line here instead of a
- * `rounded-*` duplicated onto every pressable in the app and kept in sync with
- * its child's radius forever — drift lint can't catch.
- *
- * `transparent` and not `undefined`: RNGH skips building the drawable entirely
- * for a transparent ripple (`createSelectableDrawable`), where `undefined`
- * means "use the theme's". Still overridable per pressable.
- */
+// Disables RNGH BaseButton's Android ripple, which ignores child border radius
+// (docs/solutions/android-ripple-ignores-child-radius.md). `'transparent'` skips
+// `createSelectableDrawable` entirely, whereas `undefined` falls back to the theme ripple.
 const RIPPLE_COLOR = 'transparent';
 
-/** pressto's own scale pressable, with the shrink overridable per instance. */
 const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion?: boolean }>(
   (progress, { config, metadata }) => {
     'worklet';
@@ -68,11 +42,6 @@ const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion
 const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
 
-/**
- * Scales down while pressed — media cards, poster-like surfaces, FABs.
- * `minScale` sets the shrink: shallower for a wide surface, where the default
- * 0.96 reads as a lurch, deeper for a small one.
- */
 export function PresstableScale({
   minScale,
   onPress,
@@ -99,7 +68,6 @@ export function PresstableScale({
   );
 }
 
-/** Dims while pressed — buttons, icon taps, inline text actions. */
 export function PresstableOpacity({
   onPress,
   onLongPress,

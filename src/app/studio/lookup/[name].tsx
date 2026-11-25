@@ -23,14 +23,6 @@ function ResolvedStudio({ tmdbId }: { tmdbId: number }) {
   return <StudioDetailsView {...data} />;
 }
 
-/**
- * Name → company-id resolution for studios whose origin provider has no TMDB
- * id (AniList's) — the studio twin of /person/lookup, picking via
- * `pickPersonMatch` (generic over names).
- *
- * Renders the page here rather than redirecting to an ID route: the replace was a second screen
- * transition that faded the stack through black and restarted the skeleton.
- */
 function LookupContent({ name, onGoBack }: { name: string; onGoBack: () => void }) {
   const { data } = useSuspenseTmdbStudioSearchQuery({ name });
   const match = pickPersonMatch(data, name);
@@ -71,8 +63,6 @@ export default function StudioLookupScreen() {
   );
 }
 
-/** Route-level containment — a failed search shows the not-found view with
- * a retry instead of taking the whole app down via the root boundary. */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (

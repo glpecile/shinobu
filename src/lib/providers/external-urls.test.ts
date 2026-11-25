@@ -251,12 +251,6 @@ describe('providerPersonUrl', () => {
     ).toBe('https://anilist.co/staff/96879');
   });
 
-  /**
-   * What this replaced was a name-search URL. It reads like a graceful fallback
-   * and is not: most TMDB people have no AniList entry, so it overwhelmingly
-   * opened an empty results page. R13 — hide, never near-link — is why an
-   * unresolved id is `null` rather than a search.
-   */
   it('returns null for AniList without a resolved id — never a name search', () => {
     expect(providerPersonUrl('anilist', { name: 'Hayao Miyazaki' })).toBeNull();
     expect(providerPersonUrl('anilist', { name: '宮崎 駿' })).toBeNull();

@@ -6,7 +6,6 @@ import { useColorScheme, View } from 'react-native';
 import type { SegmentedControlProps } from '@/components/segmented-control';
 import { haptics } from '@/lib/haptics';
 
-/** SwiftUI owns the selection appearance and its native transition. */
 export function NativeSegmentedControl<T extends string>({
   options,
   value,

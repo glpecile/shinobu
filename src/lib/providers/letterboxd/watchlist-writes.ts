@@ -44,18 +44,7 @@ function interpretWatchlistResponse(
   });
 }
 
-/**
- * The Letterboxd watchlist adapter both verbs share (plan 0033 R3): a
- * **declarative state set**, `{"inWatchlist": true|false}`, never a toggle —
- * so a repeat add is idempotent and plan 0031 KTD-6's hazard (a wrong guess
- * *removing* a film while reporting success) does not exist on this endpoint.
- * Native writes ride the same captured-WebView-session plumbing as the diary
- * write (`deps.watchlistWebFetch`): the LID read, CSRF fetch, and PATCH run
- * *inside* the authenticated login WebView. Web writes can instead use the
- * userscript, in the signed-in browser tab without exporting cookies. No session or transport fails as a
- * dead session so the caller surfaces "reconnect Letterboxd" rather than
- * silently dropping the write.
- */
+/** Letterboxd sets watchlist membership explicitly. Unknown receipts leave the UI unchanged. */
 export function setLetterboxdWatchlist(
   deps: LetterboxdDeps,
   item: NormalizedMediaItem,
@@ -99,7 +88,6 @@ export function setLetterboxdWatchlist(
   });
 }
 
-/** The add verb — `useWatchlistMedia`'s fan-out target. */
 export function addToLetterboxdWatchlist(
   deps: LetterboxdDeps,
   item: NormalizedMediaItem,

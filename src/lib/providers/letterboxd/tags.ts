@@ -43,19 +43,7 @@ function attribute(tag: string, name: string): string | null {
   return match == null ? null : (match[1] ?? match[2] ?? null);
 }
 
-/**
- * Parses the public tag index. The page renders one `<ul class="js-tags-section
- * tags tags-columns">` whose `<li>`s each hold a `/{user}/tag/{slug}/films/`
- * link (the display name lives in BOTH its `title` attribute and its text — the
- * attribute is the reliable one, the text can carry nested markup) and a
- * whitespace-padded `<span class="detail -has-count">` count. Letterboxd serves
- * the list already sorted by frequency descending, so the emitted order IS the
- * suggestion order — nothing here re-sorts.
- *
- * Pure for fixture testing, and total: a missing section, a shrunken attribute
- * set, or an unrelated page all yield `[]`. A missing suggestion list must
- * degrade to no chips, never to a broken sheet.
- */
+/** Extract tags and counts from the public tags section, excluding unrelated tag links. */
 export function parseTagsPage(html: string): LetterboxdTag[] {
   const section = /<ul\b[^>]*\bclass="[^"]*\bjs-tags-section\b[^"]*"[^>]*>([\s\S]*?)<\/ul>/.exec(
     html,
@@ -93,18 +81,7 @@ export function parseTagsPage(html: string): LetterboxdTag[] {
   return tags;
 }
 
-/**
- * The member's public tag vocabulary, most-used first — the log sheet's
- * suggestion source. Built exactly like `getWatchlist`'s URL so the web
- * transport's proxy rewrite (`state/queries/letterboxd.ts`) applies unchanged;
- * the Worker's third allowlist rule covers this path (plan 0018 contract
- * unchanged — see `worker/letterboxd-proxy.ts`).
- *
- * Spiked 2026-07-25: unlike the deeper diary pages
- * (docs/solutions/letterboxd-diary-html-cloudflare-walled.md) this page answers
- * 200 to a plain client. A 404 is a renamed/deleted account (dead session);
- * anything else parseable-but-empty is just "no tags yet".
- */
+/** The member's public tag vocabulary, most-used first. */
 export function getUserTags(
   deps: LetterboxdDeps,
 ): Effect.Effect<LetterboxdTag[], ProviderError> {

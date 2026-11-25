@@ -8,14 +8,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { isCleanWriteReport, type WriteReportLike } from './is-clean-report';
 import { WriteSheet } from './write-sheet';
 
-/**
- * The state and report step a provider-picker sheet shares (watchlist add and
- * remove, pause and drop).
- *
- * Only the user's toggles are state. Every other target follows
- * `preselected`, which is read on each render, so a target that arrives
- * while enrichment or a status read resolves gets its default then.
- */
 export function useSelectedTargets(targets: readonly ProviderId[], preselected: readonly ProviderId[] = targets) {
   const [toggles, setToggles] = useState<Partial<Record<ProviderId, boolean>>>({});
   const selected = targets.filter((id) => toggles[id] ?? preselected.includes(id));
@@ -29,10 +21,6 @@ export function useSelectedTargets(targets: readonly ProviderId[], preselected: 
   };
 }
 
-/**
- * The drawer's second step: set from the write's own callbacks, so a retry's
- * pending state doesn't blank the report back to the form.
- */
 export function useReportStep<R extends WriteReportLike>(onClean: (report: R) => void) {
   const [report, setReport] = useState<R | null>(null);
   const [thrown, setThrown] = useState(false);
@@ -58,7 +46,6 @@ export function useReportStep<R extends WriteReportLike>(onClean: (report: R) =>
   };
 }
 
-/** What landed, what didn't and why, with a retry for anything that failed. */
 export function PickerReport({
   item,
   step,

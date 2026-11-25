@@ -170,18 +170,7 @@ function interpretDiaryResponse(
   });
 }
 
-/**
- * The Letterboxd write adapter `useLogMedia` fans out to (plan 0012). Runs the
- * diary POST *inside the authenticated login WebView* (`deps.webFetch`), whose
- * injected script reads the film's LID off the page it loads. Replaying the
- * captured cookies over nitro-fetch lands as signed-out at the origin, so the
- * WebView is the only channel that carries the real session (docs/solutions/letterboxd-no-api-fallback.md).
- * Movies and anime films only; routing.ts guarantees nothing else reaches here.
- * No captured session (or no WebView transport, e.g. web) fails as a dead session
- * so the caller surfaces "reconnect Letterboxd" rather than silently dropping the
- * write. The web userscript transport uses the connected username instead of a
- * captured cookie session.
- */
+/** Write the diary entry inside the signed-in page and return the provider's outcome. */
 export function logToLetterboxd(
   deps: LetterboxdDeps,
   item: NormalizedMediaItem,

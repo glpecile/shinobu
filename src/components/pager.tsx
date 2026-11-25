@@ -20,50 +20,12 @@ import { AnimatedScrollView } from '@/components/animated-view';
 import { haptics } from '@/lib/haptics';
 import { DURATION, TIMING_EASE_IN_OUT } from '@/lib/motion';
 
-/**
- * Horizontal pages: a swipe moves to the neighbour, a tab tap scrolls there.
- * A plain paging scroll view — a
- * native UIScrollView / HorizontalScrollView, CSS scroll snap on web — so the
- * gesture is the platform's and no pager library is needed.
- *
- * This is what makes a switch smooth on native: the selected page and
- * its two neighbours stay mounted, so a swipe reveals a wall that already
- * exists instead of unmounting one Legend List and mounting another on the
- * gesture frame (docs/solutions/season-switch-jank-remount-and-blur-on-native.md).
- * Neighbours mount once the scroll has settled — the idle moment — never
- * mid-gesture, and a tab tap's target only when it is not one of them. A
- * tap's scroll is dispatched from an effect, after the commit, so anything
- * mounted on that render — a Legend List, even from cache — is JS time the
- * scroll waits on. Farther pages stay empty: they are only ever glimpsed
- * while a tab tap scrolls past them, and they fill in once selected.
- *
- * Controlled: `value` comes from the URL, `onSettle` reports where a swipe
- * landed, and `progress` is the offset as a continuous page index, written on
- * the UI thread every scroll frame for an animated tab indicator. Native
- * controls update their selection after the swipe settles via the
- * momentum-end event. react-native-web never fires it, but web only moves by tap, so there
- * the tap's own animation reports where it came to rest. Pages get explicit
- * sizes from the measured pager because a horizontal scroll view does not
- * stretch its children's height on every platform.
- *
- * A tab tap's scroll is the platform's on native (`scrollTo`, animated). On
- * web that would be the browser's smooth scroll, whose duration scales with
- * distance and is not ours to set — 550ms for one page, close to a second
- * for three, well past the 300ms where motion stops reading as feedback. So
- * on web the tap drives `scrollLeft` itself from a timing animation, at the
- * pill's own duration and curve so the two read as one move, with scroll
- * snap suspended for its duration: under `mandatory` snap the browser
- * re-snaps every mid-page write straight back to the page it started on.
- * Reanimated's `scrollTo` is a no-op on web, hence the DOM write.
- *
- * Web switches pages by tap only, so there the pager is not a horizontal
- * scroller at all (`overflow-x: hidden`, which a `scrollLeft` write still
- * moves). A trackpad swipe over the wall belongs to the page, not to us: it
- * is what the browser's back gesture is made of. Paging on it was worse
- * anyway — left to the browser it free scrolls for as long as the OS sends
- * momentum, and intercepting the wheel to step a page read as unpredictable,
- * killed the back gesture, and let a near-vertical flick nudge the pager into
- * a snap-back wobble.
+/*
+ * Neighbour pages stay mounted to avoid remounting Legend List mid-swipe
+ * (docs/solutions/season-switch-jank-remount-and-blur-on-native.md).
+ * On web, react-native-web never fires `onMomentumEnd`, Reanimated `scrollTo` is a no-op,
+ * and `mandatory` scroll-snap overrides mid-animation `scrollLeft` writes, so web drives
+ * `scrollLeft` directly with scroll-snap suspended.
  */
 
 /** How far off a page boundary a resting offset may sit (fractional zoom rounds `scrollLeft`). */
@@ -71,12 +33,7 @@ const BOUNDARY_TOLERANCE = 2;
 const isWeb = Platform.OS === 'web';
 /** Web pages by tap: `scrollLeft` still moves, a trackpad swipe reaches the browser. */
 const webScrollLock = { overflowX: 'hidden' } as unknown as ViewStyle;
-/**
- * The first position has to land before the first paint — after it, the pager
- * paints one frame of the first page, whose content is not even mounted, and
- * then jumps. Static web rendering has no layout to correct, and
- * `useLayoutEffect` is a no-op there anyway.
- */
+/** Avoids React's SSR `useLayoutEffect` warning during static web rendering. */
 const useBeforePaint = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 export function Pager<T extends string>({
@@ -94,16 +51,10 @@ export function Pager<T extends string>({
 }) {
   const scroller = useRef<ScrollViewInstance>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  // The page last scrolled into place. Null until the first layout, so the
-  // initial position is a jump, not a slide in from the first page.
   const shown = useRef<number | null>(null);
   const reduceMotion = useReducedMotion();
   const index = options.indexOf(value);
-  // The page the scroll last came to rest on: what the mounted window is
-  // centred on, so a tab tap mounts nothing beyond its target.
   const [settled, setSettled] = useState(index);
-  // Web only: the offset a tab tap is animating towards, retargeted from
-  // wherever the scroll is if the next tap lands mid-flight.
   const driven = useSharedValue(0);
 
   function scrollNode(): HTMLElement | null {
@@ -156,11 +107,7 @@ export function Pager<T extends string>({
 
   function onLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
-    // A covered screen reports a zero layout on web (its stack entry is
-    // `display: none`) — unmounting the pages on it would forget every
-    // wall's scroll position, so Back would always land at the top. Keep
-    // the last measured size instead; the pages stay mounted while covered
-    // and the wall is where the user left it on return.
+    // Covered stack screens on web use `display: none` and report zero layout; keep the last size so pages stay mounted.
     if (width === 0 || height === 0) return;
     if (width !== size.width || height !== size.height) setSize({ width, height });
   }
@@ -171,8 +118,6 @@ export function Pager<T extends string>({
     if (Math.abs(x - page * size.width) > BOUNDARY_TOLERANCE) return;
     const landed = options[page];
     if (landed == null) return;
-    // A swipe moves one page at most, so a rest further out is the scroll
-    // view sitting somewhere we never put it — not a page the user chose.
     if (Math.abs(page - index) > 1) {
       scroller.current?.scrollTo({ x: index * size.width, animated: false });
       return;
@@ -198,10 +143,8 @@ export function Pager<T extends string>({
       {size.width > 0 && (
         <AnimatedScrollView
           className="flex-1"
-          // Where the pager rests, as a prop rather than only a `scrollTo`. The
-          // scroll view mounts together with its pages, so Android applies this
-          // once they are laid out; a command can run before they exist and be
-          // dropped (docs/solutions/android-scrollview-drops-an-offset-set-before-layout.md).
+          // Android drops `scrollTo` called before child layout; `contentOffset` applies once laid out
+          // (docs/solutions/android-scrollview-drops-an-offset-set-before-layout.md).
           contentOffset={{ x: settled * size.width, y: 0 }}
           horizontal
           onScroll={onScroll}

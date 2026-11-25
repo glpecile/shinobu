@@ -19,29 +19,11 @@ import type {
   UpNextInputs,
 } from './types';
 
-/**
- * The pure core of Up Next (plan 0019 U3): per-show next-episode
- * classification, cross-provider dedupe, and the aired/upcoming split. No
- * Effect, no React, no ambient clock — `now` is injected, so day rollover and
- * "it aired while the app was open" correct themselves on the next render
- * instead of being frozen at fetch time (KTD-5).
- */
-
-/**
- * How many recently-watched Trakt shows get a per-show progress request. The
- * budget, not the product, sets this: each pooled show is one authed call
- * against 1000 per 5 minutes (docs/solutions/trakt-watched-endpoints-2026-api-changes.md).
- * Shows past the cap don't reach **Continue Watching** — that is the whole
- * remaining cost of the cap. Calendar no longer pays it: it reads
- * `/calendars/my/shows` instead, one call for every watched *or watchlisted*
- * show (KTD-2).
- */
+/** Capped by Trakt's 1000 req / 5 min authed rate limit (docs/solutions/trakt-watched-endpoints-2026-api-changes.md). */
 const UP_NEXT_POOL_SIZE = 20;
 
-/** Calendar covers today … today+6 — "In 6 days" is the furthest label (R2). */
 export const UP_NEXT_WINDOW_DAYS = 7;
 
-/** Admit future premieres too, so a cached input can cross its airing live. */
 export function withinPremiereWindow(
   date: string | null | undefined,
   now: Date,
@@ -53,13 +35,6 @@ export function withinPremiereWindow(
   );
 }
 
-/**
- * The shows worth spending progress requests on: most recently watched first
- * (`lastUpdated` is Trakt's `last_watched_at` on watched-show items). Called
- * before the fetch fan, so it can only rank by recency — whether a show is
- * caught up is what the progress call itself answers, and a caught-up show's
- * upcoming pointer is now the calendar's business rather than the pool's.
- */
 export function selectUpNextPool(
   watchedShows: readonly NormalizedMediaItem[],
   limit: number = UP_NEXT_POOL_SIZE,
@@ -79,23 +54,6 @@ function entryId(
     : `${item.id}-s${season}e${number}`;
 }
 
-/**
- * A tracker's pointer is authoritative about *which* episode is next, and this
- * source answers for Continue Watching **only** (KTD-2): an unaired pointer
- * yields nothing here, because the tracker's calendar states the same airing
- * for a strictly larger set of shows. Emitting it from both would put the same
- * episode in the section twice for pooled shows and once for everything else —
- * a double source is worse than either one alone.
- *
- * A pointer with no air date is excluded *unless the provider's counts prove
- * it aired* (`nextEpisodeAiredByCount` — Simkl's watched-vs-aired arithmetic,
- * plan 0034 U8): unknown is not "aired", and pretending otherwise would offer
- * a quick-log for something that may not exist yet. The proven case emits an
- * instant-less aired entry — the same shape as an AniList back-episode, which
- * every consumer already renders (no time badge, no week cell). This is also
- * how a tracked Simkl show whose episode aired *before* the rolling CDN
- * calendar window still classifies as aired rather than being hidden.
- */
 function progressEntry(
   input: ProgressUpNextInput,
   now: Date,
@@ -142,14 +100,6 @@ function progressEntry(
   };
 }
 
-/**
- * The mirror of `progressEntry`: Calendar's tracker half, and never Continue
- * Watching. An airing the calendar reports for *earlier today* is dropped
- * rather than promoted to `aired` — the calendar speaks for watchlisted and
- * un-started shows too, and "episode 1 of a show you have never opened aired
- * this morning" is not something waiting to be quick-logged (R4). When the user
- * *is* watching that show, the progress leg already produced the same episode.
- */
 function calendarEntry(
   input: CalendarUpNextInput,
   now: Date,
@@ -174,20 +124,9 @@ function calendarEntry(
   };
 }
 
-/**
- * A film release is `upcoming` unconditionally — never `aired` (R3/R5). A
- * release has nothing to log and no progress to advance, so classifying one as
- * aired would drop a film into Continue Watching, which means "waiting for
- * you, one tap away". Whether it is *still* upcoming is the window's job:
- * `inCalendarWindow` drops anything whose local day is already past, so a film
- * that came out yesterday contributes nothing while one out today still shows
- * on the today cell.
- */
 function releaseEntry(input: ReleaseUpNextInput): UpNextEntry {
   return {
     kind: 'release',
-    // The kind is part of the key, not decoration: theatrical and digital are
-    // two rows for one film and must not collide as list keys (R3).
     id: `${input.item.id}-${input.kind}`,
     item: input.item,
     release: { kind: input.kind, date: input.date },
@@ -196,29 +135,11 @@ function releaseEntry(input: ReleaseUpNextInput): UpNextEntry {
   };
 }
 
-/**
- * AniList exposes one airing pointer per series, not per-episode instants, so
- * classification is precedence rather than a single comparison (KTD-3):
- *
- * - below the pointer → aired *by construction* (the episode is out; AniList
- *   just has no instant to prove it — the Trakt-side null-instant exclusion
- *   deliberately doesn't apply here);
- * - at the pointer → `airingAt` is the episode's instant, and `hasAired` wins
- *   over the arithmetic, so a stale cached pointer resolves as aired;
- * - past the pointer → unknowable (the schedule doesn't reach that far);
- * - no pointer at all → aired iff the total says the episode exists; both
- *   unknown means hiatus/unconfirmed, which is excluded rather than guessed.
- *
- * Status-blind on purpose — `anilistEntry` gates the result. Classifying and
- * gating in one pass would mean checking PLANNING at four separate returns.
- */
+/** AniList exposes only a single `nextAiringEpisode` pointer per series, not per-episode instants. */
 function classifyAnilistEntry(
   input: AniListUpNextInput,
   now: Date,
 ): UpNextEntry | null {
-  // Anime *films* sit on the currently-watching list too, and have no next
-  // episode to be up next for — "S1E1" of a film is a nonsense card. Upcoming
-  // film releases are explicitly out of this feature's scope.
   if (input.item.isFilm === true) return null;
   const next = input.item.currentProgress + 1;
   const total = input.totalEpisodes;
@@ -229,17 +150,13 @@ function classifyAnilistEntry(
     kind: 'episode' as const,
     id: entryId(input.item, undefined, next),
     item: input.item,
-    // No season at all (plan 0027): `next` is entry-relative — the AniList
-    // entry's own numbering — and only ani.zip's table knows which canonical
-    // season it belongs to. Stamping `season: 1` here is what made a
-    // sequel-season quick log write phantom season-1 history to Trakt.
+    // Omit season: AniList episode numbers are entry-relative, not canonical seasons.
     episode: { number: next },
     source: Provider.AniList,
   };
 
   if (airing == null) {
     if (total == null) return null;
-    // Fully-aired run: everything past the user's progress is out.
     return {
       ...base,
       status: 'aired',
@@ -247,7 +164,6 @@ function classifyAnilistEntry(
     };
   }
   if (next < airing.episode) {
-    // Aired-by-construction count: every episode below the pointer is out.
     return {
       ...base,
       status: 'aired',
@@ -261,16 +177,10 @@ function classifyAnilistEntry(
     ...base,
     episode: { ...base.episode, firstAired: airing.airingAt },
     status: aired ? 'aired' : 'upcoming',
-    // At the pointer, the pointer's episode is the only aired-unwatched one.
     ...(aired ? { episodesBehind: 1 } : {}),
   };
 }
 
-/**
- * Planned premieres stay available for the same seven-day window as Simkl's
- * premiere exception. Episode 1's instant survives a refreshed airing pointer;
- * unknown dates and old planned backlog remain excluded.
- */
 function anilistEntry(
   input: AniListUpNextInput,
   now: Date,
@@ -287,25 +197,13 @@ function anilistEntry(
   return entry;
 }
 
-/** One local day of the Calendar window, with the entries airing that day. */
 export interface UpNextDayGroup {
-  /** Days from today: 0 … UP_NEXT_WINDOW_DAYS - 1. */
   offset: number;
-  /** Local midnight opening the day — for weekday/date rendering. */
   date: Date;
-  /** "Today" / "Tomorrow" / weekday name. */
   label: string;
   entries: UpNextEntry[];
 }
 
-/**
- * The whole window as day buckets, empty days included — the week strip needs
- * a cell for every day. Buckets whatever entries it is given by their air day,
- * so passing *both* sections lands today's already-aired episodes on the today
- * cell alongside what is still upcoming: the strip is a schedule, not a
- * mirror of the aired/upcoming split. Entries with no instant (AniList
- * back-episodes) or one outside the window fall out — they have no cell.
- */
 export function calendarWeek(
   entries: readonly UpNextEntry[],
   now: Date,
@@ -323,23 +221,11 @@ export function calendarWeek(
   });
 }
 
-/** Inside the local window today … today+6 (R2, shared with the week strip). */
 function inCalendarWindow(entry: UpNextEntry, now: Date): boolean {
   const offset = localDayOffset(entryInstant(entry), now);
   return offset != null && offset >= 0 && offset < UP_NEXT_WINDOW_DAYS;
 }
 
-/**
- * Same show tracked on both trackers → one row per section, Simkl's row (plan
- * 0034 KTD-10/R10): Simkl is the primary calendar source, so its metadata and
- * air instant win a conflict with Trakt's. Keyed on `(tmdbId, status)` rather
- * than the id alone so the sections stay complementary — Trakt's aired pointer
- * survives when Simkl only has an upcoming airing to state (and vice versa),
- * exactly like one show legitimately holding a row in each section. Only
- * cross-tracker rows collapse; two Simkl airings of one show (this week's E5
- * and E6) are two genuine calendar rows and both stand. No TMDB id leaves the
- * duplicate standing — best-effort, the same R5 rule as the AniList dedupe.
- */
 function dedupeTrackerEpisodes(entries: readonly UpNextEntry[]): UpNextEntry[] {
   const simklByKey = new Map<string, UpNextEntry[]>();
   for (const entry of entries) {
@@ -364,21 +250,13 @@ function dedupeTrackerEpisodes(entries: readonly UpNextEntry[]): UpNextEntry[] {
   return kept.map((entry) => withTwins(entry, twins.get(entry)));
 }
 
-/** `winner` plus the item ids of the copies a dedupe dropped for it (see `twinIds`). */
 function withTwins(winner: UpNextEntry, losers: readonly UpNextEntry[] | undefined): UpNextEntry {
   if (losers == null) return winner;
   const twinIds = losers.flatMap((loser) => [loser.item.id, ...(loser.twinIds ?? [])]);
   return { ...winner, twinIds: [...(winner.twinIds ?? []), ...twinIds] };
 }
 
-/**
- * Namespaced identity keys for cross-provider matching. TMDB alone is not
- * enough: Simkl's anime calendar frequently states tvdb/imdb/mal but no tmdb,
- * while an AniList entry's ani.zip mapping states tvdb/imdb — so the same show
- * only collapses when the join considers every id both sides can carry (plan
- * 0034 U9.5, the "Youjo Senki II" / "Saga of Tanya the Evil" duplicate).
- * Namespacing keeps a tvdb number from ever colliding with a tmdb one.
- */
+/** Simkl's anime calendar often omits `tmdb` and only provides `tvdb`/`imdb`/`mal`; namespace keys so numeric IDs across services cannot collide. */
 export function identityKeys(
   ids: UpNextEntry['item']['externalIds'],
 ): string[] {
@@ -391,20 +269,6 @@ export function identityKeys(
   return keys;
 }
 
-/**
- * Same show tracked on both providers → one card. AniList wins for anime: it
- * carries the user's anime progress and the airing schedule, and its entry is
- * what the AniList write path advances. The join runs over every shared
- * identity key (tmdb/tvdb/imdb/mal/anilist — see `identityKeys`); entries with
- * no resolvable id at all leave the duplicate standing — R5 stays best-effort.
- * A shared AniList/MAL entry also supplies missing write ids to the winner;
- * a shared TV show alone cannot vouch for a particular anime season's ids.
- *
- * Films dedupe on the *pair* `(tmdbId, release.kind)` instead (KTD-6): one film
- * on two watchlists is one TMDB id, but its theatrical and digital rows are
- * different events with different dates, so keying on the id alone would show
- * whichever one arrived first and silently swallow the other.
- */
 function dedupeByTmdb(
   anilist: readonly UpNextEntry[],
   others: readonly UpNextEntry[],
@@ -412,9 +276,7 @@ function dedupeByTmdb(
 ): UpNextEntry[] {
   const twins = new Map<UpNextEntry, UpNextEntry[]>();
   const kept = others.filter((entry) => {
-    // Only an episode can be an AniList entry's twin: anime *films* never
-    // produce an AniList entry, so a numeric collision between a TMDB movie id
-    // and a TMDB series id must not eat a release row.
+    // TMDB movie and TV IDs share numeric spaces and can collide; AniList never emits film releases.
     if (entry.kind !== 'episode') return true;
     const winners = new Set(
       identityKeys(entry.item.externalIds).flatMap((key) => anilistByKey.get(key) ?? []),
@@ -440,22 +302,12 @@ function dedupeByTmdb(
   return dedupeReleases([...enriched, ...kept]);
 }
 
-/**
- * Collapses repeat release rows across sources. Episodes pass through
- * untouched on purpose: one show legitimately contributes both an aired episode
- * (Continue Watching) and next week's (Calendar), and they share a TMDB id.
- */
 function dedupeReleases(entries: readonly UpNextEntry[]): UpNextEntry[] {
   const winners = new Map<string, UpNextEntry>();
-  // Per TMDB id, the item ids a collapse joined. Every release row of a joined
-  // copy carries the others, so a hide on any of them removes all of the
-  // film's rows (plan 0030 R8), whichever source won each release kind.
   const joined = new Map<number, Set<string>>();
   const kept = entries.filter((entry) => {
     if (entry.kind !== 'release') return true;
     const tmdbId = entry.item.externalIds.tmdb;
-    // No id is not "same film" — an unmatchable duplicate stands, exactly as it
-    // does for shows.
     if (tmdbId == null) return true;
     const key = `${tmdbId}-${entry.release.kind}`;
     const winner = winners.get(key);
@@ -475,25 +327,13 @@ function dedupeReleases(entries: readonly UpNextEntry[]): UpNextEntry[] {
   });
 }
 
-/**
- * Ordering key for the schedule: the parsed instant, not the raw string.
- * Episodes state a full ISO instant (usually UTC) and releases a bare local
- * day, so a lexical compare of the two is not a comparison of times at all — it
- * would file a release ahead of an episode airing earlier that same evening,
- * and mis-order every entry whose UTC day differs from its local one. Entries
- * with no instant sort last; they have no place in a schedule to begin with.
- */
+/** Parse before comparing: episodes carry UTC ISO instants while releases carry bare local `YYYY-MM-DD` dates, so string comparison mis-orders them. */
 function entryOrder(entry: UpNextEntry): number {
   const instant = entryInstant(entry);
   const parsed = instant == null ? null : parseLocalInstant(instant);
   return parsed?.getTime() ?? Number.POSITIVE_INFINITY;
 }
 
-/**
- * Fresh episodes (the "New" badge window) lead, latest airing first, so a show
- * that just dropped an episode isn't buried under a backlog. The rest follow
- * most recently watched first, the order the pool arrives in.
- */
 function continueWatchingOrder(a: UpNextEntry, b: UpNextEntry, now: Date): number {
   const aNew = isNewEpisode(a, now);
   const bNew = isNewEpisode(b, now);
@@ -502,11 +342,7 @@ function continueWatchingOrder(a: UpNextEntry, b: UpNextEntry, now: Date): numbe
   return b.item.lastUpdated.localeCompare(a.item.lastUpdated);
 }
 
-/**
- * When the split next changes with no new data (epoch ms): the soonest
- * upcoming airing becoming aired, or local midnight moving the week strip and
- * the day badges. What the section's clock waits for.
- */
+/** Epoch ms of the next upcoming airing or local midnight. */
 export function nextSplitChange(
   calendar: readonly UpNextEntry[],
   now: Date,
@@ -519,15 +355,6 @@ export function nextSplitChange(
   return Math.min(localDayAt(1, now).getTime(), ...airings);
 }
 
-/**
- * Both home sections from one pass. Entries appear in exactly one of them
- * (R3): aired → Continue Watching, unaired and inside the 7-day window →
- * Calendar, anything further out or unknowable → neither.
- *
- * Which source can reach which section is fixed here rather than filtered
- * later (KTD-2): the pool fan produces only aired episodes, the calendars only
- * unaired ones, and film releases only ever land in Calendar.
- */
 export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
   const anilistPairs = inputs.anilist
     .map((input) => ({ input, entry: anilistEntry(input, now) }))
@@ -536,9 +363,6 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
         pair.entry != null,
     );
   const anilistEntries = anilistPairs.map((pair) => pair.entry);
-  // Both tracker legs, then the cross-tracker collapse (KTD-10): Simkl's row
-  // wins over Trakt's for the same show and section, before AniList's own
-  // dedupe gets its turn below.
   const episodeEntries = dedupeTrackerEpisodes([
     ...inputs.progress
       .map((input) => progressEntry(input, now))
@@ -549,9 +373,6 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
   ]);
   const releaseEntries = inputs.releases.map(releaseEntry);
 
-  // Only *surviving* AniList entries suppress their Trakt twin — an AniList
-  // entry that classified to nothing (hiatus, caught up) must not silently
-  // take the Trakt card down with it.
   const anilistByKey = new Map<string, UpNextEntry[]>();
   for (const pair of anilistPairs) {
     const keys = identityKeys({
@@ -571,9 +392,6 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
     continueWatching: entries
       .filter((entry) => entry.status === 'aired')
       .sort((a, b) => continueWatchingOrder(a, b, now)),
-    // Soonest first, releases and episodes interleaved: Calendar is read as a
-    // schedule, not as a library, and a film out on Friday belongs between
-    // Thursday's and Saturday's episodes rather than in a group of its own.
     calendar: entries
       .filter((entry) => entry.status === 'upcoming' && inCalendarWindow(entry, now))
       .sort((a, b) => entryOrder(a) - entryOrder(b)),

@@ -33,13 +33,11 @@ const SOURCE_NAMES: Record<RatingSource, string> = {
 // UTC: a bare `YYYY-MM-DD` parses at UTC midnight, so the month can't shift west of Greenwich.
 const monthFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' });
 
-/** Wikidata's "as of" date as a month: Nov 2022. */
 function asOfMonth(asOf: string): string {
   const date = new Date(asOf);
   return Number.isNaN(date.getTime()) ? asOf : monthFormatter.format(date);
 }
 
-/** The score as its source writes it: 8.8, 4.24, 87%, 74. */
 function scoreText(rating: NormalizedRating): string {
   switch (rating.scale) {
     case 10: return rating.value.toFixed(1);
@@ -49,7 +47,6 @@ function scoreText(rating: NormalizedRating): string {
   }
 }
 
-/** "IMDb 8.8 out of 10, 2.9M votes": the source, score and scale read aloud. */
 function spokenRating(rating: NormalizedRating): string {
   return [
     `${SOURCE_NAMES[rating.source]} ${scoreText(rating)}${rating.scale === '%' ? '' : ` out of ${rating.scale}`}`,
@@ -64,7 +61,6 @@ interface ChipProps {
   episode?: UrlEpisode;
 }
 
-/** One score: mark, value, scale, (votes), then MAL's rank or Wikidata's month. Opens the title on its source. */
 function RatingChip({ rating, item, episode }: ChipProps & { rating: NormalizedRating }) {
   const url = ratingUrl(rating, item, episode);
   return (
@@ -100,7 +96,6 @@ function ProviderLink({ provider, url }: { provider: ProviderId; url: string }) 
   );
 }
 
-/** The provider's own score chip, or its plain link when it has no score for the title. */
 function ProviderScore({ provider, url, ratings, ...chip }: ChipProps & {
   provider: ProviderId;
   url: string;
@@ -137,11 +132,6 @@ function LetterboxdScore(props: ChipProps & { url: string; tmdbId: number }) {
   return slug == null ? <ProviderLink provider={Provider.Letterboxd} url={props.url} /> : <LetterboxdFilmScore slug={slug} {...props} />;
 }
 
-/**
- * A connected provider's chip. Its link is known before its score, so the
- * plain link stands in while the score loads and if the read fails; the score
- * replaces it in place.
- */
 function ProviderRating({ provider, url, item, resetKey }: {
   provider: ProviderId;
   url: string;
@@ -163,7 +153,6 @@ function ProviderRating({ provider, url, item, resetKey }: {
         ? <LetterboxdFilmScore item={item} slug={letterboxd} url={url} />
         : tmdb != null ? <LetterboxdScore item={item} tmdbId={tmdb} url={url} /> : null;
       break;
-    // A book's average rating arrives on the item itself, with its details.
     case Provider.Hardcover:
       return <ProviderScore item={item} provider={provider} ratings={item.ratings} url={url} />;
     case Provider.Trakt:
@@ -188,20 +177,6 @@ function WikidataScores({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-/**
- * The closing section of the details and episode screens: every source's score
- * for the title, on its own scale, then the connected providers that only link
- * (#318). It replaced the "View on" pills, so every chip opens the title on its
- * source.
- *
- * Arrival order is load order. TMDB's score comes with the item. A connected
- * provider shows its link at once and its score fills in. Rotten Tomatoes and
- * Metacritic come from Wikidata, have no link until it answers, and append to
- * the end, so they never push a chip that's already there.
- *
- * An episode carries its own TMDB score; the providers stay links, because
- * their scores are the show's.
- */
 export function RatingsSection({
   item,
   episode,
@@ -216,7 +191,6 @@ export function RatingsSection({
   const scored = episode == null ? providersForRatings(item, connected) : [];
   const tmdb = (episode ?? item).ratings?.find(({ source }) => source === 'tmdb');
   const tmdbUrl = tmdbItemUrl(item, episode);
-  // Every title Wikidata can look up also has a TMDB or source-provider link.
   if (tmdb == null && tmdbUrl == null && links.length === 0) return null;
 
   return (

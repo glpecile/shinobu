@@ -1,9 +1,8 @@
 /**
- * Explicitly approved third proxy exception (plan 0064): public GET catalogs
- * for /a/, /tv/, /co/ only. No query parameters, client headers, redirects,
- * cookies, CORS headers, thread/image/archive requests, writes, or logging.
- * Only valid JSON is served under the app origin, with nosniff and a locked
- * CSP. Upstream latency is bounded; successful public reads cache for a minute.
+ * Bounded proxy exception: public GET catalogs for /a/, /tv/, /co/ only.
+ * No query parameters, client headers, redirects, cookies, CORS headers,
+ * thread/image/archive requests, writes, or logging. Serves only valid JSON
+ * under the app origin with nosniff and a locked CSP.
  */
 export function isFourchanProxyRequest(url: URL): boolean {
   return url.pathname.startsWith('/api/fourchan/');

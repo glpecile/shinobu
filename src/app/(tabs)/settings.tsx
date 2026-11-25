@@ -43,7 +43,6 @@ function SettingsScreen() {
       <Head>
         <title>Settings — Shinobu</title>
       </Head>
-      {/* A top-level tab (native tab bar / web sidebar), so Diary's header and no back button. */}
       <View className={homeHeaderClassName}>
         <Text className={cn(homeHeaderTitleSize, 'font-display text-foreground tracking-tight')}>
           Settings
@@ -56,12 +55,9 @@ function SettingsScreen() {
           // Native clears the bottom tab bar (unmeasurable height); web doesn't.
           contentContainerClassName={process.env.EXPO_OS === 'web' ? 'pb-8' : 'pb-24'}
           keyboardShouldPersistTaps="handled"
-          // Pull refreshes the home feed. The tracker usernames here are
-          // cached for the session (use-provider-username.ts).
           onRefresh={refetchFeed}
           tab="settings"
         >
-          {/* Full width from the left edge, like Diary's rail; wide web puts the index beside it. */}
           <View>
             <ProviderCardsSection />
             <NotificationsSettingsSection />

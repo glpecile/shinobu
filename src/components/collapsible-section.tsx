@@ -25,13 +25,11 @@ import {
 
 const ScrollContext = createContext<{
   content: RefObject<ViewInstance | null>;
-  /** The content wrapper's offset in the scroll content, i.e. the container's top padding. */
   contentY: SharedValue<number>;
   scrollY: SharedValue<number>;
   layoutVersion: SharedValue<number>;
 } | null>(null);
 
-/** Pins nested section headings within this scroll viewport, including async rows. */
 function CollapsibleSectionScroll({
   children,
   onRefresh,
@@ -76,7 +74,6 @@ function CollapsibleSectionScroll({
   );
 }
 
-/** A persisted feed disclosure. Header actions stay outside the toggle target. */
 export function CollapsibleSection({
   title,
   collapseKey,
@@ -96,7 +93,6 @@ export function CollapsibleSection({
   const contentY = scroll?.contentY;
   const layoutVersion = scroll?.layoutVersion;
   const section = useRef<ViewInstance>(null);
-  // Unpinned until measured.
   const top = useSharedValue(Number.POSITIVE_INFINITY);
   const sectionHeight = useSharedValue(0);
   const headerHeight = useSharedValue(0);
@@ -131,15 +127,11 @@ export function CollapsibleSection({
       onLayout={(event) => sectionHeight.set(event.nativeEvent.layout.height)}
       ref={section}
     >
-      {/* Pinned, padding instead of margin lets the background cover the gap
-          around the title; the negative margin keeps the unpinned layout. */}
       <AnimatedView
         className={cn('flex-row items-center justify-between px-4 mb-3', scroll && 'z-10 mb-0 pb-3 bg-background web:sticky web:top-0 web:-mt-3 web:pt-3')}
         onLayout={(event) => headerHeight.set(event.nativeEvent.layout.height)}
         style={sticky}
       >
-        {/* Reserves the action's `min-h-11` while collapsed hides it, so the
-            header doesn't jump on toggle (matches `SkeletonSectionHeader`). */}
         <PresstableOpacity
           accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
           accessibilityRole="button"
@@ -161,7 +153,6 @@ export function CollapsibleSection({
   );
 }
 
-/** A `leading` glyph for rails without a provider mark, sized like `ProviderIcon size={16}`. */
 function CollapsibleSectionIcon({ name }: { name: ComponentProps<typeof Ionicons>['name'] }) {
   return <Ionicons color={useThemeColor('--color-muted')} name={name} size={16} />;
 }

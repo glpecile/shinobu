@@ -14,10 +14,6 @@ import { routes } from '@/lib/routes';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * "Ch 12 / 59", a book's "p. 26 / 204" or "13%" in the reader's unit, or the
- * length before the first log: a reading row never says "not started".
- */
 function readingProgress(item: NormalizedMediaItem, inPages: boolean): string {
   const total = item.totalEpisodes;
   if (item.progressUnit === 'page' && !inPages && item.currentProgress > 0 && total != null && total > 0) {
@@ -30,19 +26,12 @@ function readingProgress(item: NormalizedMediaItem, inPages: boolean): string {
   return `${total.toLocaleString()} ${unit}${total === 1 ? '' : 's'}`;
 }
 
-/**
- * A Continue Reading card: the Up Next card's layout (art, then title and
- * progress below it) around a tall cover, which a landscape crop would cut.
- * The log button sits on the cover because the card is too narrow to put it
- * beside the title.
- */
 export function ReadingCard({
   item,
   inPages,
   onActionsPress,
 }: {
   item: NormalizedMediaItem;
-  /** The reader's unit for book progress, read once by the row. */
   inPages: boolean;
   onActionsPress: (item: NormalizedMediaItem) => void;
 }) {
@@ -54,7 +43,6 @@ export function ReadingCard({
 
   return (
     <View className="w-32">
-      {/* The buttons are siblings of the pressable so their press can't open details. */}
       <View
         className="w-32 h-48"
         onPointerEnter={() => setHovered(true)}
@@ -64,7 +52,6 @@ export function ReadingCard({
           accessibilityLabel={[title, progress].filter(Boolean).join(', ')}
           accessibilityRole="button"
           className="w-32 h-48"
-          // A smaller shrink than the default, so the cover stays under the buttons on it.
           minScale={0.98}
           onLongPress={() => onActionsPress(item)}
           onPress={() => {

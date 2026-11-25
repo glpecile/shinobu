@@ -8,24 +8,8 @@ import { TRAKT_API_BASE_URL } from '@/lib/providers/trakt/config';
 import type { ProviderId } from '@/lib/providers/types';
 
 /**
- * Warm the TLS/HTTP2 connection to each provider host *before* the Up Next
- * request waterfall fires. That waterfall (`fetchUpNextInputs`) opens with
- * per-provider list reads (Trakt, Simkl's all-items pair, AniList), then fans
- * out up to 20 per-show progress reads — every one to a host that, cold, pays a full
- * TCP + TLS handshake. nitro-fetch (Cronet on Android, URLSession on iOS) pools
- * connections per host, so a single throwaway request opens the pipe the real
- * reads then reuse.
- *
- * Two mechanisms, both native-only (the web sibling is a no-op):
- *   - `prefetch` warms the pool *this* session, as early as the home screen
- *     mounts — a beat before TanStack fires the real queries.
- *   - `prefetchOnAppStart` registers a persistent native prewarm that runs at
- *     *process* start on the next launch, before JS even boots, so a returning
- *     user's first Up Next load can reuse the connection.
- *
- * The requests hit each host root with no auth; a 4xx/redirect back is fine —
- * the connection is warmed regardless, and provider reads ignore the root response. Only
- * connected providers are warmed, and only once per session.
+ * Warm provider connections before Up Next starts its request chain. Native transport pools
+ * them for the subsequent reads.
  */
 const HOST_ROOTS: Record<ProviderId, string | null> = {
   trakt: `${TRAKT_API_BASE_URL}/`,
@@ -41,12 +25,9 @@ const HOST_ROOTS: Record<ProviderId, string | null> = {
   // instead and stays unwarmed — one throwaway request per provider, aimed at
   // the host the waterfall races against first.
   simkl: `${SIMKL_API_BASE_URL}/`,
-  // No Up Next leg reads Hardcover.
   hardcover: null,
 };
 
-// TMDB backs every detail screen the user taps into from the feed, so warming
-// it alongside the trackers pays off on the very next navigation.
 const ALWAYS_WARM = [`${TMDB_API_BASE_URL}/`];
 
 let warmed = false;

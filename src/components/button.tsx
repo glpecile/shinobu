@@ -22,10 +22,8 @@ import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 export type ButtonVariant = 'log' | 'primary' | 'outline' | 'quiet' | 'quiet-accent' | 'ghost' | 'accent-ghost';
 export type ButtonSize = 'sm' | 'md';
 
-/** Container classes per variant — `off` covers both disabled and loading. */
 const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
   log: { on: 'bg-log', off: 'bg-log/40' },
-  // Bordered like `quiet` so the two match in size side by side.
   primary: { on: 'border border-foreground bg-foreground', off: 'border border-transparent bg-foreground/40' },
   outline: { on: 'border border-accent', off: 'border border-accent/40' },
   quiet: { on: 'border border-border web:hover:bg-border/40', off: 'border border-border opacity-60' },
@@ -44,7 +42,6 @@ const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
   'accent-ghost': { on: 'text-accent', off: 'text-accent/60' },
 };
 
-/** The theme token the spinner borrows so it matches its own label exactly. */
 const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
   log: '--color-log-foreground',
   primary: '--color-background',
@@ -81,37 +78,17 @@ const SIZE: Record<ButtonSize, { container: string; label: string; icon: number 
   md: { container: 'px-5 py-3 gap-2', label: 'text-base', icon: 18 },
 };
 
-/** A notch under the leading glyph: it marks, it doesn't name. */
 const TRAILING_ICON: Record<ButtonSize, number> = { sm: 12, md: 16 };
 
-/**
- * What `Button.Icon` needs to draw itself, supplied by the `Button` around it.
- *
- * Compound-component style on purpose (AGENTS.md: promote to this pattern when
- * a parent/children structure has implicit shared state; `components/steps.tsx`
- * is the reference). The shared state here is *appearance*: an icon has to take
- * its colour from the button's variant and its size from the button's size, and
- * dim in lockstep when the button is disabled or loading. Passing those as props
- * would mean every call site restating `color={accent} size={18}` — three
- * chances to drift from the label beside it, which is exactly how `rounded`
- * ended up next to `rounded-md` before `components/button` existed.
- */
 const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number } | null>(
   null,
 );
 
 /**
- * An icon inside a `Button`, coloured and sized by that button.
+ * Icon inside a `Button`, coloured and sized from the parent's variant and size.
+ * Renders nothing outside a `Button`.
  *
- * ```tsx
- * <Button icon={<Button.Icon name="bookmark-outline" />} label="Add to watchlist" />
- * ```
- *
- * **Every button in the app takes one.** A label without a glyph beside it
- * reads as a different design system than the row above it, which is how the
- * log sheet ended up as the one dialog with no icons anywhere. The one
- * exception is Disconnect, a label-only button. The app's vocabulary — one
- * verb, one glyph, everywhere:
+ * App glyph vocabulary (one verb, one glyph; Disconnect is the only label-only button):
  *
  * | glyph | verb |
  * | --- | --- |
@@ -137,10 +114,6 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `pause` | pause tracking a series or book |
  * | `close-circle-outline` | drop: stop tracking, history stays |
  * | `ellipsis-horizontal` | open a title's secondary actions |
- *
- * Outside a `Button` it renders nothing rather than guessing a colour — a
- * mis-coloured icon on an accent fill is invisible, and silence is the more
- * debuggable failure.
  */
 function ButtonIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['name'] }) {
   const context = useContext(ButtonIconContext);
@@ -169,7 +142,6 @@ function ButtonIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['nam
   );
 }
 
-/** The corner treatment, applied to the pressable and its drawn box alike. */
 const SHAPE: Record<ButtonShape, string> = {
   rounded: 'rounded-md',
   pill: 'rounded-full',
@@ -180,98 +152,24 @@ export type ButtonShape = 'rounded' | 'pill';
 export interface ButtonProps {
   label: string;
   onPress: () => void;
-  /**
-   * A `<Button.Icon name="…" />`, drawn before the label and inheriting this
-   * button's colour and size. A node rather than an icon name so the button
-   * never grows a second icon-set dependency in its own signature, and so a
-   * call site can pass nothing at all without a sentinel.
-   *
-   * While `loading` with a `loadingLabel`, the spinner takes this slot and the
-   * glyph drops out. Without one the spinner overlays the label instead, so the
-   * glyph stays in layout and only fades out — an unmounted glyph would shrink
-   * the pill under a spinner that is centred on its old width.
-   */
   icon?: ReactNode;
-  /**
-   * A second `<Button.Icon />` (or a provider mark), drawn at the button's far
-   * edge. An affordance marker, not an action — "this leaves the app" — so
-   * unlike `icon` it survives `loading`: the spinner takes the leading slot,
-   * and a trailing glyph vanishing mid-press would read as the row changing
-   * into a different row.
-   */
   trailingIcon?: ReactNode;
-  /**
-   * `center` (default) is a CTA. `start` is a **row** — one of a stack of
-   * actions in a sheet, where the labels line up down a left edge and the
-   * leading glyphs form a column beside them.
-   *
-   * It exists because the long-press sheets hand-rolled that shape around the
-   * gap instead (AGENTS.md: widen the button, never re-implement it), and it
-   * drifted the moment they did — a muted glyph beside a foreground label, no
-   * press state, and `rounded-full` restated by hand at each call site.
-   */
   align?: 'center' | 'start';
   variant?: ButtonVariant;
   size?: ButtonSize;
-  /** `pill` (default, fully round — owner decision 2026-09-08) or `rounded` (8px). */
   shape?: ButtonShape;
-  /**
-   * Shows a spinner, swaps in `loadingLabel`, and blocks the press. Every
-   * button that awaits something — an OAuth round-trip, a token validation, a
-   * log fan-out — should drive this rather than only changing its text, so the
-   * wait reads as progress instead of a dead tap.
-   */
   loading?: boolean;
-  /** Reads while `loading`. Defaults to the normal label. */
   loadingLabel?: string;
   disabled?: boolean;
-  /**
-   * Render the label with `MorphText` — for a label that *changes in place*
-   * from user state (the details screen's "Mark as watched" → "Log episode 4").
-   * Off by default: morphing static text is noise, and first render never
-   * animates anyway (AGENTS.md: Class names and buttons).
-   */
   morphLabel?: boolean;
-  /** Truncate a label when the button has a constrained width. */
   numberOfLines?: number;
   accessibilityLabel?: string;
-  /** Hide the visible label while keeping it as the accessible name. */
   iconOnly?: boolean;
-  /** Toggle state, announced on native and web. */
   pressed?: boolean;
-  /**
-   * `immediate` for a button pressed in quick succession, like a stepper's,
-   * whose repeats the default `prevent-repeat` would drop.
-   */
   pressBehavior?: PressBehavior;
-  /**
-   * Layout only — `shrink-0`, `self-start`, `self-stretch`, `mt-2`.
-   * Deliberately last in the `cn` chain so it wins, but appearance belongs to
-   * `variant`/`size`/`shape`.
-   *
-   * **Not padding.** It lands on the pressable, which wraps the drawn box, so a
-   * `px-8` here doesn't widen the button — it wraps it in 32px of invisible
-   * padding and takes that width away from the label instead. That is how the
-   * Home CTA ended up rendering "Connect your trackers" over three lines inside
-   * a squat red block on a phone. Reach for `size`, or `self-stretch`.
-   */
   className?: string;
 }
 
-/**
- * The app's button.
- *
- * Every call site used to hand-roll `PresstableOpacity` + `Text` with its own
- * padding, radius and disabled treatment, which is how `rounded` (4px, reads as
- * an accident) ended up next to `rounded-md`, and how "Connecting…" shipped as
- * a text swap with no spinner. The variants cover what the app actually
- * needs: `log` (records a watch), `primary` (the main neutral action), `outline` (destructive/secondary, accent
- * on transparent), `quiet` (neutral, bordered), and `ghost` (inside a shared surface).
- *
- * Width is inherited, not owned: in a stretch container (a sheet, a form
- * column) it fills; in a row it hugs. That's the same behaviour the
- * hand-rolled buttons had, so adopting it never moves a layout.
- */
 export function Button({
   label,
   onPress,
@@ -297,9 +195,6 @@ export function Button({
   const spinnerColor =
     spinnerToken;
   const unavailable = disabled || loading;
-  // `self-center` rather than `text-center` for the morph variant: the morph
-  // span shrink-wraps on web, so it has to center as a flex item instead of
-  // aligning text inside a full-width box.
   const LabelText = morphLabel ? MorphText : Text;
   const shownLabel = loading ? (loadingLabel ?? label) : label;
   const overlay = loading && loadingLabel == null;
@@ -315,13 +210,8 @@ export function Button({
       accessibilityLabel={accessibilityLabel ?? (iconOnly ? label : undefined)}
       accessibilityRole="button"
       accessibilityState={{ busy: loading, disabled: unavailable, selected: pressed }}
-      // Layout only out here. The *box* is the inner View, because a border on
-      // a pressto pressable is never drawn on Android — RNGH's native button
-      // supplies its own background drawable, and that's the same drawable
-      // React Native draws borders with, so `border` silently disappears while
-      // `backgroundColor` survives (a filled button looked fine; every outlined
-      // one rendered as bare text).
-      // docs/solutions/pressto-border-not-drawn-on-android.md
+      // Border must live on the inner View: Android RNGH buttons replace the
+      // background drawable and drop borders (docs/solutions/pressto-border-not-drawn-on-android.md).
       className={cn(
         SHAPE[shape],
         'web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',
@@ -338,9 +228,6 @@ export function Button({
       onPress={onPress}
       pressBehavior={pressBehavior}
     >
-      {/* Slot fades are for swaps on a mounted button. Its own mount and
-          unmount skip them, or every row in a list that opens or closes
-          flashes its icon in and leaves a fading label behind. */}
       <LayoutAnimationConfig skipEntering skipExiting>
         <AnimatedView
           className={cn(
@@ -379,22 +266,14 @@ export function Button({
             </AnimatedView>
           )}
           {icon != null && (overlay || !loading) && (
-            // Same own-box wrapper as the spinner, for the same native reason.
-            // The dimming rides here rather than on the icon so `Button.Icon`
-            // stays a pure "draw this glyph" leaf: the icon inherits one colour
-            // and the *button* decides how faded that colour reads, exactly as
-            // the container and label treatments already do.
             <AnimatedView
               className="items-center justify-center"
               entering={SLOT_ENTER}
               exiting={SLOT_EXIT}
               layout={BOX_LAYOUT}
             >
-              {/* The dim sits one level in, not on the node above: `SLOT_ENTER`
-                  is a FadeIn, and an entering animation owns `opacity` on its
-                  own node — a disabled icon mounted at 60% was faded back to
-                  full by its own enter, and Reanimated warned about exactly
-                  that. docs/solutions/reanimated-fade-overwrites-static-opacity.md */}
+              {/* Dim sits inside the FadeIn node: Reanimated entering animations own
+                  opacity (docs/solutions/reanimated-fade-overwrites-static-opacity.md). */}
               <AnimatedView
                 className={cn(overlay ? 'opacity-0' : unavailable && 'opacity-60')}
                 style={contentTransition}
@@ -434,9 +313,6 @@ export function Button({
             </AnimatedView>
           )}
           {trailingIcon != null && (
-            // No enter/exit and no `loading` gate — see `trailingIcon`'s
-            // docblock. Muted, because it marks where the press *goes* rather
-            // than naming the action the way the leading glyph does.
             <AnimatedView
               className={cn('items-center justify-center opacity-60')}
               layout={BOX_LAYOUT}
@@ -455,15 +331,8 @@ export function Button({
   );
 }
 
-/**
- * An outlined pill around ghost `Button`s, so icon actions read as one control.
- * Beside a labelled md `Button` it lines up as that button's extension: a 44px
- * icon button, `p-0.5`, and the border make the same 50px. `floating` is the
- * surfaced, shadowed version that hovers over content (the episode pager).
- */
 function ButtonCapsule({ floating = false, className, children }: {
   floating?: boolean;
-  /** Layout only. */
   className?: string;
   children: ReactNode;
 }) {

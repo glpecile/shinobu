@@ -23,18 +23,11 @@ import type { AniListDeps } from './deps';
 // imports — config.ts branches on Platform, which bun:test cannot load.
 export const ANILIST_GRAPHQL_URL = 'https://graphql.anilist.co';
 
-// All AniList deps use the same transport; public and personal reads share its budget.
 const cooldowns = new WeakMap<AniListDeps['fetch'], number>();
 
 /**
- * Sent on every request. AniList's edge answers any request *without* a
- * `Referer` with a 403 whose body reads "The AniList API has been temporarily
- * disabled due to severe stability issues" (2026-09-10) — browsers add the
- * header automatically, so the web app was never affected while the native
- * client (nitro-fetch sends none) lost every AniList row. Browsers ignore this
- * value (`Referer` is a forbidden fetch header) and send the real page origin;
- * natively it names the app by its own site, nothing else
- * (docs/solutions/anilist-api-outage-403.md).
+ * AniList's edge returns 403 without a `Referer` (docs/solutions/anilist-api-outage-403.md).
+ * Browsers ignore forbidden headers and send the real origin; native needs this explicitly.
  */
 export const ANILIST_REFERER = `${SHINOBU_WEB_DOMAIN}/`;
 
@@ -54,14 +47,6 @@ const graphQLResponse = Schema.Struct({
   })),
 });
 
-/**
- * Lowest layer: one GraphQL round-trip mapped into the ProviderError
- * taxonomy. AniList reports failures both ways — as non-2xx statuses *and*
- * as a 200 whose body carries `errors[]` — so both paths are handled here.
- * No refresh policy exists at all: the implicit grant has no refresh token
- * (docs/solutions/web-cors-anilist.md), which is why there is no AniList
- * counterpart to trakt's auth.ts.
- */
 export function anilistGraphQL<A>(
   deps: AniListDeps,
   query: string,
@@ -156,10 +141,6 @@ export function anilistGraphQL<A>(
       if (!apiDisabled && body.errors.some((e) => e.status === 401 || /invalid token/i.test(e.message ?? ''))) {
         return yield* new ProviderAuthError({ provider: Provider.AniList, refreshFailed: true });
       }
-      // Name the refusal for what it is. A 2xx with `errors[]` is a query
-      // problem; a 4xx with the same shape is AniList declining to serve the
-      // request at all (the Referer gate above, an edge rule), and reads
-      // very differently in a log than "network error".
       return yield* new ProviderNetworkError({
         provider: Provider.AniList,
         status: response.status,
@@ -182,7 +163,6 @@ export function anilistGraphQL<A>(
   });
 }
 
-// A tap must not wait through a long cooldown. Only retry when the full
 function withRateLimitRetry<A>(
   effect: Effect.Effect<A, ProviderError>,
 ): Effect.Effect<A, ProviderError> {
@@ -195,7 +175,6 @@ function withRateLimitRetry<A>(
   );
 }
 
-/** A public (unauthenticated) AniList query — trending etc. */
 export function anilistRequest<A>(
   deps: AniListDeps,
   query: string,
@@ -204,12 +183,6 @@ export function anilistRequest<A>(
   return withRateLimitRetry(anilistGraphQL<A>(deps, query, options));
 }
 
-/**
- * An authenticated AniList call. Unlike Trakt there is no 401→refresh leg:
- * the implicit-grant token cannot be refreshed, so an auth failure clears
- * the stored session (flipping the provider to disconnected everywhere) and
- * surfaces "reconnect AniList" via `refreshFailed: true`.
- */
 export function anilistAuthedRequest<A>(
   deps: AniListDeps,
   query: string,

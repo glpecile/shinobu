@@ -1,7 +1,4 @@
-# Deterministic merge gate: lint, typecheck, unit tests. Network-dependent
-# link health is deliberately NOT here — URL rot is time-driven, not
-# diff-driven, and a flaky provider outage must not block unrelated merges.
-# That lives in link-health.yml on a schedule.
+# CI is deterministic. Scheduled network probes run in link-health.yml.
 name: CI
 
 on:
@@ -13,7 +10,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Read-only token: lint, typecheck and tests need nothing but the source.
 permissions:
   contents: read
 

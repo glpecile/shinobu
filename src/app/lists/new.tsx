@@ -16,7 +16,6 @@ const MEDIA_TYPES: readonly string[] = ['MOVIE', 'TV', 'ANIME', 'MANGA', 'BOOK']
 
 type Props = { providers: { provider: ListProvider; username: string }[]; initialProvider: ListProvider | null };
 
-/** Starts the list with the title it was opened for. */
 function NewListWithItem({ id, type, ...props }: Props & { id: string; type: MediaType | undefined }) {
   const { item, isLoading } = useResolvedMediaItem(id, type);
   if (item == null && isLoading) return <View className="flex-1 bg-background">
@@ -38,7 +37,6 @@ export default function NewListRoute() {
   const serializd = connected.includes(Provider.Serializd) ? getSerializdUsername() : null;
   if (letterboxd != null) providers.push({ provider: Provider.Letterboxd, username: letterboxd });
   if (serializd != null) providers.push({ provider: Provider.Serializd, username: serializd });
-  // Creating needs the list scopes; the username only builds the recovery link.
   const hardcover = useHardcoverListsGranted() && connected.includes(Provider.Hardcover);
   const hardcoverUsername = useHardcoverViewerQuery({ enabled: hardcover }).data?.username ?? '';
   if (hardcover) providers.push({ provider: Provider.Hardcover, username: hardcoverUsername });

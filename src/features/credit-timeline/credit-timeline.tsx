@@ -60,38 +60,23 @@ import {
 } from './group';
 import { RoleSheet } from './role-sheet';
 
-/**
- * The diary's rail and head, verbatim (`components/rail-head`): two surfaces
- * that list titles down a rail should not have two rails. Row height is the
- * poster plus padding: 54 + 6 + 6 = 66px.
- */
 const ROW_BODY = 'flex-1 py-1.5 pr-6';
 const POSTER = 'w-9 h-13.5 rounded';
 const ROW_HEIGHT = 66;
 
 function usePosterColumns() {
   const [width, setWidth] = useState(0);
-  // The 896px column, 24px page gutters and 12px gaps target MediaCard's 160px width.
   return {
     columns: Math.max(2, Math.floor((Math.min(width, 896) - 48 + 12) / 172)),
     onLayout: (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width),
   };
 }
 
-/**
- * How far the rows dip when a filter changes them. Not to zero: the list is
- * refocusing, not arriving, and a dip from nothing reads as a reload.
- */
 const SETTLE_FROM = 0.35;
 /** Blur is web-only: native re-rasterizes a filtered subtree every frame. */
 const SETTLE_BLUR = process.env.EXPO_OS === 'web' ? 4 : 0;
 
-/**
- * Wide screens read the page as one centred column. Centred from the outer
- * wrapper rather than with `self-center`: Legend List's header slot does not
- * stretch its child on web, so a self-centred column sat flush left there
- * while the rows below it were centred.
- */
+/** Legend List's header slot does not stretch its child on web, so center from an outer wrapper instead of `self-center`. */
 function Column({ children }: { children: ReactNode }) {
   return (
     <View className="w-full items-center">
@@ -100,11 +85,6 @@ function Column({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * A run's head on the shared rail head, the year where the diary puts its
- * date. The upcoming head is muted throughout: unreleased work is a footnote
- * to a filmography, not its headline.
- */
 function TimelineHead({
   year,
   count,
@@ -128,7 +108,6 @@ function TimelineHead({
   );
 }
 
-/** The hairline an entry row contributes; `stop` ends it halfway on a run's last row. */
 function RailLine({ stop }: { stop: boolean }) {
   return (
     <View className={cn(RAIL_W, 'relative')}>
@@ -139,7 +118,6 @@ function RailLine({ stop }: { stop: boolean }) {
   );
 }
 
-/** Only mounted rows read a film's identity; the library snapshots are the timeline's. */
 function CreditWatchedMark({ item, libraries, poster }: { item: NormalizedMediaItem; libraries: ProgressLibraries; poster?: boolean }) {
   return <WatchedMark item={item} poster={poster} state={useItemProgress([item], libraries).progress[0]} />;
 }
@@ -202,7 +180,6 @@ function TimelineEntry({
   );
 }
 
-/** Owns the FAB's visibility, so a threshold crossing re-renders the button, not the timeline. */
 function TimelineScrollToTop({ scrollY, onPress }: { scrollY: SharedValue<number>; onPress: () => void }) {
   const [visible, setVisible] = useState(false);
   useAnimatedReaction(
@@ -216,33 +193,13 @@ function TimelineScrollToTop({ scrollY, onPress }: { scrollY: SharedValue<number
 
 export interface CreditTimelineProps {
   filmography: Filmography;
-  /** The page's hero (name, portrait, biography) — scrolls with the list. */
   header: ReactNode;
   footer?: ReactNode;
-  /** Optional entrance for the section heading and controls, never recycled rows. */
   sectionEntering?: EntryOrExitLayoutType;
   onItemPress: (item: NormalizedMediaItem) => void;
-  /** Long-press, or the web hover ⋯ — with the credit's role text for the sheet. */
   onItemActions: (credit: Credit, roles: string) => void;
 }
 
-/**
- * A filmography down one rail, newest first, with a head per release year.
- * The controls above it narrow by format and by role — both
- * local state: a filter is a way of reading this page, not a destination, so
- * it lives in neither the URL nor a device pref. The grid/list choice shares
- * the Watchlist's saved view preference. A filter change swaps the
- * rows in place and lets them settle: one shared value dips every row to a
- * soft blur and brings it back over `DURATION.swap`, so the new list reads
- * as the old one refocusing rather than two lists cutting. No per-row
- * entrance — the rows are recycled, and an `entering` on a cell replays on
- * every scroll.
- *
- * The whole page is the list, hero included, so a long filmography (a
- * character actor's three hundred credits) mounts a screen of rows rather than
- * three hundred posters; the web enter (blur-fade) plays once, on the frame
- * the query resolves.
- */
 export function CreditTimeline({
   filmography,
   header,
@@ -280,7 +237,6 @@ export function CreditTimeline({
   const { columns, onLayout } = usePosterColumns();
   const [role, setRole] = useState<string | null>(null);
   const [roleSheetOpen, setRoleSheetOpen] = useState(false);
-  // Only unreleased work starts folded.
   const [folded, setFolded] = useState<ReadonlySet<string>>(() => new Set([UPCOMING_HEAD]));
   const toggleFold = (key: string) => {
     const next = new Set(folded);
@@ -288,12 +244,8 @@ export function CreditTimeline({
     setFolded(next);
   };
 
-  // A Hardcover author's books have no Movies or TV to narrow to, so the page drops the
-  // format control. Only that page has books, and only it passes `print` to the skeleton.
   const print = filmography.credits.some((credit) => credit.item.type === 'BOOK');
   const counts = roleCounts(filmography, format);
-  // A role the new format emptied falls back to every role, rather than
-  // showing nothing under a chip that is no longer there.
   const activeRole = counts.some((entry) => entry.role === role) ? role : null;
   function selectRole(next: string | null) {
     if (next === activeRole) return;
@@ -309,8 +261,6 @@ export function CreditTimeline({
   });
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    // Fed from here, on the JS thread: the title bar only moves while the
-    // header is on screen, where nothing else is keeping this thread busy.
     scrollY.set(event.nativeEvent.contentOffset.y);
   }
 
@@ -348,7 +298,6 @@ export function CreditTimeline({
         ListHeaderComponent={
           <Column>
             {header}
-            {/* The section head names what the controls filter. */}
             <AnimatedView entering={sectionEntering}>
               <Section className="mt-2 mx-6">
                 <Section.Header>
@@ -376,7 +325,6 @@ export function CreditTimeline({
                     value={format}
                   />
                 )}
-                {/* One role needs no picker. */}
                 {counts.length > 1 && (
                   <NativePickerMenu
                     onSelect={selectRole}
@@ -405,7 +353,6 @@ export function CreditTimeline({
             </AnimatedView>
           </Column>
         }
-        // Poster cards own hover state and must not carry it to a recycled credit.
         recycleItems={view === 'list'}
         renderItem={({ item: row }) => (
           <Column>
@@ -465,7 +412,6 @@ export function CreditTimeline({
 }
 
 const SKELETON_TITLE_WIDTHS = ['w-2/3', 'w-1/2', 'w-3/5', 'w-5/12'];
-/** Run sizes that read as a plausible filmography rather than a uniform block. */
 const SKELETON_RUNS = [2, 1, 3];
 
 function SkeletonRow({ index, last }: { index: number; last: boolean }) {
@@ -489,21 +435,13 @@ function SkeletonRow({ index, last }: { index: number; last: boolean }) {
   );
 }
 
-/**
- * The page's hero, the section head and the first runs of the rail, on the
- * real geometry — the same constants and components size both, so the
- * resolve replaces bars with text and moves nothing. The section's title is
- * text, not a bar: it is known before the data is.
- */
 export function CreditTimelineSkeleton({
   header,
   print = false,
   roles = false,
 }: {
   header: ReactNode;
-  /** A Hardcover author's books: titled "Works", with no format control. */
   print?: boolean;
-  /** A studio's timeline has no role picker. */
   roles?: boolean;
 }) {
   const view = useWatchlistView();

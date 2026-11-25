@@ -3,11 +3,6 @@ import { Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { Spinner } from '@/components/spinner';
 
-/**
- * End-of-list footer for a paginated grid. A page failing mid-scroll keeps
- * every loaded page on screen and offers a retry right where the scroll
- * stopped — the same partial-failure treatment as an inline notice.
- */
 export function LoadMoreFooter({
   loading,
   failed,

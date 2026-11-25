@@ -7,49 +7,18 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import type { WatchlistEntry, WatchlistInput } from './types';
 
-/**
- * The cross-provider watchlist merge (plan 0031 R27/KTD-11). **Pure**: no
- * React, no Effect, no query client — the gatherer hands it raw inputs and it
- * hands back rows, so every rule below is unit-testable against fixtures.
- *
- * Dedupe here **merges** rather than suppresses, which is the deliberate
- * difference from Up Next's `dedupeByTmdb`. Up Next drops the Trakt twin of an
- * AniList entry because only one card can be quick-logged; here both providers
- * are equally true statements about the same film, the user wants to see it is
- * on both, and — decisively — the removal verb has to know *which* providers
- * actually hold the item before it fires a write (R35).
- */
-
-/** Routing order (the registry's own order), so `sources` never depends on gather order. */
 const PROVIDER_ORDER = Object.keys(PROVIDERS) as ProviderId[];
 
-/**
- * Which provider's copy of a merged item wins. A bridged Hardcover volume
- * leads its card, and among the rest AniList comes first because it holds
- * the user's anime state and airing schedule (the same rationale
- * `dedupeByTmdb` uses), then Simkl (plan 0034 KTD-10/R10 — the calendar/
- * yourShows precedence carries over here rather than inventing a second
- * ranking for the same two providers), then Trakt, with Letterboxd
- * contributing only when nothing else matched — its scrape carries a slug, a
- * title and a year and nothing more.
- */
 const ITEM_PRECEDENCE: Record<ProviderId, number> = {
   anilist: 0,
   simkl: 1,
   trakt: 2,
   serializd: 3,
   letterboxd: 4,
-  // Only a bridged volume merges with another provider's row, and it leads
-  // that card: it holds the finer progress (plan 0117 B6).
   hardcover: -1,
 };
 
-/**
- * A film-shaped or series-shaped id space. Pairing the TMDB id with this
- * (rather than keying on the bare number) is the same discipline
- * `dedupeReleases` uses: TMDB numbers movies and series independently, so
- * movie 1399 and series 1399 are different works and must never merge.
- */
+// TMDB numbers movies and TV series independently, so the ID must be paired with kind.
 function movieTvKind(item: NormalizedMediaItem): 'MOVIE' | 'TV' {
   if (item.type === 'ANIME') return animeEffectiveMovieTvType(item);
   return item.type === 'MOVIE' ? 'MOVIE' : 'TV';
@@ -59,7 +28,6 @@ function isFilmLike(item: NormalizedMediaItem): boolean {
   return item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
 }
 
-/** Case- and punctuation-insensitive, never fuzzy — see `titleKey`. */
 function normalizeTitle(title: string): string {
   return title
     .toLowerCase()
@@ -67,26 +35,12 @@ function normalizeTitle(title: string): string {
     .trim();
 }
 
-/**
- * The weak leg, kept honest. The Letterboxd scrape yields `{slug, title, year}`
- * and no TMDB id, so title+year is the only way its films can ever meet their
- * Trakt twins — but it is **exact year only and film-like only**, because a
- * ±1 window is how you merge a remake into its original. No TMDB resolve fan
- * is run to close the gap either
- * (docs/solutions/letterboxd-watchlist-release-resolve-cost.md): an
- * unmatchable duplicate **stands** rather than being guessed at, the same
- * best-effort degradation Up Next's dedupe already accepts.
- */
+// Letterboxd scrapes yield only {slug, title, year} with no TMDB id; match exact year on films only without fan-out resolution (docs/solutions/letterboxd-watchlist-release-resolve-cost.md).
 function titleKey(item: NormalizedMediaItem): string | null {
   if (!isFilmLike(item) || item.year == null) return null;
   return `title:${normalizeTitle(item.title)}|${item.year}`;
 }
 
-/**
- * Every key an item can be recognised by, in R27's precedence order. Exported
- * because `useIsWatchlisted` (U14) answers "is this the same film" with this
- * exact function — one derivation, not two that can drift.
- */
 export function watchlistMergeKeys(item: NormalizedMediaItem): string[] {
   const keys: string[] = [];
   const { tmdb, imdb } = item.externalIds;
@@ -97,11 +51,6 @@ export function watchlistMergeKeys(item: NormalizedMediaItem): string[] {
   return keys;
 }
 
-/**
- * The reading work a row belongs to: an AniList manga or novel, or the one
- * Hardcover volume the reading bridge matched to it (plan 0117 B6). Only the
- * merge uses it, so it never makes a volume read as the series elsewhere.
- */
 function readingWorkKey(item: NormalizedMediaItem): string | null {
   let id: number | undefined;
   switch (item.type) {
@@ -119,23 +68,13 @@ function readingWorkKey(item: NormalizedMediaItem): string | null {
   return id == null ? null : `anilist-manga:${id}`;
 }
 
-/**
- * The reading bridge's one-card rule (plan 0117 B6): a want-to-read book
- * grouped under an entry of the whole AniList list carries it as
- * `bridgedAniList`, and meets that entry's row, when it's planned, on the
- * `anilist-manga` key.
- */
 function bridgeReadingInputs(
   inputs: readonly WatchlistInput[],
   mangaList: readonly NormalizedMediaItem[],
 ): readonly WatchlistInput[] {
-  // The whole AniList list, as Continue Reading and the diary use, so a book
-  // groups under the same entry on every screen.
   const bridged = bridgeBooks(inputs.map((input) => input.item), mangaList);
   if (bridged.size === 0) return inputs;
-  // One volume per entry, so each card keeps one item that a removal acts on.
-  // The smallest item id as a string, because Hardcover returns the list in no
-  // fixed order.
+  // Hardcover returns list rows in arbitrary order; pick the lowest id deterministically.
   const joined = new Map<number, string>();
   for (const [itemId, grouping] of bridged) {
     const held = joined.get(grouping.id);
@@ -166,8 +105,6 @@ function absorb(entry: MergedEntry, input: WatchlistInput): void {
     entry.precedence = precedence;
   }
   const fallback = entry.item === input.item ? previous : input.item;
-  // An IMDb match can cross film/series boundaries; their release years and
-  // duration units are not interchangeable.
   for (const field of ['year', 'runtime'] as const) {
     if (isFilmLike(entry.item) !== isFilmLike(fallback) ||
       (entry.item.type === 'MANGA') !== (fallback.type === 'MANGA')) continue;
@@ -178,22 +115,15 @@ function absorb(entry: MergedEntry, input: WatchlistInput): void {
   }
   entry.sources.add(input.source);
   if (!entry.sourceIds.includes(input.item.id)) entry.sourceIds.push(input.item.id);
-  // The *most recent* statement wins: the sort answers "what did I add lately",
-  // and a provider that has held a film for a year says nothing newer than the
-  // one it was added to this morning.
   if (input.addedAt != null && (entry.addedAt == null || input.addedAt > entry.addedAt)) {
     entry.addedAt = input.addedAt;
   }
-  // Only AniList rows carry one, so a merged row can never hold two — no
-  // precedence rule needed here, unlike `item`.
   if (input.anilistStatus != null) entry.anilistStatus = input.anilistStatus;
-  // Same one-provider-carries-it rule as `anilistStatus`.
   if (input.simklWatchedCount != null) {
     entry.simklWatchedCount = input.simklWatchedCount;
   }
 }
 
-/** `addedAt` descending, undated last — stable, so ties keep gather order. */
 function byAddedAtDesc(a: WatchlistEntry, b: WatchlistEntry): number {
   if (a.addedAt == null && b.addedAt == null) return 0;
   if (a.addedAt == null) return 1;
@@ -211,9 +141,6 @@ export function computeWatchlist(
   for (const input of bridgeReadingInputs(inputs, mangaList)) {
     const work = readingWorkKey(input.item);
     const keys = work == null ? watchlistMergeKeys(input.item) : [...watchlistMergeKeys(input.item), work];
-    // First key that already names an entry wins — the keys are generated in
-    // R27's precedence order, so a TMDB match is preferred over an IMDb one and
-    // an IMDb match over a title+year one.
     let entry: MergedEntry | undefined;
     for (const key of keys) {
       entry ??= byKey.get(key);
@@ -236,9 +163,6 @@ export function computeWatchlist(
     } else {
       absorb(entry, input);
     }
-    // Every key this row knows now points at the entry — that is what lets a
-    // Trakt row carrying tmdb + imdb + title|year meet a Letterboxd row that
-    // only ever knows the last of the three.
     for (const key of keys) {
       if (!byKey.has(key)) byKey.set(key, entry);
     }

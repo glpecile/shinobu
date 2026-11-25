@@ -86,7 +86,6 @@ function traktFilm(traktId: number, title: string, listedAt: string): Normalized
   };
 }
 
-/** One `/sync/all-items` entry shape `simklInputs` reads (plan 0034 U7). */
 function simklEntry(
   simklId: number,
   title: string,
@@ -140,13 +139,10 @@ interface Scenario {
   trakt?: NormalizedMediaItem[];
   /** The widened AniList list read's payload — CURRENT *and* PLANNING. */
   anime?: AniListCurrentEntry[];
-  /** The manga list read's payload. */
   manga?: AniListMangaEntry[];
-  /** Every page the infinite Letterboxd entry already holds. */
   letterboxdPages?: NormalizedMediaItem[][];
   /** `/sync/all-items?status=plantowatch` — bucket doesn't matter to the leg. */
   simkl?: Array<{ item: NormalizedMediaItem; addedToWatchlistAt?: string }>;
-  /** Every Want to Read, Currently Reading and Read book. */
   hardcover?: HardcoverLibraryEntry[];
   failing?: Array<'trakt' | 'anilist' | 'letterboxd' | 'simkl'>;
 }
@@ -242,7 +238,6 @@ describe('fetchWatchlistInputs', () => {
         entryId: 5003,
       },
     ]);
-    // Zero extra requests: the two cached list reads, no per-status query.
     expect(requested).toEqual(['anilist/current-anime-entries', 'anilist/current-manga-entries']);
   });
 
@@ -356,8 +351,6 @@ describe('fetchWatchlistInputs', () => {
 
 describe('watchlistReadProviders (plan 0031 R25/R32)', () => {
   test('a Trakt-only user contributes a watchlist read — the row\'s new mount gate', () => {
-    // Today they see no watchlist row at all; the gate was a Letterboxd
-    // username.
     expect(watchlistReadProviders(['trakt'])).toEqual(['trakt']);
     expect(watchlistReadProviders(['anilist'])).toEqual(['anilist']);
   });

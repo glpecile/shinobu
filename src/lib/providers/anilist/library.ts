@@ -34,7 +34,6 @@ export interface AniListLibraryEntry {
   status: string;
 }
 
-/** All statuses, including completed films; separate from Up Next's narrow current/planned read. */
 export const getAniListLibrary = Effect.fn('anilist.getLibrary')(function* (deps: AniListDeps, viewerId: number) {
   const fields = `lists { entries { status progress updatedAt media {
     id idMal type format title { english romaji native } coverImage { large }

@@ -24,12 +24,6 @@ const COPY = {
   dropped: { title: 'Drop', done: 'Dropped', verb: 'Drop on', pending: 'Dropping…', icon: 'close-circle-outline' },
 } as const;
 
-/**
- * Pick where to pause or drop `item`. Each target shows its current status,
- * since connected providers can disagree. A clean report closes with a toast;
- * any other report stays on the sheet with its reasons, links and a retry of
- * the failed providers only.
- */
 export function TrackingStatusPicker({
   item,
   status,
@@ -88,7 +82,6 @@ export function TrackingStatusPicker({
           : 'Watched episodes stay. Log a new episode to resume.'}
       </WriteSheet.Description>
 
-      {/* Frozen while the fan-out runs: a target toggled mid-write would land on some providers and not others. */}
       <View className={cn(pending && 'opacity-50')} style={{ pointerEvents: pending ? 'none' : 'auto' }}>
         <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">Change on</Text>
         {writable.length > 0 && (

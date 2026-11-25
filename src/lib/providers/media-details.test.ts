@@ -14,7 +14,6 @@ const { getMediaDetails, tmdbKindFor } = await import('./media-details');
 const tokens: TokenStore = { get: () => null, set: () => {}, clear: () => {} };
 const hardcoverTokens: TokenStore = { get: () => ({ accessToken: 'at' }), set: () => {}, clear: () => {} };
 
-/** Routes each request by URL substring; unmatched URLs 404. */
 function fakeFetch(routes: Array<[match: string, body: unknown, status?: number]>) {
   return (input: RequestInfo | URL): Promise<Response> => {
     const url = String(input);

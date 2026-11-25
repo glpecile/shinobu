@@ -79,10 +79,7 @@ const POSTERS = [
   '/npdB6eFzizki0WaZ1OvKcJrWe97.jpg', // Chainsaw Man (2022)
 ].map((path) => tmdbImageUrl(path, 'w342'));
 
-/**
- * Manga covers from AniList's CDN, for the Reading scope on Search. `medium` is
- * 230 px wide; `large` is 460 px and weighs 3x more, mostly in its PNGs.
- */
+/** AniList `medium` covers are 230px wide; `large` (460px) weighs ~3x more due to PNGs. */
 const MANGA = [
   'bx30002-Cul4OeN7bYtn.jpg', // Berserk (1989)
   'bx30013-BeslEMqiPhlk.jpg', // One Piece (1997)
@@ -116,7 +113,6 @@ const MANGA = [
   'bx30012-1epmVfTSv2rr.png', // Bleach (2001)
 ].map((file) => `https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/${file}`);
 
-/** Directors, actors, composers, and crew behind the titles above. */
 const PEOPLE = [
   '/ouhjt9KugzhWtdEyBPipihB3ic8.jpg', // Hayao Miyazaki
   '/b7Oqg1bjS0e2iEzEjYWnsyVVagt.jpg', // Satoshi Kon
@@ -211,11 +207,6 @@ const STUDIOS = [
 const WALLS = { titles: POSTERS, reading: MANGA, people: PEOPLE, studios: STUDIOS };
 type WallSubject = keyof typeof WALLS;
 
-/**
- * Each column repeats its set three times and drifts by one set's height, so
- * the loop is seamless and a tall window never sees the column's end. Logo
- * tiles are shorter, so their columns hold more to cover the same height.
- */
 function tile(width: number, height: number, gap: number, perColumn: number) {
   return {
     width,
@@ -240,11 +231,6 @@ function shuffled<T>(items: readonly T[]): T[] {
   return deck;
 }
 
-/**
- * Deals each column from a shuffled deck, reshuffling when it runs out, so a
- * wide window doesn't repeat whole columns. A column never repeats an image
- * or shares one with its left neighbour; every pool holds over two columns' worth.
- */
 function deal(images: readonly string[], columns: number, perColumn: number): string[][] {
   const sets: string[][] = [];
   let deck: string[] = [];
@@ -264,7 +250,6 @@ function deal(images: readonly string[], columns: number, perColumn: number): st
   return sets;
 }
 
-/** The wall's tiles rise in column by column; each poster cross-fades in as it loads. */
 const ENTER_DURATION = 700;
 const ENTER_STAGGER = 60;
 const ENTER_RISE = 24;
@@ -273,7 +258,6 @@ const wallEntering = {
   '100%': { opacity: 1, transform: [{ translateY: 0 }] },
 };
 
-/** Per-column start offset (in posters) and loop length, so no two neighbours move in step. */
 const COLUMN_RHYTHM = [
   { offset: 0, duration: 80_000 },
   { offset: 0.55, duration: 95_000 },
@@ -284,18 +268,11 @@ const COLUMN_RHYTHM = [
   { offset: 0.1, duration: 90_000 },
 ];
 
-/**
- * A drifting, tilted wall behind a first-run or idle screen: titles on Home,
- * manga, people, or studio logos on Search. Fixed picks of classic film, anime,
- * and manga keep it out of release-week trends; each mount deals them in a new
- * order.
- */
 export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
   const hydrated = useHydrated();
   const { width, height } = useWindowDimensions();
   const focused = useIsFocused();
   const reduceMotion = useReducedMotion();
-  // The column under a hovering pointer holds still so its posters can be read.
   const [hovered, setHovered] = useState<number | null>(null);
   // `useCSSVariable`, not `useThemeColor`: the fade composes a transparent stop
   // (`${background}00`), which web's `var(--token)` can't. Wait for hydration
@@ -307,13 +284,10 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
   const wide = width >= 768;
   const logos = subject === 'studios';
   const size = (logos ? LOGO_TILES : POSTER_TILES)[wide ? 'wide' : 'compact'];
-  // The tilt pulls the corners inward; tall static walls also need side overscan.
   const wallWidth = reduceMotion ? Math.max(width * 1.5, width + height * Math.sin((8 * Math.PI) / 180) + size.width * 2) : width * 1.5;
   const columns = Math.ceil(wallWidth / (size.width + size.gap));
-  // Cover the rotated viewport and each column's negative start offset without loop buffers.
   const tiltOverscan = reduceMotion ? Math.ceil(wallWidth * Math.sin((8 * Math.PI) / 180) / 2) : 0;
   const staticRows = Math.ceil((height + tiltOverscan * 2 + size.height * 3) / (size.height + size.gap));
-  // Re-deal only when the layout changes, not on every hover.
   const dealtFor = `${subject}:${columns}:${size.perColumn}`;
   const [dealt, setDealt] = useState(() => ({
     key: dealtFor,
@@ -338,8 +312,6 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
           right: -(wallWidth - width) / 2,
           top: -size.height - tiltOverscan,
           transform: [{ rotate: '-8deg' }],
-          // Pivot on the viewport's centre, not the far taller row's, or the tilt
-          // slides the visible stretch sideways and bares one edge.
           transformOrigin: `50% ${height / 2 + size.height + tiltOverscan}px`,
         }}
       >
@@ -352,7 +324,6 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
               onPointerLeave={() => setHovered((current) => (current === column ? null : current))}
               style={{
                 marginTop: -rhythm.offset * (size.height + size.gap),
-                // Search remounts this wall when a typed query clears.
                 animationName: subject === 'titles' ? heldKeyframes(
                   reduceMotion ? sectionFading : wallEntering,
                   column * ENTER_STAGGER,
@@ -374,7 +345,6 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
                 }}
               >
                 {(reduceMotion ? Array.from({ length: staticRows }, (_, index) => set[index % set.length]) : [...set, ...set, ...set]).map((uri, index) => (
-                  // Index keys: the repeated set repeats every uri by design.
                   <View
                     className={cn('rounded-lg overflow-hidden bg-surface', logos && 'p-4 border border-border')}
                     key={index}

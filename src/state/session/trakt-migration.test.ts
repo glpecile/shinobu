@@ -61,7 +61,6 @@ describe('env detachment (R12)', () => {
 
     expect(traktClientId()).toBe('');
     expect(traktClientSecret()).toBe('');
-    // The provider-config merge resolves only user-stored credentials.
     expect(getClientIdForProvider('trakt')).toBe('');
   });
 

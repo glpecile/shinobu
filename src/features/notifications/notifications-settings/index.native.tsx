@@ -26,12 +26,6 @@ import {
 import { prefsStorage } from '@/state/prefs/storage';
 import { upNextQueryKeys } from '@/state/queries/up-next';
 
-/**
- * Opt-in toggle + permission flow + dev test affordance (plan 0020 U6, R8,
- * R11) as the Settings rail's Notifications section. Native only — see `index.tsx`.
- */
-
-/** Best-effort: whatever Up Next already has cached, no extra fetch (R11's "real tracked item"). */
 function sampleTrackedItemId(queryClient: QueryClient): string | undefined {
   const cached = queryClient.getQueryData<UpNextInputs>(upNextQueryKeys.inputs());
   return cached?.progress[0]?.item.id ?? cached?.anilist[0]?.item.id;
@@ -44,7 +38,6 @@ const KIND_ICONS = {
   physical: 'disc-outline',
 } as const satisfies Record<NotificationKind, string>;
 
-/** Mutes one kind and reschedules now, so the change applies before the next foreground. */
 function KindToggle({ kind, label, alertsOn }: { kind: NotificationKind; label: string; alertsOn: boolean }) {
   const enabled = useNotificationKindEnabled(kind);
   const queryClient = useQueryClient();
@@ -78,7 +71,6 @@ function subscribePrefs(onStoreChange: () => void): () => void {
   return () => subscription.remove();
 }
 
-/** How many kinds are unmuted, for the section's count. */
 function useEnabledKindCount(): number {
   return useSyncExternalStore(
     subscribePrefs,

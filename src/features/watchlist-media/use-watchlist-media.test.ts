@@ -6,11 +6,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import type { WatchlistWriteDeps } from './use-watchlist-media';
 
-/**
- * The watchlist add verb end to end at the function layer (plan 0031 U7).
- * There is no renderer in this suite — `runWatchlistWrite` *is* the behaviour
- * and `useWatchlistMedia` is a `useMutation` wrapper over it.
- */
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -31,17 +26,12 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
-// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
-// graph, whose auth import reaches expo-crypto — mirror the surface it
-// consumes instead of loading the whole expo package under bun (the
-// `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   CryptoEncoding: { BASE64: 'base64' },
   digestStringAsync: async () => 'unused',
 }));
-// Enrichment has every id it needs on these fixtures — no mapping lookups.
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: () => Promise.resolve(null),
   cachedAniListFilmId: () => Promise.resolve(null),
@@ -61,14 +51,8 @@ mock.module('@/state/queries/mapping', () => ({
 const { runWatchlistWrite } = await import('./use-watchlist-media');
 
 const adapterCalls: ProviderId[] = [];
-/** Every notification-refresh call and the options it carried. */
 const refreshCalls: unknown[] = [];
 
-/**
- * The seams as fakes. Injected rather than `mock.module`'d: bun's module mocks
- * are process-wide, so faking `@/lib/providers/trakt/writes` here would silently
- * replace the module its own adapter suite is testing.
- */
 function fakeDeps(): WatchlistWriteDeps {
   return {
     adapters: {
@@ -102,10 +86,6 @@ function fakeDeps(): WatchlistWriteDeps {
 
 const CONNECTED: ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
 
-/**
- * An anime *film* — the item that reaches every movie-shaped target at once
- * (Trakt + AniList + Letterboxd writable on native, plan 0033).
- */
 function animeFilm(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return {
     id: 'anilist-437',
@@ -122,7 +102,6 @@ function animeFilm(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMedi
   };
 }
 
-/** A bare `YYYY-MM-DD` `days` from now, the shape a release calendar carries. */
 function localDate(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -131,7 +110,6 @@ function localDate(days: number): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-/** A real client whose invalidations are recorded rather than executed. */
 function recordingClient(): { client: QueryClient; keys: string[] } {
   const client = new QueryClient();
   const keys: string[] = [];
@@ -150,10 +128,6 @@ beforeEach(() => {
 
 describe('runWatchlistWrite — the fan-out contract', () => {
   test('a manual target never enters the adapter map, and rides back as a manual row', async () => {
-    // Letterboxd on *web* is the standing manual case (plan 0033 R7): the
-    // declaration is 'write' but `unsupportedWritePlatforms` bans the platform,
-    // so it is reported as a manual row — never handed to `runProviderWrites`,
-    // whose missing-adapter path is a loud error by design.
     process.env.EXPO_OS = 'web';
     const { client } = recordingClient();
     const result = await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
@@ -194,9 +168,6 @@ describe('runWatchlistWrite — agenda coherence (R19/R20)', () => {
     expect(keys).toContain('trakt/my-calendar');
     expect(keys).toContain('anilist/current-anime-entries');
     expect(keys).toContain('up-next/inputs');
-    // It has no instant inside today…today+6, so it cannot produce a
-    // notification candidate — a full `fetchUpNextInputs` regather here would
-    // be pure cost, and bypassing THROTTLE_MS for it doubly so.
     expect(refreshCalls).toEqual([]);
   });
 

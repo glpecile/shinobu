@@ -10,14 +10,8 @@ import type { HttpFetch } from '@/lib/http/types';
 import { isTokenKey, onSessionChange } from '@/state/session/tokens';
 
 /**
- * Replays a launch's provider reads natively on the next cold start, so Home's
- * revalidation finds its responses ready, or in flight, by the time JS asks.
- *
- * Reads that succeed in the first seconds of a foreground launch are
- * registered with `prefetchOnAppStart`, keyed by a hash of the whole request.
- * Each session's first identical read claims the native response; a different
- * token, body or URL hashes to a different key and goes to the network. The
- * queue is encrypted at rest because entries carry `Authorization`.
+ * Claim provider reads replayed during native launch so Home can reuse them across the JS
+ * startup boundary.
  */
 
 const RECORD_WINDOW_MS = 10_000;
@@ -114,7 +108,6 @@ function record(replay: Replay) {
   persistTimer ??= setTimeout(persist, remaining);
 }
 
-/** `fetch` with the launch replay claimed and the launch's reads recorded. */
 export function fetchWithLaunchReplay(fetch: HttpFetch, input: RequestInfo | URL, init?: RequestInit) {
   const replay = ended || Date.now() - startedAt > REPLAY_TTL_MS ? null : replayFor(input, init);
   if (replay == null) return fetch(input, init);

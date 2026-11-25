@@ -3,7 +3,6 @@ import * as Effect from 'effect/Effect';
 
 import type { HardcoverDeps } from './deps';
 
-// The auth module behind `hardcoverRequest` keeps its PKCE flow in MMKV.
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({ getString: () => undefined, set: () => {}, remove: () => {} }),
 }));
@@ -20,7 +19,6 @@ function deps(data: unknown): HardcoverDeps {
 }
 
 describe('searchBooks', () => {
-  // KTD-6: an adaptation with the same title is its own book, never merged.
   test('same-title books stay separate, each with its own authors', async () => {
     const hits = await Effect.runPromise(searchBooks(deps({
       search: {

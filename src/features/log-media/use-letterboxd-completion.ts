@@ -15,7 +15,6 @@ import { getSerializdUsername } from '@/state/session/serializd';
 import type { NormalizedMediaItem } from '@/types/media';
 import { letterboxdCompletionRequest } from './letterboxd-completion';
 
-/** Confirmed writes supplement the snapshot only after their entire report is clean. */
 export function useLetterboxdCompletion(item: NormalizedMediaItem) {
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();

@@ -16,17 +16,9 @@ import { RoundIconButton } from '@/components/round-icon-button';
 import { KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
-/** Exit motion runs this long before the Modal unmounts — keep in sync below. */
 const EXIT_MS = 200;
 
-/**
- * settle-in for the image: fade up with a small 0.92 → 1 scale — never from
- * scale(0), which reads as a dot exploding out of nowhere (the old ZoomIn
- * preset did exactly that). cubic-bezier(0.23, 1, 0.32, 1) is the strong
- * ease-out (easeOutQuint); built-in weaker curves feel sluggish. Timing-based
- * keyframes, not springs: springs don't run on web. Module scope per
- * Reanimated's animation-builder performance rule.
- */
+/** Timing-based keyframe (Reanimated springs don't run on web). */
 const imageEntering = new Keyframe({
   0: { opacity: 0, transform: [{ scale: 0.92 }] },
   100: {
@@ -36,7 +28,6 @@ const imageEntering = new Keyframe({
   },
 }).duration(260);
 
-/** Asymmetric exit: faster than the enter, ease-out so close responds at once. */
 const imageExiting = new Keyframe({
   0: { opacity: 1, transform: [{ scale: 1 }] },
   100: {
@@ -46,31 +37,13 @@ const imageExiting = new Keyframe({
   },
 }).duration(EXIT_MS);
 
-/**
- * Web image viewer, adapted from bluesky-social's `Lightbox.web.tsx`. A fixed
- * fullscreen overlay that fades its backdrop in and zoom-fades the image up —
- * deliberately NOT a shared-element morph from the thumbnail (galeria's web
- * build did that and ballooned into a giant circle on unzoom). Closes on
- * backdrop tap, the X button, Escape, or browser-back.
- *
- * `image` fills the screen contain-fit; `circle-avi` / `rect-avi` render as a
- * capped, cover-cropped avatar so a portrait headshot zooms to a real circle
- * rather than an ellipse.
- */
 export function Lightbox() {
   const { activeLightbox } = useLightbox();
   const { closeLightbox } = useLightboxControls();
   const foreground = useThemeColor('--color-foreground');
   const reduceMotion = useReducedMotion();
 
-  // Retain the last shown lightbox so the exit animation still has an image to
-  // fade out after `activeLightbox` clears (same deferred-unmount trick as
-  // components/sheet/index.web.tsx).
   const [shown, setShown] = useState(activeLightbox);
-  // Adjusted during the render that opens it rather than from an effect, so
-  // the image is there on the first painted frame instead of the second (see
-  // the same note in components/sheet/index.web.tsx). Only the deferred clear
-  // needs the clock.
   if (activeLightbox != null && activeLightbox !== shown) setShown(activeLightbox);
   useEffect(() => {
     if (activeLightbox != null) return;
@@ -78,8 +51,6 @@ export function Lightbox() {
     return () => clearTimeout(timer);
   }, [activeLightbox]);
 
-  // Escape closes; browser-back closes instead of navigating away (bluesky
-  // pushes a history entry on open and pops it on close).
   const closedByPopRef = useRef(false);
   useEffect(() => {
     if (activeLightbox == null) return;
@@ -99,7 +70,6 @@ export function Lightbox() {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('popstate', onPopState);
-      // Only pop our own entry, and not when a popstate already did it.
       const state = history.state as { lightbox?: boolean } | null;
       if (!closedByPopRef.current && state?.lightbox) history.back();
     };
@@ -115,8 +85,6 @@ export function Lightbox() {
       <View className="flex-1">
         {open && image != null && (
           <>
-            {/* Full-screen tap target; the layers above sit at pointerEvents
-                none so a tap anywhere falls through to here and closes. */}
             <PresstableOpacity
               accessibilityLabel="Close image viewer"
               className="absolute inset-0"
@@ -145,8 +113,7 @@ export function Lightbox() {
                     source={{ uri: image.uri }}
                   />
                 ) : (
-                  // Raw <img> so the caps can use viewport units (like bluesky's
-                  // avatars); a square cover-crop turns a portrait into a circle.
+                  // Raw <img> so width/height can use CSS viewport units.
                   <img
                     alt={image.alt ?? ''}
                     src={image.uri}
@@ -173,7 +140,6 @@ export function Lightbox() {
   );
 }
 
-/** Square, viewport-capped avatar box — cover-crops the source to the shape. */
 function avatarStyle(type: 'circle-avi' | 'rect-avi') {
   const size = 'min(400px, 90vw, 90vh)';
   return {

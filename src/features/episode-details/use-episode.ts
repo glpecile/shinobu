@@ -9,29 +9,17 @@ import type { NormalizedEpisode, NormalizedMediaItem, NormalizedRating } from '@
 import { episodeNeighbours, episodeOrder, type EpisodeRef } from './episode-neighbours';
 
 export interface EpisodeView {
-  /** Undefined while neither the seasons list nor TMDB has answered. */
   episode: NormalizedEpisode | undefined;
-  /** The episodes either side in the show's layout; absent at the ends or before it loads. */
   prev?: EpisodeRef;
   next?: EpisodeRef;
-  /** Wide still from TMDB; '' until it answers or when there is none. */
   still: string;
-  /** TMDB's score for the episode itself. */
   ratings?: NormalizedRating[];
   isLoading: boolean;
-  /** Whether the credit sections can be fetched at all (id + token). */
   tmdbId: number | undefined;
-  /** The sequence this episode sits in (`episodeOrder`); empty until the seasons list loads. */
   order: EpisodeRef[];
 }
 
-/**
- * What the episode header renders, TMDB-over-catalogue like the details
- * screen's `applyPrimaryMetadata`: the seasons list (already cached by the
- * accordion this was opened from) answers instantly, TMDB sharpens the title,
- * overview and adds the still. The air instant stays the catalogue's when it
- * has one — Trakt carries a real time, TMDB only a date.
- */
+/** Merges TMDB metadata over the cached season entry, preserving catalogue `firstAired` since Trakt provides timestamps while TMDB only provides dates. */
 export function useEpisode(
   item: NormalizedMediaItem,
   season: number,

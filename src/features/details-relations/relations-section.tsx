@@ -11,7 +11,6 @@ import { useSuspenseHardcoverBooksQuery } from '@/state/queries/hardcover';
 import { useSuspenseMediaDetailsQuery } from '@/state/queries/media-details';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
-/** Pulls the carousel's own `px-4` header and 16px card gutter out to the column's `px-6`. */
 const ALIGN_TO_COLUMN = '-mx-4 -mb-6 mt-8';
 
 function RelationsRow({ mediaId, type, onItemActions }: { mediaId: number; type: MediaType; onItemActions: (item: NormalizedMediaItem) => void }) {
@@ -66,7 +65,6 @@ function RecommendationsAndTags({ mediaId, type, onItemActions }: { mediaId: num
   );
 }
 
-/** Hardcover ranks up to 100; the rail shows the closest. */
 const SIMILAR_BOOKS_LIMIT = 20;
 
 function SimilarBooksCarousel({ ids, onItemActions }: { ids: readonly number[]; onItemActions: (item: NormalizedMediaItem) => void }) {
@@ -109,12 +107,6 @@ function CarouselSkeleton() {
   );
 }
 
-/**
- * AniList's relations graph (prequel, sequel, side story, adaptation…) for
- * any AniList-resolvable item; TMDB has no such API, so a TV/movie page
- * without an AniList id renders nothing here. `RecommendationsAndTagsSection`
- * reads the same query, so both cost one request.
- */
 export function RelationsSection({
   item,
   resetKey,
@@ -149,10 +141,6 @@ export function RecommendationsAndTagsSection({
   );
 }
 
-/**
- * Hardcover's "Similar books" for a book. The ids ride the book read the
- * credits already make, so the rail costs one request for the books.
- */
 export function SimilarBooksSection({
   item,
   resetKey,

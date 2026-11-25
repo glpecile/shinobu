@@ -26,7 +26,6 @@ describe('native transport header composition', () => {
       Origin: 'https://www.serializd.com',
       Referer: 'https://www.serializd.com',
       'X-Requested-With': 'serializd_vercel',
-      // Caller headers survive the wrap — Authorization attaches on the native path.
       'Content-Type': 'application/json',
       Authorization: 'Bearer tok',
     });

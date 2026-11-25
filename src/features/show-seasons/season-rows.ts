@@ -6,7 +6,6 @@ export type SeasonRow =
   | { kind: 'mark'; key: string; season: NormalizedSeason }
   | { kind: 'episode'; key: string; season: NormalizedSeason; episode: NormalizedEpisode; index: number; last: boolean };
 
-/** Closed seasons contribute only their header; expanded episodes remain individual list cells. */
 export function seasonRows(
   seasons: readonly NormalizedSeason[],
   expanded: ReadonlySet<number>,

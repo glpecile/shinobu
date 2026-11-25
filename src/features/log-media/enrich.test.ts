@@ -5,12 +5,6 @@ import type { ProviderId } from '@/lib/providers/types';
 import type { AniZipIds } from '@/lib/providers/mapping/anizip';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * The seam is `state/queries/mapping` — every lookup `enrich.ts` performs goes
- * through it, and it owns the provider deps (MMKV tokens, the native fetch
- * client) that don't load under bun. Faking the module keeps this a test of
- * *which lookups run and what the ids become*, which is the whole contract.
- */
 const calls: string[] = [];
 let anizipAnilistId: number | null = null;
 let anilistFilmId: number | null = null;
@@ -46,15 +40,11 @@ mock.module('@/state/queries/mapping', () => ({
     calls.push('trakt-search');
     return Promise.resolve(null);
   },
-  // Same process-wide reason as `cachedAniZipEpisodeMap` below: unreachable
-  // from `enrich.ts`, but Up Next's Letterboxd release resolve imports it.
+  // Unused here; bun's process-wide mock.module requires every export imported by other test files.
   cachedTmdbMovieIdByTitle: () => {
     calls.push('tmdb-movie-search');
     return Promise.resolve(null);
   },
-  // Never reached from `enrich.ts` (plan 0027 translates *after* enrichment) —
-  // present because `mock.module` is process-wide, so the fake must expose
-  // every named export any module loaded later imports.
   cachedAniZipEpisodeMap: () => {
     calls.push('anizip-episodes');
     return Promise.resolve(null);
@@ -85,9 +75,6 @@ mock.module('@/state/queries/reading-bridge', () => ({
 
 const { enrichExternalIds } = await import('./enrich');
 
-// ChaO (2025): a TMDB-first anime film. ani.zip's themoviedb_id index is
-// TV-oriented and has no entry for it, so before plan 0024 U6 the log sheet
-// offered Trakt + Letterboxd only.
 function chao(
   overrides: Partial<NormalizedMediaItem> = {},
 ): NormalizedMediaItem {
@@ -126,7 +113,6 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
     expect(calls).toContain('anilist-film:ChaO:2025');
   });
 
-  // TMDB movie 1429 shares its number with Attack on Titan's TV id.
   test('ignores an ani.zip record whose TMDB id is a TV id', async () => {
     anizipBridge = { anilist: 16498, tvdb: 267440, tmdb: 1429 };
 
@@ -178,7 +164,6 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
   });
 });
 
-// A Letterboxd watchlist film: slug + title + year, no cross-provider id.
 const idlessFilm = (): NormalizedMediaItem => ({
   id: 'letterboxd-hokum',
   title: 'Hokum',
@@ -191,12 +176,6 @@ const idlessFilm = (): NormalizedMediaItem => ({
   externalIds: {},
 });
 
-/**
- * The gates that decide whether a lookup runs at all. Both were written when
- * Trakt was the only movie/TV tracker, and starved Simkl's fan-out leg after
- * the detachment: Simkl resolves a write by `tmdb`/`imdb` (movies & TV) and
- * would otherwise fail with "no Simkl-resolvable id".
- */
 describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => {
   beforeEach(() => {
     calls.length = 0;
@@ -226,8 +205,6 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
     expect(calls.some((call) => call.startsWith('anizip:'))).toBe(true);
   });
 
-  // Cyberpunk: Edgerunners 2 (2026): ani.zip's themoviedb_id 326788 is a
-  // TMDB 404, while its TVDB id finds the real show, 105248.
   test('a series anime takes its TMDB id from TVDB over ani.zip’s', async () => {
     anizipBridge = { tvdb: 384541, tmdb: 326788 };
     tmdbByTvdb = 105248;
@@ -270,8 +247,6 @@ describe('enrichExternalIds — a Letterboxd film asks its own page first', () =
   });
 });
 
-// Demons' Crest (2026-11-06): a day after its premiere, ani.zip had no TVDB or
-// TMDB id for AniList 203275, while Simkl linked TVDB 471128 and TMDB 328010.
 describe('enrichExternalIds — a new release ani.zip has not mapped yet', () => {
   beforeEach(() => {
     simklIds = { simkl: 2953770, anilist: 203275, tvdb: 471128, tmdb: 328010 };
@@ -307,8 +282,6 @@ describe('enrichExternalIds — a new release ani.zip has not mapped yet', () =>
   });
 });
 
-// The Last Blossom (2025): neither ani.zip nor Simkl link AniList 177686 to
-// TMDB, so the film never reached Letterboxd.
 describe('enrichExternalIds — an anime film no bridge maps', () => {
   beforeEach(() => {
     simklIds = null;
@@ -334,9 +307,6 @@ describe('enrichExternalIds — an anime film no bridge maps', () => {
   });
 });
 
-// Blood: The Last Vampire (AniList 405): ani.zip's 19849 is the TMDB *TV* id
-// of the show the film is a special of. Voices of a Distant Star (AniList
-// 256, an OVA): its 37910 is a TMDB *movie* id.
 const film = () => chao({ id: 'anilist-405', type: 'ANIME', isFilm: true, externalIds: { anilist: 405 } });
 
 const ova = (totalEpisodes: number) =>
@@ -397,7 +367,6 @@ describe('enrichExternalIds — a bridge id of the other kind', () => {
 
 });
 
-// Plan 0117 B5: a Hardcover volume carries its AniList entry's id and volume.
 describe('enrichExternalIds — a Hardcover book bridged to AniList', () => {
   const book: NormalizedMediaItem = {
     id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)', coverImage: '', type: 'BOOK',

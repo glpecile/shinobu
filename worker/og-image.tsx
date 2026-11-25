@@ -44,7 +44,6 @@ function Posters({ sources }: { sources: string[] }) {
   if (sources.length === 1) {
     return <img src={sources[0]} width={334} height={502} style={{ borderRadius: 24, objectFit: 'cover' }} />;
   }
-  // A fanned stack, like a list's preview row in the app.
   return (
     <div style={{ display: 'flex', position: 'relative', width: 420, height: 502 }}>
       {/* Painted back to front, so the list's first entry lands on top. */}
@@ -69,7 +68,6 @@ function Posters({ sources }: { sources: string[] }) {
 }
 
 function CardView({ card, posters, backdrop, brand }: { card: Card; posters: string[]; backdrop: string | null; brand: string | null }) {
-  // A card with no image of its own leads with the mark instead of the footer's small one.
   const leadMark = posters.length === 0 && backdrop == null ? brand : null;
   return (
     <div style={{ display: 'flex', width: WIDTH, height: HEIGHT, backgroundColor: BACKGROUND, color: FOREGROUND, fontFamily: 'Inter' }}>

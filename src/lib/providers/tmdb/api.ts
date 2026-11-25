@@ -15,13 +15,6 @@ import {
 import { TMDB_API_BASE_URL } from './config';
 import type { TmdbDeps } from './deps';
 
-/**
- * One public TMDB GET mapped into the ProviderError taxonomy, with one
- * rate-limit retry honoring Retry-After (trakt/api.ts pattern). All TMDB
- * calls are reads with the v4 Bearer token — there is no authed/refresh
- * variant: a 401 means the embedded token is bad, which no retry fixes,
- * so it surfaces with `refreshFailed: true`.
- */
 export function tmdbRequest<A>(
   deps: TmdbDeps,
   path: string,

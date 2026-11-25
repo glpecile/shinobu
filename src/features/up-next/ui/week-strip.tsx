@@ -10,7 +10,6 @@ import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 import { shortWeekdayName } from '@/lib/time/relative-day';
 
-/** A single selection tile travels behind the dates; interrupted taps retarget it. */
 export function WeekStrip({ days, selectedOffset, onChange }: {
   days: readonly (UpNextDayGroup & { groups: UpNextGroup[] })[];
   selectedOffset: number;
@@ -32,7 +31,6 @@ export function WeekStrip({ days, selectedOffset, onChange }: {
           className="absolute top-0 bottom-0 left-0 w-14 rounded-md bg-accent-tonal"
           style={{
             pointerEvents: 'none',
-            // Each step is a 56px tile plus its 8px gap, relative to the tile's width.
             transform: [{ translateX: `${index * 64 / 56 * 100}%` }],
             transitionProperty: 'transform',
             transitionDuration: reduceMotion ? 0 : DURATION.toggle,

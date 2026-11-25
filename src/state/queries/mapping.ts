@@ -48,34 +48,14 @@ import { simklDeps } from './simkl';
 import { tmdbDeps } from './tmdb';
 import { traktDeps } from './trakt';
 
-/**
- * Whether Trakt has a usable client id right now — BYO credentials (already
- * true today) or, pre-detachment, the bundled env id. The gate every
- * Trakt-riding lookup below checks before spending a request on it (plan 0034
- * KTD-8): once U9 removes the bundled credentials, this is `false` for every
- * non-BYO user, and these lookups fall back to Simkl/TMDB instead of quietly
- * degrading to `null` forever.
- */
+/** Trakt lookups require a configured BYO client id. */
 function traktHasCredentials(): boolean {
   return getClientIdForProvider(Provider.Trakt) !== '';
 }
 
 /**
- * The `via` key segment: every mapping whose *answer shape* depends on which
- * sources are usable bakes the answering source into its query key. The
- * forever-caching below is deliberate (a given source's mappings don't churn),
- * but without this segment it over-caches across a session-state change: a
- * Simkl-only user browses, forever-caches Simkl-shaped identity records (no
- * trakt id), then completes Trakt's BYO guided setup — and every fan-out leg
- * that needs a trakt id keeps being served the lesser-shaped record. Keying by
- * source makes the newly connected provider a natural cache miss, with no
- * connect/save call site having to remember to invalidate; records the current
- * source set already answered stay cached forever, untouched.
- *
- * Each lookup family names only the sources it actually consults, computed
- * once when the query is built so key and queryFn can never disagree about
- * who answers. ani.zip and the AniList film search stay via-less: public,
- * session-independent sources whose answers no provider connect can improve.
+ * Key each mapping by the source that can answer it. A change in credentials can change the
+ * answer.
  */
 type IdentityLookupVia = typeof Provider.Trakt | typeof Provider.Simkl;
 
@@ -141,10 +121,8 @@ function useMovieSearchVia(): MovieSearchVia {
 
 export const mappingQueryKeys = {
   anizip: (lookup: AniZipLookup) => ['mapping', 'anizip', lookup] as const,
-  /** AniList entry → canonical season/episode numbering (plan 0027 KTD4). */
   anizipEpisodes: (anilistId: number) =>
     ['mapping', 'anizip-episodes', anilistId] as const,
-  /** A show's own season/episode-count skeleton (plan 0027 season placement). */
   seasonLayout: (
     tmdbId: number | null,
     traktId: number | null,
@@ -158,22 +136,16 @@ export const mappingQueryKeys = {
   ) => ['mapping', 'trakt-lookup', source, id, kind, via] as const,
   traktSearch: (title: string, year: number | undefined, via: MovieSearchVia) =>
     ['mapping', 'trakt-search', title, year ?? 'any', via] as const,
-  /** TVDB → TMDB tv-id bridge (`/find`), the anime-TV leg of plan 0014. */
   tmdbFind: (tvdbId: number, via: TmdbVia) =>
     ['mapping', 'tmdb-find', tvdbId, via] as const,
-  /** Title+year → TMDB movie id, for id-less films (Letterboxd). */
   tmdbMovieSearch: (title: string, year: number | undefined, via: TmdbVia) =>
     ['mapping', 'tmdb-movie-search', title, year ?? 'any', via] as const,
-  /** AniList id → TMDB record by title and year, when ani.zip has no mapping. */
   tmdbAnimeSearch: (anilistId: number, via: TmdbVia) =>
     ['mapping', 'tmdb-anime-search', anilistId, via] as const,
-  /** Public Simkl `/search/id` by any foreign (or Simkl's own) id — via-less, no session. */
   simklLookup: (params: SimklLookupParams) => ['mapping', 'simkl-lookup', params] as const,
   simklAnimeIds: (simklId: number) => ['mapping', 'simkl-anime-ids', simklId] as const,
-  /** Title+year → AniList id, the anime-film fallback when ani.zip misses. */
   anilistFilmSearch: (title: string, year: number | undefined) =>
     ['mapping', 'anilist-film-search', title, year ?? 'any'] as const,
-  /** An animated TMDB title → AniList id by title and year, when ani.zip has no mapping. */
   anilistTitleSearch: (type: string, title: string, year: number | undefined) =>
     ['mapping', 'anilist-title-search', type, title, year ?? 'any'] as const,
   anilistNeighbours: (anilistId: number) => ['mapping', 'anilist-neighbours', anilistId] as const,
@@ -333,12 +305,8 @@ function episodeMapQuery(anilistId: number) {
 }
 
 /**
- * The AniList-entry → canonical season/episode table behind the log fan-out's
- * translation step (plan 0027 U2). **Write actions only** (R7): the underlying
- * document is ~1 MB (docs/solutions/web-cors-anizip.md), so no feed or list
- * render path may call this. The one sanctioned render-path consumer is the
- * anime details accordion's header query (`useAniZipEpisodeMapQuery`), which
- * doubles as the pre-warm for a log started from that screen.
+ * Entry-to-canonical mapping for writes. Restrict the roughly 1 MB episode table to callers
+ * that need episode placement.
  */
 export function cachedAniZipEpisodeMap(
   queryClient: QueryClient,
@@ -417,14 +385,8 @@ function seasonLayoutQueryOptions(tmdbId: number | undefined, traktId: number | 
         // through to Trakt rather than treating "no data" as an answer.
         if (layout != null && layout.length > 0) return layout;
       }
-      // Trakt's season structure is public catalogue data, but the client id
-      // that authorizes it (plan 0034 KTD-8) is exactly the credential
-      // detachment removes for a non-BYO build — gated rather than left to
-      // fail into the same `.catch(() => null)` an empty client id would give
-      // it anyway, so a Trakt-less build doesn't spend a doomed round trip.
-      // No Simkl equivalent exists (`/sync/all-items` only reports a user's
-      // own watched seasons, not a show's canonical structure) — TMDB above
-      // stays the substitute KTD-8 allows for.
+      // Trakt season layout needs a BYO client id. TMDB can supply the layout with a
+      // configured read token.
       if (traktId != null && (via === 'tmdb+trakt' || via === Provider.Trakt)) {
         const layout = await Effect.runPromise(
           getShowSeasonLayout(traktDeps(), { traktId }),
@@ -514,7 +476,6 @@ function identityLookupQuery(
       ...FOREVER,
     };
   }
-  // Identity enrichment and the public variant poster share Simkl's cache and in-flight read.
   return simklLookupQuery({
     type: params.kind,
     ...(params.source === 'tvdb' ? { tvdb: Number(params.id) } : {}),
@@ -767,7 +728,6 @@ export async function cachedAniListPrequel(
   return neighbours?.prequel ?? null;
 }
 
-/** Candidate later cours of an AniList series, for placing a later canonical season. Write actions only. */
 export async function cachedAniListLaterCours(
   queryClient: QueryClient,
   anilistId: number,

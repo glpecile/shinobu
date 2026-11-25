@@ -6,7 +6,6 @@ import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 import type { ViewToggleProps } from './props';
 
-/** Compact and regular visual frames retain 44pt targets on both segments. */
 export function ViewToggle({ view, onChange, size }: ViewToggleProps) {
   const selected = useThemeColor('--color-accent-on-tonal');
   const muted = useThemeColor('--color-muted');

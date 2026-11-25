@@ -13,8 +13,6 @@ const REGISTRY_ORDER = Object.keys(PROVIDERS) as ProviderId[];
 describe('splitProviders', () => {
 
   test('both halves follow registry order, not connection order', () => {
-    // MMKV enumerates session keys in the order they were written, so this
-    // input is deliberately reversed relative to the registry.
     const split = splitProviders(['anilist', 'trakt']);
     expect(split.connected).toEqual(
       REGISTRY_ORDER.filter((id) => id === 'trakt' || id === 'anilist'),
@@ -47,7 +45,6 @@ describe('shouldAutoCloseSheet', () => {
   });
 
   test('a sheet opened on an already-connected provider never self-closes', () => {
-    // Otherwise opening Serializd to *disconnect* it would dismiss instantly.
     expect(
       shouldAutoCloseSheet({
         ...base,

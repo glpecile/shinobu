@@ -10,18 +10,6 @@ import { computeNotificationSchedule, type NotificationKind } from './compute-sc
 import { replaceScheduledNotifications } from './scheduler';
 import type { ScheduleResult } from './scheduler/types';
 
-/**
- * The refresh orchestrator (plan 0020 U5): gather (U2) → compute (U3) →
- * schedule (U4), gated by the opt-in toggle and platform, throttled on the
- * foreground path only — the background task already paces itself via
- * WorkManager's `minimumInterval` (R6/R7).
- *
- * Deps are injected so the *decisions* (toggle off, throttle window) are
- * testable without MMKV or native modules; `createRefreshDeps` below is the
- * only production wiring, mirroring the `traktDeps()`/`anilistDeps()`
- * module-level builder pattern (KTD-1).
- */
-
 const THROTTLE_MS = 15 * 60_000;
 const LAST_REFRESH_KEY = 'notifications.lastForegroundRefresh';
 
@@ -41,7 +29,6 @@ export interface RefreshNotificationsDeps {
 }
 
 export interface RefreshOptions {
-  /** False for the background task path — WorkManager already paces it (R6). */
   throttle?: boolean;
 }
 
@@ -59,15 +46,9 @@ export async function refreshNotifications(
     deps.throttle.record(nowMs);
   }
 
-  // A disconnected/broken provider contributes zero inputs plus an error
-  // entry (fetchUpNextInputs' own partial-failure contract) — never a
-  // rejection, so the other provider's candidates still get scheduled (R4).
   const inputs = await deps.gatherInputs();
   if (!deps.isEnabled()) return;
   const candidates = computeNotificationSchedule(inputs, deps.now(), deps.mutedKinds());
-  // Offline or every leg down: an empty list from a failed gather would cancel
-  // every pending alert. Keep the last schedule; the next good refresh replaces it.
-
   if (inputs.errors.length > 0 && candidates.length === 0) return;
   await deps.schedule(candidates);
 }
@@ -77,7 +58,6 @@ export function createRefreshDeps(queryClient: QueryClient): RefreshNotification
     isEnabled: getNotificationsEnabled,
     mutedKinds: getMutedNotificationKinds,
     isWeb: () => Platform.OS === 'web',
-    // The Up Next slot, so a cold start's refresh shares the gather the feed is already running.
     gatherInputs: () => queryClient.fetchQuery(upNextOptions(queryClient)),
     schedule: replaceScheduledNotifications,
     now: () => new Date(),

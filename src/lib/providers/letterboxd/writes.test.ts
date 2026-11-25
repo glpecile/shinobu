@@ -83,7 +83,6 @@ describe('logToLetterboxd', () => {
 
     expect(captured?.filmPath).toBe('/film/tuner/');
     expect(captured?.viewingDateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    // Tags are trimmed into a string array.
     expect(captured?.tags).toEqual(['rewatch-night', 'imax']);
     expect(captured?.liked).toBe(true);
   });

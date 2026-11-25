@@ -26,8 +26,6 @@ function isLocation(value: unknown): value is Location {
   return typeof value === 'object' && value != null && 'start' in value;
 }
 
-// The compiler only touches components (JSX) and hooks (`useX`), and tests
-// never ship, so the rest of the files skip the parse.
 const COMPILABLE = /\.tsx$|(?:function|const|let)\s+use[A-Z]/;
 const OPT_OUT = new Set(['use no memo', 'use no forget']);
 
@@ -39,13 +37,8 @@ function optsOut(body: readonly ESTree.Node[] | undefined): boolean {
   return false;
 }
 
-/**
- * Runs the app's own React Compiler (the options `babel-preset-expo` passes)
- * over the file and reports every function it refuses. The build never fails
- * on these: it ships the uncompiled function, so the component re-renders its
- * whole subtree. `'use no memo'` is the deliberate opt-out and isn't reported.
- * docs/solutions/react-compiler-silent-bailouts.md
- */
+// React Compiler silently ships uncompiled functions instead of failing the build
+// (docs/solutions/react-compiler-silent-bailouts.md).
 export default defineRule({
   meta: {
     type: 'problem',

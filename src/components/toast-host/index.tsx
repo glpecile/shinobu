@@ -21,11 +21,7 @@ const EXIT = new Keyframe({
   },
 }).duration(DURATION.exit);
 
-/**
- * Native host: sonner-native's `<Toaster />`, mounted once at the root
- * (plan 0032 U1) — inside `GestureHandlerRootView`, which sonner-native's
- * dismiss gestures require. Themed to the OS scheme like the web sibling.
- */
+/** Must be mounted inside `GestureHandlerRootView` for `sonner-native` dismiss gestures. */
 export function ToastHost() {
   const colorScheme = useColorScheme();
   const theme =

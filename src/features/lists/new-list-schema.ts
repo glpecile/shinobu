@@ -16,19 +16,9 @@ export function fitsProvider(provider: ListProvider, item: NormalizedMediaItem) 
   return listProviderFor(item, [provider]) === provider;
 }
 
-/** Hardcover's `privacy_setting_id` for each choice. It has no link-only lists, so `Anyone` has none. */
+/** Hardcover's `privacy_setting_id` values. */
 const HARDCOVER_PRIVACY = { Public: 1, Friends: 2, You: 3 } as const satisfies Record<string, HardcoverListDraft['privacy']>;
 
-/**
- * The editor's rules, from what each provider's own editor enforces (plan 0097)
- * and the caps the Letterboxd userscript checks before it opens a tab: a name,
- * Serializd's 1–500 shows, a first film for a public Letterboxd list,
- * Letterboxd's lowercased, de-duplicated tags, and the first books one
- * Hardcover create can afford. One flat form covers every provider; `provider`
- * decides which rules apply and what the parsed value carries. `sharing` is
- * Letterboxd's and Hardcover's privacy, where `Friends` means followers on
- * Hardcover.
- */
 export const newListSchema = z.object({
   provider: z.enum([Provider.Letterboxd, Provider.Serializd, Provider.Hardcover]),
   name: z.string().trim(),
@@ -69,7 +59,6 @@ export const newListSchema = z.object({
     case Provider.Serializd:
       return { provider: Provider.Serializd, draft: { name: form.name, description: form.description, isPrivate: form.isPrivate, isRanked: form.ranked, allowsComments: form.allowsComments, items } };
     case Provider.Hardcover:
-      // The refinement rejects `Anyone` before this runs.
       return { provider: Provider.Hardcover, draft: { name: form.name, description: form.description, privacy: form.sharing === 'Anyone' ? HARDCOVER_PRIVACY.Public : HARDCOVER_PRIVACY[form.sharing], ranked: form.ranked, items } };
   }
 });

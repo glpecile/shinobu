@@ -15,7 +15,6 @@ const FACE = {
   dark: { screen: 'bg-preview-dark', ink: 'bg-preview-dark-ink', line: 'bg-preview-dark-line' },
 };
 
-/** A miniature screen in one theme: title bar, two text lines, a log button. */
 function PreviewFace({ tone }: { tone: keyof typeof FACE }) {
   const face = FACE[tone];
   return (
@@ -28,7 +27,6 @@ function PreviewFace({ tone }: { tone: keyof typeof FACE }) {
   );
 }
 
-/** Appearance setting: System, Light, and Dark as preview cards in a radio group. */
 export function ThemePicker() {
   return (
     <PreviewPicker label="Theme" onSelect={setThemePreference} value={useThemePreference()}>
@@ -38,7 +36,6 @@ export function ThemePicker() {
             {option.value === 'system' ? (
               <>
                 <PreviewFace tone="light" />
-                {/* Right half clips a full-width dark face, so its lines split at the middle too. */}
                 <View className="absolute inset-y-0 right-0 w-1/2 overflow-hidden">
                   <View className="absolute inset-y-0 -left-full right-0">
                     <PreviewFace tone="dark" />

@@ -10,20 +10,9 @@ import type {
 } from './deps';
 
 /**
- * Bridges Letterboxd writes into the hidden authenticated login WebView
- * (`components/letterboxd-write-bridge`, native only). Replaying the captured
- * cookies over nitro-fetch lands as signed-out at Letterboxd's origin, so the
- * write must run in-session — the only channel carrying the real session is the
- * WebView itself (proven empirically, docs/solutions/letterboxd-no-api-fallback.md).
- *
- * Each write mounts its film or list page with a document-start script. Nitro's imperative
- * `evaluateJavaScript` runs off the main thread and crashes WebKit on iOS.
- * The injected script relays
- * the outcome over `window.ReactNativeWebView.postMessage(...)` → the WebView's
- * `onMessage` event → `handleLetterboxdMessage` here, matched by a request id.
- *
- * This module holds only plain Promises — Effect stays contained in writes.ts,
- * which wraps `letterboxdWebFetch` in `Effect.tryPromise` (AGENTS.md boundary).
+ * Run native writes in the authenticated WebView. Replayed cookies do not authenticate Nitro
+ * Fetch. Use document-start injection because imperative evaluateJavaScript crashes WebKit on
+ * iOS (docs/solutions/letterboxd-no-api-fallback.md).
  */
 
 /** Page-load transport exposed by the mounted React bridge. Each write gets
@@ -90,22 +79,8 @@ const RELAY = `function relay(r){
     }`;
 
 /**
- * The submit script — runs on the freshly-rendered film page. It POSTs the diary
- * entry to Letterboxd's modern same-origin JSON API,
- * `POST /api/v0/production-log-entries`, exactly as the site's own JS does
- * (`_composeCreateLogEntryRequest` → `_doSubmission`). The legacy
- * `<form.js-diary-entry-form action="/s/save-diary-entry">` is a dead endpoint
- * that 404s — the site overrides its submit and never posts to it
- * (docs/solutions/letterboxd-no-api-fallback.md).
- *
- * Two page-derived values ride along:
- *  - `productionId` — the film's **LID**, read from the `production:identifier`
- *    meta (`{"lid":"UH8e",…}`).
- *  - `X-CSRF-TOKEN` header — **`window.supermodelCSRF`** (the API takes the token
- *    in a header, not the body). Falls back to the `com.xk72.webparts.csrf`
- *    cookie only if the global is absent.
- *
- * The outcome (plus a `debug` breadcrumb) is relayed over postMessage.
+ * Read the film LID from page metadata and the diary CSRF token from the page global or
+ * cookie. Post the result back to the bridge.
  */
 function buildSubmitScript(id: string, request: LetterboxdWebRequest): string {
   const body = {
@@ -138,14 +113,8 @@ function buildSubmitScript(id: string, request: LetterboxdWebRequest): string {
 }
 
 /**
- * The watchlist script — runs on the freshly-rendered film page and replays the
- * captured flow verbatim (plan 0033 R3/KTD-3,
- * docs/solutions/letterboxd-watchlist-write.md): a fresh CSRF token from
- * `POST /ajax/letterboxd-metadata/` (what the site's own control does — not the
- * diary write's `window.supermodelCSRF` page-global), sent as `x-csrf-token` on
- * `PATCH /api/v0/me/watchlist/{lid}` with the target state in the body. The
- * film's LID is read off the page's `production:identifier` meta. Outcome
- * relayed over postMessage.
+ * Watchlist writes use a fresh CSRF token from the metadata endpoint and set the target state
+ * by film LID.
  */
 function buildWatchlistScript(
   id: string,

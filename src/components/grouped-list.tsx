@@ -6,7 +6,6 @@ import { cn } from '@/lib/cn';
 
 const DividerContext = createContext(false);
 
-/** Groups `GroupedList.Item` children in one surface with inset dividers. */
 export function GroupedList({ children }: { children: ReactNode }) {
   return (
     <View className={cn(CARD_SHELL, 'px-4 py-0')}>
@@ -22,7 +21,6 @@ export function GroupedList({ children }: { children: ReactNode }) {
   );
 }
 
-/** Owns row padding and its divider. `className` customizes content layout. */
 function GroupedListItem({ children, className }: { children: ReactNode; className?: string }) {
   const divider = useContext(DividerContext);
 

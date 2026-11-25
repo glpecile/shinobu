@@ -24,21 +24,15 @@ import { routes } from '@/lib/routes';
 import { personMetaLine } from './meta-line';
 import { creditRoute } from './person-credit-sheet';
 
-// Identity, biography, then controls. Only the static header staggers, not virtualized credits.
 const personEntering = [0, 40, 80].map((delay) =>
   FadeIn.duration(DURATION.enter).easing(KEYFRAME_EASE_OUT).delay(delay),
 );
 
-/**
- * The person page itself, shared by `/person/[id]` and `/person/lookup` — the
- * two differ only in how the details were fetched.
- */
 export function PersonDetailsView({ person, rows, tvCredits }: NormalizedPersonDetails) {
   const headerTop = useFloatingBackButtonClearance();
   const reduceMotion = useReducedMotion();
   const pushRoute = usePushRoute();
   const meta = personMetaLine(person);
-  // Same per-card actions dialog as the home feed.
   const { openActions, sheetProps } = useCardActions();
   const filmography = mergeCreditRows(rows);
 
@@ -92,7 +86,6 @@ export function PersonDetailsView({ person, rows, tvCredits }: NormalizedPersonD
             {person.biography != null && (
               <AnimatedView entering={reduceMotion ? undefined : personEntering[1]}>
                 <ExpandableText
-                  // Four 26px lines plus the title, gap, padding and border reserve 160px.
                   className="min-h-40"
                   lines={4}
                   markdown={person.biographyMarkdown}
@@ -103,10 +96,6 @@ export function PersonDetailsView({ person, rows, tvCredits }: NormalizedPersonD
             )}
           </View>
         }
-        // The row clamps the roles to one line, so the long-press carries the
-        // whole of it into the sheet, with the face: "who is this person
-        // here?" without leaving the page. A title held only as a character
-        // reads "as …"; one that mixes in a crew job reads as the job list.
         onItemActions={(credit, roles) =>
           openActions(credit.item, {
             name: person.name,

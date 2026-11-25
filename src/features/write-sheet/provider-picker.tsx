@@ -15,14 +15,6 @@ import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 import { useConnectedProviders } from '@/state/session';
 
-/**
- * The one provider picker every write verb confirms through (plan 0032 R2,
- * KTD-1) — extracted from `LogConfirmSheet`, not written a second time. The
- * non-obvious content is the rules, not the layout: manual rows never render
- * here (they are `ManualWriteRows`, never a toggle), and nothing in this file
- * may affect a caller's `canConfirm` beyond the selected set it reports.
- */
-
 const SELECTION_FADE = {
   transitionProperty: 'opacity',
   transitionDuration: DURATION.color,
@@ -78,7 +70,6 @@ function ProviderToggle({
 
 export interface ProviderPickerProps {
   targets: readonly ProviderId[];
-  /** A short fact beside a provider's name, such as its current status. */
   details?: Partial<Record<ProviderId, string>>;
   selectedProviders: readonly ProviderId[];
   onSelectAll: () => void;
@@ -86,12 +77,6 @@ export interface ProviderPickerProps {
   onToggle: (id: ProviderId) => void;
 }
 
-/**
- * What the collapsible picker shows instead of an empty dropdown when no
- * connected provider can write the item: the reason, and the way out. The
- * caller owns `onConnect` because reaching the Connect tab means closing the
- * sheet the picker sits in first.
- */
 function NoTargets({ onConnect }: { onConnect?: () => void }) {
   const connected = useConnectedProviders();
   const accent = useThemeColor('--color-accent');
@@ -116,10 +101,6 @@ function NoTargets({ onConnect }: { onConnect?: () => void }) {
   );
 }
 
-/**
- * All/None and writable targets, shared by the collapsible log picker and
- * the standalone watchlist surface (plan 0032 R1).
- */
 function ProviderOptions({
   targets,
   details,
@@ -169,7 +150,6 @@ function ProviderOptions({
   );
 }
 
-/** Standalone selection surface for the watchlist sheet. */
 export function ProviderToggleList(props: ProviderPickerProps) {
   return (
     <View className="rounded-3xl border border-border bg-surface overflow-hidden">
@@ -178,11 +158,6 @@ export function ProviderToggleList(props: ProviderPickerProps) {
   );
 }
 
-/**
- * The collapsible form of the picker — a summary row (selected providers'
- * icons + labels) sharing one clipped surface with its options. The log sheet
- * also carries a backdate field and tags, so the picker earns its keep collapsed.
- */
 export function ProviderPicker({
   onConnect,
   ...props

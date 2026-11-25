@@ -20,10 +20,6 @@ const fading = css.keyframes({
   to: { opacity: 1 },
 });
 
-/**
- * A screen's content arriving in place of its skeleton. Mirrors
- * index.web.tsx — keep both variants' props identical.
- */
 export function BlurEnter({
   children,
   className,

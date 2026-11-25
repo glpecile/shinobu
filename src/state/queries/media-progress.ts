@@ -56,7 +56,6 @@ export function useMediaProgress(items: readonly NormalizedMediaItem[]) {
   return useItemProgress(items, useProgressLibraries(items));
 }
 
-/** Per-item reads (film identity, Letterboxd viewing) matched against shared libraries. */
 export function useItemProgress(items: readonly NormalizedMediaItem[], libraries: ProgressLibraries) {
   const { connected, letterboxdUsername, serializdUsername } = libraries;
   const { movies, shows, simkl, anilist, serializd } = libraries.indexes;

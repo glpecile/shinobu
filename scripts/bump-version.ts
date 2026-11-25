@@ -1,8 +1,3 @@
-// Bumps expo.version + expo.android.versionCode in app.json together so
-// agents and humans produce identical release bumps (KTD-5: versionCode is a
-// monotonic integer maintained here, never derived from semver). Usage:
-//   bun release:bump <patch|minor|major|x.y.z>
-
 export interface AppVersion {
   version: string;
   versionCode: number;
@@ -24,7 +19,6 @@ function compareSemver(a: string, b: string): number {
   return aPatch - bPatch;
 }
 
-/** Pure core: computes the next {version, versionCode}. Throws on invalid input or a downgrade. */
 export function bumpVersion(current: AppVersion, arg: string): AppVersion {
   let nextVersion: string;
 
@@ -34,7 +28,7 @@ export function bumpVersion(current: AppVersion, arg: string): AppVersion {
     else if (arg === 'minor') nextVersion = `${major}.${minor + 1}.0`;
     else nextVersion = `${major + 1}.0.0`;
   } else {
-    parseSemver(arg); // throws on malformed explicit version
+    parseSemver(arg);
     nextVersion = arg;
   }
 
@@ -53,12 +47,6 @@ function isPrimitiveArray(value: Json[]): boolean {
   return value.every((item) => item === null || typeof item !== 'object');
 }
 
-/**
- * Matches this repo's existing app.json formatting (prettier-style): arrays
- * of scalars stay on one line, everything else is 2-space multi-line JSON.
- * A plain `JSON.stringify(obj, null, 2)` would explode every array onto its
- * own lines and reformat untouched fields, defeating the "minimal diff" goal.
- */
 function stringifyAppJson(value: Json, indent = ''): string {
   if (Array.isArray(value)) {
     if (value.length === 0) return '[]';

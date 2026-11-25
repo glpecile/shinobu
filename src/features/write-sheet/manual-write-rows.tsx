@@ -10,20 +10,6 @@ import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * The upfront manual rows (plan 0022 R3/R4, plan 0032 R5/R11) — informational,
- * never a toggle: muted styling (not accent) so they read as distinct from the
- * writable providers above, and they never affect a caller's `canConfirm` or
- * confirm label (those only ever see `targets`/`selectedProviders`, which
- * exclude manual-only providers entirely).
- *
- * With plan 0032 these rows are the *only* surface a manual-declared or
- * platform-banned provider gets — the standing rows left the details screen
- * (R11) — so each row now carries its reason when the caller can name one
- * (R5: "can't be added from the web"). The link contract is unchanged:
- * `manualRowsFor` degrades to the provider's home URL, so the affordance never
- * vanishes silently.
- */
 export function ManualWriteRows({
   manual,
   item,
@@ -32,13 +18,7 @@ export function ManualWriteRows({
 }: {
   manual: readonly ProviderId[];
   item: NormalizedMediaItem;
-  /** Row wording — "Log manually on" (log sheet), "Add on", "Remove on". */
   verb?: string;
-  /**
-   * R5's reason line per provider, when the caller can state one — e.g.
-   * Letterboxd on web's "can't be added from the web". Rows without an entry
-   * render label-only, exactly the pre-0032 shape.
-   */
   reasons?: Partial<Record<ProviderId, string>>;
 }) {
   const muted = useThemeColor('--color-muted');

@@ -49,11 +49,6 @@ const sameEpisode = (a: CatchUpEpisode, b: CatchUpEpisode) =>
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
-/**
- * Which legs a retry re-fires: every selected provider when the write itself
- * threw, only the failed ones when the report names them (a Trakt leg that
- * landed is not logged twice). Null when the row has nothing to retry.
- */
 function retryProviders(
   row: LedgerRow,
   selected: readonly ProviderId[],
@@ -65,12 +60,6 @@ function retryProviders(
   return null;
 }
 
-/**
- * The reasons across every landed row, one line per distinct
- * provider/status/text — a chain that fails N times on one dead Simkl session
- * has one thing to say, not N copies of it. Plain successes and reconcile
- * skips have no reason to show; the row line already carries them.
- */
 function distinctReasons(rows: readonly LedgerRow[]): ProviderWriteOutcome[] {
   const seen = new Map<string, ProviderWriteOutcome>();
   for (const row of rows) {
@@ -85,12 +74,6 @@ function distinctReasons(rows: readonly LedgerRow[]): ProviderWriteOutcome[] {
   return [...seen.values()];
 }
 
-/**
- * Which numbering domain the episode lives in (plan 0027 KTD2): a seasoned
- * pointer carries its canonical season; an entry-relative one has none to
- * carry, and the fan-out resolves the season from ani.zip. Never fabricate a
- * `season: 1`.
- */
 function episodeVariables(
   item: NormalizedMediaItem,
   episode: CatchUpEpisode,
@@ -109,19 +92,12 @@ function entryEpisode(entry: UpNextEpisodeEntry): CatchUpEpisode {
   };
 }
 
-/**
- * Every logging trigger opens this app-level host, mounted in `app/_layout.tsx`.
- * Keyed on the session id so every opening starts a fresh chain; the retired
- * session stays mounted (hidden) until the next open so its late write
- * results can still report.
- */
 export function CatchUpLogSheet() {
   const { session, open } = useCatchUpLog();
   if (session == null) return null;
   return <LogSessionSheet key={session.id} open={open} request={session.request} />;
 }
 
-/** One app-level logging drawer around the session's sheet-agnostic content. */
 function LogSessionSheet({ request, open }: { request: LogRequest; open: boolean }) {
   const { closeCatchUp } = useCatchUpControls();
   return (
@@ -131,18 +107,12 @@ function LogSessionSheet({ request, open }: { request: LogRequest; open: boolean
   );
 }
 
-/**
- * A logging session's content without the drawer around it — the app-level
- * sheet above, or the card-actions sheet in place of its rows (the watchlist
- * picker's plan 0032 U3 shape): a second native drawer can't co-present over
- * the first, so the form swaps in instead.
- */
+/** Sheet-agnostic content for both the app-level drawer and inline card-actions (native drawers cannot co-present). */
 export function LogSheetContent({ request, open, onClose, onDismiss, onOpenRequest }: {
   request: LogRequest;
   open: boolean;
   onClose: () => void;
   onDismiss?: () => void;
-  /** Renders a follow-up request inline, like `onClose`'s host does. */
   onOpenRequest?: (request: LogRequest) => void;
 }) {
   if (!isEpisodeLog(request)) {
@@ -165,35 +135,6 @@ function EpisodeCatchUpForm({ request, open, onClose, onDismiss, onOpenRequest }
   return <CatchUpForm item={request.item} first={first} queue={queue} open={open} onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} />;
 }
 
-/**
- * One opening of the episode-log sheet (plan 0037): the confirm modal every
- * single-episode entry point uses, which — instead of closing after one write — steps to
- * the show's next aired-but-unwatched episode with the same providers, date
- * and tags, until the backlog is done.
- *
- * The chain is *planned* once, at the first confirm, from what the source can
- * prove (`catchUpQueue`), and never re-derived mid-chain: the refetches each
- * write triggers would otherwise shift the queue under the user's thumb.
- *
- * Writes are not awaited per episode. A confirm fires this episode's
- * `useLogMedia` fan-out and moves the form straight to the next one; each
- * fired write reports into the ledger below the form as it lands. **The last
- * episode is awaited** like a single log always was — button spinner, close
- * on a clean report, stay open on anything else — so a one-episode chain is
- * exactly the pre-0037 sheet, and a long one ends with every outcome visible.
- * Simkl is why the sheet can't simply await each write: its ~20s per-user
- * write lock means the second through last Simkl legs coalesce into one POST
- * that lands when the lock lifts (`features/log-media/simkl-write-lock.ts`).
- *
- * AniList files each season of an anime as its own entry, so a chain that ends
- * on an entry's final episode ends clean by opening the sequel's next aired
- * episode as a new session. The sequel is another item with its own targets.
- *
- * The card behind the sheet moves on each confirm (`optimistic.ts`), to the
- * chain's own next episode, and spins until its slot's awaited invalidation
- * resolves. A failed write puts the card back. The sheet is the plan; the
- * feed is the truth once it lands.
- */
 function CatchUpForm({
   item,
   first,
@@ -224,17 +165,13 @@ function CatchUpForm({
   const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
-  /** The chain, frozen at the first confirm (see the component docblock). */
   const [frozen, setFrozen] = useState<CatchUpEpisode[] | null>(null);
   const [index, setIndex] = useState(0);
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
 
-  // The write handlers below outlive renders; they read the sheet's current
-  // visibility to decide between the ledger (open) and a toast (dismissed).
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;
-    // Inline hosts unmount the form on dismissal; outstanding writes still report.
     return () => { openRef.current = false; };
   }, [open]);
 
@@ -246,9 +183,6 @@ function CatchUpForm({
     frozen != null && ledger.some((row) => sameEpisode(row.episode, frozen[frozen.length - 1]));
   const currentRow = ledger.find((row) => sameEpisode(row.episode, current));
   const awaiting = findingSequel || (lastConfirmed && currentRow?.status === 'pending');
-  // A re-press on the last episode is its retry — but only while it needs
-  // one. Once it landed clean (and an earlier row is what keeps the sheet
-  // open), offering "Log episode 5" again would just log it twice.
   const currentLanded =
     currentRow?.status === 'done' &&
     currentRow.result != null &&
@@ -266,21 +200,13 @@ function CatchUpForm({
     providers: selectedProviders,
   }, open);
 
-  // The write handlers read the ledger as of the latest landing, not their
-  // render's snapshot.
   const ledgerRef = useRef<LedgerRow[]>([]);
-  /** Set once the chain's last episode has been confirmed. */
   const lastFiredRef = useRef(false);
-  /** The AniList session that was active when the finale was confirmed. */
   const sequelEpochRef = useRef<number | null>(null);
 
-  // The chain's end: every queued episode confirmed and every write settled.
-  // Clean all round → close and announce; otherwise the sheet stays, the
-  // ledger naming what needs a hand (plan 0032 R7: a failure keeps its links).
-  // Runs on every landing, so a retry that lands clean ends the chain too.
   function finishIfSettled(rows: LedgerRow[]) {
     if (!lastFiredRef.current) return;
-    if (!openRef.current) return; // dismissed early — the rows already toasted
+    if (!openRef.current) return;
     if (rows.some((row) => row.status === 'pending')) return;
     const clean = rows.every(
       (row) => row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
@@ -297,7 +223,6 @@ function CatchUpForm({
       if (succeeded.size === 0) {
         toast.success('Saved offline', `${rows.length} episodes log when you are back online`);
       } else if (queued.size > 0) {
-        // One episode can reach one provider and wait for another, so the counts overlap.
         const reached = rows.filter((row) => (row.result?.succeeded.length ?? 0) > 0).length;
         const waiting = rows.filter((row) => (row.result?.queued.length ?? 0) > 0).length;
         toast.success(
@@ -351,18 +276,13 @@ function CatchUpForm({
     return rows;
   }
 
-  /** One episode's write: a pending row, the fan-out, the card's settle signal, the landing. */
   function fire(episode: CatchUpEpisode, variables: LogMediaVariables, next?: CatchUpEpisode) {
     const episodeCode = capitalize(catchUpEpisodeCode(episode));
-    // A re-fire (the last episode's re-press, a retry) replaces the old row.
     record(episode, { status: 'pending' });
     const write = logMedia.mutateAsync(variables);
-    // The card behind the sheet moves on now. `next` is the chain's own proof.
     trackLog(loggedWatch(variables, next), write.then((result) => result.settled));
 
-    // The card's settle signal (docs/solutions/quick-log-settle-refresh-to-update.md):
-    // once the source provider landed (or already had it), await the slot's
-    // own refetch; resolving *is* "the recomputed data is in".
+    // Await the Up Next refetch so busy clears only after the updated data lands (docs/solutions/quick-log-settle-refresh-to-update.md).
     trackBusy(
       item.id,
       write.then((result) =>
@@ -383,7 +303,6 @@ function CatchUpForm({
           if (!clean) haptics.error();
           return;
         }
-        // Dismissed before this landed: the toast is the only surface left.
         if (clean) {
           const copy = logToastCopy(result);
           toast.success(`${copy.title} ${episodeCode.toLowerCase()}`, copy.message);
@@ -422,8 +341,6 @@ function CatchUpForm({
     setIndex(index + 1);
   }
 
-  // Every failed row re-fires at once: the Simkl legs coalesce into one POST
-  // (simkl-write-lock.ts), so N retries cost the same lock wait as one.
   function retry() {
     haptics.confirm();
     for (const row of ledger) {
@@ -455,11 +372,6 @@ function CatchUpForm({
   const simklQueued =
     selectedProviders.includes(Provider.Simkl) && ledger.length > 1 && sending > 0;
 
-  // The sheet is a drawer, so it shows exactly one view. The form is the view
-  // until the chain has settled with something still needing a hand — a clean
-  // chain closes itself and becomes a toast. Latched, because a retry
-  // un-settles the ledger and must not throw the user back to the form; the
-  // finishIfSettled ends the report when every retry lands clean.
   const [reported, setReported] = useState(false);
   if (allSettled && !allClean && !reported) setReported(true);
 
@@ -513,10 +425,6 @@ function CatchUpForm({
               watchedAt={watchedAt}
             />
 
-            {/* The chain's state rides the label and morphs press to press
-                (`chainLabel`). It used to be a row per fired write above the
-                button — a scrolling receipt — and then a status line, which is
-                still a second thing to read about what the button does. */}
             {(!currentLanded || findingSequel) && (
               <WriteSheet.Actions>
                 <Button
@@ -532,8 +440,6 @@ function CatchUpForm({
               </WriteSheet.Actions>
             )}
 
-            {/* The one thing the 20s Simkl write lock needs said: the queued
-                legs look stalled otherwise (simkl-write-lock.ts). */}
             {simklQueued && (
               <Text className="text-muted font-sans text-xs text-center mt-3">
                 Simkl takes one write every 20 seconds, so the rest wait their
@@ -546,12 +452,6 @@ function CatchUpForm({
   );
 }
 
-/**
- * The chain's other view: what needs a hand. One headline naming the episodes
- * and the provider that dropped them, one muted line for what *did* land, the
- * shared reasons-and-manual-links report (never a dead end, plan 0022), and
- * the retry.
- */
 function ChainReport({
   findingSequel,
   item,
@@ -606,8 +506,6 @@ function ChainReport({
         </WriteSheet.Description>
       )}
 
-      {/* No top margin here: `WriteResultReport` brings its own (`mt-3`), and
-          a wrapper adding a second one is how the headline ended up floating. */}
       <View className="gap-1">
         {thrown.map((message) => (
           <Text className="text-accent font-sans text-xs mt-3" key={message}>

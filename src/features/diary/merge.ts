@@ -12,18 +12,6 @@ import type {
   ReadingEvent,
 } from '@/types/media';
 
-/**
- * The unified-diary merge + grouping algorithm (plan 0016 KTD3/KTD4) — the risk
- * core of the feature, kept pure and unit-tested here. Per-provider infinite
- * cursors feed `mergeDiaryEntries` (dedup → watermark cut → sort); the resulting
- * gapless stream feeds `groupDiaryEntries` (day buckets + cross-provider
- * collapse). No Effect, no React — the hook is thin plumbing around this.
- */
-
-/**
- * The diary's format filter. It adds Reading to the filmography's options,
- * because a filmography rarely holds a reading credit (plan 0117 M4).
- */
 export type DiaryFormat = FormatFilter | 'READING';
 
 export const DIARY_FORMAT_OPTIONS = [
@@ -31,7 +19,6 @@ export const DIARY_FORMAT_OPTIONS = [
   { value: 'READING', label: 'Reading' },
 ] as const satisfies readonly { value: DiaryFormat; label: string }[];
 
-/** Reading holds manga and books (KTD-10); Movies and TV follow the filmography. */
 export function matchesDiaryFormat(item: NormalizedMediaItem, format: DiaryFormat): boolean {
   switch (format) {
     case 'READING':
@@ -43,51 +30,28 @@ export function matchesDiaryFormat(item: NormalizedMediaItem, format: DiaryForma
   }
 }
 
-/** One provider's loaded-so-far slice of the diary and its pagination state. */
 export interface DiaryProviderState {
   provider: ProviderId;
-  /** Every entry loaded across pages so far (order irrelevant — sorted here). */
   entries: NormalizedDiaryEntry[];
-  /** How far back the provider's page order has read; wins over the entries (see `DiarySlice`). */
+  /** How far back the provider has paged; overrides `entries` for the watermark. */
   readTo?: string;
-  /** More pages remain to fetch (false when exhausted OR failed). */
   hasMore: boolean;
-  /** This provider's initial or pagination fetch failed. */
   failed: boolean;
 }
 
-// Precedence when the same log lands on several providers: the richest metadata
-// source wins the display item, deterministically regardless of match order
-// (plan 0016 KTD4). Trakt/AniList carry full catalogue metadata; Letterboxd RSS
-// carries only slug/title/year, so it sinks last. Serializd diary rows carry
-// show/season/episode detail (richer than Letterboxd RSS), so they rank
-// directly after Trakt (plan 0017 U1). Simkl all-items rows sit between them:
-// full catalogue metadata plus the widest external-id bridge
-// (simkl/tmdb/tvdb/imdb/mal/anilist — plan 0034 KTD-6), so a collapsed row's
-// display item keeps every join key the contributors offered.
 const PROVIDER_PRIORITY: Record<ProviderId, number> = {
   trakt: 0,
   simkl: 1,
   serializd: 2,
   anilist: 3,
   letterboxd: 4,
-  // Only a bridged volume shares a row with another provider, and it leads
-  // that row: it is the finer record (plan 0117 B6).
   hardcover: -1,
 };
 
-/** A diary entry's ordering key in epoch ms (date-only → local midnight). */
 function entryMs(entry: Pick<NormalizedDiaryEntry, 'watchedAt'>): number {
   return parseLocalInstant(entry.watchedAt)?.getTime() ?? 0;
 }
 
-/**
- * Deduplicates by log id (newest occurrence wins), applies the watermark cut,
- * and sorts descending (plan 0016 KTD3). The watermark is the newest
- * "read-back-to" instant among providers that still have more pages — no entry
- * older than it is exposed, since a not-yet-fetched page of that provider could
- * still fill the gap. Failed and exhausted providers drop out of the watermark.
- */
 export function mergeDiaryEntries(
   states: readonly DiaryProviderState[],
 ): NormalizedDiaryEntry[] {
@@ -95,8 +59,6 @@ export function mergeDiaryEntries(
   for (const state of states) {
     for (const entry of state.entries) {
       const existing = byId.get(entry.id);
-      // Page N+1 re-returns page N's tail after a prepend — same id, same log.
-      // Keep the newer occurrence (identical in practice; robust to edits).
       if (existing == null || entryMs(entry) > entryMs(existing)) {
         byId.set(entry.id, entry);
       }
@@ -115,12 +77,7 @@ export function mergeDiaryEntries(
     .map((index) => entries[index]);
 }
 
-/**
- * How far back each provider with more pages has read (epoch ms): its `readTo`
- * when it reports one (AniList reads past entries it drops; Serializd pages by
- * log time while its entries sit on backdates), else its oldest entry.
- * Providers with nothing loaded yet are left out.
- */
+/** Uses `readTo` when present (AniList filters out entries mid-page; Serializd pages by log time while entries carry backdates), else the oldest entry. */
 function readFrontiers(
   states: readonly DiaryProviderState[],
 ): Array<{ provider: ProviderId; min: number }> {
@@ -133,7 +90,6 @@ function readFrontiers(
     });
 }
 
-/** The watermark instant (epoch ms), or null when nobody has more pages. */
 function computeWatermark(
   states: readonly DiaryProviderState[],
 ): number | null {
@@ -141,12 +97,6 @@ function computeWatermark(
   return mins.length > 0 ? Math.max(...mins) : null;
 }
 
-/**
- * Which provider(s) sit at the watermark and must advance on `fetchNextPage`
- * (plan 0016 KTD3): the ones whose read-back-to instant defines the current cut.
- * Advancing them lowers the watermark and releases held-back entries. Providers
- * with more pages but nothing loaded yet advance too (cold start).
- */
 export function watermarkProviders(
   states: readonly DiaryProviderState[],
 ): ProviderId[] {
@@ -159,19 +109,11 @@ export function watermarkProviders(
   return mins.filter((m) => m.min === watermark).map((m) => m.provider);
 }
 
-// ---- Grouping (day buckets + cross-provider collapse) ----
-
-/** The title+year identity of last resort, normalized for casing/whitespace. */
 function titleYearKey(item: NormalizedDiaryEntry['item']): string {
   const title = item.title.trim().toLowerCase().replace(/\s+/g, ' ');
   return `ty:${title}:${item.year ?? '?'}`;
 }
 
-/**
- * Item identity for within-day *clustering*: shared tmdb, else imdb, else
- * title+year. Clustering runs over already-collapsed entries whose external
- * ids were unioned by `toMerged`, so the single-key chain suffices there.
- */
 function identityKey(item: NormalizedDiaryEntry['item']): string {
   if (item.externalIds.tmdb != null) return `tmdb:${item.externalIds.tmdb}`;
   if (item.externalIds.imdb != null) return `imdb:${item.externalIds.imdb}`;
@@ -182,13 +124,6 @@ function counted(value: number, singular: string, plural = `${singular}s`): stri
   return `${value.toLocaleString()} ${value === 1 ? singular : plural}`;
 }
 
-/**
- * Counts visible logs, joining provider identities and overlapping episode
- * ranges. `label` is the day head's text; `units` (films + episodes + chapters,
- * a title-only log counting once) is the day's weight in the activity graph.
- * `chapters` and `bookIds` stay apart for the Reading stats, which never
- * add them (KTD-3).
- */
 export interface DaySummary {
   label: string;
   units: number;
@@ -198,7 +133,6 @@ export interface DaySummary {
 
 export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
   let films = 0;
-  // A book started and finished on one day is one book.
   const books = new Set<string>();
   const anilistByMal = new Map<string, number>();
   for (const { item } of entries) {
@@ -223,7 +157,6 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
       books.add(item.id);
       continue;
     }
-    // Anime and TV can describe the same show; manga IDs occupy a separate namespace.
     const family = item.type === 'MANGA' ? 'manga' : 'show';
     const keys = identityKeys(item).map((key) => `${family}:${key}`);
     let group = byIdentity.get(keys[0]);
@@ -290,15 +223,6 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
   return { label: parts.join(' · '), units, chapters, bookIds: [...books] };
 }
 
-/**
- * Namespaced identity keys for the cross-provider *collapse* join. TMDB alone
- * is not enough (the up-next lesson, plan 0034 U9.5): an AniList log states
- * anilist/mal but rarely tmdb, Serializd states only tmdb — and a Simkl
- * all-items row states most of them at once, bridging the two. The join
- * therefore matches on *any* shared namespaced id. The title+year key applies
- * when an item carries no usable id at all; films add their names through
- * `filmNameKeys`. A title match never joins items whose ids disagree.
- */
 function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
   const ids = item.externalIds;
   const keys: string[] = [];
@@ -307,26 +231,18 @@ function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
   if (ids.imdb != null) keys.push(`imdb:${ids.imdb}`);
   if (ids.mal != null) keys.push(`mal:${ids.mal}`);
   if (ids.anilist != null) keys.push(`anilist:${ids.anilist}`);
-  // A book never meets a film or a manga by title (KTD-6), only through the
-  // AniList entry the reading bridge grouped it under (plan 0117 B6).
   if (ids.hardcover != null) keys.push(`hardcover:${ids.hardcover}`);
   if (item.bridgedAniList != null) keys.push(`anilist:${item.bridgedAniList.id}`);
   if (keys.length === 0) keys.push(titleYearKey(item));
   return keys;
 }
 
-/**
- * A film's names as year-scoped keys, the rule the log uses to pair an anime
- * film with its TMDB record (`isSameAnime`). AniList and Simkl file an anime
- * film without a TMDB id, so a Letterboxd or Trakt log of it shares only a
- * name (Housenka / The Last Blossom).
- */
+/** AniList and Simkl often omit TMDB IDs on anime films, so cross-provider matching falls back to year-scoped names. */
 function filmNameKeys(item: NormalizedMediaItem): string[] {
   if ((item.type !== 'MOVIE' && item.isFilm !== true) || item.year == null) return [];
   return [...nameKeys(item)].map((name) => `name:${name}:${item.year}`);
 }
 
-/** Some id namespace both items carry names a different title. */
 function idsDisagree(a: NormalizedMediaItem, b: NormalizedMediaItem): boolean {
   return Object.entries(a.externalIds).some(([namespace, id]) => {
     const other = b.externalIds[namespace as keyof NormalizedMediaItem['externalIds']];
@@ -334,12 +250,10 @@ function idsDisagree(a: NormalizedMediaItem, b: NormalizedMediaItem): boolean {
   });
 }
 
-/** The episode/chapter set signature; movies collapse on "no episodes". */
 function episodesKey(episodes: number[] | undefined): string {
   return [...(episodes ?? [])].sort((a, b) => a - b).join(',');
 }
 
-/** Local `YYYY-MM-DD` day for an entry (date-only entries pass through). */
 export function localDayKey(
   entry: Pick<NormalizedDiaryEntry, 'watchedAt' | 'dateOnly'>,
   timeZone: string,
@@ -350,13 +264,7 @@ export function localDayKey(
   return dayKeyForInstant(instant, timeZone);
 }
 
-/**
- * en-CA renders an instant in `timeZone` as `YYYY-MM-DD`. The formatter is
- * cached per zone because this runs once per diary entry *and* once per day
- * header on every regroup — constructing `Intl.DateTimeFormat` is one of the
- * most expensive calls in the engine, and the zone only ever takes one value
- * per session. The map is bounded by the number of distinct zones asked for.
- */
+/** Cached per zone; `en-CA` formats dates as `YYYY-MM-DD`. */
 const dayFormatters = new Map<string, Intl.DateTimeFormat>();
 
 export function dayKeyForInstant(instant: Date, timeZone: string): string {
@@ -383,11 +291,6 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
     (a, b) => PROVIDER_PRIORITY[a.provider] - PROVIDER_PRIORITY[b.provider],
   );
   const primary = contributors[0];
-  // Fill-only fold from the richest contributor down — merge-metadata precedence
-  // (plan 0016 KTD4): the primary's fields win, poorer contributors fill gaps
-  // and union external ids, so the result is order-independent.
-  // A bridged volume's row keeps the book's own record: the AniList entry's
-  // ids and catalogue fields name the series, not this volume (plan 0117 B6).
   const item = contributors
     .slice(1)
     .reduce((acc, entry) => (acc.type === 'BOOK' && entry.item.type !== 'BOOK' ? acc : mergeCatalogueMetadata(acc, entry.item)), primary.item);
@@ -419,7 +322,6 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
   };
 }
 
-/** Within-day order: instant entries newest-first, then date-only entries. */
 function sortMergedDesc(merged: MergedDiaryEntry[]): MergedDiaryEntry[] {
   const ms = merged.map(entryMs);
   return merged
@@ -432,9 +334,6 @@ function sortMergedDesc(merged: MergedDiaryEntry[]): MergedDiaryEntry[] {
 
 function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
   const buckets: Array<CollapseBucket | null> = [];
-  // `episodesKey + identity` → indices of the buckets holding that identity.
-  // A joining entry indexes all its keys, so an id-rich contributor (Simkl)
-  // bridges id-poor ones; candidates are looked up, not scanned bucket by bucket.
   const byIdentity = new Map<string, number[]>();
   const indexBucket = (bucket: number, key: string, identities: Iterable<string>) => {
     for (const identity of identities) {
@@ -447,13 +346,6 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
   for (const entry of entries) {
     const identities = [...identityKeys(entry.item), ...filmNameKeys(entry.item)];
     const key = episodesKey(entry.episodes);
-    // Merge only with a *different* provider's entry of the same item + episode
-    // set — two same-provider logs (binge day / rewatch) never collapse (R2/AE6),
-    // and mismatched episode sets stay separate rows (KTD4). Identity matches
-    // on any shared namespaced id (U9.5); joining unions the keys, so entries
-    // are processed newest-first deterministically and a bridge contributor
-    // extends the bucket's reach.
-    // The earliest-created matching bucket wins, as a front-to-back scan would.
     const matches = new Set<number>();
     for (const identity of identities) {
       for (const index of byIdentity.get(`${key}\u0000${identity}`) ?? []) {
@@ -473,9 +365,6 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
       target.entries.push(entry);
       target.providers.add(entry.provider);
       indexBucket(match, key, identities);
-      // An id-rich entry can bridge two buckets that share no id (an AniList
-      // cour carries the TMDB show id Serializd logs under, and the AniList id
-      // Simkl logs under). They fold when no provider logged into both.
       for (const index of bridged) {
         const other = buckets[index];
         if (other == null || [...other.providers].some((provider) => target.providers.has(provider))) continue;
@@ -492,12 +381,6 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
   return sortMergedDesc(buckets.filter((bucket) => bucket != null).map(toMerged));
 }
 
-/**
- * Groups a merged, cut diary stream into day buckets (newest day first) with
- * cross-provider same-item collapse (plan 0016 KTD4). Day keys are the user's
- * local calendar day in `timeZone` — a UTC-evening instant lands on the prior
- * local day for a negative-offset zone (AE4).
- */
 export function groupDiaryEntries(
   entries: readonly NormalizedDiaryEntry[],
   timeZone: string,
@@ -515,54 +398,24 @@ export function groupDiaryEntries(
     .sort((a, b) => (a.key < b.key ? 1 : a.key > b.key ? -1 : 0));
 }
 
-// ---- Within-day episode clustering (presentation only) ----
-
-/**
- * A run of same-show episode logs from one day, gathered into a collapsible
- * group so a binge (S6E1…E10) reads as one row instead of ten. Purely a
- * presentation grouping *over* `MergedDiaryEntry` — it never re-merges logs, so
- * the merge layer's contracts (per-log identity, cross-provider collapse,
- * rewatch/partial-failure separation) are untouched. A single-entry cluster is
- * just an ordinary row; only clusters of two or more collapse.
- */
 export interface DiaryCluster {
-  /** Stable key — the anchor (newest) entry's log id. */
   key: string;
-  /** The grouped entries, newest-first. Length ≥ 1. */
   entries: MergedDiaryEntry[];
 }
 
-/** The collapsed summary of a cluster (union across its entries). */
 export interface DiaryClusterSummary {
-  /** Display item — the anchor (newest) entry's, richest of the run. */
   item: NormalizedMediaItem;
-  /** Season shared by the run (TV); absent for anime/manga without one. */
   season?: number;
-  /** Union of every entry's episode/chapter numbers, sorted ascending. */
   episodes: number[];
-  /** Union of every provider that logged any entry, precedence-ordered. */
   providers: ProviderId[];
-  /** How many episode/chapter numbers the run covers (union size). */
   count: number;
 }
 
-/**
- * A cluster identity — same show (identity) + same season — or null for rows
- * that must never fold together: movies and season-level logs (no episodes)
- * are each their own entry, exactly as the merge layer left them.
- */
 function clusterKey(entry: MergedDiaryEntry): string | null {
   if (entry.episodes.length === 0) return null;
   return `${identityKey(entry.item)}::${entry.season ?? ''}`;
 }
 
-/**
- * Groups one day's already-collapsed entries into episode clusters, anchoring
- * each cluster at its newest member's position (input is newest-first, so the
- * anchor is the first occurrence) and preserving that relative order. Entries
- * that share a show + season fold together even if interleaved with another
- * show's logs; movies and season-level logs always pass through as singletons.
- */
 export function clusterDayEntries(
   entries: readonly MergedDiaryEntry[],
 ): DiaryCluster[] {
@@ -582,7 +435,6 @@ export function clusterDayEntries(
   return clusters;
 }
 
-/** The collapsed-row summary for a cluster: unioned episodes/providers + count. */
 export function summarizeCluster(cluster: DiaryCluster): DiaryClusterSummary {
   const episodes = [
     ...new Set(cluster.entries.flatMap((entry) => entry.episodes)),
@@ -600,9 +452,6 @@ export function summarizeCluster(cluster: DiaryCluster): DiaryClusterSummary {
   };
 }
 
-// ---- Presentation helpers (pure) ----
-
-/** "3–5" for a contiguous run, "2, 5" across a gap (plan 0016 KTD2). */
 function formatEpisodeRange(episodes: number[]): string {
   const sorted = [...new Set(episodes)].sort((a, b) => a - b);
 
@@ -630,12 +479,6 @@ const READING_EVENT_DETAIL: Record<ReadingEvent, string> = {
   finished: 'Finished',
 };
 
-/**
- * The row's detail line: "S2E5" / "Ep 3–5" / "Ch 41" / "Finished"; '' for a
- * movie. A book's progress update speaks the reader's unit (`inPages`),
- * "Pages 27–51" or "+13% (12→25)", and the other one when its own is missing.
- * A move back or a reread shows only where the reader landed: "Page 40", "12%".
- */
 export function formatEpisodeDetail(params: {
   type: MediaType;
   season?: number;
@@ -647,7 +490,6 @@ export function formatEpisodeDetail(params: {
 }): string {
   const { pages, percent } = params;
   if (pages != null && (params.inPages === true || percent == null)) {
-    // A reader who moves back lands on a page without covering any.
     return pages.from < pages.to ? `Pages ${pages.from}–${pages.to}` : `Page ${pages.to}`;
   }
   if (percent != null) {
@@ -663,12 +505,6 @@ export function formatEpisodeDetail(params: {
   return `Ep ${range}`;
 }
 
-/**
- * The same count abbreviated for the rail's run pill, where "10 episodes" does
- * not fit: "10 eps" / "12 ch". Still singularizes — a two-log run whose
- * providers recorded the *same* episode number unions down to one, so "1 eps"
- * is reachable and reads as a bug.
- */
 export function shortClusterCount(params: {
   item: Pick<NormalizedMediaItem, 'type'>;
   count: number;
@@ -677,7 +513,6 @@ export function shortClusterCount(params: {
   return `${params.count} ${params.count === 1 ? 'ep' : 'eps'}`;
 }
 
-/** "10 episodes" / "12 chapters" — the count line under a collapsed cluster. */
 export function formatClusterCount(type: MediaType, count: number): string {
   const noun = type === 'MANGA' ? 'chapter' : 'episode';
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
@@ -685,23 +520,12 @@ export function formatClusterCount(type: MediaType, count: number): string {
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** The day header split for the rail gutter: a numeral over a short label. */
 export interface DiaryDayParts {
-  /** The calendar day number, e.g. "20" — the gutter's headline. */
   day: string;
-  /** "Today", "Jul", or "Jul 25" when the day falls in another year. */
   label: string;
-  /** The day is the user's local today (the gutter tints it accent). */
   isToday: boolean;
 }
 
-/**
- * The rail gutter's stacked date: the numeral carries the day and the label
- * below it carries the month — or "Today", or a `Jul 25` month+year when the
- * day's local year differs from the current one (R8), since multi-year
- * scroll-back otherwise repeats identical labels. `todayKey` is the user's
- * local day from `dayKeyForInstant`.
- */
 export function formatDayParts(dayKey: string, todayKey: string): DiaryDayParts {
   const [year, month, day] = dayKey.split('-').map(Number);
   const dayLabel = `${day ?? ''}`;
@@ -717,15 +541,8 @@ export function formatDayParts(dayKey: string, todayKey: string): DiaryDayParts 
   };
 }
 
-/** Cached like `dayFormatters`, and for the same reason — one per zone. */
 const timeFormatters = new Map<string, Intl.DateTimeFormat>();
 
-/**
- * The local clock time a log was made, `HH:MM`, or `''` for a date-only entry.
- * Letterboxd RSS and the Simkl projection carry no time of day, so the rail's
- * time column stays empty for them rather than inventing a midnight (AE4 is
- * the same hazard: a date-only log is not an instant).
- */
 export function formatLogTime(
   entry: Pick<MergedDiaryEntry, 'watchedAt' | 'dateOnly'>,
   timeZone: string,

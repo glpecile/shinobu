@@ -4,7 +4,6 @@ import * as Effect from 'effect/Effect';
 import type { HttpFetch } from '@/lib/http/types';
 import { getPersonByName } from './person-details';
 
-/** Routes by URL: TMDB requests carry a path, AniList is one POST endpoint. */
 function mockFetch(
   respond: (url: string, body: unknown) => unknown,
 ): HttpFetch {

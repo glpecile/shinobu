@@ -13,21 +13,13 @@ import { ProgressScrubber } from './progress-scrubber';
 import { pageAt, percentRead, stepPage } from './reading-share';
 import { StepperField } from './stepper-field';
 
-/** A book log's form state: the page reached, or the whole book. */
 export interface ReadingProgress {
   finished: boolean;
   page: number;
-  /** The edition's page count, the field's cap. Absent when Hardcover has none. */
   total?: number;
-  /** The book is already Read, so this log is another read of it. */
   reread?: boolean;
 }
 
-/**
- * What a progress log covers ("34%", "page 31"), in the reader's unit
- * (`useReadingInPages`). Without a page count it is always pages. None for a
- * start or a finish.
- */
 export function readingSpan(reading: ReadingProgress, inPages: boolean): string | undefined {
   if (reading.finished || reading.page <= 0) return undefined;
   return reading.total != null && !inPages
@@ -35,7 +27,6 @@ export function readingSpan(reading: ReadingProgress, inPages: boolean): string 
     : `page ${reading.page}`;
 }
 
-/** The one string the book form speaks: its title and confirm label. */
 export function readingTitle(reading: ReadingProgress, inPages: boolean): string {
   if (reading.finished) return reading.reread === true ? 'Log reread' : 'Mark as read';
   const span = readingSpan(reading, inPages);
@@ -43,7 +34,6 @@ export function readingTitle(reading: ReadingProgress, inPages: boolean): string
   return reading.reread === true ? 'Start reread' : 'Start reading';
 }
 
-/** The page field's cap when Hardcover has no page count. */
 const LAST_PAGE = 99999;
 
 const UNITS = [
@@ -53,27 +43,15 @@ const UNITS = [
 
 interface FieldProps {
   value: ReadingProgress;
-  /** Takes an updater, so a second press that lands before a re-render steps from the first. */
   onChange: (update: (reading: ReadingProgress) => ReadingProgress) => void;
   pending: boolean;
 }
 
-/**
- * The book log form's progress fields (plan 0117 B3). Pages are their own
- * unit (KTD-3). With a page count, the reader drags or types how far they
- * got, in percent or pages, and the last page is the finish. Without one,
- * only pages can be said, so Finished is its own switch.
- */
 export function ReadingProgressField(props: FieldProps) {
   const { total } = props.value;
   return total == null ? <PageField {...props} /> : <ShareField {...props} total={total} />;
 }
 
-/**
- * Percent or pages, typed or dragged. A typed value stays as typed until the
- * field blurs: 6% of 92 pages is page 6, which reads back as 7%, and showing
- * that mid-typing would turn "60" into "70".
- */
 function ShareField({ value, onChange, pending, total }: FieldProps & { total: number }) {
   const input = useRef<TextInputInstance>(null);
   const [draft, setDraft] = useState<string | null>(null);
@@ -82,7 +60,6 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
   const inPages = useReadingInPages();
   const setPage = (next: number) =>
     onChange((reading) => ({ ...reading, page: next, finished: next >= total }));
-  // From the latest state, so a second press before a re-render steps again.
   const step = (by: 1 | -1) => {
     setDraft(null);
     onChange((reading) => {
@@ -194,7 +171,6 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
   );
 }
 
-/** A Finished switch, and the page reached while it is off. */
 function PageField({ value, onChange, pending }: FieldProps) {
   const setFinished = (finished: boolean) => onChange((reading) => ({ ...reading, finished }));
   const setPage = (next: (page: number) => number) =>
@@ -203,7 +179,6 @@ function PageField({ value, onChange, pending }: FieldProps) {
   return (
     <View className="mt-5">
       <View className={cn('flex-row items-center justify-between', pending && 'opacity-50')}>
-        {/* The switch carries the label for screen readers. */}
         <Text
           accessible={false}
           className="text-foreground font-sans-semibold text-sm"

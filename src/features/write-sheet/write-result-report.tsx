@@ -15,11 +15,6 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * Provider-labelled result card, with a manual link when the item URL is
- * buildable. Errors use a tonal surface; skips remain neutral because a
- * deliberate skip is not a failed request.
- */
 function OutcomeMessage({
   outcome,
   message,
@@ -87,31 +82,15 @@ function OutcomeMessage({
 
 export interface WriteResultReportProps {
   outcomes: readonly ProviderWriteOutcome[];
-  /** The item written — needed to build the per-outcome provider links (plan 0022). */
   item: UrlItem;
-  /** `OutcomeLink` wording — 'Log on' (default) / 'Add on' / 'Remove on'. */
   verb?: string;
-  /** "Failed on Letterboxd — Trakt was logged." — the caller owns the copy; omitted → the reasons stand alone. */
   failedHeadline?: (
     failed: readonly ProviderId[],
     succeeded: readonly ProviderId[],
   ) => string;
-  /** The reconcile-skip line ("already had this logged"); omitted → not rendered. */
   reconcileLine?: (skipped: readonly ProviderId[]) => string;
 }
 
-/**
- * The result families every write verb reports through (plan 0032 U2, KTD-1) —
- * moved from `LogConfirmSheet`, composed by it and by the watchlist picker
- * sheet, never re-derived per verb. The rules a second copy would drift on:
- *
- * - reconcile skips (no reason — already in sync) and adapter-reported skips
- *   (a reason) render differently, never lumped (plan 0022 R6);
- * - every error renders its message *and* a manual link when buildable —
- *   `manualLinkForOutcome` has no home-URL fallback, unlike the upfront rows;
- * - reasoned skips are individual lines: "already on your watchlist" and
- *   "S1–S2 are already watched" are different facts.
- */
 export function WriteResultReport({
   outcomes,
   item,
@@ -139,8 +118,6 @@ export function WriteResultReport({
               )}
             </Text>
           )}
-          {/* The per-provider reason (e.g. Letterboxd film not found, session
-              expired) — without it every failure looks identical (plan 0012). */}
           {failed.map((outcome) => (
             <OutcomeMessage
               item={item}
@@ -164,11 +141,6 @@ export function WriteResultReport({
       )}
       {(okReasons.length > 0 || reasonedSkips.length > 0) && (
         <View className="mt-3 gap-2">
-          {/* Partial successes (an `ok` carrying a reason — plan 0031 R16,
-              Serializd's season-filtered add) share the reasoned-skip family:
-              same neutral tone, because "S1 is already watched" is a fact,
-              not something that went wrong. `manualLinkForOutcome` builds no
-              link for an ok, so the line stands alone. */}
           {okReasons.map((outcome) => (
             <OutcomeMessage
               item={item}

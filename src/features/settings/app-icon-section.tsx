@@ -8,7 +8,6 @@ import { SettingsRail } from '@/features/settings/settings-rail';
 import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
 
-/** Names match app.json; the default icon follows the system appearance. */
 const OPTIONS: { value: string; label: string; source: number }[] = [
   { value: 'default', label: 'Automatic', source: require('../../../assets/images/icon.png') },
   { value: 'crimson', label: 'Kiss-shot', source: require('../../../assets/images/app-icons/crimson.png') },
@@ -17,11 +16,6 @@ const OPTIONS: { value: string; label: string; source: number }[] = [
 ];
 const DEFAULT_DARK_SOURCE = require('../../../assets/images/ios-icon-dark.png');
 
-/**
- * App icon setting as a radio group of icon previews. The OS owns the current
- * icon. iOS answers a change with its own alert; Android applies it on background.
- * Renders nothing on web and on devices without alternate icons.
- */
 export function AppIconSection() {
   const { icon: current, isSupported, setIcon } = useAppIcon();
   const muted = useThemeColor('--color-muted');

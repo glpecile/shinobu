@@ -135,7 +135,6 @@ describe('applyPrimaryMetadata', () => {
     // Artwork is fill-only: the item already showed this poster on the card
     // the viewer tapped, so TMDB must not swap it out from under them.
     expect(merged.coverImage).toBe('https://trakt/poster.jpg');
-    // …but the item carried no backdrop, so TMDB's fills the gap.
     expect(merged.backdropImage).toBe('https://tmdb/backdrop.jpg');
     expect(merged.overview).toBe('TMDB synopsis.');
     expect(merged.ratings).toEqual([
@@ -143,13 +142,10 @@ describe('applyPrimaryMetadata', () => {
       { source: 'simkl', value: 8.5, scale: 10 },
     ]);
     expect(merged.genres).toEqual(['Animation']);
-    // Identity + user state stay the item's.
     expect(merged.id).toBe('trakt-1');
     expect(merged.currentProgress).toBe(5);
     expect(merged.lastUpdated).toBe('2026-07-19T00:00:00Z');
-    // totalEpisodes is fill-only: the provider's 18 (progress source) wins.
     expect(merged.totalEpisodes).toBe(18);
-    // External ids merge with the item winning, primary filling gaps.
     expect(merged.externalIds).toEqual({ trakt: 1, tmdb: 94605, imdb: 'tt11126994' });
   });
 
@@ -270,7 +266,6 @@ describe('applyPrimaryMetadata', () => {
       digital: '2026-11-25',
       physical: '2026-11-25',
     });
-    // User state still untouched.
     expect(merged.currentProgress).toBe(5);
   });
 });

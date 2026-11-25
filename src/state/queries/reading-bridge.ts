@@ -14,7 +14,6 @@ import { anilistDeps } from './anilist';
 import { mediaDetailsQuery } from './media-details';
 
 export const readingBridgeQueryKeys = {
-  /** A title → AniList `MANGA` entries with staff and volumes. */
   search: (query: string) => ['mapping', 'anilist-reading-search', query] as const,
 };
 

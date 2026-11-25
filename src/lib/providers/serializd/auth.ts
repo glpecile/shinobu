@@ -39,7 +39,6 @@ function usernameFrom(raw: RawLoginResponse): string {
   return raw.username ?? raw.user?.username ?? '';
 }
 
-/** Best-effort JSON parse — returns null for an empty or non-JSON body. */
 function tryParse<T>(text: string): T | null {
   if (text.trim() === '') return null;
   try {

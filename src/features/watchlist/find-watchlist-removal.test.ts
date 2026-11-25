@@ -27,8 +27,6 @@ function inputs(partial: Partial<WatchlistInputs> = {}): WatchlistInputs {
 describe('findWatchlistRemoval (plan 0033 follow-up)', () => {
 
   test('recognises a details-screen item by shared merge keys, not id', () => {
-    // The details screen opens a TMDB-sourced copy whose id never equals the
-    // gathered row's — the same recognition case `useIsWatchlisted` handles.
     const data = inputs({
       inputs: [
         { item: film(), source: 'trakt' },

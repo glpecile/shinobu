@@ -14,18 +14,12 @@ import { computeNotificationSchedule, hashSchedule, notificationKind } from './c
 
 const NOW = new Date('2026-07-23T12:00:00.000Z');
 
-/**
- * A release date is a *local* calendar day, so every release assertion has to
- * be built from local wall-clock fields — a UTC literal would pass or fail
- * depending on the machine's timezone, which is exactly the class of bug
- * `lib/time` exists to prevent.
- */
+// Bare release dates are local calendar days, so assertions must build local wall-clock Dates rather than UTC literals.
 function localTime(date: string, hours: number, minutes = 0): Date {
   const [year, month, day] = date.split('-').map(Number);
   return new Date(year, month - 1, day, hours, minutes);
 }
 
-/** The same local day, `days` later — via the Date constructor, so DST rolls. */
 function localDay(from: Date, days: number): string {
   const shifted = new Date(from.getFullYear(), from.getMonth(), from.getDate() + days);
   const month = String(shifted.getMonth() + 1).padStart(2, '0');
@@ -77,8 +71,6 @@ function anilistInput(
 ): AniListUpNextInput {
   return {
     item: item(id, { type: 'ANIME', currentProgress: episode - 1, ...itemOverrides }),
-    // The list read carries PLANNING entries too since plan 0030 R12; the
-    // schedule is only ever asked about series the user is actually watching.
     status: 'CURRENT',
     nextAiring: { episode, airingAt },
     totalEpisodes: 24,
@@ -153,12 +145,6 @@ describe('computeNotificationSchedule', () => {
     expect(exactlySevenDays).toEqual([]);
   });
 
-  /**
-   * The reported bug: one anime airing notified two or three times, because
-   * AniList, Simkl and Trakt share no single id. The join has to chain —
-   * AniList meets Simkl on `mal`, Simkl meets Trakt on `tmdb` — and no leg
-   * carries all three ids.
-   */
   test('one anime on AniList, Simkl and Trakt notifies once', () => {
     const anime = {
       progress: [
@@ -201,12 +187,6 @@ describe('computeNotificationSchedule', () => {
   });
 });
 
-/**
- * The 09:00 rule is a named regression guard (plan 0030 R10): local midnight is
- * the right ordering key for a bare release date and a hostile alert, and a
- * release whose moment already passed must never fire on the next refresh
- * (plan 0020 R2). Both directions of the boundary are asserted explicitly.
- */
 describe('computeNotificationSchedule — release candidates', () => {
   const RELEASE_DAY = '2026-07-30';
 
@@ -232,8 +212,6 @@ describe('computeNotificationSchedule — release candidates', () => {
   });
 
   test('at exactly 09:00 local it is not scheduled — the moment has arrived', () => {
-    // Half-open, matching `hasAired`: an instant equal to `now` counts as gone,
-    // exactly as an episode airing at `now` is already excluded above.
     expect(scheduleRelease(localTime(RELEASE_DAY, 9, 0))).toEqual([]);
   });
 
@@ -277,9 +255,6 @@ describe('computeNotificationSchedule — release candidates', () => {
 
   test('the 50-cap holds nearest-first across mixed kinds', () => {
     const now = localTime('2026-07-23', 12);
-    // 48 episodes at now+1h..now+48h, plus releases on local days +1/+3/+5
-    // (09:00 → ~21h/~69h/~117h). Sorted, the +5 release is the 51st and the
-    // only candidate the cap drops — the interleaving is what's under test.
     const episodes = Array.from({ length: 48 }, (_, index) =>
       traktInput(`e${index}`, new Date(now.getTime() + (index + 1) * 60 * 60 * 1000).toISOString()),
     );
@@ -293,18 +268,11 @@ describe('computeNotificationSchedule — release candidates', () => {
     expect(ids).toContain('r3');
     expect(ids).not.toContain('r5');
     expect(result.some((c) => c.kind === 'episode')).toBe(true);
-    // Strictly nearest-first regardless of kind.
     const instants = result.map((c) => new Date(c.fireInstant).getTime());
     expect(instants).toEqual([...instants].sort((a, b) => a - b));
   });
 });
 
-/**
- * The regression guard for the gap adversarial review found in plan 0030: the
- * schedule read `inputs.trakt` (the *watched* pool) and never
- * `inputs.traktCalendar`, so the feature's headline case — watchlist a premiere,
- * be told when it airs — rendered a Calendar card and then silently never fired.
- */
 describe('computeNotificationSchedule — watchlisted episodes (R9)', () => {
   test('a never-watched watchlisted show still schedules its premiere', () => {
     const result = computeNotificationSchedule(
@@ -363,21 +331,11 @@ describe('computeNotificationSchedule — watchlisted episodes (R9)', () => {
   });
 });
 
-/**
- * A whole season landing at once is one event (owner decision 2026-07-27). Ten
- * notifications for one show on one morning is the tray version of the ten
- * identical Calendar cards `groupDayEntries` collapses — and at ten a single
- * drop takes a fifth of `MAX_SCHEDULED`.
- */
 describe('computeNotificationSchedule — season drops', () => {
   const now = localTime('2026-07-27', 12);
   const dropDay = localDay(now, 4);
 
-  /**
-   * `count` episodes of one show, all landing on the same local day. Staggered
-   * a minute apart on purpose: Trakt routinely spreads a batch's `first_aired`,
-   * and "the season dropped" is a claim about the day, not the second.
-   */
+  // Staggered by 1 minute because Trakt often spreads a season drop's first_aired timestamps.
   function seasonDrop(
     id: string,
     count: number,
@@ -402,7 +360,6 @@ describe('computeNotificationSchedule — season drops', () => {
       kind: 'episode',
       itemId: 'bat',
       season: 2,
-      // Names the *first* of the batch, which is the airing it fires on.
       episode: 1,
       count: 10,
     });
@@ -461,7 +418,6 @@ describe('computeNotificationSchedule — season drops', () => {
         [],
         [],
         [
-          // 09:00 is behind `now` — already out, already dropped by the window.
           calendarInput('bat', localTime(today, 9).toISOString(), { season: 2, number: 1 }),
           calendarInput('bat', localTime(today, 9, 1).toISOString(), { season: 2, number: 2 }),
           calendarInput('bat', localTime(today, 14).toISOString(), { season: 2, number: 3 }),
@@ -472,7 +428,6 @@ describe('computeNotificationSchedule — season drops', () => {
     );
 
     expect(result).toHaveLength(1);
-    // The count states what the user has yet to see, not what Trakt listed.
     expect(result[0]).toMatchObject({ episode: 3, count: 2 });
   });
 
@@ -500,8 +455,6 @@ describe('computeNotificationSchedule — season drops', () => {
 
 describe('hashSchedule', () => {
   test('an unbatched episode hashes exactly as it did before batching', () => {
-    // Byte-identical to the pre-batch subject, so shipping this doesn't
-    // invalidate every stored hash and reschedule everyone once on upgrade (R7).
     const single: NotificationCandidate = {
       kind: 'episode',
       itemId: 'a',
@@ -524,7 +477,6 @@ describe('hashSchedule', () => {
       fireInstant: '2026-07-31T04:00:00.000Z',
     };
 
-    // Keying on the lead episode alone would leave the tray claiming ten.
     expect(hashSchedule([{ ...base, count: 10 }])).not.toBe(
       hashSchedule([{ ...base, count: 11 }]),
     );

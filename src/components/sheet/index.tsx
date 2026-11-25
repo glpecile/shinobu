@@ -25,27 +25,17 @@ import { SheetDismissHeader } from './header';
 
 export interface SheetProps {
   open: boolean;
-  /** Called once per dismissal: drag, scrim tap, screen-reader dismiss, or Android Back. */
   onClose: () => void;
   children: ReactNode;
   /** Focuses the first text field when the sheet opens. Desktop web only. */
   autoFocus?: boolean;
 }
 
-/**
- * Native bottom sheet (@swmansion/react-native-bottom-sheet — the sheet host,
- * gestures and snapping run in native code; no web build, hence the
- * `index.web.tsx` Modal fallback). Controlled: detent 0 is closed, detent 1
- * sizes to content. The only allowed import of the lib (oxlint-enforced).
- */
 export function Sheet({ open, onClose, children }: SheetProps) {
   // Negative while the keyboard is up, tracked per frame on the UI thread.
   const keyboard = useReanimatedKeyboardAnimation();
   const lift = useAnimatedStyle(() => ({ bottom: open ? -keyboard.height.get() : 0 }));
-  // A focused field outlives the sheet, which stays mounted while closed, so
-  // its keyboard would stay up over the screen beneath. On Android a drag to
-  // close left the keyboard up after `Keyboard.dismiss()`; the controller hides
-  // it natively, whether or not a field still holds focus.
+  // Android drag-to-close leaves the keyboard up after `Keyboard.dismiss()`; `KeyboardController.dismiss()` hides it natively.
   function close() {
     void KeyboardController.dismiss();
     onClose();
@@ -54,27 +44,17 @@ export function Sheet({ open, onClose, children }: SheetProps) {
     <ModalBottomSheet
       detents={[0, 'content']}
       index={open ? 1 : 0}
-      // `windowOverlay` stays off: it reparents the sheet into a window-level
-      // dialog outside the gesture-handler root, which kills every pressto
-      // press inside it on Android (hotfix 0.6.1 — the log sheet went dead).
-      // Scrim taps, screen-reader dismiss and Android Back only ask; the
-      // sheet moves once `open` flips.
+      // Keep `windowOverlay` off: reparenting into a window dialog outside the gesture-handler root breaks pressto presses on Android.
       onCloseRequest={close}
       // A drag to the closed detent is the one dismissal that never asks.
       onIndexChange={(index) => {
         if (index === 0) close();
       }}
       scrimColor="rgba(0, 0, 0, 0.6)"
-      // The lib's 450 ms default is slow for a sheet opened many times a day.
       settleDuration={300}
-      // The keyboard draws over the sheet, which is short enough that
-      // its scroller has nowhere to scroll a field to. Shrinking the host lifts
-      // the sheet above the keyboard, like `adjustResize`; the host re-anchors
-      // on resize natively. Resize the host, never the content, which crashed
-      // Fabric (docs/solutions/bottom-sheet-content-detent-clips-tall-content.md).
-      // The lift follows the keyboard frame by frame: jumping to its final
-      // height flashed the screen behind between the sheet and the keyboard.
-      // The lib types `style` as static, but it lands on the wrapped view.
+      // Resize the host above the keyboard, never the content, which crashes Fabric
+      // (docs/solutions/bottom-sheet-content-detent-clips-tall-content.md). The lib
+      // types `style` as static, but `wrapNativeView` forwards animated styles to it.
       style={lift as unknown as ViewStyle}
       wrapNativeView={createAnimatedComponent}
       surface={
@@ -92,50 +72,17 @@ export function Sheet({ open, onClose, children }: SheetProps) {
 
 Sheet.Header = SheetDismissHeader;
 
-/** Padding lives on the scroll content, not the scroller, so the indicator
- * tracks the sheet's edge rather than floating inside the padding. */
 const CONTENT_PADDING = 'p-6 pb-12';
 
-/**
- * How much of the window a sheet may occupy before its content starts
- * scrolling. The lib's own `'content'` detent cap is a little higher; staying
- * under it means the scroller appears before the sheet is pinned, never after.
- */
 const MAX_SHEET_FRACTION = 0.85;
 
-/** Sub-pixel layout noise must not re-size the sheet. */
 const HEIGHT_EPSILON = 1;
 
 /**
- * Sheet content scrolls **only once it has to**.
- *
- * The `'content'` detent is measured natively from this subtree, and a
- * `ScrollView` has no intrinsic height to report — it always answers "as much
- * as you have", so a scroller left to size itself pins *every* sheet to the
- * full detent cap: a two-line sheet opened full-screen. Neither `flexShrink`,
- * `flexGrow: 0` nor `maxHeight` changes that; all three were measured on
- * device and none moved the sheet.
- *
- * So the scroller is always in the tree and is given an **explicit height**:
- * the children's own laid-out height, capped. Short sheets hug (the height is
- * the content's), long ones pin and scroll — which is the case the scroller
- * exists for (the log sheet's tag picker, once a few tags exist, used to render
- * its buttons past the bottom edge with no way to reach them). The measurement
- * stays live inside the scroller — children lay out unbounded along the scroll
- * axis — so content that shrinks again drops back to hugging.
- *
- * **The scroller must not come and go.** Swapping between a scroller and a
- * plain `View` (the previous shape of this) reads as one `if` but is an
- * unmount: every child loses its state each time the sheet crosses the cap. The
- * tag picker measures itself to decide whether to collapse, so it came back
- * expanded, which pushed the sheet back over the cap, which swapped the wrapper
- * again — an infinite loop that eventually killed the app
- * (docs/solutions/sheet-scroller-swap-render-loop.md). Sizing one stable
- * scroller has no such feedback: its height depends on the content, and the
- * content's height doesn't depend on it.
- *
- * `keyboardShouldPersistTaps="handled"`: a tap on Confirm while the tags field
- * is focused would otherwise be swallowed as a keyboard dismissal.
+ * Keeps one `ScrollView` mounted with an explicit measured height: a `ScrollView`
+ * without an explicit height pins the native `'content'` detent to full cap, and
+ * swapping between `ScrollView` and `View` unmounts children into a layout loop
+ * (docs/solutions/sheet-scroller-swap-render-loop.md).
  */
 function SheetContent({ children }: { children: ReactNode }) {
   const keyboardVisible = useKeyboardState((state) => state.isVisible);
@@ -160,10 +107,7 @@ function SheetContent({ children }: { children: ReactNode }) {
     </View>
   );
 
-  // No keyboard-aware scroller: the sheet host itself moves above the keyboard
-  // (see `Sheet`), so scrolling the field up as well would over-shoot. The
-  // lifted host can leave less room than the cap, so iOS enables scrolling
-  // with the keyboard; without it, short sheets stay draggable-to-dismiss.
+  // Enable scroll when the keyboard shrinks the lifted host; otherwise keep short iOS sheets draggable-to-dismiss.
   const scroller = (
     <ScrollView
       keyboardShouldPersistTaps="handled"
@@ -173,14 +117,8 @@ function SheetContent({ children }: { children: ReactNode }) {
     </ScrollView>
   );
 
-  // The height goes on a plain `View` around the scroller rather than on the
-  // scroller itself, because for one frame — before the first measurement —
-  // there is no height to give, and a `ScrollView` with none fills whatever it
-  // is inside. That one frame is the one the sheet's `'content'` detent
-  // latches, so every sheet opened at the cap. An auto-height `View` has
-  // nothing to fill: with no definite height above it the scroller's
-  // `flexGrow` has no free space to claim and it reports its content.
-  // `flexShrink` lets it fit a sheet the keyboard has made shorter than `height`.
+  // Height sits on the wrapper `View` so the unmeasured first frame doesn't let
+  // `ScrollView` fill and latch the `'content'` detent at the cap.
   return (
     <View style={height == null ? undefined : { height, flexShrink: 1 }}>
       {scroller}
@@ -188,7 +126,6 @@ function SheetContent({ children }: { children: ReactNode }) {
   );
 }
 
-/** Mounted once in app/_layout.tsx — hosts the modal sheets' portal. */
 export function SheetProvider({ children }: { children: ReactNode }) {
   return <BottomSheetProvider>{children}</BottomSheetProvider>;
 }

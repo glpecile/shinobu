@@ -63,7 +63,6 @@ export function tmdbToken(): string {
   return isServer() ? builderTmdbToken() : readToken();
 }
 
-/** Reactive counterpart — re-renders when the stored token is saved or cleared. */
 export function useTmdbToken(): string {
   return useSyncExternalStore(subscribe, readToken, getServerSnapshot);
 }
@@ -74,7 +73,6 @@ export function hasBuilderTmdbToken(): boolean {
   return builderTmdbToken() !== '';
 }
 
-/** The stored token itself, for the Connect screen's edit/clear affordances. */
 export function storedTmdbToken(): string | null {
   return isServer() ? null : getStoredTmdbToken();
 }

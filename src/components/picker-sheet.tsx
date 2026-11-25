@@ -14,18 +14,6 @@ const PickerContext = createContext<{
   select: (value: PickerValue) => void;
 }>({ value: null, select: () => {} });
 
-/**
- * Single-choice list in the app's bottom sheet: a titled column of options,
- * each with an optional leading icon and a trailing count, the chosen one on
- * the tonal pill the nav bars use. Picking selects and closes.
- *
- * ```tsx
- * <PickerSheet onClose={close} onSelect={setRole} open={open} title="Role" value={role}>
- *   <PickerSheet.Option count={208} label="All roles" value={null} />
- *   <PickerSheet.Option count={171} label="Acting" value="Acting" />
- * </PickerSheet>
- * ```
- */
 export function PickerSheet<T extends PickerValue>({
   open,
   onClose,
@@ -81,9 +69,6 @@ function PickerOption({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       aria-pressed={selected}
-      // The negative margin lets the pill bleed past the text, so labels stay
-      // aligned with the title. It bleeds half the sheet's padding, which
-      // leaves the pill as far from the sheet's edge as its text is from its own.
       className={cn(
         '-mx-3 flex-row items-center gap-3 rounded-full px-3 py-2.5',
         selected && 'bg-accent-tonal',

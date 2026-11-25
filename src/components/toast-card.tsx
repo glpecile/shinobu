@@ -16,7 +16,6 @@ const DRAW_CHECK = {
 };
 const FADE_MARK = { from: { opacity: 0 }, to: { opacity: 1 } };
 
-/** Shared announcement card; Sonner owns its lifetime, stacking, and dismissal. */
 export function ToastCard({
   kind,
   title,

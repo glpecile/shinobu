@@ -94,7 +94,6 @@ export function firstRow<T>(index: LibraryIndex<T>, item: NormalizedMediaItem, k
   return first === -1 ? undefined : index.rows[first];
 }
 
-/** The first row whose item is `item` by `sameProgressItem`. */
 export function findProgressRow<T>(index: LibraryIndex<T>, item: NormalizedMediaItem): T | undefined {
   return firstRow(index, item, ID_KEYS, (row) => sameProgressItem(item, index.itemOf(row)));
 }

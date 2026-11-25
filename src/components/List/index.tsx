@@ -8,14 +8,6 @@ import type { ReactElement, Ref } from 'react';
 import type { ScrollViewProps } from 'react-native';
 import { GestureScrollView } from '@/components/animated-view';
 
-/**
- * The one allowed Legend List import in the app (AGENTS.md, .oxlintrc.json).
- * Screens never touch `@legendapp/list` directly; if web ever needs a different
- * virtualizer, swap in `components/List/index.web.tsx` without touching callers.
- * `ref` is declared explicitly (React 19 delivers it in props, so the spread
- * already forwards it) — it reaches Legend List's imperative handle
- * (`scrollToOffset` and friends).
- */
 export type ListProps<T> = Omit<LegendListProps<T>, 'refScrollView'> & {
   ref?: Ref<LegendListRef>;
   itemLayoutAnimation?: AnimatedLegendListProps<T>['itemLayoutAnimation'];
@@ -24,25 +16,12 @@ export type ListProps<T> = Omit<LegendListProps<T>, 'refScrollView'> & {
 export type { LegendListRef } from '@legendapp/list/react-native';
 
 /**
- * `recycleItems` is defaulted here rather than left unset: Legend List warns on
- * every mount when the prop is absent, and the app-wide answer is `false` —
- * rows like `MediaCard` keep local state (hover, quick-log) that would leak
- * into whichever row the cell got recycled to (AGENTS.md "Long Lists"). A list
- * whose rows are provably prop-derived can still opt in per call site.
- *
- * `onStartReachedThreshold` is defaulted to 0 because Legend List ≥ 3.3.3 puts
- * `onStartReached` and `onEndReached` behind one shared "edge reached" gate
- * that closes as soon as *either* edge is hit — even with no `onStartReached`
- * handler. Every list mounts at the top, so the gate closed on mount and only
- * reopened while scrolled clear of both edges; a fast fling or scrollbar drag
- * straight to the bottom skipped that band and `onEndReached` never fired
- * (docs/solutions/legend-list-end-reached-never-fires-after-a-fast-scroll.md).
- * A zero threshold means the top edge is never "reached", so it never closes
- * the gate. Nothing in the app uses `onStartReached`; if one does, it must
- * pass its own threshold and re-verify the jump case.
- *
- * `renderScrollComponent` defaults to gesture-handler's ScrollView so a fling
- * stopped on a row doesn't press it (docs/solutions/ghost-taps-while-scrolling.md).
+ * Defaults `recycleItems={false}` (Legend List warns when omitted),
+ * `onStartReachedThreshold={0}` to avoid Legend List >= 3.3.3 closing the
+ * shared edge gate on mount
+ * (docs/solutions/legend-list-end-reached-never-fires-after-a-fast-scroll.md),
+ * and gesture-handler's ScrollView to prevent ghost taps when stopping a fling
+ * (docs/solutions/ghost-taps-while-scrolling.md).
  */
 export function List<T>({
   recycleItems = false,

@@ -41,7 +41,6 @@ function HardcoverAuthorDetails({ author }: { author: HardcoverAuthorKey }) {
   return <PersonDetailsView {...data} />;
 }
 
-/** Every Hardcover read needs the member's session, which the web prerender doesn't have. */
 function HardcoverAuthorContent({ author, onGoBack }: { author: HardcoverAuthorKey; onGoBack: () => void }) {
   const connected = useConnectedProviders();
   const pushRoute = usePushRoute();
@@ -71,7 +70,6 @@ function positiveId(id: string): number | null {
   return Number.isSafeInteger(value) && value > 0 ? value : null;
 }
 
-/** The page behind a `/person/<provider>/<id>` path, or null when the id isn't that provider's. */
 function personPage(provider: string, id: string, onGoBack: () => void) {
   switch (provider) {
     case 'tmdb': {
@@ -139,14 +137,8 @@ export default function PersonScreen() {
   );
 }
 
-/**
- * Route-level containment: a failed fetch (no token, 404, rate limit)
- * surfaces as this screen's not-found view with a retry — not the root
- * boundary unmounting the whole app (plan 0013 §5).
- */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
-  // A remount alone rethrows the cached query error, so clear it first.
   const { reset } = useQueryErrorResetBoundary();
   return (
     <PersonNotFound

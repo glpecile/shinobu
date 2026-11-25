@@ -45,16 +45,12 @@ describe('filmReleaseStatus', () => {
   });
 
   test('no date and no year is unknown, so it cannot be logged', () => {
-    // The reported case: an announced project with cast and crew but no
-    // release date anywhere.
     expect(filmReleaseStatus({}, NOW)).toBe('unknown');
     expect(filmReleaseStatus({ releaseDate: '' }, NOW)).toBe('unknown');
     expect(filmReleaseStatus({ releaseDate: 'not a date' }, NOW)).toBe('unknown');
   });
 
   test('a past year is proof enough when no date survived the merge', () => {
-    // A Letterboxd item (slug + title + year) with no TMDB backfill must stay
-    // loggable — it is plainly out.
     expect(filmReleaseStatus({ year: 2019 }, NOW)).toBe('released');
     expect(filmReleaseStatus({ year: 2019, releaseDate: 'nonsense' }, NOW)).toBe(
       'released',
@@ -79,9 +75,6 @@ describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
   });
 
   test('an unreleased film keeps its disabled log CTA beside the watchlist one', () => {
-    // Anime parity (owner override 2026-10-12): "Episode 1 airs in 8 days"
-    // stays visible and disabled rather than vanishing — movies do the same
-    // with a release countdown.
     expect(
       watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '2026-12-25' }, NOW),
     ).toBe(false);
@@ -98,9 +91,6 @@ describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
   });
 
   test('an airing series with no release date still keeps its log button', () => {
-    // The whole reason this is one exported predicate: unguarded,
-    // `filmReleaseStatus` answers "unknown" here and would delete episode
-    // logging from exactly the shows people watch weekly.
     expect(filmReleaseStatus({}, NOW)).toBe('unknown');
     expect(watchlistCtaIsPrimary({ type: 'TV' }, NOW)).toBe(false);
   });
@@ -115,7 +105,6 @@ describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
 
 describe('needsReleaseEnrichment', () => {
   test('only `unknown` film rows need the details read', () => {
-    // The reported Simkl case: library rows carry year only.
     expect(needsReleaseEnrichment({ type: 'MOVIE', year: 2026 }, NOW)).toBe(true);
     expect(needsReleaseEnrichment({ type: 'MOVIE' }, NOW)).toBe(true);
     expect(
@@ -124,8 +113,6 @@ describe('needsReleaseEnrichment', () => {
   });
 
   test('judgeable rows and series never pay for the fetch', () => {
-    // Resolved by the read above: TMDB backfills 2026-08-28, so the row
-    // stops needing enrichment and the gate sees `released`.
     expect(
       needsReleaseEnrichment({ type: 'MOVIE', releaseDate: '2026-08-28' }, NOW),
     ).toBe(false);
@@ -194,13 +181,11 @@ describe('preAiringDisplay', () => {
   });
 
   test('loading stays permissive when nothing dates the series', () => {
-    // A dateless airing show keeps its tile until its episodes prove otherwise.
     expect(preAiringDisplay({ type: 'TV' }, undefined, 0, NOW)).toBe('progress');
     expect(preAiringDisplay({ type: 'ANIME', year: 2026 }, undefined, 0, NOW)).toBe('progress');
   });
 
   test('an anime premiere comes from episode 1, not the item', () => {
-    // AniList items carry no releaseDate, only a year.
     expect(
       preAiringDisplay(
         { type: 'ANIME', year: 2026 },

@@ -194,22 +194,7 @@ function watchlistBody(item: NormalizedMediaItem, ids: TraktIds): unknown {
   return null;
 }
 
-/**
- * The Trakt watchlist-add adapter (plan 0031 U3). Same id resolution and same
- * movie-vs-show shape as `logToTrakt` — an anime film is a MOVIE to Trakt, per
- * routing.ts — but a much smaller payload: `/sync/watchlist` takes ids and
- * nothing else (no `watched_at`, no seasons, no episodes; R3).
- *
- * Idempotency is read off the response (R16): `added` 0 with `existing` 1 means
- * the item was already on the watchlist, which is a *reasoned skip*, not a
- * failure — the user's intent is already recorded. `not_found` is the opposite
- * and fails naming the item, because nothing landed anywhere.
- *
- * Note the read half is different: `GET /sync/watchlist` must paginate
- * explicitly (`limit ≤ 250`, plan KTD-16). That constraint is the read's
- * (PR C), not this add's — but it is why nothing here should assume Trakt
- * hands back unbounded collections.
- */
+/** Add to Trakt's watchlist using the same media identity as the log adapter. */
 export function addToTraktWatchlist(
   deps: TraktDeps,
   item: NormalizedMediaItem,
@@ -270,23 +255,7 @@ export function addToTraktWatchlist(
   );
 }
 
-/**
- * The Trakt watchlist-**remove** adapter (plan 0031 R34) — the second verb on
- * the capability axis, not the add run backwards, which is why it is its own
- * function rather than a `mode` parameter.
- *
- * Same `idsFor` resolution and same movie-vs-show body as the add. Two
- * deliberate differences:
- *
- * - **`deleted: 0` with an empty `not_found` is a reasoned skip**, not a
- *   failure: Trakt matched the item and found nothing to remove, which means
- *   the user's intent (it is not on the watchlist) already holds. A non-empty
- *   `not_found` is the opposite — nothing was matched at all — and fails naming
- *   the item.
- * - **No 420 branch.** Trakt's watchlist-limit error is add-only; a removal can
- *   never exceed a limit, so translating a 420 here would be inventing a case
- *   the endpoint doesn't have.
- */
+/** Remove a Trakt watchlist entry by its media identity. An already-absent entry is a skip. */
 export function removeFromTraktWatchlist(
   deps: TraktDeps,
   item: NormalizedMediaItem,

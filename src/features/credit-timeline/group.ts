@@ -3,7 +3,6 @@ import type { NormalizedMediaItem, PersonCreditRow } from '@/types/media';
 
 export type FormatFilter = 'ALL' | 'MOVIE' | 'TV';
 
-/** "All" first, as on the seasons explorer — it is the shape a page opens in. */
 export const FORMAT_OPTIONS = [
   { value: 'ALL', label: 'All' },
   { value: 'MOVIE', label: 'Movies' },
@@ -15,13 +14,10 @@ export const FORMAT_OPTIONS = [
 }[];
 
 export interface CreditRole {
-  /** The department row the credit came from ("Directing", "Acting"). */
   role: string;
-  /** Job title(s) or character name(s) on that row; '' when unknown. */
   detail: string;
 }
 
-/** One title, every role the person holds on it. */
 export interface Credit {
   item: NormalizedMediaItem;
   roles: readonly CreditRole[];
@@ -29,15 +25,9 @@ export interface Credit {
 
 export interface Filmography {
   credits: readonly Credit[];
-  /** Role chip order — the rows' order, which already leads with known-for. */
   roles: readonly string[];
 }
 
-/**
- * The per-department rows folded into one credit per title: a film someone
- * both directed and wrote is one row on the timeline carrying both roles,
- * where the carousels showed it once per department.
- */
 export function mergeCreditRows(rows: readonly PersonCreditRow[]): Filmography {
   const byId = new Map<string, { item: NormalizedMediaItem; roles: CreditRole[] }>();
   for (const row of rows) {
@@ -53,19 +43,16 @@ export function mergeCreditRows(rows: readonly PersonCreditRow[]): Filmography {
   return { credits: [...byId.values()], roles: rows.map((row) => row.role) };
 }
 
-/** A studio's catalogue has no roles; every title is a bare credit. */
 export function catalogueFilmography(items: readonly NormalizedMediaItem[]): Filmography {
   return { credits: items.map((item) => ({ item, roles: [] })), roles: [] };
 }
 
-/** AniList's ANIME type includes films; print credits belong only in All. */
 export function matchesFormat(item: NormalizedMediaItem, format: FormatFilter): boolean {
   if (format === 'ALL') return true;
   const type = item.type === 'ANIME' ? (item.isFilm === true ? 'MOVIE' : 'TV') : item.type;
   return type === format;
 }
 
-/** Each role with how many titles it holds under `format`; empty roles drop out. */
 export function roleCounts(
   filmography: Filmography,
   format: FormatFilter,
@@ -85,12 +72,9 @@ export const UPCOMING_HEAD = 'head-upcoming';
 export type TimelineRow =
   | {
       kind: 'head';
-      /** `UPCOMING_HEAD`, or `head-<year>`; the fold state is keyed by it. */
       key: string;
-      /** Null is the upcoming stop. */
       year: number | null;
       count: number;
-      /** Whether entries follow — the rail only runs on from an open head. */
       open: boolean;
     }
   | {
@@ -102,7 +86,6 @@ export type TimelineRow =
       kind: 'entry';
       key: string;
       credit: Credit;
-      /** The credit's role text under the active role filter. */
       roles: string;
       last: boolean;
     };
@@ -115,25 +98,13 @@ function roleText(credit: Credit, role: string | null): string {
     .join(', ');
 }
 
-/**
- * The flat row stream the list virtualizes: a head per release year, newest
- * first, with the year's titles hanging under it; unreleased and undated
- * work sits under one upcoming head at the top, soonest first. A head in
- * `folded` keeps its entries out of the stream.
- *
- * `filmReleaseStatus` reads a title's date and year only, which is exactly
- * what a TMDB credit carries — a series with neither is an unannounced one.
- */
 export function timelineRows(
   credits: readonly Credit[],
   options: {
     format: FormatFilter;
-    /** Null shows every role. */
     role: string | null;
-    /** Head keys whose entries are hidden. */
     folded: ReadonlySet<string>;
     now?: Date;
-    /** Poster columns; omitted for the timeline list. */
     columns?: number;
   },
 ): TimelineRow[] {
@@ -145,10 +116,7 @@ export function timelineRows(
     if (role != null && !credit.roles.some((entry) => entry.role === role)) continue;
     (filmReleaseStatus(credit.item, now) === 'released' ? released : upcoming).push(credit);
   }
-  // A released title always has a year (a parsed date or a past year is what
-  // made it released), so the fallback never sorts.
   released.sort((a, b) => (b.item.year ?? 0) - (a.item.year ?? 0));
-  // Undated (unannounced) work last, behind anything with a date.
   upcoming.sort((a, b) =>
     (a.item.releaseDate ?? '9999').localeCompare(b.item.releaseDate ?? '9999'),
   );
@@ -184,7 +152,6 @@ export function timelineRows(
 
   if (upcoming.length > 0) pushGroup(UPCOMING_HEAD, null, upcoming);
 
-  // Insertion order is the sorted order, so the map is the year sequence.
   const byYear = new Map<number, Credit[]>();
   for (const credit of released) {
     const year = credit.item.year ?? 0;

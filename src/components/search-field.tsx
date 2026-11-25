@@ -10,11 +10,9 @@ import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
 /**
- * Shared search chrome. The clear target is beside the input, since an
- * overlapping pressable loses touches to Android's EditText. The input can
- * shrink below its intrinsic web width so the clear control stays reachable.
- * See android-pressable-over-textinput.md and firefox-flex-input-wont-shrink.md
- * in docs/solutions/.
+ * Clear button sits beside TextInput (overlapping pressables lose touches to Android's EditText)
+ * and the input has `min-w-0` so Firefox lets it shrink (docs/solutions/android-pressable-over-textinput.md,
+ * docs/solutions/firefox-flex-input-wont-shrink.md).
  */
 export function SearchField({ value, onChangeText, onClear, loading, placeholder, accessibilityLabel, autoFocus, ref, className }: {
   value: string;
@@ -25,7 +23,6 @@ export function SearchField({ value, onChangeText, onClear, loading, placeholder
   accessibilityLabel: string;
   autoFocus?: boolean;
   ref?: RefObject<TextInputInstance | null>;
-  /** Layout only. */
   className?: string;
 }) {
   const ownRef = useRef<TextInputInstance>(null);

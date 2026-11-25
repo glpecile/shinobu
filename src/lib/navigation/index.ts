@@ -17,18 +17,7 @@ export function allowRoutePush(href: string): boolean {
   return pushGuard.allow(href);
 }
 
-/**
- * `router.push`, minus the duplicate. Use this instead of `useRouter().push`
- * for anything a press can reach; `useRouter` stays the way to `back()`,
- * `replace()` or read navigation state. Returns whether the push was accepted
- * (false for a blocked duplicate or a web new-tab open), so contextual press
- * feedback stays quiet when nothing happened in this tab.
- *
- * A press on a screen that is no longer focused never navigates. A tap queued
- * behind a slow push runs its handler after the time guard expires, so only
- * focus can tell it from a fresh press
- * (docs/solutions/double-tap-pushes-two-detail-screens.md).
- */
+/** Use for press-driven route pushes. The guard is shared across callers. */
 export function usePushRoute(): (href: string) => boolean {
   const router = useRouter();
   const navigation = useNavigation();

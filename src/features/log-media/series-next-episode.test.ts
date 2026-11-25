@@ -38,7 +38,6 @@ describe('nextEpisodeFromProgress', () => {
       watchedKeys: NO_WATCHED,
       nextEpisode: { season: 1, number: 4, firstAired: '2099-01-01T00:00:00.000Z' },
     });
-    // Named so the button can say *which* episode is waiting, not just "wait".
     expect(next).toEqual({
       season: 1,
       number: 4,
@@ -50,10 +49,6 @@ describe('nextEpisodeFromProgress', () => {
   });
 
   test('a fully watched show wraps to S1E1, flagged as a rewatch', () => {
-    // Trakt omits `next_episode` when nothing aired is left; the button must
-    // still have something to offer, exactly like the anime wrap to episode 1
-    // — but flagged, so the UI says "Log rewatch" instead of naming S1E1 as
-    // if it were up next.
     expect(
       nextEpisodeFromProgress({ watchedKeys: NO_WATCHED, aired: 12 }),
     ).toEqual({
@@ -66,12 +61,6 @@ describe('nextEpisodeFromProgress', () => {
   });
 });
 
-/**
- * Plan 0035 U7. `next_episode: null` covers two opposite situations and Trakt
- * says which by way of `aired`: 0 means an announced show nobody could have
- * watched, >0 means one you finished. Before this, both rendered as "🎉 You've
- * watched every aired episode" over a "Log rewatch" button.
- */
 describe('the zero-aired state (plan 0035 R17/R18)', () => {
   test('no next episode and nothing aired is `unaired`, never a rewatch', () => {
     expect(
@@ -79,8 +68,6 @@ describe('the zero-aired state (plan 0035 R17/R18)', () => {
     ).toEqual({
       season: 1,
       number: 1,
-      // Blocks the log the same way an unaired next episode does, which is
-      // what disables the CTA.
       aired: false,
       rewatch: false,
       unaired: true,
@@ -88,17 +75,12 @@ describe('the zero-aired state (plan 0035 R17/R18)', () => {
   });
 
   test('an absent aired count takes the rewatch path — old caches behave as before', () => {
-    // `aired` was not carried until this plan, so a progress payload persisted
-    // by an earlier build has none. Unknown must never read as zero.
     const next = nextEpisodeFromProgress({ watchedKeys: NO_WATCHED });
     expect(next.rewatch).toBe(true);
     expect(next.unaired).toBe(false);
   });
 
   test('a named next episode with a null air date is still logable (R19)', () => {
-    // The permissive catalogue-gap rule is untouched by the aired count:
-    // "nothing has aired" and "we don't know when this airs" stay different
-    // facts, and only the first blocks a log.
     const next = nextEpisodeFromProgress({
       watchedKeys: NO_WATCHED,
       aired: 0,
@@ -152,8 +134,6 @@ describe('nextEpisodeFromSimklEntry', () => {
   });
 
   test('a TV pointer without a season number is unnameable, not season 1', () => {
-    // Simkl numbers anime absolutely; that shape leaking onto a show must
-    // fall back to the season picker rather than mislabel the episode.
     expect(
       nextEpisodeFromSimklEntry(midItem, {
         nextToWatch: { episode: 11, date: null },
@@ -174,11 +154,6 @@ describe('nextEpisodeFromSimklEntry', () => {
   });
 
   test('a part-way entry with no pointer is unnameable, never a rewatch', () => {
-    // The `plantowatch` case (owner report 2026-08-01): Simkl omits
-    // `next_to_watch` for anything parked outside `watching`, so a 10-of-20
-    // show read out of that snapshot used to satisfy "aired > 0" and offer a
-    // rewatch of S1E1 on a screen reading "10 / 20 episodes". Unnameable hands
-    // it to the season picker instead of asserting something false.
     expect(
       nextEpisodeFromSimklEntry(midItem, { notAiredEpisodes: 0 }),
     ).toBeNull();
@@ -214,8 +189,6 @@ describe('nextEpisodeFromSimklEntry', () => {
   });
 
   test('an entry whose whole run is unaired is `unaired`, not a rewatch', () => {
-    // Simkl's arithmetic (`total - not_aired`) — the same shape Up Next's
-    // `simklAiredByCount` uses, reused rather than reinvented.
     expect(
       nextEpisodeFromSimklEntry({ currentProgress: 0, totalEpisodes: 8 }, {
         notAiredEpisodes: 8,
@@ -230,8 +203,6 @@ describe('nextEpisodeFromSimklEntry', () => {
   });
 
   test('a missing not-aired count takes the rewatch path, unchanged', () => {
-    // Absent is "we don't know", not zero-aired — treating it as zero would
-    // turn every thinly-reported entry into a false "hasn't aired yet".
     const noCount = nextEpisodeFromSimklEntry(doneItem, {});
     expect(noCount?.rewatch).toBe(true);
     expect(noCount?.unaired).toBe(false);
@@ -243,8 +214,6 @@ describe('nextEpisodeFromSimklEntry', () => {
   });
 
   test('a mid-show item without an entry is unnameable', () => {
-    // The snapshot that knows its next episode doesn't list it — guessing a
-    // season from a flat count would misfile the log.
     expect(nextEpisodeFromSimklEntry(midItem, null)).toBeNull();
   });
 });
@@ -253,8 +222,6 @@ describe('simklAnimeEpisodeAired', () => {
   const now = new Date(2026, 8, 12, 14, 0);
 
   test('an episode the user already watched aired — the rewatch wrap', () => {
-    // A completed entry, opened cold (owner report 2026-09-18): no counts, no
-    // pointer, and episode 1 still has to read as aired.
     expect(simklAnimeEpisodeAired(1, { currentProgress: 10, totalEpisodes: 10 }, {})).toBe(true);
   });
 

@@ -5,7 +5,6 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { useWallMetrics } from '@/features/media-layout/poster-wall';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 
-/** `count` pulsing posters in the wall's own column count, staggered on from `offset`. */
 function GridSkeleton({ animated, count, offset = 0 }: { animated: boolean; count: number; offset?: number }) {
   const { columns } = useWallMetrics();
   return (
@@ -23,7 +22,6 @@ function GridSkeleton({ animated, count, offset = 0 }: { animated: boolean; coun
   );
 }
 
-/** `count` list rows in `WatchlistRows`' geometry: 48×72 poster, title, detail line. */
 function RowsSkeleton({ animated, count, offset = 0 }: { animated: boolean; count: number; offset?: number }) {
   return (
     <View>
@@ -40,12 +38,6 @@ function RowsSkeleton({ animated, count, offset = 0 }: { animated: boolean; coun
   );
 }
 
-/**
- * The wall's loading state in the shape the wall will take — the grid/list
- * preference is read synchronously from MMKV, so the skeleton already knows
- * which layout is coming and the load reads as that layout materializing,
- * not as a grid that then turns into a list.
- */
 export function WallSkeleton({ animated = true }: { animated?: boolean }) {
   const { columns } = useWallMetrics();
   return useWatchlistView() === 'grid' ? (
@@ -57,17 +49,11 @@ export function WallSkeleton({ animated = true }: { animated?: boolean }) {
   );
 }
 
-/**
- * The season list's shelves loading: a short shelf of the user's titles, then
- * New to you. How many shelves will resolve is unknown, so this is the
- * commonest frame, one tracked shelf above the catalogue.
- */
 export function ShelvesSkeleton({ animated = true }: { animated?: boolean }) {
   const { columns } = useWallMetrics();
   const grid = useWatchlistView() === 'grid';
   const shelf = grid ? Math.min(2, columns) : 2;
   return (
-    // `pt-1`: the list's own top padding.
     <View className="pt-1">
       <RailHead.Skeleton animated={animated} lead="icon" showRail={false} />
       {grid ? <GridSkeleton animated={animated} count={shelf} /> : <RowsSkeleton animated={animated} count={shelf} />}

@@ -3,7 +3,6 @@ import { haptics } from '@/lib/haptics';
 
 import type { ViewToggleProps } from './props';
 
-/** A compact native action showing the layout it switches to. */
 export function ViewToggle({ view, onChange, size }: ViewToggleProps) {
   const next = view === 'grid' ? 'list' : 'grid';
 

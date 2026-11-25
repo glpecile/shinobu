@@ -32,7 +32,6 @@ import {
 import { useEpisode } from '@/features/episode-details/use-episode';
 import { useEpisodeLogs } from '@/features/episode-details/use-episode-logs';
 
-/** Mirrors index.tsx — keep both variants' props identical. */
 export interface EpisodeScreenProps {
   item: NormalizedMediaItem;
   season: number;
@@ -40,14 +39,8 @@ export interface EpisodeScreenProps {
   onBack: () => void;
 }
 
-/** Above this the still and the text sit side by side instead of stacked. */
 const TWO_COLUMN_MIN_WIDTH = 1024;
 
-/**
- * Web: a page inside the sidebar shell. Wide viewports match the details
- * header: heading and overview on the left, the still pinned top right, the
- * log button full width below. Narrow ones stack like the native screens.
- */
 export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenProps) {
   const view = useEpisode(item, season, number);
   const logs = useEpisodeLogs(item, season, number, view.episode?.firstAired);
@@ -60,8 +53,6 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   // series via "View series") would otherwise still hear the arrows.
   const isFocused = useIsFocused();
   const { activeLightbox } = useLightbox();
-  // ← / → step between episodes — the keyboard's swipe. A subscription to
-  // the document, so an effect; skipped while a field has focus.
   useEffect(() => {
     if (!isFocused || activeLightbox != null) return;
     function onKeyDown(event: KeyboardEvent) {
@@ -146,7 +137,6 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   );
 }
 
-/** Mirrors index.tsx — one shape for the route's and the screen's loading phase. */
 export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
   const { width } = useWindowDimensions();
   const wide = width >= TWO_COLUMN_MIN_WIDTH;

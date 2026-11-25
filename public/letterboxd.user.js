@@ -26,9 +26,7 @@
   const prefix = 'shinobu-letterboxd-';
   const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
   const devOrigin = /^http:\/\/(localhost|127\.0\.0\.1):(8081|8082|19006)$/.test(origin);
-  // Local dev servers on these ports are not necessarily Shinobu (8081 is
-  // every Expo project's Metro). Developers opt in per install through the
-  // script's Tampermonkey menu command, which a page can't trigger.
+  // Localhost ports like 8081 aren't exclusively Shinobu; require Tampermonkey menu opt-in, which pages can't trigger.
   const appOrigin = origin === 'https://shinobu.glpecile.xyz' ||
     (devOrigin && await GM.getValue('shinobu-trust-localhost', false) === true);
 
@@ -101,9 +99,7 @@
     return;
   }
 
-  // The marker grants nothing: it lets the app ask for the opt-in instead of a
-  // reinstall, which resets Tampermonkey's storage and with it the opt-in.
-  // Only the menu command grants it, and only a click in Tampermonkey runs it.
+  // Marker only signals the app to ask for opt-in rather than reinstalling (reinstalling resets Tampermonkey storage).
   if (devOrigin) {
     page.document.documentElement.setAttribute('data-shinobu-letterboxd-untrusted', '');
     GM_registerMenuCommand('Trust this Shinobu dev server', async () => {
@@ -177,7 +173,6 @@
   })();
       response = { status: 200, body: JSON.stringify(membership) };
     } else if (request.listRename) {
-      // Mirrors listRenameScript (src/lib/providers/letterboxd/list-editor-scripts.ts).
       if (page.location.pathname !== request.listPath + 'edit/') throw new Error('Letterboxd opened a different list. Nothing was sent.');
       if (request.listPath.split('/')[1].toLowerCase() !== request.username.toLowerCase()) throw new Error('You can only edit your own lists. Nothing was sent.');
       const editor = page.document.querySelector('[data-component-class="ListEditor"]');
@@ -212,7 +207,6 @@
       }
       response = { status: 200, body: JSON.stringify({ result: true, listPath }) };
     } else if (request.listCreate) {
-      // Mirrors listCreateScript (src/lib/providers/letterboxd/list-editor-scripts.ts).
       if (page.location.pathname !== '/list/new/') throw new Error('Letterboxd opened a different page. Nothing was sent.');
       const csrf = page.supermodelCSRF;
       if (typeof csrf !== 'string' || !csrf) throw new Error('Missing page CSRF token. Nothing was sent.');
@@ -290,7 +284,6 @@
         throw new Error(`Letterboxd returned HTTP ${result.status}${challenged ? ' (Cloudflare challenge)' : ''}. Check Letterboxd before retrying.`);
       }
       if (request.watchlist) {
-        // Like the native adapter, accept successful PATCH statuses, not only 204.
         if (text.trim()) {
           let receipt;
           try { receipt = JSON.parse(text); } catch { throw new Error('Non-JSON response. Check Letterboxd before retrying; the write may have succeeded.'); }

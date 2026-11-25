@@ -203,7 +203,6 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
     const client = new QueryClient();
     client.setQueryData(anilistQueryKeys.currentAnimeEntries(), [planning]);
 
-    // 1. The watchlist surface sees it.
     expect((await fetchWatchlistAnime(client)).map((e) => e.item.id)).toEqual([
       'anilist-42',
     ]);
@@ -227,7 +226,6 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
 
   test('one manga read feeds both surfaces, PLANNING reaches only the reading list, and a Hardcover outage keeps the manga cards', async () => {
     setProviderSession('anilist', { accessToken: 'first' });
-    // Hardcover is down: Continue Reading keeps AniList's cards.
     setProviderSession('hardcover', { accessToken: 'hc' });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     client.setQueryData(anilistQueryKeys.viewer(), { id: 1, name: 'Reader' });
@@ -246,7 +244,6 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
     // stays off a rail that means "you are partway through this".
     await waitFor(() => expect(rail.result.current?.map((item) => item.id)).toEqual(['anilist-2', 'anilist-1']));
     expect((await fetchWatchlistManga(client)).map((planned) => planned.item.id)).toEqual(['anilist-3']);
-    // One AniList read and the failed Hardcover one.
     expect(requests).toBe(2);
     rail.unmount();
     client.clear();

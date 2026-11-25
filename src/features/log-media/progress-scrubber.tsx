@@ -11,18 +11,9 @@ import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { pageAt, percentRead } from './reading-share';
 
-/** Quarter marks drawn on the track. A drag also lands on 0 and the end. */
 const MARKS = [25, 50, 75];
-/** How near a mark, in percent, a drag lands on it. */
 const SNAP = 2;
 
-/**
- * The book log's drag bar: tap or drag to set the page reached, read as a
- * share of the book. A drag snaps to the quarter marks and to the last page,
- * so a rough drag says "half" or "finished" without typing. The typed field
- * beside it covers exact pages. A screen reader swipe and the arrow keys call
- * `onStep`, which moves one unit of the field; Home and End jump to the ends.
- */
 export function ProgressScrubber({ page, total, onChange, onStep, disabled }: {
   page: number;
   total: number;
@@ -44,12 +35,10 @@ export function ProgressScrubber({ page, total, onChange, onStep, disabled }: {
     onChange(pageAt(mark ?? at, total));
   }
 
-  // On the JS thread: each move re-renders the field and the confirm label anyway.
   const tap = useTapGesture({ runOnJS: true, enabled: !disabled, onActivate: (event) => seek(event.x) });
   const pan = usePanGesture({
     runOnJS: true,
     enabled: !disabled,
-    // Horizontal only, so a vertical drag still moves the sheet.
     activeOffsetX: [-4, 4],
     failOffsetY: [-12, 12],
     onUpdate: (event) => seek(event.x),
@@ -95,7 +84,6 @@ export function ProgressScrubber({ page, total, onChange, onStep, disabled }: {
             default:
               return;
           }
-          // The arrows would also scroll the sheet.
           event.preventDefault();
         }}
       >

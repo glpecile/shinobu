@@ -1,4 +1,3 @@
-/** What the sheet's scroller renders as, for a given measured content height. */
 export interface SheetScrollMetrics {
   /**
    * Explicit height for the scroller — `undefined` only until the content has
@@ -16,17 +15,9 @@ export interface SheetScrollMetrics {
 }
 
 /**
- * Sizes the sheet's scroller from its content: hug what's there, up to a cap,
- * and only scroll past it.
- *
- * Deliberately a *height*, not a `maxHeight`, and deliberately the shape of the
- * whole decision — the scroller is always in the tree, and this is the only
- * thing that changes about it. Choosing between a scroller and a plain `View`
- * instead (the previous shape) unmounts and remounts everything inside the
- * sheet, which turns any child whose own height depends on its own layout state
- * into an infinite loop: remount → child forgets it had collapsed → renders
- * tall → sheet swaps to the scroller → remount → …
- * (docs/solutions/sheet-scroller-swap-render-loop.md).
+ * Keep the scroller mounted and only vary `height`/`scrollEnabled`; swapping
+ * between a `ScrollView` and `View` remounts children and causes an infinite
+ * layout loop (docs/solutions/sheet-scroller-swap-render-loop.md).
  */
 export function sheetScrollMetrics(
   contentHeight: number | null,

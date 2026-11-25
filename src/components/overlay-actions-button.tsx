@@ -27,14 +27,7 @@ const ICON_TOKEN: Record<OverlayActionsButtonTone, ThemeColorToken> = {
   surface: '--color-foreground',
 };
 
-/**
- * The ⋯ over a poster's corner. Callers reveal it on web hover, or keep it
- * visible on editable lists, using `lg` for a 44-point target around a compact mark. Render it
- * beside the poster pressable: nesting gesture-handler buttons lets a press
- * bubble into the poster underneath.
- *
- * `className` positions the control; size and tone own its appearance.
- */
+/** Render beside the poster pressable: nesting gesture-handler buttons lets a press bubble into the poster underneath. */
 export function OverlayActionsButton({
   label,
   onPress,
@@ -43,14 +36,11 @@ export function OverlayActionsButton({
   visible = true,
   className,
 }: {
-  /** Spoken label, e.g. `More options for ${title}`. */
   label: string;
   onPress: () => void;
   size?: OverlayActionsButtonSize;
   tone?: OverlayActionsButtonTone;
-  /** Hidden controls stay keyboard reachable and reveal themselves on focus. */
   visible?: boolean;
-  /** Positioning only. */
   className?: string;
 }) {
   const [focused, setFocused] = useState(false);

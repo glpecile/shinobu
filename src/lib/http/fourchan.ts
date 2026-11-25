@@ -23,7 +23,6 @@ export function discussionBoards(item: NormalizedMediaItem): DiscussionBoard[] {
   return anime ? movie ? ['a', 'tv', 'co'] : ['a'] : ['tv', 'co'];
 }
 
-/** Plain searchable text only; remote HTML is never rendered. */
 export function plainText(value: string): string {
   return value.replace(/<[^>]*>/g, ' ').replace(/&#(x[\da-f]+|\d+);/gi, (_, code: string) => {
     const point = code.toLowerCase().startsWith('x') ? parseInt(code.slice(1), 16) : Number(code);
@@ -46,7 +45,6 @@ function normalize(value: string): string {
 const EPISODE_MARKERS = /\bs(\d+)\s*e(\d+)\b|\b(?:episode|ep|e)\.?\s*#?\s*(\d+)\b/gi;
 const DISCUSSION_CONTEXT = new RegExp(`${EPISODE_MARKERS.source}|\\b(?:discussion|general|thread)\\b`, 'i');
 
-/** A catalog thread with the fields the matcher reads, computed once per fetch. */
 export function indexThread(thread: { id: number; subject: string; opening: string; image?: string }) {
   const raw = `${thread.subject} ${thread.opening}`;
   const subject = normalize(thread.subject);
@@ -89,7 +87,6 @@ export const getDiscussionCatalog = Effect.fn('getDiscussionCatalog')(function*(
   }));
 });
 
-/** Alias matches; inferred initials need discussion context in the subject to avoid incidental mentions. */
 export function matchDiscussionThreads(
   catalog: readonly ReturnType<typeof indexThread>[],
   item: NormalizedMediaItem,

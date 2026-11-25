@@ -8,20 +8,13 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 export interface EpisodeLog {
   provider: ProviderId;
-  /** ISO instant of the latest play; absent when the provider kept none. */
   watchedAt?: string;
 }
 
-/**
- * Watched state from Trakt, Simkl, and the item's mapped AniList entry.
- * AniList's progress proves a watch but carries no per-episode timestamp.
- * Its mapping and progress reads share the anime accordion's query cache.
- */
 export function useEpisodeLogs(
   item: NormalizedMediaItem,
   season: number,
   number: number,
-  /** Completion only implies aired episodes within the entry's mapped seasons. */
   firstAired: string | undefined,
 ): EpisodeLog[] {
   const connected = useConnectedProviders();

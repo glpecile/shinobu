@@ -4,15 +4,11 @@ import { AnimatedView } from '@/components/animated-view';
 import { Image } from '@/components/image';
 
 const SIZE = 32;
-/** Height of the band the mark centres in. */
 export const MARK_BOX = 48;
-/** Pull, in points, that fills the mark. Android refreshes on release past it. */
 export const PULL_TRIGGER = 72;
 
 const MARK = require('../../../assets/images/splash-icon.png');
 
-// The ink sweeps into the glyph from the left and out to the right. The
-// negative delay starts the loop halfway, on the full mark the pull left.
 const WAVE_MS = 1200;
 const wave = {
   from: { transform: [{ translateX: -SIZE }] },
@@ -29,11 +25,6 @@ const waveTiming = {
   animationTimingFunction: 'linear',
 } as const;
 
-/**
- * The 忍 mark in the gap a pull opens: it grows and fills with ink from the
- * left as `gap` reaches `PULL_TRIGGER`, and the ink sweeps across it while
- * `refreshing`.
- */
 export function RefreshMark({ gap, refreshing }: { gap: SharedValue<number>; refreshing: boolean }) {
   const reduceMotion = useReducedMotion();
   const inkOffset = useDerivedValue(() => -SIZE * (1 - Math.min(gap.get() / PULL_TRIGGER, 1)));

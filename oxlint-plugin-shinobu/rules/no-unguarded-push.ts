@@ -16,7 +16,6 @@ export default defineRule({
     const isRouter = (node: ESTree.Node | null | undefined) => routers.has(nodeName(node) ?? '') || isCallTo(node, hooks);
 
     function exempted(node: ESTree.Node): boolean {
-      // Exemptions may sit above the enclosing if or callback, with a wrapped reason.
       const lines = context.sourceCode.lines;
       for (let line = node.loc.start.line - 2; line >= 0; line--) {
         const text = lines[line] ?? '';

@@ -168,7 +168,6 @@ describe('logToSimkl', () => {
         { item: show, episode: { season: 1, number: 3 } },
         { item: show, episode: { season: 2, number: 1 } },
         { item: show, episode: { season: 1, number: 4 } },
-        // A different watched_at is a different item as Simkl dates it.
         { item: show, episode: { season: 2, number: 2 }, watchedAt: '2026-09-01T00:00:00.000Z' },
       ]),
     );
@@ -201,9 +200,6 @@ describe('logToSimkl', () => {
   });
 
   test('an anime series episode passes through the AniDB-domain entry numbers verbatim', async () => {
-    // entryEpisodes is the AniList-entry-relative 1..n domain — the same
-    // AniDB-derived key domain ani.zip's table uses (plan 0027 KTD2), which is
-    // the numbering Simkl's anime catalog speaks (plan 0034 KTD-6).
     const { deps, calls } = makeDeps(() => okHistoryResponse());
     await Effect.runPromise(logToSimkl(deps, [{ item: anime, entryEpisodes: [3, 4] }]));
     const body = requestBody(calls[0]!);
@@ -217,8 +213,6 @@ describe('logToSimkl', () => {
   });
 
   test('a canonically-numbered anime episode remaps through the ani.zip table', async () => {
-    // Canonical S2E3 corresponds to entry/AniDB number 15 in the fixture — a
-    // continuous-numbered entry — so the POST must carry 15, never the naive 3.
     const episodeMap: AniZipEpisodeMap = new Map([
       [14, { season: 2, number: 2, absolute: 14 }],
       [15, { season: 2, number: 3, absolute: 15 }],
@@ -288,10 +282,6 @@ describe('logToSimkl', () => {
   });
 
   test('an episode-level not_found (unmatched episodes, nothing else) is the not-found skip, not a bare ok', async () => {
-    // Simkl files an episode-scoped miss under not_found.episodes, not
-    // not_found.shows — it must still count as a miss, or the fan-out's
-    // manual-link affordance never fires (mirrors the remove adapter's
-    // episode counting).
     const { deps } = makeDeps(() =>
       Response.json({
         added: { movies: 0, shows: 0, episodes: 0 },
@@ -328,8 +318,6 @@ describe('logToSimkl', () => {
     );
     expect(result.status).toBe('ok');
     if (result.status === 'ok') {
-      // Neither piece of news displaces the other (the pre-fix bug: dropped[0]
-      // overwrote the partial-match reason).
       expect(result.reason).toContain('could not match 1 of 2');
       expect(result.reason).toContain('no Simkl-resolvable id');
     }
@@ -369,10 +357,6 @@ describe('addToSimklWatchlist', () => {
   });
 });
 
-/**
- * One `/sync/all-items` bucket row, as the plan-0036 fresh-read guard sees it.
- * `watched` is what makes a removal destructive.
- */
 function planToWatchRow(
   media: { ids: Record<string, number | string>; title: string },
   watched = 0,
@@ -380,17 +364,10 @@ function planToWatchRow(
   return {
     status: 'plantowatch',
     watched_episodes_count: watched,
-    // A `simkl` id is what makes the row normalizable at all — without one
-    // `normalizeLibraryEntry` drops it, so every fixture row carries one.
     show: { ids: { simkl: 900_000, ...media.ids }, title: media.title },
   };
 }
 
-/**
- * The two-request shape every removal now has: a `GET /sync/all-items/all/
- * plantowatch` guard read, then (only if it clears) the `POST
- * /sync/history/remove`.
- */
 function makeRemoveDeps(
   library: Record<string, unknown>,
   removeResponse: () => Response = okRemoveResponse,
@@ -410,13 +387,10 @@ describe('removeFromSimklWatchlist', () => {
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
     expect(result.status).toBe('ok');
     expect(calls).toHaveLength(2);
-    // The fresh in-effect read (plan 0031 R36) — never a cached watchlist row.
     expect(calls[0]!.url.pathname).toBe('/sync/all-items/all/plantowatch');
     expect(calls[1]!.url.pathname).toBe('/sync/history/remove');
     expect(calls[1]!.init?.method).toBe('POST');
     const body = requestBody(calls[1]!);
-    // Whole-item (no seasons/episodes): the documented un-track form that
-    // clears the list entry — a seasons-scoped body would only unmark watched.
     expect(body.movies).toEqual([{ ids: { tmdb: 603, imdb: 'tt0133093' } }]);
   });
 
@@ -429,8 +403,6 @@ describe('removeFromSimklWatchlist', () => {
   });
 
   test('absent from the fresh plantowatch list is a reasoned skip with no POST', async () => {
-    // The post-log case: the item moved to `watching`/`completed` server-side,
-    // so there is nothing to remove — and nothing hits Simkl's write lock.
     const { deps, calls } = makeRemoveDeps({ movies: [] });
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
     expect(result.status).toBe('skipped');
@@ -443,7 +415,6 @@ describe('removeFromSimklWatchlist', () => {
     });
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, show));
     expect(result.status).toBe('skipped');
-    // The whole point: no POST fired, so the 12 watched episodes still exist.
     expect(calls).toHaveLength(1);
   });
 
@@ -459,8 +430,6 @@ describe('removeFromSimklWatchlist', () => {
   });
 
   test('a clean removal reporting deleted: 0 is still ok, not a skip', async () => {
-    // A plan-to-watch row has no history rows to delete, so `deleted: 0` is the
-    // normal answer — membership was already proven by the guard read.
     const { deps } = makeRemoveDeps(
       { movies: [planToWatchRow({ ids: { tmdb: 603 }, title: 'The Matrix' })] },
       () =>
@@ -487,8 +456,6 @@ describe('removeFromSimklWatchlist', () => {
   });
 
   test('a film-shaped row never matches a series-shaped one on a shared TMDB number', async () => {
-    // TMDB numbers movies and series independently; the guard searches all
-    // three buckets at once, so shape has to gate the bridge-id match.
     const { deps, calls } = makeRemoveDeps({
       shows: [planToWatchRow({ ids: { tmdb: 603 }, title: 'Some Series' })],
     });

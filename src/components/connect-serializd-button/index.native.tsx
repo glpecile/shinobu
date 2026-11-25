@@ -15,15 +15,6 @@ import {
 import { validateSerializdToken } from '@/state/queries/serializd';
 import { connectSerializd } from '@/state/session/serializd';
 
-/**
- * Native Serializd connect (plan 0017 R4): the user signs into serializd.com in
- * a modal WebView and Shinobu harvests the `tvproject_credentials` cookie — its
- * value is the bearer token. Unlike Letterboxd, no password is exchanged and no
- * write bridge is kept; the token replays fine over plain HTTP. The token is
- * validated via `/validateauthtoken` (which also recovers the username) before
- * it's stored. This is the primary connect path — the user types into
- * serializd.com directly, never sending a password to Shinobu.
- */
 export function ConnectSerializdButton() {
   const [signingIn, setSigningIn] = useState(false);
   const [status, setStatus] = useState<'idle' | 'validating' | 'error'>('idle');
@@ -53,9 +44,6 @@ export function ConnectSerializdButton() {
       <Button
         icon={<Button.Icon name="link-outline" />}
         label="Sign in to Serializd"
-        // The WebView closes on capture and the token is validated *after* it
-        // is gone, so without a spinner here that gap looks like nothing
-        // happened.
         loading={status === 'validating'}
         loadingLabel="Verifying…"
         onPress={() => {

@@ -58,7 +58,6 @@ export interface HardcoverViewer {
   avatar?: string;
 }
 
-/** The connected member. */
 export function getViewer(deps: HardcoverDeps): Effect.Effect<HardcoverViewer, ProviderError> {
   return hardcoverRequest<unknown>(deps, 'query Viewer { me { id username image { url } } }').pipe(
     Effect.flatMap((data) =>
@@ -115,7 +114,6 @@ const bookEntryData = Schema.Struct({
   ),
 });
 
-/** The viewer's library entry for one book. */
 export interface HardcoverBookEntry {
   /** The `user_books` id that status changes and reads attach to. */
   id: number;
@@ -156,7 +154,6 @@ const BOOK_ENTRY = `query BookEntry($bookId: Int!) {
   }
 }`;
 
-/** The viewer's library entry for `bookId`, or null when the book is not in the library. */
 export function getBookEntry(
   deps: HardcoverDeps,
   bookId: number,
@@ -293,7 +290,6 @@ const searchData = Schema.Struct({
   })),
 });
 
-/** A search result row: the book, and its author names for the row's byline. */
 export interface HardcoverBookHit {
   item: NormalizedMediaItem;
   authors: readonly string[];
@@ -487,7 +483,6 @@ const authorData = Schema.Struct({
   })),
 });
 
-/** Enough for a long bibliography; a prolific author's tail is on hardcover.app. */
 const AUTHOR_BOOKS_LIMIT = 100;
 
 /** An author by id, or by the slug in a `hardcover.app/authors/{slug}` link. */

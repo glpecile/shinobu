@@ -58,7 +58,6 @@ describe('searchAniListStaff', () => {
         Page: {
           staff: [
             { id: 96_879, name: { full: 'Hayao Miyazaki', native: '宮崎駿' } },
-            // No romanization — the native name still identifies the page.
             { id: 12, name: { full: null, native: '新海誠' } },
           ],
         },

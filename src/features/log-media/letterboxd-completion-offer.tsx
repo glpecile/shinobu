@@ -3,7 +3,6 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { useCatchUpControls } from '@/features/log-media/session/state';
 import type { LogRequest } from './log-request';
 
-/** A separate opt-in step; the next press opens the existing diary confirmation. */
 export function LetterboxdCompletionOffer({ request, onClose, onOpenRequest }: { request: LogRequest; onClose: () => void; onOpenRequest?: (request: LogRequest) => void }) {
   const { openLog } = useCatchUpControls();
   return (

@@ -12,14 +12,6 @@ import { getSerializdTrackingLists, serializdTrackingState } from '@/lib/provide
 import { getSerializdWatchedShows, type SerializdWatchedShow } from '@/lib/providers/serializd/watched';
 import { getSerializdUpcoming, type SerializdUpcomingEpisode } from '@/lib/providers/serializd/upcoming';
 
-/**
- * Real dependency wiring for Serializd effects — same state → lib/providers
- * arrow as `traktDeps()`/`letterboxdDeps()`. The transport (`fetch` + `baseUrl`)
- * is the platform seam (KTD4): native reaches the upstream host with app
- * headers, web the same-origin proxy. Works on every platform (R13) — no
- * `EXPO_OS` gate. List reads pass their cache-key username so anonymous or
- * stale-account queries never authenticate as a different stored account.
- */
 export function serializdDeps(username?: string | null): SerializdDeps {
   const session = getSerializdSession();
   return {
@@ -50,7 +42,6 @@ export async function loginSerializd(credentials: {
   return { accessToken: login.token, username };
 }
 
-/** Native connect: validates a token captured from the sign-in WebView. */
 export function validateSerializdToken(token: string): Promise<SerializdSession> {
   return Effect.runPromise(validateAuthToken(serializdDeps(), token)).then((result) => ({
     accessToken: result.token,
@@ -59,16 +50,8 @@ export function validateSerializdToken(token: string): Promise<SerializdSession>
 }
 
 /**
- * Query keys rooted at `['serializd', …]` (matches disconnect's
- * `removeQueries({ queryKey: ['serializd'] })`, R6). The progress keys
- * include the username so reconnecting as a different account never serves the
- * prior account's entries (Letterboxd's pattern).
- *
- * There is deliberately no cached season-id query: writes resolve the seasonId
- * inline on every log (`resolveSeasonId`), which *self-heals* a
- * currently-airing season Serializd hasn't ingested yet — a forever-cache would
- * be the very thing that permanently skips later episodes (KTD6). The one extra
- * GET per log is within the politeness budget (KTD7).
+ * Scope private Serializd keys to the username so a reconnect cannot reuse the previous
+ * account's data.
  */
 export const serializdQueryKeys = {
   all: [Provider.Serializd] as const,
@@ -124,7 +107,6 @@ export async function fetchSerializdTrackingState(queryClient: QueryClient, tmdb
   return serializdTrackingState(lists, tmdbId, findWatchedShow(watched, tmdbId));
 }
 
-/** The show's Serializd status, null when untracked and undefined until both reads land. */
 export function useSerializdTrackingStateQuery({ tmdbId, enabled }: { tmdbId: number | undefined; enabled: boolean }) {
   const username = getSerializdUsername();
   const on = enabled && username != null && tmdbId != null;
@@ -144,7 +126,6 @@ export function useSerializdProgressQuery(tmdbId: number | undefined, username: 
   });
 }
 
-/** Serializd's "Coming soon" for the signed-in account. */
 export function useSuspenseSerializdUpcomingQuery(username: string) {
   return useSuspenseQuery({
     queryKey: serializdQueryKeys.upcoming(username),

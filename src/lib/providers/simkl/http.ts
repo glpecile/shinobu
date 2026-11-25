@@ -16,7 +16,6 @@ const provider = Provider.Simkl;
 export interface SimklHttpOptions {
   method?: 'GET' | 'POST';
   body?: unknown;
-  /** Attached as `Authorization: Bearer …` when present. */
   accessToken?: string;
   /** Defaults to the API host; calendar reads pass `SIMKL_CDN_BASE_URL`. */
   baseUrl?: string;

@@ -23,11 +23,8 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 interface MediaCardProps {
   item: NormalizedMediaItem;
-  /** Layout only, including responsive poster dimensions. */
   className?: string;
-  /** Extra context line under the type label (e.g. a person's character/job). */
   subtitle?: string;
-  /** Opens quick log/hide via long-press or the web hover button. */
   onActionsPress: (item: NormalizedMediaItem) => void;
 }
 
@@ -87,7 +84,6 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
         colors={['transparent', 'rgba(0,0,0,0.85)']}
         style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 112 }}
       />
-      {/* Keep text light over the dark scrim in both themes. */}
       <View className="absolute bottom-0 left-0 right-0 p-3">
         <Text
           className="text-accent-foreground font-sans-semibold text-sm leading-tight"
@@ -119,7 +115,6 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
   };
 
   return (
-    // Keep the actions button separate so its press cannot open details.
     <View
       className={cn('w-40 h-60 relative', className)}
       onPointerDown={newTab.onPointerDown}

@@ -8,12 +8,7 @@ import { Rail } from '@/components/rail';
 import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * A bordered pill that opens something; `external` marks a link that leaves the app.
- * `children` replace the label's text when it needs styling (a score and its
- * scale); `label` then only names the pill to assistive tech.
- * Omit `onPress` for a static value without a destination.
- */
+/** When `children` is provided, it replaces the visible text and `label` is used only for accessibility. */
 export function LinkPill({
   icon,
   label,
@@ -63,10 +58,6 @@ export function LinkPill({
   );
 }
 
-/**
- * One scrolling row of `LinkPill`s, so a section of them stays one line tall
- * however many there are.
- */
 function LinkPillRail({ children }: { children: ReactNode }) {
   return <Rail contentContainerClassName="gap-2">{children}</Rail>;
 }

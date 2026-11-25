@@ -63,7 +63,6 @@ describe('normalizeAniListMedia', () => {
       lastUpdated: NOW_ISO,
       externalIds: { anilist: 21 },
     });
-    // Ongoing show: AniList has no total — the field must stay absent.
     expect(item.totalEpisodes).toBeUndefined();
     expect(item.isFilm).toBeUndefined();
   });
@@ -142,7 +141,6 @@ describe('normalizeListActivity', () => {
       episodes: [3, 4, 5],
     });
     expect(entry?.item.type).toBe('ANIME');
-    // Epoch seconds → the exact ISO instant (AE4's instant discipline).
     expect(entry?.watchedAt).toBe(new Date(1_752_000_000 * 1000).toISOString());
   });
 
@@ -220,7 +218,6 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
       media: {
         ...SERIES,
         episodes: 24,
-        // 2026-07-18T16:00:00.000Z
         nextAiringEpisode: { episode: 7, airingAt: 1_784_390_400 },
       },
     };
@@ -244,11 +241,6 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     expect(normalized.totalEpisodes).toBeNull();
   });
 
-  // Plan 0030 KTD-3: the read asks for CURRENT *and* PLANNING in one request,
-  // so the status has to survive normalization — it is what tells the "Your
-  // Anime" row and Up Next's gate apart from each other downstream. It was
-  // selected by the query and dropped here before this plan.
-
   test('a PLANNING entry is marked planned rather than flattened to CURRENT', () => {
     const entry: AniListListEntry = {
       status: 'PLANNING',
@@ -262,14 +254,10 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     };
     const normalized = normalizeCurrentAnimeEntry(entry, NOW_ISO);
     expect(normalized.status).toBe('PLANNING');
-    // Still a full entry otherwise — the airing pointer is exactly what decides
-    // whether it is a calendar event or nothing at all.
     expect(normalized.nextAiring?.episode).toBe(5);
     expect(normalized.firstAired).toBe('2026-07-14T16:00:00.000Z');
   });
 
-  // Plan 0031 U12: the MediaList row's own id, threaded through for the removal
-  // path. A hint only (R36) — the removal guard re-reads the entry in-effect.
   test('the MediaList entry id is threaded through as entryId', () => {
     const entry: AniListListEntry = {
       id: 9001,
@@ -279,13 +267,10 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     };
     const normalized = normalizeCurrentAnimeEntry(entry, NOW_ISO);
     expect(normalized.entryId).toBe(9001);
-    // Not the media id — deleting by that would target the wrong thing.
     expect(normalized.item.externalIds.anilist).toBe(21);
   });
 
   test('an entry read without the id field simply has no hint', () => {
-    // Persisted caches written before U12 carry no entryId, and a read that has
-    // no use for it doesn't select it — absent, never a guessed 0.
     const entry: AniListListEntry = {
       status: 'PLANNING',
       progress: 0,
@@ -295,8 +280,6 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
   });
 
   test('a missing status falls back to CURRENT, never to planned', () => {
-    // PLANNING is the restricted status (Calendar only), so guessing it for an
-    // absent value would silently hide a series the user is watching.
     const entry: AniListListEntry = {
       progress: 2,
       media: { ...SERIES, episodes: 12 },
@@ -311,9 +294,6 @@ describe('normalizeCurrentMangaEntry (plan 0117 M3)', () => {
     const media: AniListMedia = { ...SERIES, type: 'MANGA', format: 'MANGA', chapters: 59 };
     const status = (raw?: string) =>
       normalizeCurrentMangaEntry({ status: raw, progress: 12, media }, NOW_ISO).status;
-    // Continue Reading takes CURRENT and REPEATING; the reading list takes
-    // PLANNING. A planned guess for an unknown value would hide a manga
-    // the user is reading.
     expect(status('REPEATING')).toBe('REPEATING');
     expect(status('PLANNING')).toBe('PLANNING');
     expect(status(undefined)).toBe('CURRENT');

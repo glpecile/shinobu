@@ -1,19 +1,7 @@
 import type { AniZipCanonicalEpisode, AniZipEpisodeMap } from './anizip';
 import { placeInLayout, type SeasonLayout } from './season-layout';
 
-/**
- * Entry-relative → canonical numbering (plan 0027 KTD3), pure so the bounds are
- * unit-testable without a fetch.
- *
- * The rule this file exists to enforce: **a wrong season is worse than no
- * write** (docs/solutions/trakt-text-search-wrong-movie-match.md). Today's
- * behavior — stamping `season: 1` on every AniList-origin log — *is* the wrong
- * guess; an honest `ok: false` here turns it into a reasoned skip carrying a
- * manual deep link (plan 0022 R6) instead.
- *
- * Resolution is all-or-nothing per batch: `ProviderWriteOutcome` has no
- * per-episode granularity, so a half-mappable batch must not half-write.
- */
+/** Translate entry-relative numbers without guessing across gaps or known season boundaries. */
 export type EpisodeTranslation =
   | { ok: true; episodes: AniZipCanonicalEpisode[] }
   | { ok: false; reason: string };

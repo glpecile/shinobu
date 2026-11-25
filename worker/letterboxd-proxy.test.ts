@@ -16,7 +16,6 @@ interface Captured {
   init?: RequestInit;
 }
 
-/** An upstream fetch stub that records what the proxy sent and returns `response`. */
 function capturingUpstream(response: Response): {
   fetch: (input: string, init?: RequestInit) => Promise<Response>;
   captured: Captured[];
@@ -79,8 +78,6 @@ describe('allowlist', () => {
     }
   });
 
-  // Plan 0024 U9's one bounded widening — everything else about the rule is
-  // unchanged, so these pin exactly what it does and does not now accept.
   test('accepts the paginated watchlist suffix', async () => {
     for (const path of [
       '/api/letterboxd/gian/watchlist/page/2/',
@@ -102,7 +99,6 @@ describe('allowlist', () => {
       '/api/letterboxd/gian/watchlist/page/',
       '/api/letterboxd/gian/watchlist/page/two/',
       '/api/letterboxd/gian/watchlist/page/2/extra/',
-      // The suffix is watchlist-only — it must not unlock other paths.
       '/api/letterboxd/gian/rss/page/2/',
       '/api/letterboxd/gian/films/page/2/',
       '/api/letterboxd/tmdb/0/',
@@ -117,13 +113,8 @@ describe('allowlist', () => {
     }
   });
 
-  // The third rule (the tag picker's vocabulary source). Spiked 2026-07-25:
-  // `/{user}/tags/` answers 200 uncthallenged, unlike the walled deeper pages
-  // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md). These pin
-  // exactly what it does and does not unlock.
   test('rejects everything around the tag index — deeper shapes, no trailing slash, bad usernames', async () => {
     for (const path of [
-      // The filtered tag-browse surface is NOT unlocked by the tags rule.
       '/api/letterboxd/gian/tags/films/by/name/',
       '/api/letterboxd/gian/tags/films/',
       '/api/letterboxd/gian/tag/criterion-collection/films/',
@@ -223,7 +214,6 @@ describe('request hardening', () => {
     expect(headers.Cookie).toBeUndefined();
     expect(headers.Authorization).toBeUndefined();
     expect(headers['X-Evil']).toBeUndefined();
-    // A fixed server-side UA is attached instead of anything client-supplied.
     expect(headers['User-Agent']).toContain('Mozilla/5.0');
   });
 
@@ -318,8 +308,6 @@ describe('response relay', () => {
     expect(res.headers.get('set-cookie')).toBeNull();
   });
 });
-
-// --- Throwaway write spike (plan 0018 phase-0 re-spike) ---------------------
 
 describe('letterboxd write spike (throwaway)', () => {
   const SPIKE = '/api/letterboxd/spike/production-log-entries';

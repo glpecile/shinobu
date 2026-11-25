@@ -5,17 +5,7 @@ import type { SimklLibrary, SimklLibraryEntry } from './normalize';
 
 const provider = Provider.Simkl;
 
-/**
- * Simkl has no paginated history endpoint (nothing like Trakt's
- * `/sync/history`): watch history lives *inside* the `/sync/all-items`
- * snapshot as per-episode watched instants (`episode_watched_at=yes`) and a
- * movie's `last_watched_at`. So the Simkl diary is a pure projection of the
- * library snapshot — one flatten, no extra endpoint, and the query layer
- * caches it under the same `allItemsRoot` invalidation prefix every other
- * snapshot consumer refetches on (the rate-limit discipline in
- * docs/solutions/simkl-rate-limits-and-write-lock.md: never a new polled
- * read when the snapshot already carries the data).
- */
+/** Project diary plays from the all-items snapshot. Simkl has no paginated history endpoint. */
 
 /**
  * How many entries the projection exposes, newest-first. A long-lived Simkl

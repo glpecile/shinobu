@@ -6,23 +6,10 @@ import { Button } from '@/components/button';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * Centered message with an optional action — a dedicated screen's
- * total-failure and empty states. A screen must never degrade to a blank page.
- *
- * ```tsx
- * <CenteredNotice>
- *   <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
- *   <CenteredNotice.Body>Check your connection and try again.</CenteredNotice.Body>
- *   <CenteredNotice.Action icon={<Button.Icon name="refresh" />} label="Try again" onPress={retry} />
- * </CenteredNotice>
- * ```
- */
 export function CenteredNotice({
   className,
   children,
 }: {
-  /** Layout only. */
   className?: string;
   children: ReactNode;
 }) {
@@ -33,12 +20,10 @@ export function CenteredNotice({
   );
 }
 
-/** A kanji over the title, in the OS fallback font — neither app family ships kanji. */
 function CenteredNoticeGlyph({ children }: { children: ReactNode }) {
   return <Text className="text-5xl text-muted mb-4">{children}</Text>;
 }
 
-/** An Ionicon over the title, in the Glyph's slot and tone. */
 function CenteredNoticeIcon({ name }: { name: ComponentProps<typeof Ionicons>['name'] }) {
   const muted = useThemeColor('--color-muted');
   return (

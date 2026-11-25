@@ -2,7 +2,6 @@ import { defineRule } from '@oxlint/plugins';
 
 const ALLOWED_DIRECTORIES = ['/src/lib/providers/', '/src/lib/http/', '/src/state/queries/'];
 
-// The feature write hooks run their mutation's Effects at the mutation boundary.
 const ALLOWED_FILES = [
   '/src/features/log-media/use-log-media.ts',
   '/src/features/watchlist-media/use-watchlist-media.ts',

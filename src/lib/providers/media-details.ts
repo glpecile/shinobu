@@ -54,11 +54,8 @@ export interface MediaDetails {
   cast: NormalizedCastMember[];
   crew: NormalizedCrewMember[];
   studios: NormalizedStudio[];
-  /** A book's characters. */
   characters?: NormalizedCharacter[];
-  /** The series a book belongs to, and its place in it. */
   series?: HardcoverBookSeries;
-  /** A book's similar books on Hardcover, most similar first. */
   similarBookIds?: readonly number[];
   source: 'tmdb' | typeof Provider.Trakt | typeof Provider.AniList | typeof Provider.Hardcover | 'none';
 }

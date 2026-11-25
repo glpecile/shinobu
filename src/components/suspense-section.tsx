@@ -16,26 +16,11 @@ import { toast } from '@/lib/toast';
 
 interface BoundaryProps {
   children: ReactNode;
-  /** Change to re-attempt rendering after a caught error (e.g. on refresh). */
   resetKey?: unknown;
-  /**
-   * Opt-in failure toast: a section that disappears on error is silent by
-   * design on dense surfaces (the home feed degrades row by row), but on a
-   * detail screen the vanished section *is* the news — a provider outage
-   * looks identical to "this show has no episodes". Pass copy naming what
-   * failed and the recourse (pull to refresh). Fires once per caught error;
-   * a `resetKey` retry that fails again is a new error and toasts again.
-   */
   errorToast?: { title: string; message?: string };
-  /** What stands in after a failure; nothing by default. */
   errorFallback?: ReactNode;
 }
 
-/**
- * Sections are optional garnish — when their suspense query rejects the
- * section disappears instead of taking the screen down (there is no app-level
- * error boundary, so an uncaught throw would).
- */
 class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }> {
   override state = { failed: false };
 
@@ -59,26 +44,16 @@ class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }>
   }
 }
 
-/**
- * How long a skeleton waits unseen; content that beats it appears at once, so
- * a fast load never flashes one. React reveals a boundary's content no sooner
- * than 300ms after its fallback commits (`FALLBACK_THROTTLE_MS`, React DOM and
- * Fabric alike), so a shorter hold would show the skeleton to loads that had
- * already finished.
- */
+/** Matches React's `FALLBACK_THROTTLE_MS` (300ms on React DOM and Fabric). */
 const SKELETON_HOLD = 300;
 
 const skeletonEntering = heldKeyframes(sectionFading, SKELETON_HOLD, DURATION.swap);
 
-/** What a section's content learns, as it lands, about the skeleton it replaces. */
 interface Outgoing {
-  /** When the skeleton's hold began: null if none went up, -Infinity if the server rendered it. */
   since: number | null;
-  /** Its width, so the copy fading out over the content covers the same box. */
   width?: number;
 }
 
-/** The fallback, held back for `SKELETON_HOLD` and then faded in; one the server rendered is already on screen. */
 function SkeletonHold({
   children,
   onHoldStart,
@@ -109,12 +84,6 @@ function SkeletonHold({
   );
 }
 
-/**
- * The content replacing a skeleton. One that never showed leaves no trace and
- * the content appears at once. One that showed is pinned over the content
- * where it stood and fades out from the opacity it had reached, as the
- * content fades in under it.
- */
 function Reveal({
   children,
   outgoing,
@@ -124,12 +93,10 @@ function Reveal({
   outgoing: RefObject<Outgoing>;
   skeleton: ReactNode;
 }) {
-  // Read once, as the content first lands; later renders keep how it arrived.
   const [from] = useState(() => {
     const { since, width } = outgoing.current;
     if (since == null) return null;
     const shown = Math.min(Math.max((performance.now() - since - SKELETON_HOLD) / DURATION.swap, 0), 1);
-    // Approximate EASE_OUT's easeOutQuint curve during a partial fade.
     const opacity = 1 - (1 - shown) ** 5;
     return opacity > 0 ? { opacity, width } : null;
   });
@@ -161,16 +128,6 @@ function Reveal({
   );
 }
 
-/**
- * Suspense boundary for a self-contained, suspense-query-backed screen
- * section: shows `fallback` (a skeleton) while the query loads, renders
- * `errorFallback` (nothing by default) if it fails, and retries after a
- * failure when `resetKey` changes.
- *
- * The skeleton waits `SKELETON_HOLD` before it shows, so a fast or cached load
- * never flashes one, and content arriving over a shown skeleton crossfades
- * with it in place.
- */
 export function SuspenseSection({
   fallback,
   children,
@@ -180,15 +137,13 @@ export function SuspenseSection({
   animateFallback = true,
 }: BoundaryProps & {
   fallback: ReactNode;
-  /** Real controls must stay visible and must never be cloned into the crossfade. */
+  /** Set false for interactive fallbacks; enabled fallbacks are cloned into the crossfade. */
   animateFallback?: boolean;
 }) {
   // Static web export awaits every suspended query, so prerendering a section
   // would fetch its provider at build time, and an outage there fails the
   // build (error boundaries don't run on the server).
   const hydrated = useHydrated();
-  // A prerendered skeleton has been on screen since the page loaded, so
-  // holding it back would blank it.
   const [served] = useState(() => !hydrated);
   const outgoing = useRef<Outgoing>({ since: served ? -Infinity : null });
   if (!hydrated) return fallback;

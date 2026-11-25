@@ -26,7 +26,6 @@ function loadErrorBody(provider: ListSummary['provider']) {
   }
 }
 
-/** Request failures and render failures share the same retry and provider escape hatch. */
 export function ListsLoadError({ provider, url, index = false, title = 'List', shareHref, onRetry }: {
   provider: ListSummary['provider'];
   url: string;
@@ -49,24 +48,16 @@ export function ListsLoadError({ provider, url, index = false, title = 'List', s
   </>;
 }
 
-/** Shared recovery and loading frame; resource pages own their query and identity. */
 export function ListsPage({ provider, title = 'List', url, shareHref, index = false, embedded = false, unavailable = 'invalid', children, fallback, contentKey }: {
   provider: ListSummary['provider'];
   title?: string;
   url: string | null;
-  /** Keeps a detail page's Share in its header when the list fails to load. */
   shareHref?: string;
   index?: boolean;
-  /** A pager owns the shared header and document title; this page owns recovery. */
   embedded?: boolean;
-  /** `reconnect`: a Hardcover session from before lists, without the list scopes. */
   unavailable?: 'invalid' | 'connect' | 'reconnect';
   children?: ReactNode;
   fallback?: ReactNode;
-  /**
-   * Remounts the content (boundary + suspense) when its resource owner changes,
-   * without remounting the shared header.
-   */
   contentKey?: string;
 }) {
   const { reset } = useQueryErrorResetBoundary();

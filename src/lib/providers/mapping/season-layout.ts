@@ -1,18 +1,6 @@
 import type { AniZipCanonicalEpisode, AniZipEpisodeMap } from './anizip';
 
-/**
- * How the *destination* tracker carves a show into seasons — the arbiter plan
- * 0027 originally didn't have.
- *
- * ani.zip's `seasonNumber` is TVDB-derived, and TVDB splits anime into
- * broadcast seasons that Trakt and TMDB largely don't have: "The 100
- * Girlfriends … Season 3" is TVDB S3E4 but a single 28-episode season on both
- * trackers, so writing S03E04 404s on Trakt and can't resolve a Serializd
- * season id. Live probes (six entries, both trackers) are recorded in
- * `docs/solutions/anizip-tvdb-seasons-vs-tracker-seasons.md`; the headline is
- * that **Trakt and TMDB agree with each other** on every one, so a single
- * layout resolves both providers and translation stays one centralized step.
- */
+/** Destination season layouts place ani.zip episodes when TVDB and the tracker disagree. */
 export interface SeasonSlot {
   season: number;
   /** Episodes the season is structured to hold — including not-yet-aired ones. */

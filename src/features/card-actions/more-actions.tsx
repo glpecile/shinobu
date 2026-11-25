@@ -14,10 +14,6 @@ import { haptics } from '@/lib/haptics';
 import type { TrackingStatus } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * Which secondary actions `item` has: a list add, and pause or drop when a
- * connected provider holds an entry it would move.
- */
 function useMoreActions(item: NormalizedMediaItem) {
   const list = useCanAddToList(item);
   const targets = useWriteTargetsSplit(item, 'tracking');
@@ -25,10 +21,6 @@ function useMoreActions(item: NormalizedMediaItem) {
   return { list, movable, tracking: movable.paused.length > 0 || movable.dropped.length > 0 };
 }
 
-/**
- * The "…" menu and the step each row opens, in one sheet. `onBack` leaves
- * the menu, and `onClose` closes the sheet after a clean write.
- */
 export function MoreActions({
   item,
   onBack,
@@ -69,15 +61,6 @@ export function MoreActions({
   }
 }
 
-/**
- * A title's main action with its secondary actions capsuled beside it, as
- * `ShareButton.Capsule` lays out Share. With pause and drop available the
- * capsule is "…" and opens `MoreActions`. With only a list add it stays
- * "Add to list", so a film's list add is not a one-row menu. Without a main
- * action (`children` null) the button takes the full width with its label.
- * `onOpen` lets a host sheet render the step in place instead of a second
- * sheet. `className` is layout for the row.
- */
 export function MoreActionsCapsule({
   item,
   children,
@@ -91,8 +74,6 @@ export function MoreActionsCapsule({
 }) {
   const { list, tracking } = useMoreActions(item);
   const [open, setOpen] = useState(false);
-  // The step is chosen at press time, so a read landing while the sheet is
-  // open does not swap its content. `session` remounts it per open.
   const [opened, setOpened] = useState<{ session: number; mode: 'more' | 'list-add' } | null>(null);
   if (!list && !tracking && !open) return children == null ? null : <View className={className}>{children}</View>;
   const label = tracking ? 'More actions' : 'Add to list';

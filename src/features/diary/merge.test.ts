@@ -22,7 +22,7 @@ import {
   type DiaryProviderState,
 } from './merge';
 
-// UTC−05:00 year-round (no DST) — the fixed offset AE4 specifies.
+// UTC−05:00 year-round (no DST).
 const TZ_MINUS_5 = 'Etc/GMT+5';
 
 function item(
@@ -84,7 +84,6 @@ describe('mergeDiaryEntries — watermark', () => {
       state('trakt', traktOld, { hasMore: false }),
       state('anilist', anilistNew, { hasMore: true }),
     ]);
-    // Watermark = AniList's oldest loaded (July 10); Trakt's July 1/5 are older.
     expect(merged.map((e) => e.id)).toEqual(['anilist-2', 'anilist-1']);
   });
 
@@ -106,7 +105,6 @@ describe('mergeDiaryEntries — failure & dedup', () => {
       state('trakt', [entry('trakt', '1', '2026-07-10T12:00:00.000Z')], {
         hasMore: false,
       }),
-      // AniList failed with nothing loaded — must not hold Trakt back.
       state('anilist', [], { hasMore: false, failed: true }),
     ]);
     expect(merged.map((e) => e.id)).toEqual(['trakt-1']);
@@ -120,7 +118,6 @@ describe('mergeDiaryEntries — failure & dedup', () => {
         [
           entry('trakt', '6', '2026-07-11T12:00:00.000Z'),
           shared,
-          // page N+1 re-returns the tail of page N after a prepend.
           shared,
         ],
         { hasMore: false },
@@ -143,7 +140,6 @@ describe('watermarkProviders', () => {
         hasMore: true,
       }),
     ]);
-    // Letterboxd's oldest (July 12) is the newest oldest-loaded → it advances.
     expect(providers).toEqual(['letterboxd']);
   });
 
@@ -203,11 +199,9 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     expect(row.providers).toEqual(['trakt', 'letterboxd']);
     expect(row.liked).toBe(true);
     expect(row.episodes).toEqual([]);
-    // The merged item cross-links both providers' ids; Trakt (richer) is primary.
     expect(row.id).toBe('trakt-100');
     expect(row.item.externalIds.tmdb).toBe(603);
     expect(row.item.externalIds.letterboxd).toBe('fight-club');
-    // Hiding either copy hides the row.
     expect(row.sourceIds).toEqual(['trakt-603', 'letterboxd-fight-club']);
   });
 
@@ -231,8 +225,6 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
         entry('trakt', 'first', '2026-07-01T20:00:00.000Z', { item: item(movie) }),
         entry('trakt', 'again', '2026-07-20T20:00:00.000Z', { item: item(movie) }),
       ]),
-      // Simkl's snapshot holds only the latest play, so it contributes one entry
-      // that collapses into the rewatch's row and never erases the first watch.
       state('simkl', [
         entry('simkl', '603', '2026-07-20T20:00:00.000Z', {
           item: item({ ...movie, id: 'simkl-603' }),
@@ -297,7 +289,6 @@ describe('groupDiaryEntries — timezone & ordering', () => {
       state('trakt', [entry('trakt', '1', '2026-07-20T23:30:00.000Z')]),
     ]);
     const days = groupDiaryEntries(merged, TZ_MINUS_5);
-    // 23:30Z − 5h = 18:30 local on July 20, not July 21.
     expect(days[0].key).toBe('2026-07-20');
   });
 
@@ -312,9 +303,7 @@ describe('groupDiaryEntries — timezone & ordering', () => {
 
   test('a date-only watermark never cuts same-day instant entries', () => {
     const merged = mergeDiaryEntries([
-      // Letterboxd still paginating, oldest is a July 20 date-only entry.
       state('letterboxd', [entry('letterboxd', 'g', '2026-07-20', { dateOnly: true })], { hasMore: true }),
-      // A Trakt instant safely inside July 20 (20:00Z) must not be cut.
       state('trakt', [entry('trakt', '1', '2026-07-20T20:00:00.000Z')], { hasMore: false }),
     ]);
     expect(merged.some((e) => e.id === 'trakt-1')).toBe(true);
@@ -377,8 +366,6 @@ describe('formatDayParts', () => {
 
 describe('formatLogTime', () => {
   test('an instant renders as 24h local time in the given zone', () => {
-    // 23:30Z is 18:30 at UTC-5 — the same conversion `has-aired` makes, so a
-    // log never displays the origin zone's clock.
     expect(
       formatLogTime({ watchedAt: '2026-07-20T23:30:00.000Z', dateOnly: false }, TZ_MINUS_5),
     ).toBe('18:30');
@@ -396,16 +383,12 @@ describe('shortClusterCount', () => {
     expect(shortClusterCount({ item: { type: 'TV' }, count: 10 })).toBe('10 eps');
   });
   test('a run that unions down to one episode says "ep", not "eps"', () => {
-    // Two same-provider logs of the same episode (a rewatch) cluster together
-    // but union to a single episode number.
     expect(shortClusterCount({ item: { type: 'ANIME' }, count: 1 })).toBe('1 ep');
   });
   test('manga counts chapters', () => {
     expect(shortClusterCount({ item: { type: 'MANGA' }, count: 4 })).toBe('4 ch');
   });
 });
-
-// --- Within-day episode clustering (presentation grouping) ---
 
 function mergedEntry(
   overrides: Partial<MergedDiaryEntry> & { id: string },
@@ -421,7 +404,6 @@ function mergedEntry(
   };
 }
 
-// A same-show TV entry keyed by a shared tmdb id, so the identity matches.
 function ep(id: string, season: number, episode: number): MergedDiaryEntry {
   return mergedEntry({
     id,
@@ -463,7 +445,6 @@ describe('summarizeDay', () => {
       mergedEntry({ id: 'anime-film', item: item({ id: 'anime-film', type: 'ANIME', isFilm: true }), episodes: [1] }),
       ep('s1', 1, 1), ep('s2', 2, 1),
       mergedEntry({ id: 'manga', item: item({ id: 'manga', type: 'MANGA' }), episodes: [1, 2, 3] }),
-      // Started and finished on one day: one book.
       mergedEntry({ id: 'started', item: book, readingEvent: 'started' }),
       mergedEntry({ id: 'finished', item: book, readingEvent: 'finished' }),
     ])).toEqual({
@@ -529,7 +510,6 @@ describe('clusterDayEntries', () => {
     ]);
     expect(clusters).toHaveLength(1);
     expect(clusters[0].entries).toHaveLength(3);
-    // Anchored at the first (newest) member's id.
     expect(clusters[0].key).toBe('e10');
   });
 
@@ -559,7 +539,6 @@ describe('clusterDayEntries', () => {
       season: 1,
     });
     const clusters = clusterDayEntries([ep('a', 6, 3), other, ep('b', 6, 2)]);
-    // The show cluster anchors at its newest member (`a`), then the other row.
     expect(clusters.map((c) => c.key)).toEqual(['a', 'other']);
     expect(clusters[0].entries.map((e) => e.id)).toEqual(['a', 'b']);
   });
@@ -587,7 +566,6 @@ describe('summarizeCluster', () => {
     expect(summary.episodes).toEqual([1, 2, 3]);
     expect(summary.count).toBe(3);
     expect(summary.season).toBe(6);
-    // Precedence-ordered provider union, and the anchor (newest) item wins.
     expect(summary.providers).toEqual(['trakt', 'anilist']);
     expect(summary.item.id).toBe('x-item');
   });
@@ -603,7 +581,6 @@ describe('formatClusterCount', () => {
   });
 });
 
-// --- Serializd (plan 0017 U7) ---
 const tvItem = (id: string) =>
   item({ id, title: 'Breaking Bad', type: 'TV', externalIds: { tmdb: 1396 } });
 
@@ -629,7 +606,6 @@ describe('Serializd diary in the unified merge', () => {
     expect(days).toHaveLength(1);
     const rows = days[0].entries;
     expect(rows).toHaveLength(1);
-    // Both providers on one row (priority order) — two icons, one entry.
     expect(rows[0].providers).toEqual(['trakt', 'serializd']);
     expect(rows[0].episodes).toEqual([5]);
     expect(rows[0].season).toBe(1);
@@ -655,7 +631,6 @@ describe('Simkl diary in the unified merge', () => {
         id: 'anilist-555',
         title: 'KAMUI ---He is behind you',
         type: 'ANIME',
-        // No tmdb — the pre-U9.5 tmdb/imdb/title join would miss this.
         externalIds: { anilist: 555 },
       }),
     });
@@ -669,14 +644,11 @@ describe('Simkl diary in the unified merge', () => {
     const rows = days[0].entries;
     expect(rows).toHaveLength(1);
     expect(rows[0].providers).toEqual(['simkl', 'anilist']);
-    // Simkl outranks AniList, so the display item is Simkl's.
     expect(rows[0].item.id).toBe('simkl-200');
     expect(rows[0].episodes).toEqual([5]);
   });
 
   test('a Simkl entry bridges a tmdb-only Serializd row and an anilist-only AniList row into one', () => {
-    // Newest-first processing seats the id-rich Simkl entry as the bucket,
-    // whose unioned keys then catch both id-poor contributors.
     const simkl = entry('simkl', '300-s1e4', '2026-07-31T18:00:02.000Z', {
       episodes: [4],
       item: item({
@@ -744,7 +716,6 @@ describe('Simkl diary in the unified merge', () => {
 
     expect(day.entries).toHaveLength(1);
     expect(day.entries[0].providers).toEqual(['simkl', 'serializd', 'anilist']);
-    // Serializd's season 2 would send the row to S2E3 of Simkl's own show.
     expect(day.entries[0].season).toBeUndefined();
     expect(summarizeDay(day.entries).label).toBe('1 episode of 1 show');
   });
@@ -779,8 +750,6 @@ describe('Simkl diary in the unified merge', () => {
         externalIds: { simkl: 1, tmdb: 593 },
       }),
     });
-    // Same title+year, different film (the 2002 remake mis-dated) — a shared
-    // title must not merge items whose ids disagree.
     const letterboxd = entry('letterboxd', 'l1', day, {
       item: item({
         id: 'letterboxd-solaris-2002',

@@ -11,7 +11,6 @@ import type { SegmentedControlProps } from '@/components/segmented-control';
 import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
-/** Material 3 owns the selected shape, colours, and press feedback. */
 export function NativeSegmentedControl<T extends string>({
   options,
   value,

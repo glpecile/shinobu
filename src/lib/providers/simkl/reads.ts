@@ -44,8 +44,6 @@ function accessToken(deps: SimklDeps): string | undefined {
   return deps.tokens.get()?.accessToken;
 }
 
-// ---- Library snapshot (plan 0034 KTD-5 pairs this with getLastActivities) ----
-
 /**
  * Docs (api.simkl.org get-all-items, verified 2026-07-31): `/sync/all-items`
  * returns the entire filtered library in one response — **no pagination
@@ -118,8 +116,6 @@ export function getLastActivities(
   }).pipe(Effect.map(normalizeActivities));
 }
 
-// ---- Calendar (CDN JSON, KTD-4) ----
-
 export type SimklCalendarKind = 'tv' | 'anime' | 'movie_release';
 
 /**
@@ -158,8 +154,6 @@ export function getMonthlyCalendar(
   ).pipe(Effect.map(normalizeCalendarFile));
 }
 
-// ---- Trending (CDN JSON, KTD-8) ----
-
 export interface SimklTrendingParams {
   /** `today` refreshes hourly, `week`/`month` daily. Defaults to `week`. */
   interval?: 'today' | 'week' | 'month';
@@ -192,8 +186,6 @@ export function getTrending(
   });
 }
 
-// ---- Profile ----
-
 /**
  * The connected account's profile — the "connected as who" read (R6).
  * POST-shaped despite being a read: the docs say "historical reasons"
@@ -208,8 +200,6 @@ export function getUserSettings(
     accessToken: accessToken(deps),
   }).pipe(Effect.map(normalizeUserSettings));
 }
-
-// ---- Id resolution (KTD-6) ----
 
 export interface SimklLookupParams {
   /** Simkl's own id — how a cold `/details/simkl-<id>` resolves (verified live 2026-09-17). */

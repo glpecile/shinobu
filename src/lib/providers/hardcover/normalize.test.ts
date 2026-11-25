@@ -119,7 +119,6 @@ describe('normalizeHardcoverLibraryRow', () => {
 describe('normalizeHardcoverJournal', () => {
   const book = { id: 61, title: 'No Longer Human' };
 
-  // Midnight UTC on 9 March is still the 8th in Buenos Aires. The reader's day is the 9th.
   test('a journal date stays the reader day in every time zone', () => {
     const entry = normalizeHardcoverJournal({
       id: '501',

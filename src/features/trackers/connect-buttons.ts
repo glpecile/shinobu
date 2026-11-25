@@ -8,21 +8,6 @@ import { ConnectSimklButton } from '@/components/connect-simkl-button';
 import { ConnectTraktButton } from '@/components/connect-trakt-button';
 import type { ProviderId } from '@/lib/providers/types';
 
-/**
- * Each provider's own connect affordance, keyed by id so the cards stay
- * data-driven — adding a provider means a registry entry plus one line here,
- * not a fifth copy-pasted card shell. The buttons keep all their own logic:
- *
- * - Trakt renders the bring-your-own client-id setup form when none is stored.
- * - AniList renders one-tap when this build embeds a client id, or the
- *   one-time client-id form when it doesn't.
- * - Serializd is a WebView token capture on native, email/password on web.
- * - Simkl is one-tap PKCE with the bundled client id — no wizard (plan 0034).
- * - Hardcover is one-tap PKCE with the bundled client id (plan 0117).
- *
- * They range from one button to a multi-step form, which is exactly why they
- * live in the sheet rather than inline on a row (`provider-sheet.tsx`).
- */
 export const CONNECT_BUTTONS: Record<ProviderId, ComponentType> = {
   trakt: ConnectTraktButton,
   anilist: ConnectAniListButton,

@@ -14,20 +14,11 @@ type RefreshControlProps = Omit<ComponentProps<typeof GestureRefreshControl>, 'o
   tab?: string;
 };
 
-/**
- * Pull-to-refresh that draws the 忍 mark in the overscroll gap and holds it
- * until `onRefresh`'s promise settles. The pending state lives here, so a pull
- * re-renders the control, not the list it sits in.
- *
- * iOS keeps UIRefreshControl, with its spinner hidden, for the trigger and the
- * hold. It's gesture-handler's, so the pull waits on the scroll gesture.
- */
+/** Uses gesture-handler's `UIRefreshControl` with a transparent tint on iOS for native trigger/hold while drawing `RefreshMark`. */
 export function RefreshControl({ onRefresh, tab, ...rest }: RefreshControlProps) {
   const { offset } = usePullScroll();
   const [refreshing, startRefresh] = useTransition();
   const gap = useDerivedValue(() => Math.max(0, -offset.get()));
-  // A child of the scroll view, so it sits in content coordinates: the centre
-  // of the gap above the content's top edge.
   const position = useAnimatedStyle(() => ({
     transform: [{ translateY: -gap.get() / 2 - MARK_BOX / 2 }],
   }));

@@ -11,8 +11,6 @@ export { longPressAction, type PressBehavior } from './press-behavior';
  * Reanimated mappers run in JS here (docs/solutions/web-pressables-skip-gesture-handler.md).
  */
 
-// pressto's defaults: activeOpacity, minScale, and its 250 ms timing curve,
-// which is CSS `ease`.
 const ACTIVE_OPACITY = 0.5;
 const MIN_SCALE = 0.96;
 // react-native's types lack CSS transitions; react-native-web applies them.
@@ -20,7 +18,6 @@ const FEEDBACK = {
   transitionDuration: '250ms',
   transitionProperty: 'opacity, transform',
   transitionTimingFunction: 'ease',
-  // Gesture handler's button default, so a long press on a card doesn't select its text.
   userSelect: 'none',
 } as ViewStyle;
 
@@ -54,11 +51,6 @@ function WebPresstable({
   );
 }
 
-/**
- * Scales down while pressed — media cards, poster-like surfaces, FABs.
- * `minScale` sets the shrink: shallower for a wide surface, where the default
- * 0.96 reads as a lurch, deeper for a small one.
- */
 export function PresstableScale({ minScale = MIN_SCALE, ...props }: PresstableProps & { minScale?: number }) {
   const reduceMotion = useReducedMotion();
   return (
@@ -69,7 +61,6 @@ export function PresstableScale({ minScale = MIN_SCALE, ...props }: PresstablePr
   );
 }
 
-/** Dims while pressed — buttons, icon taps, inline text actions. */
 export function PresstableOpacity(props: PresstableProps) {
   return <WebPresstable {...props} pressedStyle={{ opacity: ACTIVE_OPACITY }} />;
 }

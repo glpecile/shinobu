@@ -9,11 +9,9 @@ import { cn } from '@/lib/cn';
 import { episodeCardRailHeight, STACK_OFFSET } from '@/features/up-next/ui/metrics';
 import { Provider } from '@/lib/providers/types';
 
-// Must stay in sync with MediaCard (w-40 = 160) and the mr-3 gap (12).
 const CARD_WIDTH = 160;
 const CARD_GAP = 12;
 
-/** One block: `MediaCard` paints its title over the artwork, not below it. */
 function SkeletonCard({ index }: { index: number }) {
   return (
     <Skeleton
@@ -38,25 +36,15 @@ function SkeletonRow({ cardCount, hasAction = false }: { cardCount: number; hasA
   );
 }
 
-/**
- * Skeleton for a single feed row — the `SuspenseSection` fallback while that
- * row's query is in flight. Enough cards to fill the viewport edge to edge:
- * the real carousels overflow the window, so a fixed short card count would
- * leave trailing whitespace on wide (web) viewports and cause a visible
- * fill-in when content lands.
- */
 export function FeedRowSkeleton({ hasAction = false }: { hasAction?: boolean }) {
   const { width } = useWindowDimensions();
-  // +1 so the last card is clipped by the edge, like a real carousel.
   const cardCount = Math.ceil(width / (CARD_WIDTH + CARD_GAP)) + 1;
 
   return <SkeletonRow cardCount={cardCount} hasAction={hasAction} />;
 }
 
-// Must stay in sync with the Up Next card (w-64 = 256, h-36 art = 144).
 const LANDSCAPE_WIDTH = 256;
 
-/** Art plus two text lines below it, unlike the poster cards. */
 function SkeletonLandscapeCard({ index, hasAction = false }: { index: number; hasAction?: boolean }) {
   const delay = staggerDelay(index);
   return (
@@ -73,7 +61,6 @@ function SkeletonLandscapeCard({ index, hasAction = false }: { index: number; ha
   );
 }
 
-/** Coming Soon's stacked rail, honoring its saved collapse state while loading. */
 export function LandscapeRowSkeleton() {
   const { width, fontScale } = useWindowDimensions();
   const cardCount = Math.ceil(width / (LANDSCAPE_WIDTH + CARD_GAP)) + 1;
@@ -88,10 +75,8 @@ export function LandscapeRowSkeleton() {
   );
 }
 
-// Must stay in sync with ReadingCard's w-32.
 const READING_WIDTH = 128;
 
-/** Continue Reading's rail: a `ReadingCard` cover (w-32 h-48) and two text lines. */
 export function ReadingRowSkeleton() {
   const { width, fontScale } = useWindowDimensions();
   const cardCount = Math.ceil(width / (READING_WIDTH + CARD_GAP)) + 1;
@@ -116,8 +101,6 @@ export function ReadingRowSkeleton() {
 }
 
 function SkeletonDayCell({ index }: { index: number }) {
-  // Mirrors the real cell's internal stack (weekday · date · dot row) so the
-  // strip is the same height here as once it resolves.
   const delay = staggerDelay(index);
   return (
     <View className="w-14 py-2 mr-2 items-center rounded-md bg-surface">
@@ -136,18 +119,6 @@ function SkeletonSectionHeader({ widthClass, hasAction = false }: { widthClass: 
   );
 }
 
-/**
- * Fallback for the whole Up Next block (plan 0019). It mirrors the *resolved*
- * layout — a Continue Watching landscape row **and** the "This week" header,
- * 7-day strip, and its fixed-height content area — because the section is the
- * heaviest home query and resolves last: a single-row skeleton would grow by
- * ~300px on resolve and shove every row beneath it down after the user is
- * already reading. Reserving both sub-sections' height keeps that from moving.
- *
- * (If a user has no Continue Watching, the real section omits that row and the
- * feed nudges *up* on resolve — the far rarer, far gentler case than the
- * downward jump this prevents for the common "has continue-watching" user.)
- */
 export function UpNextSectionSkeleton() {
   const { width, fontScale } = useWindowDimensions();
   const cardCount = Math.ceil(width / (LANDSCAPE_WIDTH + CARD_GAP)) + 1;
@@ -156,7 +127,6 @@ export function UpNextSectionSkeleton() {
 
   return (
     <View>
-      {/* Continue Watching */}
       <CollapsibleSection collapseKey="up-next-continue" leading={<CollapsibleSection.Icon name="play-circle-outline" />} title="Continue Watching">
         <View style={{ height: cardRailHeight }}>
           <Rail className="px-4">
@@ -167,7 +137,6 @@ export function UpNextSectionSkeleton() {
         </View>
       </CollapsibleSection>
 
-      {/* This week */}
       <CollapsibleSection collapseKey="up-next-calendar" leading={<CollapsibleSection.Icon name="calendar-outline" />} title="This week">
         <Rail
           className="px-4"
@@ -190,11 +159,6 @@ export function UpNextSectionSkeleton() {
   );
 }
 
-/**
- * Whole-feed placeholder, shown while an OAuth connect is exchanging (the
- * feed itself loads row-by-row via per-row suspense boundaries). Mirrors the
- * real feed with two rows of skeleton cards.
- */
 export function FeedSkeleton() {
   return (
     <View className="pt-2">

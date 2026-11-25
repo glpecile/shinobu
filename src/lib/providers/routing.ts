@@ -21,17 +21,8 @@ export function animeEffectiveMovieTvType(item: Pick<NormalizedMediaItem, 'isFil
 }
 
 /**
- * Anime exists on both sides of the fence (plan.md 1.3, plan 0011): a film is
- * ANIME to AniList but a MOVIE to Trakt/Letterboxd, and an anime *series* is
- * ANIME to AniList but a TV show to Trakt. The cross-provider match only
- * counts when the item actually carries ids for the other side — `useLogMedia`
- * enriches `externalIds` through the ani.zip mapping before routing, so an
- * unmappable item simply logs to its origin provider.
- *
- * Simkl (plan 0034) needs no case here at all: its mediaTypes include 'ANIME',
- * so it matches an anime item directly — mapped or not. That also means anime
- * *films* fan out to Simkl once its write flag flips (U6), unlike TV-only
- * Serializd, which the movie-side type keeps out of films.
+ * Anime films use movie capabilities on movie trackers and anime capabilities where the
+ * provider tracks anime directly.
  */
 function effectiveTypes(item: RoutableItem): readonly MediaType[] {
   if (item.type === 'ANIME') {
@@ -278,17 +269,8 @@ export function isManualWriteTarget(
 }
 
 /**
- * Splits `providersForWrite`'s targets into what the fan-out can actually
- * perform (`writable`) and what it can't but should still offer as a manual
- * external link (`manual` — plan 0022 R1/R2, plan 0031 R5/R7). A target is
- * manual when the provider *declares* the verb manual (Letterboxd's unverified
- * watchlist endpoint) **or** when the platform structurally bans the write
- * (Letterboxd on web). Every routed target lands in exactly one bucket, so no
- * applicable provider is ever silently absent from the report.
- *
- * Platform is passed in by the caller (`use-log-targets.ts`, from
- * `process.env.EXPO_OS`) so this stays pure and unit-testable, never reading
- * `Platform.OS` itself.
+ * Split applicable providers into in-app writes and manual links. Keep every applicable
+ * provider in the report.
  */
 export function splitWriteTargets(
   item: RoutableItem,

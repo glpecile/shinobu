@@ -35,7 +35,6 @@ interface TraktHistoryBody {
   shows: [{ seasons: TraktSeasonBody[] }];
 }
 
-/** Records the POST body sent to /sync/history and replies with added.episodes. */
 function capturingDeps(captured: { body: unknown }) {
   const deps: TraktDeps = {
     tokens: TOKENS,
@@ -95,7 +94,6 @@ describe('logToTrakt TV batch', () => {
     await Effect.runPromise(logToTrakt(capturingDeps(captured), TV_ITEM, options));
 
     const body = captured.body as TraktHistoryBody;
-    // Map-insertion order is the batch's first-seen order: season 2, then 1.
     const byNumber = new Map(
       body.shows[0].seasons.map((s) => [
         s.number,
@@ -104,7 +102,6 @@ describe('logToTrakt TV batch', () => {
     );
     expect(byNumber.get(1)).toEqual([5]);
     expect(byNumber.get(2)).toEqual([1, 2]);
-    // watchedAt threads through to every episode.
     for (const season of body.shows[0].seasons) {
       for (const episode of season.episodes) {
         expect(episode.watched_at).toBe('2026-07-13T00:00:00Z');
@@ -121,7 +118,6 @@ describe('logToTrakt TV batch', () => {
   });
 });
 
-/** A /sync/history stub replying with one fixed response. */
 function historyDeps(response: unknown): TraktDeps {
   return {
     tokens: TOKENS,
@@ -209,11 +205,6 @@ const MOVIE_ITEM = {
 const EMPTY_NOT_FOUND = { movies: [], shows: [], seasons: [], episodes: [] };
 const ZERO = { movies: 0, shows: 0, seasons: 0, episodes: 0 };
 
-/**
- * A /sync/watchlist stub that replies with a caller-supplied queue of
- * responses, one per call, and records every request — so a test can assert
- * *how many times* the adapter hit the endpoint, not just what came back.
- */
 function watchlistDeps(
   responses: Array<() => Response>,
   calls: { bodies: unknown[] },
@@ -418,7 +409,6 @@ describe('addToTraktWatchlist', () => {
 
     expect(result._tag).toBe('Failure');
     if (result._tag === 'Failure') {
-      // Not the meaningless "Trakt responded 420" the generic non-2xx path gives.
       expect(result.failure.message).toContain('account limit');
       expect(result.failure.message).toContain('100');
       expect(result.failure.message).toContain('https://trakt.tv/vip');
@@ -461,10 +451,6 @@ describe('addToTraktWatchlist', () => {
   });
 });
 
-/**
- * The same queue-and-record stub as `watchlistDeps`, pointed at the remove
- * endpoint — a wrong path must fail the test loudly, not quietly pass.
- */
 function removeDeps(responses: Array<() => Response>, calls: { bodies: unknown[] }) {
   const deps: TraktDeps = {
     tokens: TOKENS,

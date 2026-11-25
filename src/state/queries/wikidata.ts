@@ -11,20 +11,12 @@ export const wikidataQueryKeys = {
   ratings: (lookup: WikidataLookup) => [...wikidataQueryKeys.all, 'ratings', lookup] as const,
 };
 
-/** Volunteers update these scores every few months or years, so a day costs nothing. */
 const RATINGS_CACHE_MS = 24 * 60 * 60_000;
 
-/**
- * Rotten Tomatoes and Metacritic scores for the details Ratings section,
- * looked up by MAL/AniList id for anime and by TMDB id otherwise.
- */
 export function wikidataRatingsLookup(item: NormalizedMediaItem): WikidataLookup {
   const kind = tmdbKindFor(item.type, item.isFilm);
   const { tmdb, mal, anilist } = item.externalIds;
-  // Anime ids first: an AniList entry is one cour while TMDB's match is the
-  // whole series, and the TMDB id only arrives with the catalogue, which would
-  // re-key (and refetch) the lookup mid-screen. P4086 and P8729 are MAL's and
-  // AniList's *anime* ids; manga has its own.
+  // Prefer anime ids over TMDB (AniList is per-cour, TMDB is whole-series); Wikidata P4086/P8729 are anime-only.
   return item.type === 'ANIME' && (mal != null || anilist != null)
     ? { ...(mal != null ? { mal } : {}), ...(anilist != null ? { anilist } : {}) }
     : tmdb != null && kind != null

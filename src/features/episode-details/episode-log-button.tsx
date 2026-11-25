@@ -8,7 +8,6 @@ import { hasAired } from '@/lib/time/has-aired';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 import { episodeCode } from './episode-label';
 
-/** Episode screens open the app-level chain, without navigating away mid-log. */
 export function EpisodeLogButton({ item, season, number, episode, watched, className }: {
   item: NormalizedMediaItem;
   season: number;

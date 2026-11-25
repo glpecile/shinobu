@@ -5,10 +5,6 @@ import { useFloatingBackButtonClearance } from '@/components/floating-back-butto
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { CreditTimelineSkeleton } from '@/features/credit-timeline/credit-timeline';
 
-/**
- * The person hero on the person screen's geometry, so content lands without a
- * shift. `print` is a Hardcover author's page of books.
- */
 export function PersonSkeleton({ print = false }: { print?: boolean }) {
   const headerTop = useFloatingBackButtonClearance();
   return (

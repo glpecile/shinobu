@@ -15,17 +15,9 @@ import {
 import { connectLetterboxdSession } from '@/state/session/letterboxd';
 
 /**
- * Native Letterboxd connect (plan 0012, session-capture write path): Letterboxd
- * has no API, so the user signs in through a real WebView and Shinobu harvests
- * the resulting session cookies — the username (`letterboxd.signed.in.as`) plus
- * the Cookie header + CSRF token + User-Agent that authorize diary writes.
- *
- * Migrated (plan 0017 KTD5) onto the shared `ProviderSigninWebView` — the same
- * modal + cookie-poll mechanics Serializd uses. Letterboxd's `extractSession`
- * returns its provider-specific cookie+CSRF+UA payload (`captureUserAgent` on,
- * since the origin binds the session to the UA); the component stays agnostic to
- * that shape. Detection is cookie-based, not URL-based, so a post-login redirect
- * anywhere is expected (docs/solutions/letterboxd-no-api-fallback.md).
+ * Letterboxd binds its session cookies to the WebView User-Agent (`captureUserAgent`),
+ * and login detection is cookie-based so any post-login redirect works
+ * (docs/solutions/letterboxd-no-api-fallback.md).
  */
 function storeLetterboxdSession(captured: CapturedLetterboxdLogin) {
   connectLetterboxdSession({

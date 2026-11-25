@@ -64,7 +64,6 @@ const refreshLock: HardcoverDeps['refreshLock'] = (run) =>
     ? (navigator.locks.request('shinobu-hardcover-refresh', run) as ReturnType<typeof run>)
     : run();
 
-/** Real dependency wiring for Hardcover effects, the same on web and native. */
 export function hardcoverDeps(): HardcoverDeps {
   return {
     fetch: httpFetch,
@@ -105,9 +104,7 @@ export const hardcoverQueryKeys = {
   /** Every read of the viewer's library. A log or a reading-list write invalidates this prefix. */
   libraryRoot: () => [...hardcoverQueryKeys.all, 'library'] as const,
   bookEntry: (bookId: number) => [...hardcoverQueryKeys.libraryRoot(), 'entry', bookId] as const,
-  /** Want to Read and Currently Reading, with progress. */
   shelves: () => [...hardcoverQueryKeys.libraryRoot(), 'shelves'] as const,
-  /** Continue Reading's settled slice of `shelves`. */
   reading: () => [...hardcoverQueryKeys.libraryRoot(), 'reading'] as const,
   searchRoot: () => [...hardcoverQueryKeys.all, 'search'] as const,
   search: (query: string) => [...hardcoverQueryKeys.searchRoot(), query] as const,
@@ -125,7 +122,6 @@ export const hardcoverQueryKeys = {
 /** Catalog records change rarely, and each read costs the per-token budget. */
 const CATALOG_STALE_MS = 24 * 60 * 60_000;
 
-/** Books by id, in the order given. */
 export function useSuspenseHardcoverBooksQuery(ids: readonly number[]) {
   return useSuspenseQuery({
     queryKey: hardcoverQueryKeys.books(ids),
@@ -135,7 +131,6 @@ export function useSuspenseHardcoverBooksQuery(ids: readonly number[]) {
   });
 }
 
-/** `/person/hardcover/<id>`: an author and their books. */
 export function useSuspenseHardcoverAuthorQuery(key: HardcoverAuthorKey) {
   return useSuspenseQuery({
     queryKey: hardcoverQueryKeys.author(key),
@@ -176,7 +171,6 @@ export function hardcoverViewerQuery() {
   };
 }
 
-/** The connected member's username and avatar, for Manage Trackers and list pages. */
 export function useHardcoverViewerQuery(options: { enabled?: boolean } = {}) {
   return useQuery({ ...hardcoverViewerQuery(), enabled: options.enabled });
 }
@@ -213,7 +207,6 @@ export async function fetchHardcoverWantToRead(
   return entries.filter((entry) => entry.statusId === HardcoverStatus.WantToRead);
 }
 
-/** A library book's item, with its progress, for the details screen's cache-only resolution chain. */
 export function findInHardcoverLibraryCache(
   queryClient: QueryClient,
   id: string,
@@ -240,7 +233,6 @@ export function useHardcoverBookSearchQuery(params: { query: string; enabled: bo
   });
 }
 
-/** A Books search result's item, for the details screen's cache-only resolution chain. */
 export function findInHardcoverSearchCache(
   queryClient: QueryClient,
   id: string,

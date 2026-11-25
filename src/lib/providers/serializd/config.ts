@@ -1,13 +1,6 @@
 /**
- * Serializd's unofficial JSON API (plan 0017). Kept free of any RN/Expo import
- * so the Cloudflare Worker proxy (worker/serializd-proxy.ts) can share the
- * upstream-base + app-header constants verbatim (KTD4: one place to re-point).
- *
- * Base-URL note (Appendix): `serializd.onrender.com` is Serializd's hosting
- * domain — the vanity `www.serializd.com/api` alias 404'd on POST in the
- * 2026-07-21 probe. It is an implementation detail; if Serializd migrates off
- * Render, re-probe `www.serializd.com/api` first. This single constant is the
- * only line to change (KTD4).
+ * Serializd URLs shared by native, web, and the Worker. Keep this module free of native
+ * imports.
  */
 export const SERIALIZD_UPSTREAM_BASE_URL = 'https://serializd.onrender.com/api';
 

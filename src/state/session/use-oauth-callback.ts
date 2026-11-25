@@ -26,14 +26,7 @@ import { connectedProviderIds } from './tokens';
 
 export type OAuthCallbackStatus = 'idle' | 'exchanging' | 'error';
 
-/**
- * Reads Trakt's OAuth return params and erases them from the URL in the same
- * step. Authorization codes are single-use with a short TTL, so once seen
- * they must never survive in the address bar — a refresh or restored tab
- * would replay them and get a guaranteed 400 from Trakt. `state` is the
- * expo-auth-session echo the caller matches against the pending flow; it
- * travels with the code and is stripped alongside.
- */
+/** Consume single-use Trakt codes and erase them from the address bar in the same step. */
 function consumeTraktReturnParams(): {
   code: string | null;
   state: string | null;
@@ -84,8 +77,6 @@ function consumeMarkedReturnParams(marker: string): {
   const denied = params.get('error') != null;
 
   if (code == null && !denied) {
-    // A bare marked visit (e.g. someone opened the registered redirect URI by
-    // hand): this provider's territory, but nothing to consume or exchange.
     return { code: null, state: null, iss: null, denied: false };
   }
 
@@ -98,14 +89,6 @@ function consumeMarkedReturnParams(marker: string): {
   return { code, state, iss, denied };
 }
 
-/**
- * Reads AniList's implicit-grant fragment (`#access_token=…`) and erases it.
- * The fragment never reaches any server, but it *is* the bearer token — it
- * must not linger in the address bar/history either. Returns the full URL
- * that carried the fragment, or null when this isn't an AniList return. The
- * caller connects only for a pending flow: any link can carry a fragment, and
- * connecting from one would sign the visitor in as someone else.
- */
 function consumeAniListReturnFragment(): string | null {
   const { hash } = window.location;
   if (!hash.includes('access_token=')) return null;
@@ -133,7 +116,6 @@ export async function handleOAuthReturn(
   const anilistReturn = consumeAniListReturnFragment();
   if (anilistReturn != null) {
     const expected = takeOAuthFlow(Provider.AniList);
-    // A stray or replayed link: the fragment is already stripped, nothing more to do.
     if (expected == null) return;
     const state = new URLSearchParams(
       anilistReturn.slice(anilistReturn.indexOf('#') + 1),
@@ -224,11 +206,8 @@ export async function handleOAuthReturn(
   }
   if (code == null) return;
 
-  // A code can linger in a tab that predates the exchange (or failed it), or
-  // arrive on a link this browser never started. Only a pending flow with a
-  // matching `state` exchanges, and it overwrites any stored session, so a
-  // reconnect over a stale token works. Without the client id + secret pair
-  // the exchange cannot be built at all.
+  // Only exchange a code with matching pending state. A successful connect can replace a
+  // retained session.
   const expected = takeOAuthFlow(Provider.Trakt);
   if (expected == null) return;
   if (state !== expected) {
@@ -254,19 +233,7 @@ export async function handleOAuthReturn(
   }
 }
 
-/**
- * Web-only return leg of every provider's OAuth flow, mounted on the home
- * route (every web redirect URI points at the site origin). Trakt comes
- * back as `?code=…` needing an async exchange; Simkl as `?oauth=simkl&code=…`
- * and Hardcover as `?oauth=hardcover&code=…` (their PKCE exchanges); AniList as `#access_token=…` where
- * "exchange" is just parsing the fragment (plan 0011). Success persists the
- * session, which flips `useConnectedProviders` and swaps the home screen to
- * the feed; no explicit navigation is needed.
- *
- * State starts as `idle` and only flips inside the effect: the web build is
- * statically pre-rendered, so reading `window` in an initializer would make
- * the first client render disagree with the server HTML and break hydration.
- */
+/** Mount on the web home route, where all provider OAuth redirects arrive. */
 export function useOAuthCallback(): OAuthCallbackStatus {
   const [status, setStatus] = useState<OAuthCallbackStatus>('idle');
 

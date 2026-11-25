@@ -59,7 +59,6 @@ describe('fanOutLog', () => {
       {
         trakt: () => {
           started.push('trakt');
-          // Slowest adapter first — its outcome must still come first.
           return new Promise((resolve) => setTimeout(() => resolve({ status: 'ok' as const }), 20));
         },
         letterboxd: () => {
@@ -71,7 +70,6 @@ describe('fanOutLog', () => {
       variables,
     );
 
-    // Both dispatched before the slow one settled ⇒ parallel, not sequential.
     expect(started).toEqual(['trakt', 'letterboxd']);
     expect(result.outcomes.map((outcome) => outcome.provider)).toEqual([
       'trakt',
@@ -90,8 +88,6 @@ describe('fanOutLog', () => {
       variables,
     );
 
-    // A skip is a success value: it never joins `failed`, and the other
-    // provider's write still succeeds (plan 0017 R9 / AE4).
     expect(result.succeeded).toEqual(['trakt']);
     expect(result.failed).toEqual([]);
     expect(result.skipped).toEqual(['serializd']);
@@ -116,9 +112,6 @@ describe('fanOutLog', () => {
       variables,
     );
 
-    // A partial success is still a success — it joins `succeeded`, never
-    // `skipped` — but the reason survives onto the outcome so the season-
-    // filtered Serializd add is never reported as a bare "watchlisted".
     expect(result.succeeded).toEqual(['trakt', 'serializd']);
     expect(result.skipped).toEqual([]);
     expect(result.outcomes[0]).toEqual({ provider: 'trakt', status: 'ok' });

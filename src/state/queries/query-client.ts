@@ -35,8 +35,6 @@ export function isRetryable(error: unknown): boolean {
 
 export function retryCountFor(error: unknown): number {
   if (!isRetryable(error)) return 0;
-  // 3 retries (4 attempts) for transient connection failures, the standard 2
-  // for everything else retryable (e.g. a one-off decode hiccup).
   return TRANSIENT.test(errorLabel(error)) ? 3 : 2;
 }
 

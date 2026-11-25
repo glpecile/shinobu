@@ -11,11 +11,6 @@ import { markBootRevealed } from './revealed';
 
 export function dismissBootSplash() {}
 
-/**
- * Hands the OS splash to a themed overlay. It mounts ahead of the app and
- * calls `onPainted` once its image is on screen; the app renders after that,
- * and the commit that mounts it passes `ready` and starts the reveal.
- */
 export function BootSplash({ ready, onPainted }: { ready: boolean; onPainted: () => void }) {
   const [finished, setFinished] = useState(false);
   const laidOut = useRef(false);
@@ -36,10 +31,8 @@ export function BootSplash({ ready, onPainted }: { ready: boolean; onPainted: ()
     opacity.set(withTiming(0, {
       duration: reduced ? 120 : 300,
       easing: KEYFRAME_EASE_OUT,
-      // Reduced motion retains the fade, but drops the scale above.
       reduceMotion: ReduceMotion.Never,
     }, () => {
-      // A cancelled fade still finishes, or the deferred tabs would never mount.
       scheduleOnRN(finish);
     }));
   }
@@ -48,9 +41,6 @@ export function BootSplash({ ready, onPainted }: { ready: boolean; onPainted: ()
     if (laidOut.current && imageLoaded.current) onPainted();
   }
 
-  // A layout effect runs in the commit that mounts the app, before that
-  // commit's effects and the re-renders they schedule. The fade runs on the UI
-  // thread, so it starts beside the hide rather than after its promise.
   useLayoutEffect(() => {
     if (!ready) return;
     void SplashScreen.hideAsync().catch(() => {});
@@ -61,7 +51,6 @@ export function BootSplash({ ready, onPainted }: { ready: boolean; onPainted: ()
 
   return (
     <AnimatedView
-      // Faded out before the JS thread gets to unmount it.
       className="pointer-events-none absolute inset-0 items-center justify-center bg-background"
       style={backdrop}
       accessibilityElementsHidden

@@ -1,47 +1,23 @@
-/**
- * One connected provider's OAuth session — the only "account" Shinobu has
- * (AGENTS.md: there is no Shinobu account; a provider's token *is* the
- * session for that provider).
- */
 export interface ProviderSession {
-  /** Empty string for tokenless sessions (Letterboxd, plan 0012 decision 1). */
+  /** Empty string for tokenless sessions (Letterboxd). */
   accessToken: string;
-  /**
-   * Absent for providers that can't refresh: AniList on web uses the implicit
-   * grant because its token endpoint blocks browser origins
-   * (docs/solutions/web-cors-anilist.md). A 401 with no refreshToken means
-   * "reconnect this provider", not a refresh flow.
-   */
+  /** Absent when refresh isn't supported (e.g. AniList implicit grant on web; see `docs/solutions/web-cors-anilist.md`). */
   refreshToken?: string;
   /** Epoch milliseconds when accessToken expires; absent = long-lived/unknown. */
   expiresAt?: number;
-  /**
-   * Letterboxd's read session: a public username, no OAuth (plan 0012). Set
-   * only by tokenless providers — presence of this record still means
-   * "connected" to `connectedProviderIds()`, with zero special-casing.
-   */
   username?: string;
-  /**
-   * Letterboxd's write session, harvested from the login WebView (plan 0012
-   * session-capture path): the `Cookie:` header and the CSRF token echoed as
-   * `__csrf`. Present only once a web login is captured; absent = read-only.
-   * As sensitive as any accessToken — same todos/003 at-rest encryption caveat.
-   */
+  /** Letterboxd write session from the login WebView (`Cookie` header and `__csrf` token); absent when read-only. */
   cookie?: string;
   csrf?: string;
   /**
-   * The exact `User-Agent` the login WebView ran under (plan 0012). Letterboxd
-   * binds the signed-in session (and Cloudflare binds `cf_clearance`) to the UA
-   * that logged in; replaying the cookies from a different UA lands as
-   * "remembered but not signed in" and every write 404s. Captured at login and
-   * sent verbatim on writes (docs/solutions/letterboxd-no-api-fallback.md).
+   * Exact login WebView `User-Agent`, sent verbatim on writes: Letterboxd and
+   * Cloudflare (`cf_clearance`) bind the session to it, so a different UA makes
+   * writes 404 (`docs/solutions/letterboxd-no-api-fallback.md`).
    */
   userAgent?: string;
   /**
-   * Set when Hardcover's refresh token can't be sent again: Hardcover refused
-   * it, or a refresh got no clear answer and may have spent it. The session is
-   * kept as the evidence behind the reconnect banner and is unusable until a
-   * new connect overwrites it.
+   * Set when Hardcover refused a refresh or a refresh had an unknown outcome
+   * (Hardcover rotates single-use refresh tokens and revokes the chain on replay).
    */
   reconnectNeeded?: boolean;
   /**

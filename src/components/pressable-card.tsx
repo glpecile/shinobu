@@ -4,12 +4,7 @@ import { View } from 'react-native';
 import { PresstableScale } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 
-/**
- * A bordered surface card that presses as one thing: a hair of scale, border
- * included. The card is an inner View, not the pressable itself, because a
- * border on the pressable is never drawn on Android
- * (docs/solutions/pressto-border-not-drawn-on-android.md).
- */
+/** Inner View holds the border because pressto never draws borders on Android (docs/solutions/pressto-border-not-drawn-on-android.md). */
 export function PressableCard({
   children,
   className,
@@ -18,14 +13,8 @@ export function PressableCard({
   ...rest
 }: Omit<ComponentProps<typeof PresstableScale>, 'minScale' | 'children'> & {
   children: ReactNode;
-  /** Layout only. */
   className?: string;
-  /** The card's own box — its content direction, a corner squared off. */
   cardClassName?: string;
-  /**
-   * False for a media card whose art owns the face edge to edge: the padding
-   * drops so a poster strip or grid can bleed to the border (list cards).
-   */
   padded?: boolean;
 }) {
   return (

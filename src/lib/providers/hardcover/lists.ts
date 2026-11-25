@@ -30,7 +30,6 @@ export interface HardcoverList {
   ranked: boolean;
   /** Hardcover's `privacy_setting_id`: 1 public, 2 followers, 3 private. */
   privacy: number;
-  /** The first 5 books, in list order. */
   previews: NormalizedMediaItem[];
 }
 
@@ -40,13 +39,11 @@ export interface HardcoverListEntry {
   position: number | null;
   item: NormalizedMediaItem;
   authors: string[];
-  /** The viewer's `HardcoverStatus` for the book, null when it is not in their library. */
   statusId: number | null;
 }
 
 export interface HardcoverListPage {
   list: HardcoverList;
-  /** The viewer owns the list. */
   mine: boolean;
   entries: HardcoverListEntry[];
   hasNextPage: boolean;
@@ -54,15 +51,11 @@ export interface HardcoverListPage {
 
 const BOOK_FIELDS = 'id title description pages release_year rating ratings_count image { url }';
 
-/**
- * GraphQL selection for one `lists` row. The previews are aliased, so a query
- * can select `list_books` again with its own arguments.
- */
+/** `previews` is aliased so callers can select `list_books` again with different arguments. */
 export const HARDCOVER_LIST_FIELDS = `id name slug description books_count likes_count ranked privacy_setting_id user_id
   user { username }
   previews: list_books(order_by: [{ position: asc }, { id: asc }], limit: 5) { book { ${BOOK_FIELDS} } }`;
 
-/** One row selected with `HARDCOVER_LIST_FIELDS`. */
 export const HardcoverListRow = Schema.Struct({
   id: Schema.Number,
   name: Schema.String,
@@ -93,13 +86,11 @@ export function normalizeHardcoverList(row: typeof HardcoverListRow.Type, nowIso
   };
 }
 
-/** `https://hardcover.app/@{owner}/lists/{slug}`, or null without an owner or slug. */
 export function hardcoverListUrl(owner: string, slug: string): string | null {
   if (owner === '' || slug === '') return null;
   return `${hardcoverListsUrl(owner)}/${encodeURIComponent(slug)}`;
 }
 
-/** `https://hardcover.app/@{owner}/lists`. */
 export function hardcoverListsUrl(owner: string): string {
   return `https://hardcover.app/@${encodeURIComponent(owner)}/lists`;
 }
@@ -145,7 +136,6 @@ const readRows = Effect.fnUntraced(function* (
   }
 });
 
-/** The member's own lists (created) or the lists they follow (liked). One top-level field. */
 export const getHardcoverLists = Effect.fnUntraced(function* (
   deps: HardcoverDeps,
   kind: HardcoverListKind,
@@ -175,11 +165,7 @@ const listData = Schema.Struct({
   })),
 });
 
-/**
- * One page of a list's books in list order, 100 a page. `page` starts at 1.
- * One top-level field. A list that does not exist, or that the viewer may not
- * see, fails with a 404.
- */
+/** `page` is 1-based (100 books/page). Fails with 404 if missing or private. */
 export const getHardcoverList = Effect.fnUntraced(function* (
   deps: HardcoverDeps,
   params: { id: number; viewerId: number; page: number },
@@ -240,7 +226,6 @@ const bookListsData = Schema.Struct({
   list_books: Schema.Array(Schema.Struct({ list: HardcoverListRow })),
 });
 
-/** The most-liked public lists that include a book, up to 10. One top-level field. */
 export const getHardcoverBookLists = Effect.fnUntraced(function* (
   deps: HardcoverDeps,
   bookId: number,

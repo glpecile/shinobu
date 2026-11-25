@@ -2,7 +2,6 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 
 import { routes } from '@/lib/routes';
 
-/** Preserve shared episodes whose season and number were query parameters. */
 export default function LegacyEpisodeRoute() {
   const { id, season, number } = useLocalSearchParams<{
     id?: string; season?: string; number?: string;

@@ -217,9 +217,7 @@ test('a film on a later list page resolves for details without fetching any list
 
 interface Scenario {
   watchlist?: NormalizedMediaItem[];
-  /** TMDB id → its `releaseCalendar`, as the catalogue read carries it. */
   dates?: Record<number, NormalizedMediaItem['releaseCalendar']>;
-  /** TMDB ids whose catalogue read rejects. */
   failingCatalogue?: number[];
   failingWatchlist?: boolean;
 }

@@ -8,37 +8,19 @@ import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
 import type { UpNextEpisode, UpNextEpisodeEntry } from '@/features/up-next/types';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
-/**
- * One episode the catch-up chain will offer, in the entry's own numbering
- * domain (plan 0037): `season` present for Trakt/Simkl-TV pointers, absent for
- * AniList and Simkl anime — the same rule `UpNextEpisode` states, so a chained
- * episode logs through exactly the variables the entry's own quick-log uses.
- */
 export type CatchUpEpisode = Pick<UpNextEpisode, 'season' | 'number' | 'title'>;
 
-/**
- * What each source can prove about the backlog. Every field is optional and
- * nullable because a source needs only its own: Trakt its progress read,
- * Simkl its library entry (plus a season layout for TV), AniList nothing —
- * its `episodesBehind` is already exact.
- */
 export interface CatchUpEvidence {
   trakt?: TraktShowProgressResult | null;
   simkl?: Pick<SimklLibraryEntry, 'watchedKeys' | 'notAiredEpisodes'> | null;
   layout?: SeasonLayout | null;
 }
 
-/**
- * Hard stop on any walk, whatever the counts say. A backlog this deep is a
- * season picker's job, not a one-tap chain's — and it bounds the loops below
- * against a count that disagrees with the structure it walks.
- */
 const MAX_CHAIN = 200;
 
 const key = (episode: { season: number; number: number }) =>
   `${episode.season}-${episode.number}`;
 
-/** A partial airing schedule must not turn its undated future episodes into a backlog. */
 export function airedAnimeEpisodes(
   item: NormalizedMediaItem,
   episodes: readonly NormalizedEpisode[],
@@ -55,7 +37,6 @@ export function airedAnimeEpisodes(
         : hasStartedAiring(item, episodes));
 }
 
-/** Catalogue candidates are already aired and unwatched; never wrap before the requested episode. */
 export function catalogueCatchUpQueue(
   first: CatchUpEpisode,
   candidates: readonly CatchUpEpisode[],
@@ -70,27 +51,6 @@ export function catalogueCatchUpQueue(
     .slice(0, MAX_CHAIN);
 }
 
-/**
- * The aired-but-unwatched episodes of `entry`'s show, the entry's own first —
- * what the quick-log sheet steps through after each confirm (plan 0037 R1–R4).
- *
- * Three derivations, by what the source can prove, never by guessing a
- * structure the source didn't state:
- *
- * - **Trakt, exact.** `progress/watched` lists every aired episode; minus the
- *   completed keys, from the pointer on, that *is* the backlog — gaps and
- *   season boundaries included, no count needed.
- * - **Absolute numbering** (AniList, Simkl anime): the pointer plus one, plus
- *   one, … for `episodesBehind` episodes. Simkl's watched keys skip a gap and
- *   its aired arithmetic caps the walk; AniList's count is exact already.
- * - **Seasoned pointer without an aired list** (Simkl TV, a Trakt cache from
- *   before `airedEpisodes` was carried): the same walk across the tracker's
- *   own season layout. **No layout → the entry alone**: stepping past a season
- *   end with no structure to step into would fabricate an episode.
- *
- * Every arm returns at least the entry's own episode, so a caller never has to
- * special-case "no chain" — a one-element queue is today's single log.
- */
 export function catchUpQueue(
   entry: UpNextEpisodeEntry,
   evidence: CatchUpEvidence,
@@ -130,8 +90,6 @@ function fromTraktProgress(
   const queue: CatchUpEpisode[] = [first];
   for (const episode of aired.slice(start + 1)) {
     if (queue.length >= MAX_CHAIN) break;
-    // Specials never chain: Trakt's pointer never lands on season 0, and a
-    // special between two seasons isn't "the next episode" of either.
     if (episode.season === 0) continue;
     if (progress.watchedKeys.has(key(episode))) continue;
     queue.push({ season: episode.season, number: episode.number });
@@ -139,11 +97,6 @@ function fromTraktProgress(
   return queue;
 }
 
-/**
- * Simkl's aired count, by the arithmetic `state/queries/up-next.ts` already
- * trusts (`total - not_aired`), or `null` when either half is unknown — never
- * 0, which would read as "nothing aired" and stop the chain at the entry.
- */
 function simklAiredCount(
   entry: UpNextEpisodeEntry,
   simkl: CatchUpEvidence[typeof Provider.Simkl],
@@ -168,8 +121,7 @@ function absoluteWalk(
     number += 1;
     steps += 1;
     if (airedCount != null && number > airedCount) break;
-    // Simkl files anime under season 1 (AniDB convention); AniList carries no
-    // keys, so the lookup is a no-op there and the count alone bounds it.
+    // Simkl files anime under season 1 (AniDB convention).
     if (watched.has(key({ season: 1, number }))) continue;
     queue.push({ number });
   }
@@ -191,9 +143,6 @@ function layoutWalk(
 
   const queue: CatchUpEpisode[] = [first];
   let number = first.number;
-  // Absolute position of the pointer inside the layout, for the aired cap:
-  // episodes air in order, so "the first `airedCount` in layout order" is the
-  // aired set.
   let absolute =
     seasons.slice(0, slot).reduce((sum, s) => sum + s.episodeCount, 0) + number;
   let steps = 0;
@@ -215,7 +164,6 @@ function layoutWalk(
   return queue;
 }
 
-/** "episode 4" / "S2E4" — the sheet's copy for a queued episode. */
 export function catchUpEpisodeCode(episode: CatchUpEpisode): string {
   return episode.season == null
     ? `episode ${episode.number}`

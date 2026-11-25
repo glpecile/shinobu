@@ -7,16 +7,7 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import type { ProviderLink } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
 
-/**
- * A "View on …" row, the *sheet* treatment of a provider link — the app's
- * centered `quiet` button, matching the other sheet actions above it. The pages use pills instead (`RatingsSection`, `PersonLinksSection`): a page has room
- * to lay links out as a cluster, a sheet is a stack of one-tap actions and a
- * row of pills reads as a different kind of control in the middle of it.
- *
- * `onOpened` fires **on native only**: a new tab steals focus on web, so
- * closing the sheet there would animate it shut in a backgrounded tab, which
- * reads as broken when the user switches back.
- */
+/** onOpened fires on native only: opening a new tab on web steals focus and makes closing the sheet animate in the background. */
 export function ProviderLinkRow({
   link,
   onOpened,
@@ -41,7 +32,6 @@ export function ProviderLinkRow({
   );
 }
 
-/** Convenience wrapper: the rows as a stack, spaced like the sheet's actions. */
 export function ProviderLinkRows({
   links,
   onOpened,

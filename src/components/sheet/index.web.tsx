@@ -25,7 +25,6 @@ import { sheetScrollMetrics } from './metrics';
 import { SheetCloseContext } from './context';
 import { SheetDismissHeader } from './header';
 
-/** Mirrors index.tsx — keep both platform variants' props identical. */
 export interface SheetProps {
   open: boolean;
   onClose: () => void;
@@ -34,12 +33,7 @@ export interface SheetProps {
   autoFocus?: boolean;
 }
 
-/**
- * Ref callback for the sheet overlay, passed only while open so a reopen during
- * the exit re-arms it. Focuses its first text field once the entering animation
- * has made it visible, where React's `autoFocus` is dropped
- * (docs/solutions/web-sheet-autofocus-dropped.md).
- */
+/** Focuses the first field on `animationstart` because React `autoFocus` is dropped on entering web modals (docs/solutions/web-sheet-autofocus-dropped.md). */
 function focusFirstFieldOnReveal(view: ViewInstance | null) {
   const overlay = view as unknown as HTMLElement | null;
   if (overlay == null || hasCoarsePointer()) return;
@@ -58,27 +52,14 @@ function focusFirstFieldOnReveal(view: ViewInstance | null) {
   return stop;
 }
 
-/** Exit motion runs this long before the Modal unmounts — keep in sync below. */
 const EXIT_MS = DURATION.exit;
 
-/**
- * The panel rises 25px into place rather than from the window height, as
- * `SlideInDown` would. Presets, not a custom `Keyframe`: Reanimated's web
- * cleanup pins a custom-Keyframe element to its open-time rect, so the wrapper
- * kept the pre-keyboard height and the panel sank behind the Android keyboard
- * (docs/solutions/reanimated-web-keyframe-pins-position.md).
- */
+/** Presets instead of custom `Keyframe`: Reanimated web pins custom-Keyframe rects, sinking the panel behind mobile keyboards (docs/solutions/reanimated-web-keyframe-pins-position.md). */
 const panelEntering = FadeInDown.duration(DURATION.enter).easing(
   KEYFRAME_EASE_OUT,
 );
 const panelExiting = FadeOutDown.duration(EXIT_MS).easing(KEYFRAME_EASE_EXIT);
 
-/**
- * The backdrop is a *paired* element: it shares the panel's duration and curve
- * exactly, so the two read as one surface arriving. (They used to run 200ms vs
- * 300ms, which is why the sheet looked like it lagged behind its own scrim.)
- * Opacity only, so it needs no reduced-motion variant.
- */
 const backdropEntering = new Keyframe({
   0: { opacity: 0 },
   100: { opacity: 1, easing: KEYFRAME_EASE_OUT },
@@ -89,29 +70,10 @@ const backdropExiting = new Keyframe({
   100: { opacity: 0, easing: KEYFRAME_EASE_EXIT },
 }).duration(EXIT_MS);
 
-/**
- * Mirrors the native sheet's detent cap: the panel grows with its content up
- * to this share of the viewport, then the scroller inside it takes over.
- */
 const MAX_SHEET_FRACTION = 0.9;
 
-/** The panel's 1px top + bottom border, which `height` (border-box) includes. */
 const PANEL_BORDER = 2;
 
-/**
- * The panel, sized from its content and **animating between sizes**. The
- * native sheet animates its `'content'` detent whenever the content's height
- * changes (`animateContentHeight`); a bottom-anchored Modal just snaps. So the
- * panel gets an explicit height driven by the scroller's content size, with a
- * CSS transition on it — the tag picker's "Show more", a result line
- * appearing, and the catch-up chain's ledger (plan 0037) all resize the sheet
- * smoothly instead of jumping. The first measurement goes from `auto` to a
- * pixel value, which CSS doesn't transition, so opening never animates a
- * resize; only later changes do.
- *
- * Same sizing rule as native (`sheetScrollMetrics`): hug the content up to the
- * cap, scroll past it. `max-h` stays as the guard for the one unmeasured frame.
- */
 function SheetPanel({
   children,
   reduceMotion,
@@ -152,29 +114,10 @@ function SheetPanel({
   );
 }
 
-/**
- * Web fallback: the native sheet lib has no web build, so a bottom-anchored
- * RN Modal stands in — same controlled `open`/`onClose` contract, capped at a
- * readable width on desktop viewports.
- *
- * RN Modal's own `animationType` cross-fades the whole modal (backdrop + sheet
- * together materialise in place), which reads as a flicker rather than a sheet
- * appearing. Instead we drive motion with Reanimated: backdrop and panel fade
- * in together on one strong ease-out while the panel rises a short distance,
- * and both leave on a faster ease-in-shaped curve. Timing, not springs —
- * springs don't run on web. The Modal is held mounted for `EXIT_MS` after
- * `open` flips false so the exit actually plays before unmount.
- */
 export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
   const [mounted, setMounted] = useState(open);
   const reduceMotion = useReducedMotion();
 
-  // Opening is adjusted *during* the render that opens it, not from an effect:
-  // an effect runs after the commit, so the sheet returned `null` for one
-  // painted frame and only appeared on the following one — a frame of latency
-  // on the app's most-used surface, for nothing (react.dev, "You Might Not
-  // Need an Effect"). Closing is the half that genuinely needs the clock, so
-  // it stays where a side effect belongs.
   if (open && !mounted) setMounted(true);
   useEffect(() => {
     if (open) return;
@@ -197,13 +140,7 @@ export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
               entering={backdropEntering}
               exiting={backdropExiting}
             />
-            {/* The rise/fade rides on a full-height wrapper, not the panel,
-                so `justify-end` keeps the panel bottom-anchored however tall
-                it grows. The wrapper covers the scrim, and a `box-none` style
-                doesn't survive the animated view on web, so the close target
-                is a layer filling the wrapper, painted under the panel: above
-                it *and* beside it on wide viewports, where the panel is
-                narrower than the window. */}
+            {/* `box-none` doesn't survive Reanimated `AnimatedView` on web, so the scrim close target lives inside this wrapper below the panel. */}
             <AnimatedView
               className="flex-1 justify-end"
               entering={
@@ -229,7 +166,6 @@ export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
 
 Sheet.Header = SheetDismissHeader;
 
-/** Web needs no portal host — pass-through. */
 export function SheetProvider({ children }: { children: ReactNode }) {
   return children;
 }

@@ -3,7 +3,6 @@ import { useCatchUpControls } from '@/features/log-media/session/state';
 import type { NormalizedMediaItem } from '@/types/media';
 import { useLetterboxdCompletion } from './use-letterboxd-completion';
 
-/** Completed details keep this opt-in action available after an episode sheet closes. */
 export function LetterboxdCompletionButton({ item }: { item: NormalizedMediaItem }) {
   const { openLog } = useCatchUpControls();
   const request = useLetterboxdCompletion(item)();

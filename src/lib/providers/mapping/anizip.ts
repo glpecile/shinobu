@@ -120,21 +120,8 @@ export async function fetchAniZipIds(
 }
 
 /**
- * The *numbering* bridge, sibling to `fetchAniZipIds`'s identity bridge (plan
- * 0027 KTD1): AniList models every anime season as its own series entry with
- * episodes 1..n, while Trakt/Serializd/TMDB model one show with numbered
- * seasons. ani.zip's `episodes` block keys AniList-entry-relative numbers to
- * the canonical `{seasonNumber, episodeNumber}` pair, so a sequel entry's
- * episode 3 resolves to S02E03 instead of the phantom S01E03 the fan-out used
- * to write.
- *
- * `null` means ani.zip confirmed there is no table, through a 404 or an absent
- * `episodes` block. Other failures throw so callers don't cache them as
- * misses. Shares the ids fetch's ~1 MB payload hazard
- * (docs/solutions/web-cors-anizip.md), which is why only `{season, number}`
- * survives the decode and only *write actions* ever call this (KTD4). Keys are
- * AniDB-entry-derived: `"S1"`-style specials keys and any entry without a
- * season/episode number are dropped rather than guessed at.
+ * Map AniList entry episodes to canonical season and episode numbers. Null means no table.
+ * Transport failures throw so callers can retry.
  */
 export async function fetchAniZipEpisodeMap(
   fetch: HttpFetch,

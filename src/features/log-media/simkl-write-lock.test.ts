@@ -26,7 +26,6 @@ const entry = (number: number): SimklLogEntry => ({
   episode: { season: 1, number },
 });
 
-/** Hand-driven clock: `advance` fires due timers in order. */
 function fakeClock() {
   let now = 0;
   const timers: Array<{ at: number; run: () => void }> = [];
@@ -45,7 +44,6 @@ function fakeClock() {
       timers.shift();
       now = next.at;
       next.run();
-      // Let promise continuations settle between timers.
       await Promise.resolve();
       await Promise.resolve();
     }
@@ -56,7 +54,6 @@ function fakeClock() {
 
 const ok = { status: 'ok' as const };
 
-/** Microtask drain, so `fire`'s await/finally run before assertions. */
 const settle = async () => {
   for (let i = 0; i < 4; i += 1) await Promise.resolve();
 };
@@ -70,7 +67,6 @@ describe('createSimklLogQueue', () => {
 
     const first = queue.log(entry(1));
     await settle();
-    // Three more confirms while the lock is engaged.
     const second = queue.log(entry(2));
     const third = queue.log(entry(3));
     await advance(5_000);
@@ -101,7 +97,6 @@ describe('createSimklLogQueue', () => {
     release?.();
     await settle();
     await expect(first).resolves.toEqual(ok);
-    // The lock starts when the first POST *completes*, not when it started.
     await advance(SIMKL_WRITE_LOCK_MS - 1);
     expect(send).toHaveBeenCalledTimes(1);
     await advance(1);
@@ -121,14 +116,12 @@ describe('createSimklLogQueue', () => {
     const { clock, advance } = fakeClock();
     const queue = createSimklLogQueue(send, clock);
 
-    // Attach the rejection handler now, before any timer can settle it.
     const outcome = queue.log(entry(1)).then(
       () => 'resolved',
       (error: unknown) => error,
     );
     await settle();
     expect(calls).toBe(1);
-    // 2s, 4s, 8s, 16s: well inside the 21s window a landed write waits.
     for (const wait of [2_000, 4_000, 8_000, 16_000]) {
       await advance(wait);
       await settle();

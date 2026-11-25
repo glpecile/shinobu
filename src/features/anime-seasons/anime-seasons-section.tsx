@@ -50,12 +50,7 @@ function SeasonsSkeleton() {
   );
 }
 
-/**
- * Entry-relative, always (plan 0027 U5): the accordion's section index stays 1
- * and the keys derive from the AniList entry's own progress, no matter which
- * canonical season the header ends up displaying. Keying these off the mapped
- * season would tick every checkmark off by a whole season.
- */
+/** AniList entries are always single-season (`1-n`), regardless of the displayed canonical season title. */
 function watchedKeys(progress: number): ReadonlySet<string> {
   const keys = new Set<string>();
   for (let number = 1; number <= progress; number++) {
@@ -89,8 +84,6 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
     enabled: connected.includes(Provider.AniList),
   });
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
-  // A manual-only target still needs the sheet openable (plan 0022 R3) —
-  // matches LogMediaButton's gate.
   const canLog = targets.length > 0 || manualTargets.length > 0;
 
   const { openLog: openLogSession } = useCatchUpControls();
@@ -100,22 +93,11 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
   const aired = new Set(airedAnimeEpisodes(item, season?.episodes ?? [], null).map((episode) => episode.number));
   const isEpisodeAired = (episode: NormalizedEpisode) => aired.has(episode.number);
 
-  // R8, display only: show the entry's *true* canonical season in the header
-  // ("Season 2" for a sequel entry) instead of the synthesized label. Mounting
-  // this query here is R7's one sanctioned render-path episode-map read — a
-  // details screen, not a feed row — and it doubles as the pre-warm for a log
-  // started from this very screen, so the confirm doesn't wait on ani.zip.
   const { data: episodeMap } = useAniZipEpisodeMapQuery(mediaId);
   const canonicalTitle = canonicalSeasonTitle(episodeMap);
   const labelled =
     canonicalTitle == null || season == null ? season : { ...season, title: canonicalTitle };
 
-  // Episode screen + sheet for an anime row: the row is entry-relative, the
-  // episode surfaces are TMDB-numbered, so each tap places the row's ani.zip
-  // mapping on TMDB's season layout — the same arbiter the log fan-out uses
-  // (plan 0027, `placeInLayout`). Needs the TMDB id the details screen's
-  // catalogue merge put on `item`; without it (or an unmapped row) the tap
-  // says why instead of opening a screen that can't load.
   const pushRoute = usePushRoute();
   const tmdbId = item.externalIds.tmdb;
   const { data: layout } = useSeasonLayoutQuery({ tmdb: tmdbId });
@@ -143,8 +125,6 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
     openLogSession({ item, ...next });
   }
 
-  // Pre-airing series drop the whole block: every row would read "Unaired"
-  // next to a 0/total tile that says the same thing twice.
   if (preAiringDisplay(item, season?.episodes, progress) !== 'progress') {
     return <DetailsList {...page} />;
   }
@@ -188,7 +168,6 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
           onMarkEpisode: (_s, episode) =>
             openLog({
               title: `Log episode ${episode.number}`,
-              // Entry-relative: the log fan-out handles canonical provider numbering.
               description: `“${item.title}” — episode ${episode.number}: ${episode.title}`,
               entryEpisodes: [episode.number],
             }),
@@ -231,10 +210,6 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
   );
 }
 
-/**
- * Anime details use the same flat episode list as TV. Rows stay entry-relative;
- * only navigation and logging translate them to canonical provider numbering.
- */
 export function AnimeSeasonsSection({
   item,
   resetKey,

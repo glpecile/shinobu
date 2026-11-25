@@ -1,5 +1,4 @@
-/* Match app-shell's bottom-nav breakpoint, independently of sonner's 600px
-   mobile sizing: 76px bar, home indicator, and a 16px gap. */
+/* Match the app-shell bottom-nav breakpoint. 92px is the 76px bar plus a 16px gap. */
 @media (width < 768px) {
   [data-sonner-toaster] {
     --toast-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);

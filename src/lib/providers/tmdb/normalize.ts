@@ -74,7 +74,6 @@ export interface TmdbPersonSearchResponse {
 export interface PersonMatch {
   tmdbId: number;
   name: string;
-  /** Headshot or logo URL; '' when TMDB has none. */
   image: string;
 }
 
@@ -456,8 +455,6 @@ export function pickPersonMatch<T extends { name: string }>(
   return reordered ?? results[0];
 }
 
-// ---- Media catalogue (TMDB-first detail screens, plan 0014) ----
-
 interface TmdbGenre {
   id: number;
   name?: string | null;
@@ -591,7 +588,6 @@ export interface TmdbTvResponse extends TmdbCreditBase {
   } | null;
 }
 
-/** What one `/movie/{id}` or `/tv/{id}` call yields for a detail screen. */
 export interface TmdbMediaCatalogue {
   catalogue: NormalizedMediaItem;
   cast: NormalizedCastMember[];
@@ -733,7 +729,6 @@ function normalizeCompanies(
     });
 }
 
-/** Catalogue-only fields shared by movie and tv detail responses. */
 function catalogueExtras(
   raw: TmdbMovieResponse | TmdbTvResponse,
   runtime: number | undefined,
@@ -839,8 +834,6 @@ export function normalizeTvCatalogue(
   };
 }
 
-// ---- Episode pages ----
-
 /** `/tv/{id}/season/{s}/episode/{e}?append_to_response=credits`. */
 export interface TmdbEpisodeResponse {
   episode_number?: number | null;
@@ -852,18 +845,15 @@ export interface TmdbEpisodeResponse {
   still_path?: string | null;
   vote_average?: number | null;
   vote_count?: number | null;
-  /** Top-level guest list, present even without the credits append. */
   guest_stars?: TmdbMovieCastEntry[] | null;
   crew?: TmdbMovieCrewEntry[] | null;
   credits?: {
-    /** The series regulars credited on this episode. */
     cast?: TmdbMovieCastEntry[] | null;
     guest_stars?: TmdbMovieCastEntry[] | null;
     crew?: TmdbMovieCrewEntry[] | null;
   } | null;
 }
 
-/** What one episode call yields for the episode screen and its sheet. */
 export interface TmdbEpisodeDetails {
   episode: NormalizedEpisode;
   /** Wide still (`w780`); '' when TMDB has none. */
@@ -923,8 +913,6 @@ export function normalizeTvEpisode(
     crew,
   };
 }
-
-// ---- Studio pages ----
 
 export interface TmdbCompanyResponse {
   id: number;
@@ -1007,9 +995,6 @@ export function normalizeCompanySearch(
     .filter((entry) => entry.name !== '');
 }
 
-// ---- Title search (title+year → TMDB id, for id-less items) ----
-
-/** `/search/movie` (or `/tv`) result rows — the same slice as a credit row. */
 export interface TmdbSearchResponse {
   results?: TmdbCreditBase[];
 }
@@ -1048,8 +1033,6 @@ export function normalizeMultiSearch(
     })
     .filter((item) => item != null);
 }
-
-// ---- /find external-id bridge ----
 
 export interface TmdbFindResponse {
   tv_results?: Array<{ id: number }>;

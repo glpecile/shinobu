@@ -58,11 +58,8 @@ function findInTmdbCache(
   for (const [, data] of queryClient.getQueriesData<{ rows?: Array<{ items: NormalizedMediaItem[] }> }>({
     queryKey: tmdbQueryKeys.all,
   })) {
-    // `row?.items` and `item?.id`: `tmdbQueryKeys.all` is a prefix, so a
-    // sibling TMDB query whose rows are shaped differently gets scanned here
-    // too. A row without `items` must not crash the whole details screen. Same
-    // failure `diary-pages.ts` documents; a resolution helper degrades to
-    // "Not found", never throws.
+    // The prefix also matches sibling queries with differently shaped rows. Skip rows without
+    // items.
     for (const row of data?.rows ?? []) {
       const found = Array.isArray(row?.items) ? row.items.find((item) => item?.id === id) : undefined;
       if (found != null) return found;
@@ -91,23 +88,8 @@ function findInSeasonalPagesCache(
 }
 
 /**
- * The item behind a provider-qualified detail or episode route, resolved
- * from the cached surfaces a card can be tapped on: the personal
- * feed first (its copy carries real progress), then Up Next, search, diary,
- * the merged watchlist and the TMDB person/studio pages. Items whose origin
- * carries no metadata (a Letterboxd watchlist film is a slug + title + year)
- * get a catalogue record resolved by title+year merged in; TMDB-keyed
- * filmography credits get their Trakt identity discovered the same way.
- *
- * Cold TMDB, AniList, Simkl and typed Trakt links fetch public records by ID. Incoming
- * IMDb links use Simkl's ID lookup; Letterboxd film links first resolve their
- * public film metadata without changing their log identity. Serializd IDs resolve
- * as TMDB TV IDs through Simkl's public lookup. Hardcover book ids and
- * `hardcover-books-<slug>` links fetch the book with the Hardcover session,
- * and resolve to nothing without one.
- *
- * `undefined` while the feed or that fetch is still loading — the caller
- * tells "loading" and "not found" apart with `isLoading`.
+ * Resolve a routed item from cached personal data first, then from the surfaces that can open
+ * a card.
  */
 export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   item: NormalizedMediaItem | undefined;
@@ -125,13 +107,8 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
       feed.seasonalAnime,
       feed.animeMovies,
     ], mediaType) ??
-    // Up Next / Continue Watching cards. They used to resolve incidentally out
-    // of the `yourShows`/`yourAnime` slots (the same show sat in both
-    // surfaces); those rows are gone, so the gather that produced the card is
-    // now what answers for it. Cache-only, like every step here.
+    // Up Next can hold a card absent from the personal feed.
     findInUpNextCache(queryClient, id) ??
-    // Continue Reading cards, from the list reads behind the rail; their
-    // copies carry the reader's chapter or page progress.
     findInCurrentMangaCache(queryClient, id) ??
     findInHardcoverLibraryCache(queryClient, id) ??
     // Search results belong to no feed slot (plan 0009), and a manga that is
@@ -141,10 +118,7 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
     // Diary rows live in no feed slot and no search — resolve them from the
     // cached diary pages the viewer just scrolled (plan 0016 KTD7/R6).
     findInDiaryCache(queryClient, id) ??
-    // The merged watchlist belongs to no feed slot (plan 0031 KTD-11 keeps it
-    // out of one deliberately), so its Trakt- and AniList-sourced cards would
-    // hit "Not found" without this step. Cache-only: opening a details screen
-    // never triggers the gather.
+    // Merged watchlist cards resolve from their own cache entry.
     findInWatchlistCache(queryClient, id) ??
     findInLetterboxdListsCache(queryClient, id) ??
     findInSerializdListsCache(queryClient, id) ??
@@ -152,13 +126,7 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
     findInTmdbCache(queryClient, id) ??
     findInSeasonalPagesCache(queryClient, id);
   const resolvedItem = mediaType == null || cachedItem?.type === mediaType ? cachedItem : undefined;
-  // Cold deep link (a refreshed browser tab, a shared URL): nothing above
-  // holds the item, but a TMDB-minted id says exactly what to fetch, so a
-  // stub carrying just that id rides the same catalogue query the details
-  // screen runs for the resolved item — same key, one request. Only for
-  // TMDB ids; the other public ID lookups are handled below.
-  // Public ID reads are independent of Home. Cached personal data still wins
-  // above when it arrives, without making a cold detail wait for every feed row.
+  // On a cold deep link, a provider-qualified id is enough for the matching detail read.
   const deepLink = resolvedItem == null ? parseTmdbItemId(id) : null;
   // A Hardcover book rides the same query: its record is the book's catalogue.
   // A `hardcover.app/books/{slug}` link resolves its id first.
@@ -172,7 +140,6 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   // explorer is reachable signed out, so its links must survive a refresh.
   const anilistDeepLink = parseAniListItemId(id);
   const anilistDeepLinkItem = useAnimeByIdQuery(anilistDeepLink, mediaType ?? resolvedItem?.type);
-  // And the Simkl one: a variant poster or a shared link to a Simkl-minted id.
   const simklDeepLink = resolvedItem == null ? parseSimklItemId(id) : null;
   const simklLookup = useSimklLookupQuery(
     simklDeepLink != null ? { simkl: simklDeepLink } : null,

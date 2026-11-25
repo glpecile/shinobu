@@ -29,12 +29,7 @@ import { seasonsSourceFor, showSeasonsQueryOptions } from './show-seasons';
 import { tmdbDeps } from './tmdb';
 import { traktDeps } from './trakt';
 
-/**
- * The one detail-screen metadata query (plan 0014): TMDB-first via the
- * `getMediaDetails` composer, provider failover inside the effect. The
- * header consumes the plain hook (renders immediately, metadata pops in);
- * the credits sections consume the suspense sibling — same key, one fetch.
- */
+/** Detail metadata uses one query with TMDB-first provider fallback. */
 
 export const mediaDetailsQueryKeys = {
   all: ['media-details'] as const,
@@ -182,7 +177,6 @@ export function usePrefetchMediaDetails() {
   };
 }
 
-/** Non-suspending variant for the details header metadata merge. */
 export function useMediaDetailsQuery(item: NormalizedMediaItem | undefined) {
   const queryClient = useQueryClient();
   return useQuery({

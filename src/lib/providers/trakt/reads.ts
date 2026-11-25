@@ -146,7 +146,6 @@ export function getMediaPeople(
   );
 }
 
-/** Production studios for a detail view — public endpoint. */
 export function getMediaStudios(
   deps: TraktDeps,
   params: { type: MediaType; traktId: number },
@@ -423,8 +422,6 @@ export function getShowWatchedProgress(
   ).pipe(Effect.map(normalizeWatchedProgress));
 }
 
-// ---- My calendars (plan 0030) ----
-
 /**
  * Trakt rejects a calendar range longer than 33 days, so the cap is enforced
  * here: a caller asking for more gets 33 days of results rather than a 4xx
@@ -530,7 +527,6 @@ function getMyMovieCalendar(
   });
 }
 
-/** Theatrical release dates for the user's watchlisted/collected films. */
 export function getMyMoviesCalendar(
   deps: TraktDeps,
   params: TraktCalendarParams = {},

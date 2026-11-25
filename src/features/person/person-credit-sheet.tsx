@@ -15,7 +15,6 @@ import type { NormalizedPerson } from '@/types/media';
 import { personMetaLine } from './meta-line';
 import { PersonAvatar } from './person-avatar';
 
-/** "as Peter Parker / Spider-Man" for cast, the job list for crew. */
 export function creditRoleLine(credit: {
   role: string;
   kind: 'cast' | 'crew';
@@ -24,7 +23,6 @@ export function creditRoleLine(credit: {
   return credit.kind === 'cast' ? `as ${credit.role}` : credit.role;
 }
 
-/** Where a credit opens: TMDB's person, else AniList's, else Hardcover's author, else a name search. */
 export function creditRoute(credit: Pick<PersonCredit, 'name' | 'tmdbId' | 'anilistId' | 'hardcoverId'>) {
   if (credit.tmdbId != null) return routes.person(credit.tmdbId);
   if (credit.anilistId != null) return routes.anilistPerson(credit.anilistId);
@@ -32,40 +30,17 @@ export function creditRoute(credit: Pick<PersonCredit, 'name' | 'tmdbId' | 'anil
   return routes.personLookup(credit.name);
 }
 
-/**
- * A credit exactly as the detail screen's Cast/Crew rails hold it — the sheet
- * is opened from a card, so everything the header needs is already in hand and
- * nothing has to load before it can render.
- */
 export interface PersonCredit {
   id: string;
   name: string;
-  /** Character name(s) for cast, job title(s) for crew; '' when unknown. */
   role: string;
-  /** Which rail the card came from — the role's kind, not its text. */
   kind: 'cast' | 'crew';
   headshot: string;
-  /** TMDB person id; absent for AniList people. */
   tmdbId?: number;
-  /** AniList staff id, for AniList people. */
   anilistId?: number;
-  /** Hardcover author id, for a book's authors. */
   hardcoverId?: number;
 }
 
-/**
- * Life dates and birthplace — one line. Non-suspending on purpose: this is a
- * *supplement* to a header that already renders, so it fades in under it rather
- * than holding the whole sheet back. A failure (no token, 404, rate limit)
- * renders nothing at all — the sheet is still useful with just the credit.
- *
- * **No biography** (plan 0035 R6, narrowing plan 0028 R1): five clamped lines of
- * prose pushed the role — the thing the long-press was asking about — off the
- * first screen. Plan 0028's own A1 already said the bio was a supplement rather
- * than the payload; this is that, taken at its word. The full bio still lives on
- * `/person` behind `ExpandableText`, one row away. The person query stays (R7):
- * it feeds this line and warms the route's cache.
- */
 function CreditMeta({
   person,
   loading,
@@ -74,8 +49,6 @@ function CreditMeta({
   loading: boolean;
 }) {
   if (loading) {
-    // One line of content now, so one line of skeleton — a three-bar block
-    // would reserve space nothing is coming to fill.
     return (
       <View className="mt-5">
         <Skeleton className="h-3 w-2/3 rounded" />
@@ -84,8 +57,6 @@ function CreditMeta({
   }
 
   if (person == null) return null;
-  // Keys on the meta line alone now that it is the whole content — the old
-  // guard also waited on the bio, which would leave an empty 20px gap here.
   const meta = personMetaLine(person);
   if (meta === '') return null;
 
@@ -93,35 +64,18 @@ function CreditMeta({
 }
 
 interface PersonCreditSheetProps {
-  /** Kept (not nulled) while closing so content doesn't vanish mid-animation. */
   credit: PersonCredit | null;
   open: boolean;
   onClose: () => void;
 }
 
-/**
- * The long-press dialog behind a Cast/Crew card (plan 0028 R1).
- *
- * A credit card is 96px wide and clamps its role to two lines, so "Additional
- * Voices / Villager #3" and a six-job crew credit ("Executive Producer,
- * Producer, Unit Production Manager") both die in an ellipsis — and tapping the
- * card navigates away rather than telling you what it said. Long-press answers
- * the question in place: the full role text, who the person is, and the same
- * "View on" links the person page carries, with navigation still one row away.
- *
- * The meta line needs a TMDB person id and a token; without either the sheet is
- * just the credit — which is the part the long-press was asking about anyway.
- */
 export function PersonCreditSheet({
   credit,
   open,
   onClose,
 }: PersonCreditSheetProps) {
   const pushRoute = usePushRoute();
-  // No TMDB token, no bio, and no person page unless AniList can serve it.
   const hasTmdb = useTmdbToken() !== '';
-  // Fetched only while the sheet is open, and keyed the same as the person
-  // route's query, so opening this warms that page and vice versa.
   const personQuery = useTmdbPersonQuery({
     tmdbId: credit?.tmdbId,
     enabled: open && hasTmdb,
@@ -132,8 +86,6 @@ export function PersonCreditSheet({
     <Sheet onClose={onClose} open={open && credit != null}>
       {credit != null && (
         <>
-          {/* The role is the subtitle rather than a paragraph below a CAST
-              chip: it is the answer the long-press asked for. */}
           <SheetHeader>
             <PersonAvatar
               className="w-20 h-20"
@@ -166,17 +118,11 @@ export function PersonCreditSheet({
             </ShareButton.Capsule>
           )}
 
-          {/* The person-page "View on" links as sheet rows — a person has no
-              source provider, so these gate purely on what's connected.
-              Letterboxd files people by craft, so the department matters: TMDB's
-              is used once it arrives, and until then a cast credit is Acting by
-              definition (a crew one just takes the builder's own default). */}
           <PersonLinksSection
             enabled={open}
             onOpened={onClose}
             person={{
               name: credit.name,
-              // A known id skips the name search against the AniList budget.
               ...(credit.anilistId != null ? { anilistId: credit.anilistId } : {}),
               ...(person?.knownForDepartment != null
                 ? { knownForDepartment: person.knownForDepartment }

@@ -90,9 +90,7 @@ describe('catchUpQueue', () => {
       episodesBehind: 3,
     });
     const simkl = { watchedKeys: new Set(['1-1', '1-2', '1-4']), notAiredEpisodes: 2 };
-    // 4 is watched → skipped without spending the budget; 6 is the last aired.
     expect(catchUpQueue(e, { simkl })).toEqual([{ number: 3 }, { number: 5 }, { number: 6 }]);
-    // A count that overshoots (gaps below the pointer) still stops at aired.
     const deep = entry({ ...e, episodesBehind: 5 });
     expect(catchUpQueue(deep, { simkl })).toEqual([{ number: 3 }, { number: 5 }, { number: 6 }]);
   });

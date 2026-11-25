@@ -1,20 +1,13 @@
 @import "tailwindcss";
 @import "uniwind";
 
-/*
- * Typography tokens - fonts are subset by `scripts/subset-fonts.py` and loaded
- * through `src/lib/fonts`. React Native treats every weight as its own
- * font family and won't synthesize bold/semibold for custom fonts, so each token
- * names one exact loaded font. Use these classes (`font-display`, `font-sans`,
- * `font-sans-semibold`) instead of `font-bold`/`font-semibold` on custom-font text.
- */
+/* React Native won't synthesize weights for custom fonts; each token names one loaded family. */
 @theme {
   --font-display: "SpaceGrotesk_700Bold";
   --font-sans: "Inter_400Regular";
   --font-sans-italic: "Inter_400Regular_Italic";
   --font-sans-semibold: "Inter_600SemiBold";
 
-  /* Radius tokens — use these instead of Tailwind's default rounded values. */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -22,27 +15,8 @@
 }
 
 /*
- * Shinobu color tokens - single source of truth for both themes.
- * Every variable must be defined in both `light` and `dark` (Uniwind requirement).
- * Accent is pinned to the same Vampiric Crimson in both themes (plan.md 1.1) - it's
- * a brand color, not a theme-adaptive one.
- *
- * `--color-provider-*` are each tracker's own brand color, lifted out of
- * `src/assets/providers/*` so components can tint by provider without a hardcoded
- * hex (plan 0026 KTD6). Like accent, they are identical in both themes - they
- * belong to Trakt/AniList/Letterboxd/Serializd, not to Shinobu's palette - and
- * they are only ever used as small tints (icon chips, edge stripes, status dots),
- * never as text-on-background, so they need no per-theme contrast tuning.
- * Letterboxd's mark is three dots (orange/green/blue); its green is the one that
- * reads as "Letterboxd" at a glance. Simkl's accent is its softer brand green
- * (#73c26e) — muted next to Letterboxd's neon #00e054, which keeps the two
- * greens tellable apart as dots.
- *
- * `--color-logo-tile` backs company logos. TMDB logos are dark or colored marks on
- * transparent PNGs, so the tile stays light in the dark theme too.
- *
- * `--color-preview-*` paint the settings theme picker's miniature light and dark
- * screens, so they too are identical in both themes.
+ * Uniwind requires every variable in both `light` and `dark`.
+ * `--color-logo-tile` stays light in dark mode because TMDB company logos are dark/colored transparent PNGs.
  */
 @layer theme {
   :root {

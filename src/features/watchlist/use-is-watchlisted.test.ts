@@ -4,8 +4,6 @@ import { join } from 'node:path';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
-// Import-time stubs only (MMKV / the native fetch client / react-native's entry
-// point don't load under bun) — the function under test is pure.
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -22,10 +20,6 @@ mock.module('@/lib/http/client', () => ({
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
-// `./use-is-watchlisted` imports `@/state/queries/watchlist`, which imports
-// `./simkl` (plan 0034 U7), whose auth re-export reaches expo-crypto —
-// mirror the surface it consumes instead of loading the whole expo package
-// under bun (the `state/queries/simkl.test.ts` pattern).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
@@ -60,8 +54,6 @@ function input(item: NormalizedMediaItem, source: WatchlistInput['source']): Wat
 
 describe('watchlistSourcesFor (owner report 2026-08-01)', () => {
   test('names every provider whose row matches, across id spaces', () => {
-    // The state the whole-item boolean could not express: on Letterboxd's
-    // watchlist, removed from Simkl's, recognised as one film regardless.
     const inputs = [
       input(film('letterboxd-heat-1995', { externalIds: { tmdb: 949 } }), 'letterboxd'),
       input(film('trakt-1', { externalIds: { tmdb: 949 } }), 'trakt'),
@@ -94,20 +86,8 @@ describe('watchlistSourcesFor (owner report 2026-08-01)', () => {
 });
 
 describe('the hook registers no query observer', () => {
-  // Regression, and the reason this reads source rather than rendering (the
-  // repo has no render-test setup): `useIsWatchlisted` was written as
-  // `useQuery({ queryFn: skipToken })` on the reasoning that a skipToken
-  // observer cannot fetch. It cannot — but it is still an *active* observer, so
-  // `invalidateAfterWatchlist` invalidating `watchlistQueryKeys.inputs()` asked
-  // it to refetch and TanStack threw "Attempted to invoke queryFn when set to
-  // skipToken" on every watchlist add from a details screen — the one surface
-  // where the watchlist screen's own real observer is not mounted.
-  //
-  // The rule that broke: ONE KEY, ONE queryFn. `useWatchlistInputsQuery` owns
-  // `inputs()` and holds the real gatherer; a passive consumer must read the
-  // cache, never register a second differently-fetching observer on the key.
-  // Comments stripped first: the docblock deliberately *names* the mistake, so
-  // asserting over raw source would match its own explanation.
+  // TanStack Query treats `useQuery({ queryFn: skipToken })` as an active observer,
+  // so `invalidateQueries` on the shared key throws when no real observer is mounted.
   const code = readFileSync(join(import.meta.dir, 'use-is-watchlisted.ts'), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/\/\/.*$/gm, '');

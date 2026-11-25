@@ -5,11 +5,6 @@ export interface EpisodeRef {
   number: number;
 }
 
-/**
- * The sequence `season` belongs to, in the show's own layout, crossing season
- * boundaries (S1's last → S2's first). Specials (season 0) are their own
- * sequence: stepping back from S1E1 must not land on one.
- */
 export function episodeOrder(
   seasons: readonly NormalizedSeason[],
   season: number,
@@ -24,7 +19,6 @@ export function episodeOrder(
     );
 }
 
-/** The episodes either side of `{season, number}` in `episodeOrder`. */
 export function episodeNeighbours(
   seasons: readonly NormalizedSeason[],
   season: number,

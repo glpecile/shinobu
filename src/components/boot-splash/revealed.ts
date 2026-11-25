@@ -4,7 +4,6 @@ import { useDeferredValue, useSyncExternalStore } from 'react';
 let revealed = process.env.EXPO_OS === 'web';
 const listeners = new Set<() => void>();
 
-/** Called once the native boot splash has faded out over the first screen. */
 export function markBootRevealed() {
   if (revealed) return;
   revealed = true;
@@ -20,11 +19,6 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-/**
- * Gates work the first screen doesn't show (other tabs, closed sheets) until
- * the splash has faded out. The flip renders as a deferred update, which
- * yields to touches.
- */
 export function useBootRevealed(): boolean {
   return useDeferredValue(useSyncExternalStore(subscribe, getRevealed, getRevealed));
 }

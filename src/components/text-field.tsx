@@ -6,12 +6,7 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * The app's pill text input, with the search field's accent border on focus.
- * Takes every `TextInput` prop but `className`; `multiline` rounds it into a box.
- * `size="sm"` matches a `size="sm"` segmented control beside it: 36 tall, and
- * 32 on iOS, where SwiftUI draws the native control at 32 at the top of its box.
- */
+/** `size="sm"` is `ios:h-8` (32pt) to match SwiftUI's small segmented control height. */
 export function TextField({ size = 'md', ...props }: Omit<TextInputProps, 'className'> & {
   ref?: Ref<TextInputInstance>;
   size?: 'sm' | 'md';

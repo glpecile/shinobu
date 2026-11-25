@@ -13,24 +13,19 @@
 
 import type { NormalizedMediaItem } from '@/types/media';
 
-/** A Hardcover book, as the bridge reads it. */
 export interface BridgeBook {
   title: string;
-  /** Every credited person, translators included. */
   authors: readonly string[];
   series?: { name: string };
 }
 
-/** An AniList `MANGA` search result, as the bridge reads it. */
 export interface BridgeCandidate {
   id: number;
   /** AniList's format: `MANGA`, `NOVEL`, `ONE_SHOT`. */
   format: string | null;
   /** Null while AniList doesn't know the count. */
   volumes: number | null;
-  /** Romaji, English, native and synonyms. */
   titles: readonly string[];
-  /** Each staff member's full, native and alternative names. */
   staff: readonly string[];
 }
 

@@ -42,11 +42,8 @@ import type { ProviderFailure } from './settle';
 import { simklLibraryQuery, simklQueryKeys } from './simkl';
 import { traktDeps } from './trakt';
 
-// Trakt/AniList paginate at 50; history is append-mostly so a generous
-// staleTime keeps diary ↔ details navigation off the rate budget
-// (plan 0016 KTD9, docs/solutions/anilist-rate-limit-retry-storm.md).
-// No `maxPages`: page 1 holds Simkl's and Letterboxd's *entire* windows, so
-// windowing would drop them wholesale after a deep scroll.
+// History is append-mostly. Cache it across diary and detail navigation to stay within
+// provider rate budgets.
 const PAGE_SIZE = 50;
 const DIARY_STALE_MS = 5 * 60_000;
 
@@ -62,7 +59,6 @@ function letterboxdDiaryQuery() {
   };
 }
 
-/** A short final page signals end-of-history; a full page has a successor. */
 function pageAfter(entries: NormalizedDiaryEntry[], page: number) {
   return entries.length < PAGE_SIZE ? undefined : page + 1;
 }
@@ -110,7 +106,6 @@ function unbridgedAniListIds(entries: readonly NormalizedDiaryEntry[]): number[]
   return [...ids].sort((a, b) => a - b);
 }
 
-/** AniList id → its show's TMDB id, from ani.zip, for ids that state a TV id. */
 async function showTmdbIds(
   queryClient: QueryClient,
   anilistIds: readonly number[],
@@ -167,7 +162,6 @@ type FetchSlice = (
   signal?: AbortSignal,
 ) => Promise<Pick<DiarySlice, 'entries' | 'next' | 'readTo'>>;
 
-/** One page of each provider's diary; the effects run here (containment rule). */
 const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
   trakt: async (_queryClient, page, signal) => {
     const entries = await Effect.runPromise(getHistory(traktDeps(), { page }), { signal });
@@ -177,10 +171,8 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
     const { entries, hasNextPage, readTo } = await fetchAniListActivityPage(queryClient, page, undefined, signal);
     return { entries, next: hasNextPage ? page + 1 : undefined, readTo };
   },
-  // RSS is a single recent window — deeper HTML pages are Cloudflare-walled
-  // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md), so the diary
-  // exhausts after page 1 and drops out of the watermark early. On web it
-  // reads through the Worker proxy (plan 0018); native reads letterboxd.com.
+  // Letterboxd supplies one RSS window. Deeper HTML pages are Cloudflare-walled
+  // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md).
   letterboxd: async (queryClient) => ({
     entries: await queryClient.fetchQuery(letterboxdDiaryQuery()),
     next: undefined,
@@ -197,17 +189,11 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
       readTo: result.readTo,
     };
   },
-  // Simkl has no history endpoint — the diary is a projection of the one
-  // `/sync/all-items` snapshot (per-episode watched instants), so like
-  // Letterboxd it is a single window. It reads the shared library query, so
-  // the details screen and Up Next's copy is reused rather than downloaded
-  // again (docs/solutions/simkl-rate-limits-and-write-lock.md).
+  // Simkl's diary is projected from an all-items snapshot, so it has no next page.
   simkl: async (queryClient) => ({
     entries: simklDiaryEntries(await queryClient.fetchQuery(simklLibraryQuery())),
     next: undefined,
   }),
-  // Reading journal starts, progress and finishes. The viewer id is cached
-  // forever, so steady-state paging spends one request.
   hardcover: async (queryClient, page, signal) => {
     const viewer = await queryClient.fetchQuery(hardcoverViewerQuery());
     const { entries, hasNextPage } = await Effect.runPromise(
@@ -247,12 +233,8 @@ async function fetchDiaryPage(
 }
 
 /**
- * The unified diary feed (plan 0016 U4): one infinite query over every
- * connected, platform-capable provider, merged behind a watermark into one
- * gapless, grouped, reverse-chronological stream. Each page advances only the
- * watermark provider(s) (`nextDiaryCursor`); the merge is provider-count-
- * agnostic, so a subset degrades cleanly. No Effect type escapes — the effects
- * run inside the `queryFn` (containment rule).
+ * Merge independently paged providers behind a watermark to keep the diary in reverse
+ * chronological order.
  */
 export function useDiaryFeedQuery(): DiaryFeedResult {
   const connected = useConnectedProviders();
@@ -261,9 +243,7 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const readable = providersForFeed(connected);
-  // Letterboxd and Serializd reads need a stored username. The `readable`
-  // gate keeps these MMKV reads out of web SSR renders (`readable` is empty
-  // in the server snapshot — plan 0016 R16).
+  // The server snapshot has no readable providers, keeping username reads out of SSR.
   const letterboxdUsername = readable.includes(Provider.Letterboxd)
     ? (getLetterboxdUsername() ?? '')
     : '';
@@ -289,7 +269,6 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
 
   const states = diaryStates(query.data?.pages ?? []);
   const merged = mergeDiaryEntries(states);
-  // Runs after the feed renders: the rows collapse once ani.zip answers.
   const anilistIds = unbridgedAniListIds(merged);
   const { data: tmdbByAniList } = useQuery({
     queryKey: diaryQueryKeys.showTmdbIds(anilistIds),
@@ -336,17 +315,11 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
 
 export interface DiaryFeedResult {
   days: DiaryDay[];
-  /** Device-local IANA zone — grouping + header formatting share it. */
   timeZone: string;
-  /** Connected + platform-capable providers (drives the R9 empty states). */
   activeProviders: ProviderId[];
-  /** Total merged rows currently exposed (0 → "no logs yet" vs a load state). */
   entryCount: number;
-  /** The first page — every provider — is still in flight. */
   isLoading: boolean;
-  /** Every active provider errored (R9 load-failure state / AE5). */
   allFailed: boolean;
-  /** Providers whose initial or pagination read failed (R10 banner). */
   errors: ProviderFailure[];
   hasNextPage: boolean;
   isFetchingNextPage: boolean;

@@ -8,7 +8,6 @@ const SIZE = {
   lg: 'w-14 h-21 rounded',
 };
 
-/** Artwork only; callers own provider recovery and any metadata fallback. */
 export function SmallPoster({ uri, recyclingKey, size }: {
   uri: string;
   recyclingKey: string;

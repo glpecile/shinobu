@@ -8,8 +8,6 @@ import { Suspense } from 'react';
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { FloatingShareButton } from '@/components/floating-share-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
-// Layout-generic despite the name — the studio page shares the person
-// page's header-plus-rows shape, so its skeleton and miss state fit as-is.
 import { PersonNotFound } from '@/features/person';
 import { StudioSkeleton } from '@/features/studio/studio-skeleton';
 import { StudioDetailsView } from '@/features/studio/studio-details-view';
@@ -50,11 +48,6 @@ export default function StudioScreen() {
   );
 }
 
-/**
- * Route-level containment: a failed TMDB fetch (no token, 404, rate limit)
- * surfaces as this screen's not-found view with a retry — not the root
- * boundary unmounting the whole app.
- */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (

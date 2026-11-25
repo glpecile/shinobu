@@ -18,7 +18,6 @@ describe('canonicalSeasonTitle (plan 0027 R8)', () => {
   });
 
   test('a split-cour entry still names the season it belongs to', () => {
-    // Mushoku Tensei S2 part 2: entry episode 1 is S02E13.
     expect(canonicalSeasonTitle(table(2, 12, 13))).toBe('Season 2');
   });
 

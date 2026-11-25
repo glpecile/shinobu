@@ -15,7 +15,6 @@ interface CopySubject {
   year?: number | null;
 }
 
-/** The item's other names, minus the one already shown and any repeat (case-insensitive). */
 export function alternateTitles(item: NormalizedMediaItem): string[] {
   const seen = new Set([item.title.toLowerCase()]);
   const shown: string[] = [];
@@ -44,11 +43,6 @@ async function copy(text: string) {
   else toast.error('Couldn’t copy', 'Your browser blocked clipboard access.');
 }
 
-/**
- * The copy options as sheet content: `CopyTitle`'s own sheet, or a step that
- * swaps in place of another sheet's rows. `onClose` is the header's close
- * (back to the rows, for a step); `onCopied` runs as a choice is pressed.
- */
 export function CopyTitleOptions({ onClose, onCopied, ...subject }: CopySubject & {
   onClose?: () => void;
   onCopied: () => void;
@@ -78,12 +72,6 @@ export function CopyTitleOptions({ onClose, onCopied, ...subject }: CopySubject 
   );
 }
 
-/**
- * A page's heading, pressable: opens a small sheet that copies it alone, with
- * its year, as one of its alternate names, or as its TMDB id (the Letterboxd
- * gesture — one tap gets you the string you paste into another tracker's
- * search box).
- */
 export function CopyTitle({ className, ...subject }: CopySubject & { className?: string }) {
   const [open, setOpen] = useState(false);
   const single = copyChoices(subject).length === 1;

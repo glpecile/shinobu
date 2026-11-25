@@ -17,22 +17,15 @@ import type { NormalizedEpisode, NormalizedSeason } from '@/types/media';
 import type { LogRequest } from '@/features/log-media/log-request';
 import { formatRuntime, seasonRuntimeMinutes } from './runtime';
 
-/** Pointer into a season/episode that the confirm sheet will mark watched. */
 export type PendingLog = Omit<LogRequest, 'item' | 'entry'>;
 
 export interface SeasonActions {
-  /** Anime can prove an undated episode aired from its catalogue evidence. */
   isEpisodeAired?: (episode: NormalizedEpisode) => boolean;
   /** `"${season}-${number}"` watched keys; anime uses entry-relative season 1. */
   watched: ReadonlySet<string> | null;
   onMarkSeason: (season: NormalizedSeason) => void;
   onMarkEpisode: (season: NormalizedSeason, episode: NormalizedEpisode) => void;
-  /**
-   * Row tap opens episode details. Without a canonical mapping, anime rows
-   * remain display-only while their logging buttons still work.
-   */
   onOpenEpisode?: (season: NormalizedSeason, episode: NormalizedEpisode) => void;
-  /** Row long-press (web: the hover ⋯): the episode actions sheet. */
   onEpisodeActions?: (season: NormalizedSeason, episode: NormalizedEpisode) => void;
 }
 
@@ -57,17 +50,10 @@ export function EpisodeRow({
   const accent = useThemeColor('--color-accent');
   const muted = useThemeColor('--color-muted');
   const foreground = useThemeColor('--color-foreground');
-  // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
-  // ⋯ reveal rides on RN-web's pointer events (the PersonCard pattern) —
-  // long-press is not a discoverable web gesture.
+  // Uniwind has no `group-hover:`, so web hover uses pointer events.
   const [hovered, setHovered] = useState(false);
-  // Phone widths drop "Mark as" so the title keeps room to fit on one line.
   const compact = useWindowDimensions().width < 640;
   const hasActionsButton = process.env.EXPO_OS === 'web' && onActions != null;
-  // Every known air date stays in the meta line; upcoming episodes also show
-  // a countdown in the mark-button slot. No date at
-  // all on an unstarted season leaves only the bare word; released catalogue
-  // gaps stay loggable without displaying a fabricated date.
   const airsOn = episode.firstAired == null ? null : formatAirDate(episode.firstAired);
   const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
   const meta = [
@@ -119,8 +105,6 @@ export function EpisodeRow({
           {label}
         </PresstableOpacity>
       )}
-      {/* The ⋯ floats beside the trailing slot rather than taking a column, so
-          hovering never rewraps the title. */}
       <View className="relative justify-center">
         {hasActionsButton && (
           <OverlayActionsButton
@@ -151,11 +135,6 @@ export function EpisodeRow({
   );
 }
 
-/**
- * Controlled header: the screen's flat list owns expansion, not this cell.
- * The gap above it is its own, so toggling never changes its height and the
- * rows below never wait on a re-measure.
- */
 export function SeasonHeader({
   season,
   open,
@@ -194,7 +173,6 @@ export function SeasonHeader({
   );
 }
 
-/** A separate list row, so opening a season never mounts its whole body. */
 export function SeasonMarkRow({ onPress }: { onPress: () => void }) {
   return (
     <View className="px-4 py-3 border-b border-border bg-accent/5">

@@ -16,7 +16,6 @@ const ANILIST_LABELS: Record<string, string> = {
   PLANNING: 'Planning',
 };
 
-/** A bridged book's AniList entry is its manga's, read rather than watched. */
 const ANILIST_READING_LABELS: Record<string, string> = {
   CURRENT: 'Reading',
   REPEATING: 'Rereading',
@@ -35,7 +34,6 @@ const SERIALIZD_LABELS = { watching: 'Watching', watched: 'Watched', completed: 
 
 const NOT_TRACKED = 'Not tracked';
 
-/** The statuses a pause or drop moves, the same set the adapters accept. */
 type MovableState = 'active' | TrackingStatus;
 const ANILIST_STATE: Record<string, MovableState | undefined> = { CURRENT: 'active', PAUSED: 'paused', DROPPED: 'dropped' };
 const SIMKL_STATE: Record<string, MovableState | undefined> = { watching: 'active', hold: 'paused', dropped: 'dropped' };
@@ -46,20 +44,12 @@ const HARDCOVER_STATE: Record<number, MovableState | undefined> = {
   [HardcoverStatus.DidNotFinish]: 'dropped',
 };
 
-/**
- * Each target's current status, from the reads the details screen already
- * holds, so providers that disagree show it before the write. A target whose
- * read has not landed has no label. `movable[status]` lists the targets
- * holding an entry that a change to `status` would move: one the adapters
- * accept that is not in that status already.
- */
 export function useTrackingState(
   item: NormalizedMediaItem,
   targets: readonly ProviderId[],
 ): { labels: Partial<Record<ProviderId, string>>; movable: Record<TrackingStatus, ProviderId[]> } {
   const reading = item.type === 'BOOK';
-  // A disabled query still returns cached data, and the details screen caches
-  // these reads for items that are not targets, such as a film.
+  // TanStack Query returns cached data even when `enabled` is false.
   const onAniList = targets.includes(Provider.AniList);
   const onSimkl = targets.includes(Provider.Simkl);
   const onHardcover = targets.includes(Provider.Hardcover);

@@ -10,12 +10,10 @@ import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/** Draws one row's progress; the list resolves `state` (`useMediaProgress` / `useItemProgress`). */
 export function WatchedMark({ item, state, poster = false, showProgress = false }: { item: NormalizedMediaItem; state: MediaProgress; poster?: boolean; showProgress?: boolean }) {
   const accent = useThemeColor('--color-accent');
   const watched = state.watched;
   const unit = state.unit === 'chapter' ? 'ch' : state.unit === 'season' ? 'seasons' : 'ep';
-  // The count already says it was watched, so the eye only marks titles without one.
   const inProgress = showProgress && state.current > 0 && !state.completed;
   const label = `${state.current}${state.total != null && state.total > 0 ? ` / ${state.total}` : ''} ${unit}`;
   const style = useAnimatedStyle(() => {

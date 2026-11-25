@@ -22,15 +22,8 @@ export interface CapturedLetterboxdLogin {
 }
 
 /**
- * Turn the sign-in WebView's cookie jar into a persistable login — or `null`
- * when the user isn't actually signed in yet (the `letterboxd.signed.in.as`
- * marker is absent), which is the "keep the WebView open" signal.
- *
- * The `Cookie` header forwards *every* letterboxd.com cookie the jar holds, not
- * a hand-picked subset: the cookie that actually authenticates the session is
- * httpOnly, so we never see its name from JS — we only need to send it back
- * verbatim. `__csrf` is the one value we must name, so we also surface it
- * separately (docs/solutions/letterboxd-no-api-fallback.md).
+ * Build a write session from the signed-in WebView cookie jar. Null until the sign-in cookie
+ * is present.
  */
 export function captureLoginFromCookies(
   cookies: readonly CookiePair[],

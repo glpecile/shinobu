@@ -2,23 +2,8 @@ import { LayoutAnimation } from 'react-native';
 import { cubicBezier, Easing } from 'react-native-reanimated';
 
 /**
- * Shared motion tokens: one curve per *kind* of motion, one duration per *kind*
- * of moment. Durations and easings were previously inlined per component, which
- * is how a 200ms backdrop ends up paired with a 300ms sheet — motion only reads
- * as one system if the numbers come from one place.
- *
- * Two flavours of each curve are exported because Reanimated has two animation
- * APIs and they take different easing types:
- *
- * - `EASE_*` — declarative CSS transitions/animations (`transitionTimingFunction`,
- *   `animationTimingFunction`). This is the codebase's default style
- *   (`components/skeleton.tsx`, `components/media-carousel.tsx`).
- * - `KEYFRAME_*` — layout-animation `Keyframe` builders (`easing:` inside a
- *   keyframe), used for entering/exiting elements.
- *
- * Everything here is timing + easing, never springs: springs don't run on web in
- * this codebase (see `components/lightbox/index.web.tsx`), and the same surfaces
- * ship to web, iOS and Android.
+ * Shared web and native motion tokens. Use EASE_* for declarative animations and KEYFRAME_*
+ * for layout builders.
  */
 
 /**
@@ -50,39 +35,19 @@ export const TIMING_EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1);
  */
 export const KEYFRAME_EASE_EXIT = Easing.bezier(0.5, 1, 0.89, 1);
 
-/**
- * Durations, in ms. All well under the 300ms ceiling for product UI: past that
- * an animation stops reading as feedback and starts reading as latency.
- */
+/** Durations in ms. */
 export const DURATION = {
-  /** A colour/selected-state crossfade on a control the user just tapped. */
   color: 150,
-  /** Content settling in after the user switches what a panel is showing. */
   swap: 180,
-  /** A glyph rotating in place (a disclosure chevron). */
   toggle: 200,
-  /**
-   * A surface arriving on screen — a sheet and its backdrop. Deliberately at
-   * the fast end of the 150–250ms band rather than the middle: logging is the
-   * app's core action, so this sheet is a *many-times-a-day* surface, and the
-   * frequency rule says to drastically reduce motion on those. Paired with the
-   * strong ease-out below, 160ms reads as "already there" — the panel only
-   * travels 25px, so there is no distance that needs the extra time.
-   */
+  /** Shared entrance duration for surfaces and their backdrops. */
   enter: 160,
-  /** Its exit: faster still — the user has already decided to leave. */
   exit: 120,
-  /** One breath of a skeleton's pulse — ambient, so deliberately past the
-   * 300ms ceiling every other number here sits under. */
+  /** One skeleton pulse cycle. */
   pulse: 1400,
 } as const;
 
-/**
- * One CoreAnimation pass over a disclosure's layout diff (an overview box or
- * a season accordion opening): everything below it reflows together, which a
- * per-frame JS height animation stutters through. Native only; react-native-web
- * makes `configureNext` a no-op.
- */
+/** Native layout animation for disclosures. The web implementation is a no-op. */
 export const DISCLOSURE_LAYOUT = LayoutAnimation.create(
   DURATION.toggle,
   LayoutAnimation.Types.easeInEaseOut,

@@ -9,7 +9,6 @@ interface Captured {
   init?: RequestInit;
 }
 
-/** An upstream fetch stub that records what the proxy sent and returns `response`. */
 function capturingUpstream(response: Response): {
   fetch: (input: string, init?: RequestInit) => Promise<Response>;
   captured: Captured[];
@@ -42,7 +41,6 @@ describe('isSerializdProxyRequest', () => {
 describe('allowlist', () => {
   test('passes allowlisted path+method pairs through to upstream', async () => {
     for (const [path, method] of [
-      // Every client GET shape, with the query it sends.
       ['/api/serializd/show/1396', 'GET'],
       ['/api/serializd/show/1396/season/0', 'GET'],
       ['/api/serializd/user/gian/diary?page=3', 'GET'],
@@ -113,24 +111,7 @@ describe('allowlist', () => {
     }
   });
 
-  /**
-   * The load-bearing assertion of the watchlist grant (plan 0031 R23.2): the two
-   * new rules are exact `===`, never `startsWith('watchlist')`, so every other
-   * `watchlist*` shape — including `watchlist/random`, a route that really
-   * exists upstream — stays a 404.
-   *
-   * NOTE FOR THE NEXT EDITOR: `watchlist_v2/../login` is deliberately absent and
-   * must NOT be added as a 404 case. `handleSerializdProxy` derives its sub-path
-   * from `new URL(request.url).pathname`, and the URL parser resolves dot
-   * segments *before* the handler sees them — that request arrives as sub-path
-   * `login`, matches the existing `login` POST rule, and is forwarded with a 200.
-   * `isUnsafePath`'s `..` check is effectively unreachable through a normal
-   * pathname; the two traversal cases below pass only because they normalize
-   * *outside* the `/api/serializd/` prefix and the slice yields `''`. What keeps
-   * the grant narrow is URL normalization plus exact-match rules, so the only
-   * traversal shape worth asserting is the percent-encoded one, which keeps
-   * `%2F` in `pathname` and therefore matches no rule (plan 0031 KTD-9).
-   */
+  /** The watchlist grant covers two exact paths. Similar paths must stay rejected. */
   test('unlisted paths and traversal tricks are 404, never forwarded', async () => {
     for (const path of [
       '/api/serializd/admin',

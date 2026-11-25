@@ -2,7 +2,6 @@ import { useTransition } from 'react';
 
 import { toast } from '@/lib/toast';
 
-/** Shows feedback while an external-link opener is pending and restores retry on failure. */
 export function useLinkHandoff(openLink: () => void | Promise<void>) {
   const [loading, startTransition] = useTransition();
   function open() {

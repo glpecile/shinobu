@@ -13,15 +13,6 @@ import type { NormalizedMediaItem, NormalizedSeason } from '@/types/media';
 import { tmdbDeps, tmdbQueryKeys } from './tmdb';
 import { traktDeps, traktQueryKeys } from './trakt';
 
-/**
- * Which catalogue answers a TV show's seasons + episodes. Trakt when its
- * credentials exist (BYO post-detachment — plan 0034 KTD-8): it carries true
- * air *instants* and matches the progress read's numbering. TMDB otherwise —
- * the same catalogue substitute the mapping layer uses, needing only the
- * builder token; live probes (plan 0027) found the two agreeing on season
- * structure, so either source serves the log fan-out's canonical numbering.
- * `null` means no source can answer and the seasons UI stays hidden.
- */
 export type ShowSeasonsSource =
   | { source: typeof Provider.Trakt; traktId: number }
   | { source: 'tmdb'; tmdbId: number };
@@ -38,16 +29,6 @@ export function seasonsSourceFor(
   return null;
 }
 
-/**
- * Subscribed to the session store so saving BYO Trakt credentials or a TMDB
- * token mid-session re-routes an already-mounted details screen (the
- * `mapping.ts` via-hook pattern). SSR snapshots never touch MMKV — only the
- * builder TMDB token can be known on the server.
- *
- * Accepts `null` (renders nothing there) so callers can hook unconditionally;
- * the details header passes merged catalogue ids to subscribe to the same
- * cache entry its seasons section reads.
- */
 export function useShowSeasonsSource(
   item: Pick<NormalizedMediaItem, 'externalIds'> | null | undefined,
 ): ShowSeasonsSource | null {
@@ -65,17 +46,12 @@ export function useShowSeasonsSource(
   return seasonsSourceFor(item, traktUsable, tmdbUsable);
 }
 
-/** Trakt shares `traktQueryKeys.seasons` with the pre-existing hooks —
- *  whichever mounts first fills the cache for both. The widened `queryKey`
- *  type lets the two sources' literal key tuples share one options shape. */
 export function showSeasonsQueryOptions(source: ShowSeasonsSource): {
   queryKey: readonly unknown[];
   queryFn: (context: { signal: AbortSignal }) => Promise<NormalizedSeason[]>;
   staleTime: number;
   gcTime: number;
 } {
-  // Season structure, not watch progress: an hour matches the details
-  // metadata, so reopening a show skips the seasons skeleton.
   const cache = { staleTime: SEASONS_STALE_TIME_MS, gcTime: SEASONS_STALE_TIME_MS };
   return source.source === Provider.Trakt
     ? {
@@ -97,21 +73,10 @@ export function showSeasonsQueryOptions(source: ShowSeasonsSource): {
 
 const SEASONS_STALE_TIME_MS = 60 * 60 * 1000;
 
-/**
- * Full seasons + episodes from whichever source `useShowSeasonsSource`
- * resolved (plan 0010's suspense contract, source-widened for plan 0034).
- * Mount under a `SuspenseSection`, only with a non-null source.
- */
 export function useSuspenseShowSeasonsQuery(source: ShowSeasonsSource) {
   return useSuspenseQuery(showSeasonsQueryOptions(source));
 }
 
-/**
- * Non-suspense sibling sharing the same cache entries — the series-runtime
- * stat tile reads the resolved structure without blocking the screen; the
- * suspense section drives the fetch. Accepts `null` (renders nothing there)
- * so callers can hook unconditionally.
- */
 export function useShowSeasonsQuery(source: ShowSeasonsSource | null) {
   return useQuery({
     ...(source != null

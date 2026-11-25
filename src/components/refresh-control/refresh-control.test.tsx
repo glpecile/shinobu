@@ -111,7 +111,6 @@ test('an active pull cannot start another refresh after a tab double-tap', async
   const view = render(<RefreshControl onRefresh={onRefresh} tab="index" />);
   try {
     act(() => pan.onUpdate({ changeY: 200, velocityY: 0 }));
-    // The hold animation is still above the trigger when the finger lifts.
     withTiming.mockImplementationOnce(() => 100);
     act(() => doubleTap());
     act(() => pan.onFinalize({ canceled: false }));

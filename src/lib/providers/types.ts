@@ -24,22 +24,8 @@ export type MetadataSourceId = 'tmdb' | 'wikidata';
 export type ErrorSourceId = ProviderId | MetadataSourceId;
 
 /**
- * How well a provider supports one *write verb* (plan 0031 R5/KTD-1).
- *
- * - `'write'` — the fan-out has a working adapter for it on the platforms not
- *   listed in `unsupportedWritePlatforms`.
- * - `'manual'` — applicable, but Shinobu cannot perform it: routing keeps the
- *   provider as a target and surfaces an external link instead (plan 0022).
- * - `'none'` — the verb does not exist for this provider at all, so it is
- *   excluded outright rather than shown a link that means nothing.
- *
- * **Deliberately three-state, not a boolean.** The applicability filter and the
- * transport are different axes, and a boolean conflates them: `false` sits at
- * the same filter position as `canWrite` (`routing.ts`'s `providersForWrite`),
- * so it would delete the provider *before* `splitWriteTargets` ever sees it —
- * the provider then lands in neither `writable` nor `manual` and produces **no
- * outcome at all**. That silent drop is exactly what AGENTS.md's no-dead-end
- * rule forbids. A `Set` of supported verbs at that position fails the same way.
+ * Write uses an adapter, manual exposes a provider link, and none excludes the provider for
+ * this verb.
  */
 export type WriteSupport = 'write' | 'manual' | 'none';
 
@@ -60,31 +46,9 @@ export interface ProviderDescriptor {
   mediaTypes: readonly MediaType[];
   canRead: boolean;
   canWrite: boolean;
-  /**
-   * Whether adding an item to this provider's **watchlist** is possible
-   * (plan 0031 R5/KTD-1). Deliberately **not** derived from `canWrite`: the
-   * four providers give four different answers to the watchlist verb (Trakt
-   * confirmed and transport-ready, AniList confirmed but status-guard-gated,
-   * Letterboxd endpoint-unverified and web-banned, Serializd proxy-gated) and
-   * none of them is derivable from "can log a diary entry". Reusing `canWrite`
-   * would route Letterboxd a payload whose path is unverified, and it would
-   * make the two verbs impossible to degrade independently.
-   */
+  /** Watchlist adds are independent of diary-write support. */
   watchlistWrite: WriteSupport;
-  /**
-   * Whether *removing* an item from this provider's watchlist is possible
-   * (plan 0031 R33/KTD-15). A **second field rather than a second meaning for
-   * `watchlistWrite`**, because the verbs legitimately diverge on day one:
-   * Letterboxd's add and remove are gated by the same spike but can resolve
-   * differently (R37's toggle case makes remove safe from the surface while the
-   * add stays unsafe), and Trakt's add can hit a 420 account limit its remove
-   * never can. Deriving remove from write (`canRemove = write === 'write'`) is
-   * the symmetry assumption this interface's docblock already warns against.
-   *
-   * The *platform* axis has **not** diverged — Letterboxd is web-banned for
-   * every write verb by the same fingerprint wall — so `unsupportedWritePlatforms`
-   * stays one flat list shared by all verbs. Verb splits; platform does not.
-   */
+  /** Removal is its own capability and can be manual even when adds work. */
   watchlistRemove: WriteSupport;
   /**
    * Whether pausing or dropping a series or book is possible (#227,

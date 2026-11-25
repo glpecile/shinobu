@@ -17,14 +17,12 @@ export interface SerializdLogOptions {
   episodes?: Array<{ season: number; number: number }>;
   /** ISO instant — the diary entry's `backdate` (R8). Omitted = now. */
   watchedAt?: string;
-  /** Diary tags (R10). */
   tags?: string[];
   liked?: boolean;
   /** Parity rewatch from the fan-out's reconcile step (R10). */
   rewatch?: boolean;
 }
 
-/** Trimmed, non-empty diary tags. */
 function tagList(options: SerializdLogOptions): string[] {
   return (options.tags ?? []).map((tag) => tag.trim()).filter((tag) => tag !== '');
 }
@@ -75,18 +73,8 @@ function addDiaryEntry(
 }
 
 /**
- * The Serializd write adapter the `useLogMedia` fan-out targets (plan 0017 R8).
- * TMDB is the join key (KTD2) — no `tmdb` id means no way to reach Serializd, a
- * `skipped` value (never a throw, so it can't fail the fan-out).
- *
- * Every log — a single episode OR a whole-season batch — both marks the
- * episode(s) watched (`/episode_log/add`) AND writes a dated diary entry
- * (`/show/reviews/add`), grouped by season. This is deliberate: marking watched
- * alone leaves nothing on the user's serializd.com diary, which was the whole
- * point of a "log". Order matters (R8): watched first, diary second — if the
- * episode call succeeds but the diary call fails, the diary error propagates (an
- * `error` outcome, not `ok`) so reconcile knows the entry is absent and
- * re-attempts it (R12) rather than skipping on progress.
+ * Write Serializd logs using the item's TMDB id. A partial write can leave progress even when
+ * the diary write fails.
  */
 export function logToSerializd(
   deps: SerializdDeps,
@@ -226,57 +214,9 @@ function noEligibleSeasonSkip(watchedNumbers: readonly number[]): ProviderWriteR
 }
 
 /**
- * KTD-10's guard, steps 0–1: enumerate the show's seasons, read progress, and
- * return only the season ids Shinobu is entitled to watchlist.
- *
- * **Why a read at all — and what U10 actually found.** Serializd's own copy is
- * explicit — *"You can't mark a show / season as 'Watched' and 'Watchlisted' at
- * the same time"* — so posting every season id of a partly-watched show
- * plausibly cleared those seasons' watched flags (R21, KTD-10's named risk).
- * U10 probed it and **the hazard is not real**: on a live account 13 shows hold
- * the *same season id* in both the watched and watchlisted lists at once, which
- * cannot happen if the API enforces exclusivity
- * (`docs/solutions/serializd-watchlist-clears-watched.md`). The copy is a UI
- * convention. So this filter is kept for the reason U10's third outcome names —
- * it produces the honest "already watched on Serializd" skip instead of a silent
- * `ok` — not as a data-loss guard.
- *
- * **Why the raw progress body and not `getWatchedEpisodeKeys`.** That helper
- * flattens `watchedSeasons` into `${season}-${episode}` keys and therefore drops
- * any season whose `watchedEpisodes` array is empty or absent — exactly the
- * shape a season marked watched wholesale (`POST /watched_v2`, which writes no
- * episode rows) takes. Built on the key set, this guard would treat such a
- * season as never-touched and send it, i.e. fail **open** in the one scenario it
- * exists for. So a season counts as watched if it appears in `watchedSeasons`
- * **at all**, or if its watched-episode count is ≥ the `episodeCount` the show
- * payload reports; only a season absent from `watchedSeasons` with zero watched
- * episodes is eligible.
- *
- * **The eligible set is specified, not implicit.** Season 0 / specials are
- * excluded (Serializd's copy says "Specials not affected", so a specials id is
- * at best a no-op and at worst a 4xx that fails the whole add) and year-based
- * seasons are excluded for the same reason the log path skips them permanently
- * (`isYearBasedSeason`). Seasons whose payload carries no `id` or `seasonNumber`
- * are dropped rather than guessed at — the `seasonNumber` ↔ `id` join is what
- * the whole guard rests on.
- *
- * Both reads propagate their errors unchanged (branch 0): the caller never
- * writes on a failed read, and the tagged error keeps its own semantics — a 401
- * must still read as "reconnect Serializd", not as a generic guard failure.
- *
- * **One deliberate exception to fail-closed: a 404 means "no watched seasons
- * known", not an outage.** `/user/{username}/show/{tmdbId}/progress` was
- * **removed from Serializd's API** — it 404s for every show, watched or not, and
- * is absent from the (DEBUG-exposed) URL map, with no per-show replacement;
- * watched state is now only readable account-wide from `watchedpage_v2`, which
- * is 13 pages on a 300-show account and exactly the per-item membership cost
- * KTD-3 rejected (all three verifications in
- * `docs/solutions/serializd-watchlist-clears-watched.md`). Treating that as
- * branch-0 poison would refuse **every** add. It is safe to proceed *only*
- * because the same probe showed watched and watchlisted coexist per-season — a
- * guard with no input costs the "already watched" copy, not data. Every other
- * failure (401, 429, 5xx, transport) stays fail-closed, and the filter comes
- * back to life on its own if the endpoint ever returns.
+ * Serializd's raw progress preserves seasons with no episode rows. Its retired per-show
+ * progress route returns 404, so allow that case to proceed. Watched and watchlisted seasons
+ * can coexist (docs/solutions/serializd-watchlist-clears-watched.md).
  */
 function watchlistSeasons(
   deps: SerializdDeps,
@@ -324,33 +264,8 @@ function watchlistSeasons(
 }
 
 /**
- * The Serializd watchlist-**add** adapter (plan 0031 U9, KTD-10 branches 0–3).
- * TMDB is the join key (KTD2) — no `tmdb` id is a `skipped` value, never a throw.
- *
- * Unlike every other watchlist target, this one is not a single POST: Serializd's
- * watchlist is season-keyed and `season_ids` is required, so "show-level" here
- * means *all seasons* and the adapter must enumerate them (KTD-7). That is
- * contained entirely inside this file — `RoutableItem` is unchanged and the
- * payload crossing the routing boundary is still `{ item }` (R3) — at a cost of
- * three requests: the show read, the progress read, the write.
- *
- * The branches, mirroring KTD-2's structure on AniList:
- *
- * 0. Either read fails → the error propagates, so the fan-out reports Serializd
- *    as `error` with R17's manual link attached, and **no POST is issued**. The
- *    guard is deliberately **fail-closed**: the log path's "a failed state read
- *    counts as 'doesn't have it'" rule is safe there and destructive here.
- * 2. Eligible, unwatched season ids → `POST /watchlist_v2`.
- * 3. No eligible ids → a reasoned skip, **never a write**. "Already watched on
- *    Serializd" when the guard filtered everything out; a distinct reason when
- *    the catalogue simply lists nothing watchlistable (specials-only, year-based
- *    seasons, or a body with no usable per-season ids — see `RawShowResponse`).
- *
- * A *partial* filter is an `ok` **carrying the reason** naming the seasons left
- * alone (R16) — never a bare success. Serializd's POST siblings are
- * boolean-success by convention (`client.py:356-360`) with no `added`/`existing`
- * signal, so this guard is the only place an "already there" story can come
- * from; a repeated add is upsert-shaped and harmless.
+ * Serializd watchlists are season-scoped. Read eligible season ids before posting and report
+ * the watched seasons left alone.
  */
 export function addToSerializdWatchlist(
   deps: SerializdDeps,
@@ -382,24 +297,8 @@ export function addToSerializdWatchlist(
 }
 
 /**
- * The Serializd watchlist-**remove** adapter (plan 0031 R34) —
- * `POST /watchlist/remove_v2 { show_id, season_ids, async: true }`. `async: true`
- * is what the site's own show-level removal sends; the response carries no
- * per-season detail, so success is boolean (R16) exactly like the add.
- *
- * It sends the **same filtered season set as the add**, and that is the point:
- * removal is *not* assumed hazard-free (R34's named risk). The mutual-exclusivity
- * behaviour behind KTD-10 is unverified in both directions, so a removal that
- * names watched seasons is exactly as capable of touching watched state as an
- * add is. U10 step 5 probes it directly (watchlist S2, remove with S1 included,
- * re-read progress).
- *
- * **Deliberately not on a live path in v1.** Serializd's `watchlistRemove` stays
- * declared `'manual'` in the registry: with no Serializd read leg (R32) it can
- * never appear in a `WatchlistEntry`'s `sources`, so a `'write'` declaration
- * would be an unreachable adapter behind a silent drop (R35). The upfront
- * "Remove on Serializd" link is the honest surface until the read lands; this
- * function exists so the flip is a one-token change, not a new implementation.
+ * Use the same season filter as add. Removal remains manual until Serializd supplies watchlist
+ * membership.
  */
 export function removeFromSerializdWatchlist(
   deps: SerializdDeps,

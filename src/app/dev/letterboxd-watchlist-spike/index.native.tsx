@@ -15,22 +15,6 @@ import {
 } from '@/lib/providers/letterboxd/watchlist-capture';
 import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
 
-/**
- * U6's capture harness (plan 0031 R7/R37) — a **dev screen, not a feature**.
- * Reachable only by typing `/dev/letterboxd-watchlist-spike`; nothing links to
- * it, and it must not grow a link.
- *
- * Why a *visible* WebView when the app already has a hidden one: the spike's
- * whole method is driving **Letterboxd's own watchlist control**, in both
- * directions, and watching what the site composes. Nothing here fabricates a
- * request — that is the point. An adapter written against a guessed endpoint is
- * exactly what R37 forbids, and the likely toggle semantics (KTD-6) make a wrong
- * guess *remove* a film while reporting success.
- *
- * Delete it once `docs/solutions/letterboxd-watchlist-write.md` records the
- * classification — or keep it, like `letterboxd-write-spike.ts`, as the standing
- * way to re-check when Letterboxd moves the endpoint.
- */
 export default function LetterboxdWatchlistSpikeScreen() {
   const hasSession = useHasLetterboxdWriteSession();
   const [slug, setSlug] = useState('the-thing');
@@ -60,10 +44,7 @@ export default function LetterboxdWatchlistSpikeScreen() {
         <Text className="text-2xl font-display text-foreground">
           Watchlist capture (U6)
         </Text>
-        {/* One line, deliberately: Letterboxd's actions panel is a fixed
-            overlay sized to the WebView viewport, and on a phone the panel
-            clips its watched/liked/watchlist icon row unless the WebView gets
-            most of the screen (observed 2026-07-29 on an iPhone 17 Pro sim). */}
+        {/* Keep short: Letterboxd's fixed actions panel clips its icon row unless the WebView gets most of the viewport. */}
         <Text className="text-muted font-sans text-sm">
           Tap the site&rsquo;s own watchlist control — add, then remove.
         </Text>
@@ -85,14 +66,9 @@ export default function LetterboxdWatchlistSpikeScreen() {
         </View>
       </View>
 
-      {/* Half the screen, because both halves matter at once: you need to see
-          the control you are pressing *and* what it emitted. */}
       <View className="flex-1 border-y border-border">
         <NitroWebView
           onLoadEnd={callback(() => {
-            // Re-injected on every load: a navigation replaces `window`, and a
-            // once-only hook would quietly stop capturing exactly when you
-            // click through to the film page where the control lives.
             void webView?.evaluateJavaScript(buildCaptureScript());
           })}
           onMessage={callback((event) => {
@@ -114,9 +90,6 @@ export default function LetterboxdWatchlistSpikeScreen() {
         />
         <Button
           label="Print report"
-          // Console, not a share sheet: the deliverable is a file in
-          // `docs/solutions/`, and the Metro log is already open next to the
-          // editor it gets pasted into.
           onPress={() => console.log(captureReport(captures))}
           size="sm"
           variant="outline"

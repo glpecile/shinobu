@@ -30,7 +30,6 @@ export function useListMembership(target: ListEditTarget) {
     scope: { id: `list-membership/${target.provider}/${target.username}/${target.url}` },
     retry: false,
     mutationFn: async ({ item: listed, ...params }: { item: NormalizedMediaItem; present: boolean; entryId?: string }) => {
-      // An AniList entry carries no TMDB id until ani.zip maps one.
       const item = await enrichExternalIds(client, listed, [target.provider]);
       switch (target.provider) {
         case Provider.Letterboxd: {
@@ -167,7 +166,6 @@ export function useCreateList(username: string) {
     mutationKey: ['list-create', username],
     retry: false,
     mutationFn: async (list: NewList) => {
-      // AniList titles carry no TMDB id until ani.zip maps one.
       const items = await Promise.all(list.draft.items.map((item) => enrichExternalIds(client, item, [list.provider])));
       switch (list.provider) {
         case Provider.Letterboxd:

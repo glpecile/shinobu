@@ -16,11 +16,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import { creditRoleLine } from './person-credit-sheet';
 
-/**
- * One of a person's credits on a show, with its episode count
- * ("Director · 5 episodes"). The line opens to its episodes, and each episode
- * opens its screen. `onNavigate` closes the host sheet before the push.
- */
 export function TvCreditLine({
   show,
   credit,
@@ -43,8 +38,6 @@ export function TvCreditLine({
     : role;
 
   if (listed == null) {
-    // Same frame as the disclosure, chevron slot included, so the label
-    // doesn't re-wrap when the list lands.
     return (
       <View className="min-h-11 flex-row items-center gap-2">
         <Text className="flex-1 text-foreground font-sans text-sm">{label}</Text>

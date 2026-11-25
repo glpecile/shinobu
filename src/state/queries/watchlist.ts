@@ -25,24 +25,11 @@ import { simklDeps, simklQueryKeys } from './simkl';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { WATCHLIST_QUERY_ROOT } from './watchlist-cache';
 
-/**
- * The cross-provider watchlist gatherer (plan 0031 U13/R26). Same shape as
- * `up-next.ts`: raw per-provider inputs cached under one key, merged by a pure
- * function (`features/watchlist/compute.ts`) at render time — never in the
- * `queryFn`, so a hide or a second Letterboxd page re-merges without a refetch.
- *
- * Every leg settles **independently** through the shared `settle` helper: one
- * provider's outage costs that provider's rows and an inline notice, never the
- * grid (R29/KTD-12).
- *
- * Effect stays inside the `queryFn`s here — the AGENTS.md containment boundary.
- * No `Effect<…>` appears in any exported signature.
- */
+/** Cache watchlist inputs per provider and merge them on read. */
 
 export const watchlistQueryKeys = {
   /** Shared root so the disconnect purge in `state/session` can't drift. */
   all: [...WATCHLIST_QUERY_ROOT],
-  /** The gathered rows — persisted, and what a successful add invalidates. */
   inputs: () => [...watchlistQueryKeys.all, 'inputs'] as const,
 };
 
@@ -72,20 +59,7 @@ export const WATCHLIST_STALE_MS = 15 * 60_000;
 
 export type { WatchlistInput, WatchlistInputs };
 
-/**
- * The providers that contribute a watchlist read. **Not** every readable
- * provider: Serializd is deliberately absent (R32 — its endpoint is known and
- * cheap, but its `items[]` element shape is unverified). Named once so the
- * gather's legs below and the home row's mount gate
- * (`app/(tabs)/index.tsx`, R25) can never disagree about who has a watchlist.
- *
- * Simkl joined in U7: its `/sync/all-items` shape was already live-verified
- * against a real account in U3 (the normalized `SimklLibraryEntry`/
- * `normalizeAllItems` fixtures) — the same live-verification bar Serializd is
- * still held to above before it can join this list.
- *
- * Hardcover's leg is its Want to Read shelf (plan 0117 B2).
- */
+/** Serializd has no read leg until its watchlist membership shape is verified. */
 const WATCHLIST_READ_PROVIDERS: readonly ProviderId[] = [
   Provider.Trakt,
   Provider.AniList,
@@ -94,11 +68,6 @@ const WATCHLIST_READ_PROVIDERS: readonly ProviderId[] = [
   Provider.Hardcover,
 ];
 
-/**
- * Which of the connected providers this surface can actually read from — the
- * row's mount gate is `length > 0`, which is what finally gives a Trakt-only or
- * AniList-only user a watchlist row (R25).
- */
 export function watchlistReadProviders(
   connected: readonly ProviderId[],
 ): ProviderId[] {
@@ -107,14 +76,7 @@ export function watchlistReadProviders(
   );
 }
 
-/**
- * Trakt's leg: **one** call, `type=all`. Not split into movies + shows — they
- * are one endpoint, so there is no independent shows outage to isolate, and a
- * second request would only widen the ~7-concurrent mount-time burst
- * (docs/solutions/trakt-transient-network-errors.md). `added/desc` because
- * `addedAt` is what the merged grid sorts by; `rank` is Trakt's own default and
- * a Trakt-side concept this app must not silently reorder.
- */
+/** Trakt's type=all read covers movies and shows in one call. */
 async function traktInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
   const items = await queryClient.fetchQuery({
     queryKey: traktQueryKeys.watchlist('all', 'added', 'desc'),
@@ -131,21 +93,8 @@ async function traktInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
 }
 
 /**
- * AniList's leg: **selectors over already-cached reads**, costing zero extra
- * requests warm. The anime and manga list reads each ask for every status
- * their surfaces need in one request, so the watchlist's slices are already in
- * the cache — never "fix" this by adding a status query (30 req/min budget,
- * docs/solutions/anilist-rate-limit-retry-storm.md).
- *
- * Reads **CURRENT ∪ PLANNING** anime (plan 0035 R1): an anime you are watching
- * is watchlisted. Manga contributes PLANNING only (plan 0117 M3), since a manga
- * being read is on Continue Reading. Each is its own selector, which is what
- * leaves the status gate
- * (`docs/solutions/anilist-shared-list-query-status-gate.md`) intact.
- *
- * No `addedAt`: `MediaList.createdAt` is not part of those shared selections,
- * and widening them to sort one surface is not worth changing the reads every
- * other consumer depends on. These rows sort into the undated block.
+ * Reuse shared AniList list reads. Include Current and Planning for anime, and Planning only
+ * for manga. These reads have no added-at timestamp.
  */
 async function anilistInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
   const [anime, manga] = await Promise.all([
@@ -160,24 +109,13 @@ async function anilistInputs(queryClient: QueryClient): Promise<WatchlistInput[]
   }));
 }
 
-/** The infinite watchlist entry as the grid holds it: one page per cursor. */
 interface WatchlistPages {
   pages: NormalizedMediaItem[][];
 }
 
 /**
- * Letterboxd's leg: **`pages.flat()` of the infinite entry**, not the feed
- * row's separate page-1 key. That is load-bearing — the grid pages a 600-film
- * watchlist behind `onEndReached`, and reading only page 1 would both truncate
- * the merge input to 28 films and make every page-2 film that is also on Trakt
- * render as a visible duplicate of a row already on screen instead of merging.
- *
- * Cold it is one page (`pages: 1`), so the cost is unchanged; warm it refetches
- * only the pages already loaded, which is what the grid's own refetch does.
- * The list is **never** auto-paged here to complete dedupe — 22 sequential
- * fetches on mobile data per gather is exactly what plan 0031's scope boundary
- * rules out. Page 1 reads through the feed row's entry, which Up Next's
- * releases share, so the three surfaces cost one scrape.
+ * Use loaded Letterboxd pages for dedupe. A gather initially loads one page and never
+ * auto-pages the full list.
  */
 /**
  * Whether Letterboxd's leg has read the user's whole watchlist, judged from the
@@ -211,14 +149,7 @@ async function letterboxdInputs(queryClient: QueryClient): Promise<WatchlistInpu
   return data.pages.flat().map((item) => ({ item, source: Provider.Letterboxd }));
 }
 
-/**
- * Simkl's leg (plan 0034 U7): one `status=plantowatch` snapshot across every
- * bucket, the same one-call-not-a-loop shape as Trakt's `type=all` above —
- * Simkl's path grammar puts a bare status filter under the `all` type segment
- * (`getAllItems`), so shows/movies/anime all come back in one request.
- * `addedToWatchlistAt` is Simkl's `added_to_watchlist_at`, the merge's sort
- * key exactly like Trakt's `listed_at`; absent when Simkl didn't record one.
- */
+/** Simkl applies the bare status filter to every media bucket. */
 async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
   const library = await queryClient.fetchQuery({
     queryKey: simklQueryKeys.allItems(undefined, 'plantowatch'),
@@ -233,38 +164,17 @@ async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
     ...(entry.addedToWatchlistAt != null
       ? { addedAt: entry.addedToWatchlistAt }
       : {}),
-    // The picker's destructive warning (plan 0036) — carried on every row, not
-    // only the non-zero ones, so "we looked and it holds nothing" is a fact the
-    // merge states rather than an absence it has to guess at. A hint: the
-    // adapter's own fresh read is the authority, and takes the stricter of this
-    // count and the per-episode array.
+    // Keep a zero history count as positive evidence for the destructive removal warning.
     simklWatchedCount: entry.item.currentProgress,
   }));
 }
 
-/**
- * Hardcover's leg: Want to Read books, a slice of the library read that
- * Continue Reading also reads. `created_at` is when the book entered the
- * library, which for a Want to Read book is when it was added to the list.
- */
 async function hardcoverInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
   const entries = await fetchHardcoverWantToRead(queryClient);
   return entries.map((entry) => ({ item: entry.item, source: Provider.Hardcover, addedAt: entry.addedAt }));
 }
 
-/**
- * Every connected provider's watchlist, gathered in parallel and settled
- * per-leg. **No Serializd leg** (R32): its endpoint is known and cheap, but its
- * `items[]` element shape is unverified against a real account and writing a
- * normalizer against a guess is how a data contract rots. The consequence is
- * stated rather than absorbed — v1 writes to a Serializd watchlist it cannot
- * show back, which is also why Serializd's removal stays a manual link.
- *
- * **Never a Calendar source** (R22): plan 0030 KTD-2 deliberately chose
- * `/calendars/my/*` over `/sync/watchlist` + per-item resolution, so this
- * gatherer feeds the watchlist surface only and `fetchUpNextInputs` never
- * calls it.
- */
+/** Gather each eligible watchlist in parallel and settle failures independently. */
 function streamWatchlistInputs(
   queryClient: QueryClient,
   connected: readonly ProviderId[],
@@ -291,10 +201,8 @@ function streamWatchlistInputs(
     ],
     (legs) => {
       const settled = legs.map((leg) => leg ?? none<WatchlistInput>());
-      // A leg still streaming in is *incomplete*, as is a Letterboxd leg with
-      // unread pages. A failed one is already `errors`, and R35 treats both as
-      // unknown membership, so reporting it twice would only make the two lists
-      // overlap.
+      // A pending leg or unread Letterboxd page means membership is incomplete. Failures are
+      // reported through errors.
       const incomplete = WATCHLIST_READ_PROVIDERS.filter((provider, index) =>
         feedProviders.includes(provider) &&
         (legs[index] == null ||
@@ -344,19 +252,7 @@ export function watchlistOptions(queryClient: QueryClient) {
   };
 }
 
-/**
- * Pull-to-refresh, and the retry behind a failed leg's inline notice (R29).
- *
- * Marks **each leg's own cache entry** stale before refetching the gather. The
- * legs are read through `fetchQuery`/`fetchInfiniteQuery` under a 15-minute
- * `staleTime`, so refetching the gather alone would re-serve exactly the
- * payloads the user pulled to replace — the same "provider keys first, then the
- * gatherer" ordering `invalidateAfterWatchlist` follows, for the same reason.
- *
- * The AniList entries it invalidates are the *shared* list reads behind Up Next
- * and Continue Reading: this refreshes the network reads those surfaces already
- * share, it does not change what any of them displays (R28).
- */
+/** Mark the provider entries stale before refetching the gather, including on retry. */
 export async function refreshWatchlistInputs(
   queryClient: QueryClient,
 ): Promise<void> {
@@ -369,12 +265,9 @@ export async function refreshWatchlistInputs(
     queryClient.invalidateQueries({
       queryKey: anilistQueryKeys.currentMangaEntries(),
     }),
-    // The prefix, not the exact `status=plantowatch` key: a stale write
-    // elsewhere (a log moving an item out of `plantowatch`) can't be known
-    // here, so every cached all-items filter is marked stale together, same
-    // as `invalidateAfterLog`'s Simkl branch.
+    // Invalidate the whole Simkl prefix because a prior write can move an item out of
+    // plan-to-watch.
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() }),
-    // Also refreshes Continue Reading's books, which read the same library.
     queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.libraryRoot() }),
     ...(username == null
       ? []

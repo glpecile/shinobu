@@ -35,10 +35,6 @@ interface Mutation {
   variables: Record<string, unknown>;
 }
 
-/**
- * A stubbed Hardcover. Reads answer from `reads`, by operation name. Each
- * mutation is recorded and answers `answer`, or a row id.
- */
 function hardcover(
   options: {
     reads?: Record<string, unknown>;

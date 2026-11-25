@@ -24,8 +24,6 @@ import {
 
 type ConnectionStatus = 'idle' | 'connecting' | 'error';
 
-// AniList client ids are small integers (otraku's is 3535) — catch pasted
-// URLs/names, not a specific length.
 const clientIdSchema = z.object({
   clientId: z
     .string()
@@ -36,7 +34,6 @@ const clientIdSchema = z.object({
 
 type ClientIdForm = z.infer<typeof clientIdSchema>;
 
-/** The redirect URL the user's AniList client must register for this device. */
 function redirectUriForThisDevice(): string {
   if (Platform.OS === 'web') {
     if (typeof window !== 'undefined' && window.location.origin) {
@@ -47,24 +44,6 @@ function redirectUriForThisDevice(): string {
   return SHINOBU_NATIVE_REDIRECT_URI;
 }
 
-/**
- * AniList OAuth trigger — implicit grant, no secret (otraku-style, plan
- * 0011). Hybrid client-id model (2026-07-14): builds that embed a client id
- * (or set EXPO_PUBLIC_ANILIST_CLIENT_ID) connect in one tap; otherwise a
- * Trakt-style one-time form takes the user's own client id (a single field —
- * the implicit grant has no secret to pair it with). On native the embedded
- * browser session returns the token fragment directly; on web the window
- * navigates to AniList and returns to the home route with `#access_token=…`,
- * where `useOAuthCallback` consumes it.
- */
-/**
- * AniList's OAuth trigger, without any of its UI.
- *
- * Extracted so a caller that already knows no setup is needed — the Manage
- * Trackers row, when this build embeds a client id — can connect in one tap
- * instead of opening a sheet whose only content is this button. The button
- * below consumes the same hook, so there is exactly one copy of the flow.
- */
 export function useAniListConnect() {
   const [storedClientId, setStoredClientId] = useState<string | null>(() =>
     typeof window === 'undefined' ? null : getProviderClientId(Provider.AniList),
@@ -80,8 +59,6 @@ export function useAniListConnect() {
     setStatus('connecting');
 
     if (Platform.OS === 'web') {
-      // Same-window redirect; AniList returns to the client's registered
-      // redirect URL (the site origin) with the token in the fragment.
       const state = crypto.randomUUID();
       beginOAuthFlow(Provider.AniList, state);
       window.location.assign(anilistAuthorizeUrl(id, state));
@@ -90,7 +67,6 @@ export function useAniListConnect() {
 
     const result = await openAuthSessionAsync(anilistAuthorizeUrl(id), SHINOBU_NATIVE_REDIRECT_URI);
     if (result.type !== 'success') {
-      // User-cancelled/dismissed — not an error worth alarming about.
       setStatus('idle');
       return;
     }
@@ -104,7 +80,6 @@ export function useAniListConnect() {
     embeddedClientId,
     storedClientId,
     setStoredClientId,
-    /** True when connecting first requires the one-time client-id form. */
     needsSetup: clientId === '',
   };
 }
@@ -127,7 +102,6 @@ export function ConnectAniListButton() {
     defaultValues: { clientId: '' },
     resolver: zodResolver(clientIdSchema),
   });
-  // Saving the id means the user wants to connect — go straight into OAuth.
   const submitClientId = handleSubmit(async (values) => {
     setProviderClientId(Provider.AniList, values.clientId);
     setStoredClientId(values.clientId);

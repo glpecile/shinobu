@@ -5,17 +5,9 @@ import {
 } from '@/lib/providers/serializd/config';
 
 /**
- * The Serializd same-origin CORS proxy (plan 0017 U4/R14, KTD3) — the repo's
- * first and deliberately bounded exception to the AGENTS.md "never proxied"
- * policy. It forwards ONLY an allowlisted set of exact Serializd path+method
- * pairs, each with its own allowlist of query keys, attaches the app headers
- * server-side, passes through only `Authorization`
- * (never cookies or any other client header), caps body size and upstream
- * latency, forces a JSON `Content-Type` + `nosniff` on every relayed response,
- * emits no `Access-Control-Allow-Origin`, and stores/logs nothing. Everything
- * else falls through to static-asset serving (worker/index.ts).
- *
- * Pure helpers (no Cloudflare bindings) so the security boundary is unit-tested.
+ * Approved same-origin relay for exact Serializd paths and methods. Only Authorization crosses
+ * from the client. Keep upstream responses JSON, omit CORS, and never log requests or
+ * credentials.
  */
 
 const PROXY_PREFIX = `${SERIALIZD_WEB_PROXY_BASE_URL}/`;
@@ -36,12 +28,7 @@ function exact(pattern: string): (path: string) => boolean {
   return (path) => regex.test(path);
 }
 
-/**
- * First-match-wins allowlist keyed on the sub-path (after `/api/serializd/`),
- * each with its single permitted method (KTD3) and the query keys it may carry
- * (none unless listed). Every rule is an exact path: each new Serializd read
- * needs its own rule, mirroring one call site in `src/lib/providers/serializd/`.
- */
+/** First match wins. Each exact path specifies one method and any allowed query keys. */
 const RULES: Array<{ match: (path: string) => boolean; method: Method; query?: readonly string[] }> = [
   { match: (p) => p === 'login', method: 'POST' },
   { match: (p) => p === 'validateauthtoken', method: 'POST' },
@@ -54,7 +41,6 @@ const RULES: Array<{ match: (path: string) => boolean; method: Method; query?: r
   // single-method rule mirrors upstream rather than narrowing it.
   { match: (p) => p === 'watchlist_v2', method: 'POST' },
   { match: (p) => p === 'watchlist/remove_v2', method: 'POST' },
-  // Pause and drop (#227): the status list, and the list the show leaves.
   { match: exact('(?:paused_shows|dropped_shows|currently_watching)(?:/remove)?'), method: 'POST' },
   { match: (p) => p === 'list/add_item' || p === 'list/edit' || p === 'list/create', method: 'POST' },
   { match: (p) => /^list\/[1-9][0-9]{0,14}$/.test(p), method: 'GET' },
@@ -97,15 +83,11 @@ function jsonError(status: number, message: string): Response {
   return jsonResponse(status, JSON.stringify({ error: message }));
 }
 
-/** Is this request for the Serializd proxy (vs static assets)? */
 export function isSerializdProxyRequest(url: URL): boolean {
   return url.pathname.startsWith(PROXY_PREFIX);
 }
 
-/**
- * Relay an allowlisted Serializd request. `upstreamFetch` is injectable so the
- * boundary is testable; production passes the Worker's global `fetch`.
- */
+/** Relay an allowlisted Serializd request through the Worker. */
 export async function handleSerializdProxy(
   request: Request,
   upstreamFetch: UpstreamFetch = globalThis.fetch,

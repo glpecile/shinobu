@@ -19,14 +19,6 @@ import { useThemeColor } from '@/lib/theme-color';
 
 import type { DaySummary } from './merge';
 
-/**
- * A month's calendar heading that month in the diary, drawn from the days the
- * feed has already merged — it never fetches. `activity` maps a local day key
- * to that day's summary (`summarizeDay`), and `oldest` is the oldest loaded day:
- * anything before it is unknown rather than empty, so it stays unshaded and
- * fills in as infinite scroll loads further back. A month only appears once
- * one of its days has loaded, so the gap is at most the tail of the oldest one.
- */
 export interface DiaryMonthProps {
   /** `YYYY-MM`. */
   month: string;
@@ -34,16 +26,9 @@ export interface DiaryMonthProps {
   /** Empty once the feed has no older page, so every day is known. */
   oldest: string;
   today: string;
-  /**
-   * Under Reading, which counts to show apart instead of one sum (KTD-3):
-   * chapters while a manga tracker is connected, books while a book one is.
-   */
   reading?: { chapters: boolean; books: boolean };
-  /** Stack stats vertically for a side column with height to spare. */
   stacked?: boolean;
-  /** Pressing a day with logs; the list scrolls to it. */
   onSelectDay?: (dayKey: string) => void;
-  /** Fetches the next older page, offered while a stat is still a lower bound. */
   onLoadMore?: () => void;
   loadingMore?: boolean;
 }
@@ -62,7 +47,6 @@ const DAY_DATE_YEAR = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
 });
 
-/** "Today", "Tue, Oct 14", or "Mon, Jul 14, 2025" for another year. */
 export function formatDayDate(dayKey: string, today: string): string {
   if (dayKey === today) return 'Today';
   // The key is already the local day; formatting it as UTC midnight keeps it.
@@ -84,7 +68,6 @@ function previousDay(key: string): string {
 
 const LEVELS = ['bg-border/50', 'bg-accent/25', 'bg-accent/50', 'bg-accent/75', 'bg-accent'];
 
-/** Fixed thresholds, so a day keeps its shade as older pages load. */
 function level(units: number): number {
   if (units <= 0) return 0;
   if (units === 1) return 1;
@@ -93,25 +76,21 @@ function level(units: number): number {
   return 4;
 }
 
-/** What hovering a day says: its date, then what was logged or why it's blank. */
 function dayTooltip(key: string, units: number | null, props: DiaryMonthProps): string {
   const date = formatDayDate(key, props.today);
   if (units == null) return `${date} · not loaded yet`;
   return `${date} · ${props.activity.get(key)?.label || 'nothing logged'}`;
 }
 
-/** A day's units, or null when it is in the future or not loaded yet. */
 function dayUnits(key: string, props: DiaryMonthProps): number | null {
   if (key > props.today || key < props.oldest) return null;
   return props.activity.get(key)?.units ?? 0;
 }
 
-/** The month's logged units, its active days, and its longest run of them (first and last day). */
 function monthStats(keys: readonly string[], props: DiaryMonthProps) {
   let units = 0;
   let chapters = 0;
   let chapterDays = 0;
-  // A book read on several days is one book.
   const books = new Set<string>();
   let bookDays = 0;
   let days = 0;
@@ -133,11 +112,6 @@ function monthStats(keys: readonly string[], props: DiaryMonthProps) {
   return { units, chapters, chapterDays, books: books.size, bookDays, days, longest };
 }
 
-/**
- * The run of active days ending today, or yesterday while today is still
- * unlogged. It crosses month boundaries, so it walks the whole loaded map;
- * `partial` when the run reaches the oldest loaded day and may go further.
- */
 function currentStreak(props: DiaryMonthProps) {
   let key = (props.activity.get(props.today)?.units ?? 0) > 0 ? props.today : previousDay(props.today);
   let streak = 0;
@@ -161,14 +135,10 @@ function Stat({
 }: {
   icon: ComponentProps<typeof Ionicons>['name'];
   accent?: boolean;
-  /** A lower bound: older pages that could raise it haven't loaded. */
   atLeast?: boolean;
-  /** Null while loading: the bar stands in for the number alone. */
   value: number | null;
   label: string;
-  /** Web hover: the context behind the number. */
   tooltip: string;
-  /** One line per stat, for a column of them; otherwise the label sits below. */
   stacked: boolean;
 }) {
   const color = useThemeColor(accent && value != null && value > 0 ? '--color-accent' : '--color-muted');
@@ -194,13 +164,11 @@ const MONTH_NAMES = [
 ];
 const WEEKDAY_INITIALS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-/** The month's day keys, and the same keys as Monday-first weeks padded with nulls. */
 function monthGrid(month: string) {
   const first = keyDate(month);
   const length = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
   const keys = Array.from({ length }, (_, day) => `${month}-${`${day + 1}`.padStart(2, '0')}`);
   const cells: Array<string | null> = [
-    // getUTCDay counts from Sunday; shift so Monday is column 0.
     ...Array.from({ length: (first.getUTCDay() + 6) % 7 }, () => null),
     ...keys,
   ];
@@ -210,25 +178,18 @@ function monthGrid(month: string) {
 }
 
 const CELL = 'flex-1 min-h-11 aspect-square rounded-md';
-/** Days shade in as older pages load rather than snapping. */
 const SHADE_TRANSITION: CSSTransitionProperties = {
   transitionProperty: 'backgroundColor',
   transitionDuration: DURATION.swap,
   transitionTimingFunction: EASE_OUT,
 };
 
-/**
- * With `loading`, everything that doesn't come from the feed — the title,
- * weekdays, day numerals, and stat labels — renders as itself, and only the
- * past days' shading and the stat numbers pulse.
- */
 export function DiaryMonth({
   className,
   loading = false,
   ...props
 }: DiaryMonthProps & { className?: string; loading?: boolean }) {
   const stacked = props.stacked === true;
-  // Seven 44px targets and six 4px gaps need 332px before the page gutters.
   const tight = useWindowDimensions().width < 380;
   const first = keyDate(props.month);
   const year = first.getUTCFullYear();
@@ -246,10 +207,8 @@ export function DiaryMonth({
   return (
     <View className={cn('pt-1 pb-2', tight ? 'px-0' : 'px-6', className)}>
       <Eyebrow className={cn('mb-3', tight && 'mx-6')}>{title}</Eyebrow>
-      {/* Inline at 640+, the stats stack beside the calendar instead of under it. */}
       <View className={cn('gap-5', !stacked && 'sm:flex-row sm:gap-10')}>
         <View
-          // Capped so a wide web window gets a calendar, not a row of pills.
           className={cn('w-full max-w-96', !tight && 'gap-1')}
         >
           <View className={cn('flex-row', !tight && 'gap-1')}>
@@ -341,9 +300,6 @@ export function DiaryMonth({
             />
             {props.reading != null ? (
               <>
-                {/* Chapters and pages never add up (KTD-3), so books get
-                    their own stat. Each follows its tracker, not the loaded
-                    data, so the row keeps its frame as older pages load. */}
                 {props.reading.chapters && (
                   <Stat
                     stacked={stacked}
@@ -377,8 +333,6 @@ export function DiaryMonth({
             )}
           </View>
           {props.onLoadMore != null && (
-            // Web collapses the space once the month is complete. Keep the
-            // gap inside so a closed body leaves no space behind.
             <Collapse open={incomplete}>
               <View className="items-start pt-5">
                 <Button
@@ -400,7 +354,6 @@ export function DiaryMonth({
 
 const NO_ACTIVITY: ReadonlyMap<string, DaySummary> = new Map();
 
-/** The current month as `DiaryMonth` draws it while the feed loads. */
 export function DiaryMonthSkeleton({ stacked = false }: { stacked?: boolean }) {
   const now = new Date();
   const today = [

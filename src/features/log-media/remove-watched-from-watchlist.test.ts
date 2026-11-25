@@ -6,8 +6,6 @@ import type { WatchlistInputs } from '@/features/watchlist/types';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/** Same isolation preamble as `use-unwatchlist-media.test.ts` — the helper
- * runs the real removal pipeline, whose enrichment touches these modules. */
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -28,10 +26,7 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
-// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
-// graph, whose auth import reaches expo-crypto — mirror the surface it
-// consumes instead of loading the whole expo package under bun (the
-// `state/queries/simkl.test.ts` pattern).
+// Stub expo-crypto under bun (imported transitively by Simkl auth).
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
@@ -70,8 +65,6 @@ function fakeDeps(): WatchlistRemoveDeps {
         adapterCalls.push('letterboxd');
         return Promise.resolve({ status: 'ok' as const });
       },
-      // Bait, not dead code (plan 0036): Simkl's remove *is* live now, and the
-      // derived path is the one caller that must still never reach this key.
       simkl: () => {
         adapterCalls.push('simkl');
         return Promise.resolve({ status: 'ok' as const });
@@ -184,10 +177,6 @@ describe('removeWatchedFromWatchlist (plan 0033 U7)', () => {
       [...CONNECTED, 'simkl'],
       fakeDeps(),
     );
-    // Simkl is a real removal target now, and this is the one caller that must
-    // still not use it: `/sync/history/remove` deletes watch history, and here
-    // it would land inside the write lock against a snapshot that may not have
-    // caught up with the log that just fired.
     expect(adapterCalls).toEqual(['trakt']);
   });
 
@@ -209,15 +198,10 @@ describe('removeWatchedFromWatchlist (plan 0033 U7)', () => {
       [...CONNECTED, 'simkl'],
       fakeDeps(),
     );
-    // Dropping Simkl must leave *nothing*, not fall through to "no opt-out
-    // given, so target everything" — the empty-`providers` trap in
-    // `resolveWriteTargets`.
     expect(adapterCalls).toEqual([]);
   });
 
   test('a removal nothing can act on resolves silently — best-effort by contract', async () => {
-    // Letterboxd holds the film but isn't connected, so `runWatchlistRemove`
-    // has no target, manual row or unknown to offer and throws.
     const queryClient = client({
       inputs: [
         {

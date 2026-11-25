@@ -12,7 +12,6 @@ import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
 
-/** Share public website links, never a dev-client or app-scheme URL. */
 export async function shareLink(href: string) {
   const url = `${SHINOBU_WEB_DOMAIN}${href}`;
   try {
@@ -28,7 +27,6 @@ export async function shareLink(href: string) {
   }
 }
 
-/** `BackButton`'s counterpart: one Share glyph and shape, in a header or floating over art. */
 export function ShareButton({
   href,
   ...props
@@ -44,7 +42,6 @@ export function ShareButton({
   );
 }
 
-/** A sheet's main action with Share capsuled beside it, as the list sheet lays it out. */
 function ShareCapsule({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
   return (
     <View className={cn('flex-row items-center gap-2', className)}>

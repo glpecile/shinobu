@@ -26,7 +26,6 @@ import {
 import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { cn } from '@/lib/cn';
 
-/** Where the anchored title sits in the scroll content; zero until measured. */
 interface AnchorFrame {
   y: number;
   height: number;
@@ -47,7 +46,6 @@ function useScrolledTitleContext(caller: string): ScrolledTitleContextValue {
   return context;
 }
 
-/** Whether the bar has started to cover the anchored title or, with `whole`, covers all of it. */
 function covered(
   scrollY: number,
   anchor: AnchorFrame,
@@ -59,23 +57,6 @@ function covered(
   return anchor.height > 0 && scrollY > edge - barHeight;
 }
 
-/**
- * A page title that scrolls away and comes back as a top bar, in three parts:
- *
- *   <ScrolledTitle>                                the screen's frame
- *     <ScrollView {...useScrolledTitle()}>           or a JS onScroll writing scrollY
- *       <ScrolledTitle.Anchor><CopyTitle … /></…>    the title in the content
- *     </ScrollView>
- *     <ScrolledTitle.Bar title="…" />                 above the content …
- *     <FloatingBackButton … />                        … and under the button
- *   </ScrolledTitle>
- *
- * The moment the scroll carries the anchored title's top under the bar, the
- * bar fades in over it; once its last line is under, the bar's own title
- * slides up from under the bar's edge: the text is covered and rises again,
- * small. Timed from those crossings rather than tied to the offset, so a fast
- * wheel tick that skips the whole overlap still gets a full slide.
- */
 export function ScrolledTitle({ children }: { children: ReactNode }) {
   const frameRef = useRef<ViewInstance>(null);
   const anchorRef = useRef<ViewInstance>(null);
@@ -93,9 +74,7 @@ export function ScrolledTitle({ children }: { children: ReactNode }) {
     });
   }
 
-  // The anchor's own `onLayout` misses the hero moving as a whole (a meta
-  // line landing under a bottom-aligned title lifts it), so each scroll that
-  // leaves the top measures again, well before the title nears the bar.
+  // Re-measure on scroll start: `onLayout` misses shifts caused by ancestor layout changes.
   useAnimatedReaction(
     () => scrollY.get() > 0,
     (scrolled, wasScrolled) => {
@@ -114,10 +93,6 @@ export function ScrolledTitle({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * The scroll surface's wiring: spread `onScroll` + `scrollEventThrottle` onto
- * a Reanimated scroll view, or write `scrollY` from a plain JS scroll handler.
- */
 export function useScrolledTitle() {
   const { scrollY } = useScrolledTitleContext('useScrolledTitle');
   const onScroll = useAnimatedScrollHandler((event) => {
@@ -126,13 +101,11 @@ export function useScrolledTitle() {
   return { scrollY, onScroll, scrollEventThrottle: 16 as const };
 }
 
-/** Wraps the in-content title the bar stands in for. */
 function Anchor({
   children,
   className,
 }: {
   children: ReactNode;
-  /** Layout only. */
   className?: string;
 }) {
   const { anchorRef, measure } = useScrolledTitleContext('ScrolledTitle.Anchor');
@@ -143,7 +116,6 @@ function Anchor({
   );
 }
 
-/** 0 to 1, timed from the bar starting to cover the anchored title or, with `whole`, covering all of it. */
 function useCovered(
   whole: boolean,
   duration: number,
@@ -166,20 +138,13 @@ function useCovered(
   return progress;
 }
 
-/**
- * The bar. Never interactive, so it must never catch a scroll's first touch,
- * and hidden from screen readers: the anchored title already says it.
- */
 function Bar({ title, trailingAction = false }: { title: string; trailingAction?: boolean }) {
   const reduceMotion = useReducedMotion();
-  // The title row's top is the button's: slid that far down, the row is fully
-  // under the bar's edge.
   const rowTop = useFloatingBackButtonTop();
   const barHeight = rowTop + FLOATING_BACK_BUTTON_SIZE + FLOATING_BACK_BUTTON_GAP;
   const shown = useCovered(false, DURATION.enter, barHeight);
   const risen = useCovered(true, DURATION.toggle, barHeight);
   const barStyle = useAnimatedStyle(() => ({ opacity: shown.get() }));
-  // Reduced motion keeps the second crossing as a fade, with no travel.
   const titleStyle = useAnimatedStyle(() =>
     reduceMotion
       ? { opacity: risen.get() }
@@ -191,7 +156,6 @@ function Bar({ title, trailingAction = false }: { title: string; trailingAction?
       className={cn('absolute top-0 left-0 right-0 justify-end pl-16 pr-6 bg-background border-b border-border overflow-hidden', trailingAction && 'pr-16')}
       style={[{ pointerEvents: 'none', height: barHeight, paddingBottom: FLOATING_BACK_BUTTON_GAP }, barStyle]}
     >
-      {/* The button's own box, so the title centers on the buttons beside it. */}
       <AnimatedView className="justify-center" style={[{ height: FLOATING_BACK_BUTTON_SIZE }, titleStyle]}>
         <Text className="font-display text-lg text-foreground" numberOfLines={1}>
           {title}

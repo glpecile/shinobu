@@ -5,7 +5,6 @@ import { useColorScheme } from 'react-native';
 import { haptics } from '@/lib/haptics';
 import type { ViewToggleProps } from './props';
 
-/** Grid ⇄ list as SwiftUI's segmented `Picker`. */
 export function ViewToggle({ view, onChange, size }: ViewToggleProps) {
   const scheme = useColorScheme();
   return (

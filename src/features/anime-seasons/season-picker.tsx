@@ -18,7 +18,6 @@ import {
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { YearSheet } from './year-sheet';
 
-/** "WINTER" → "Winter". */
 function seasonName(season: AnimeSeason): string {
   return season.charAt(0) + season.slice(1).toLowerCase();
 }
@@ -28,10 +27,6 @@ const SEASON_OPTIONS = ANIME_SEASONS.map((season) => ({
   label: seasonName(season),
 }));
 
-/**
- * The explorer's year, for the screen header: ‹ › step one year, and the year
- * itself opens the year picker.
- */
 export function YearStepper({
   window,
   onChange,
@@ -39,7 +34,6 @@ export function YearStepper({
 }: {
   window: AnimeSeasonWindow;
   onChange: (next: AnimeSeasonWindow) => void;
-  /** Layout only. */
   className?: string;
 }) {
   const foreground = useThemeColor('--color-foreground');
@@ -109,7 +103,6 @@ export function YearStepper({
   );
 }
 
-/** The four cours. Every format is cour-scoped, films included, so it is unconditional. */
 export function SeasonStrip({
   window,
   onChange,
@@ -118,9 +111,7 @@ export function SeasonStrip({
 }: {
   window: AnimeSeasonWindow;
   onChange: (next: AnimeSeasonWindow) => void;
-  /** The pager's position for the web season indicator. */
   progress: SharedValue<number>;
-  /** Layout only. */
   className?: string;
 }) {
   return (
