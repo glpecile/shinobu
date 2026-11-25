@@ -11,7 +11,7 @@ import {
 } from '@/lib/providers/errors';
 import type { NormalizedRating } from '@/types/media';
 
-const SPARQL_URL = 'https://query.wikidata.org/sparql';
+const SPARQL_URL = 'https://query-next.wikidata.org/sparql';
 
 // Wikidata's user-agent policy; browsers can't set `User-Agent`, so the header
 // it reads in its place rides on every platform (docs/solutions/web-cors-wikidata.md).
@@ -30,20 +30,23 @@ export interface WikidataLookup {
   anilist?: number;
 }
 
-/** `VALUES` rows for the lookup, or null when there's nothing to look up by. */
-function lookupValues(lookup: WikidataLookup): string | null {
-  const rows = lookup.tmdb != null
-    ? [`(wdt:${lookup.tmdb.kind === 'movie' ? 'P4947' : 'P4983'} "${lookup.tmdb.id}")`]
-    : [
-      ...(lookup.mal != null ? [`(wdt:P4086 "${lookup.mal}")`] : []),
-      ...(lookup.anilist != null ? [`(wdt:P8729 "${lookup.anilist}")`] : []),
-    ];
-  return rows.length > 0 ? rows.join(' ') : null;
+/** Fixed predicates let Wikidata look up each ID without scanning unrelated statements. */
+function lookupPattern(lookup: WikidataLookup): string | null {
+  if (lookup.tmdb != null) {
+    const property = lookup.tmdb.kind === 'movie' ? 'P4947' : 'P4983';
+    return `?item wdt:${property} "${lookup.tmdb.id}" .`;
+  }
+  const patterns = [
+    ...(lookup.mal != null ? [`?item wdt:P4086 "${lookup.mal}" .`] : []),
+    ...(lookup.anilist != null ? [`?item wdt:P8729 "${lookup.anilist}" .`] : []),
+  ];
+  return patterns.length === 2
+    ? patterns.map((pattern) => `{ ${pattern} }`).join(' UNION ')
+    : patterns[0] ?? null;
 }
 
-const query = (values: string) => `SELECT ?score ?source ?method ?date ?rt ?mc WHERE {
-  VALUES (?prop ?id) { ${values} }
-  ?item ?prop ?id .
+const query = (pattern: string) => `SELECT ?score ?source ?method ?date ?rt ?mc WHERE {
+  ${pattern}
   OPTIONAL { ?item wdt:P1258 ?rt }
   OPTIONAL { ?item wdt:P1712 ?mc }
   OPTIONAL {
@@ -124,10 +127,10 @@ export const getWikidataRatings = Effect.fnUntraced(function* (
   deps: { fetch: HttpFetch },
   lookup: WikidataLookup,
 ): Effect.fn.Return<NormalizedRating[], ProviderError> {
-  const values = lookupValues(lookup);
-  if (values == null) return [];
+  const pattern = lookupPattern(lookup);
+  if (pattern == null) return [];
   const response = yield* Effect.tryPromise({
-    try: (signal) => deps.fetch(`${SPARQL_URL}?${new URLSearchParams({ query: query(values) }).toString()}`, {
+    try: (signal) => deps.fetch(`${SPARQL_URL}?${new URLSearchParams({ query: query(pattern) }).toString()}`, {
       signal,
       headers: { Accept: 'application/sparql-results+json', 'Api-User-Agent': API_USER_AGENT },
     }),

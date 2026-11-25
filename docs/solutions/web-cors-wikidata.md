@@ -1,15 +1,21 @@
 # Web CORS: Wikidata SPARQL — browser-callable, keyless, scores are sparse
 
-**Verified:** 2026-10-25, with `curl` and a foreign `Origin` header against
-`https://query.wikidata.org/sparql` (#318, the details Ratings section's Rotten
-Tomatoes and Metacritic scores).
+**Verified:** 2026-11-25, in Chromium from `http://localhost:8081` against
+`https://query-next.wikidata.org/sparql` for the details Ratings section's
+Rotten Tomatoes and Metacritic scores.
+
+Wikidata Query Service v2 returned HTTP 500 for Carrie (TMDB movie 7340)
+with a variable predicate bound through `VALUES`. QLever reported a
+72.5 GB allocation attempt. A fixed predicate with the same ID returned
+both ratings. Use one direct lookup per ID and join the MAL and AniList
+patterns with `UNION` when both IDs are present. This keeps one request
+per title. [Wikidata Query Service API](https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service/API)
 
 ## Findings
 
 | Probe | Result |
 | --- | --- |
-| `GET /sparql?query=…`, `Origin: http://localhost:8081`, `Accept: application/sparql-results+json` | 200, `access-control-allow-origin: *`, `cache-control: public, max-age=300` |
-| `OPTIONS /sparql`, `Access-Control-Request-Headers: api-user-agent` | 200, `access-control-allow-headers: accept, content-type, content-length, user-agent, api-user-agent` |
+| Browser GET with `Accept: application/sparql-results+json` and `Api-User-Agent` | 200, readable response from the local web origin |
 
 - No key and no account. `Accept` is CORS-safelisted, so a plain GET needs no
   preflight. `Api-User-Agent` triggers one, and the preflight allows it.
@@ -39,7 +45,7 @@ Tomatoes and Metacritic scores).
 ## Probe
 
 ```sh
-curl -s -D - -G https://query.wikidata.org/sparql \
+curl -s -D - -G https://query-next.wikidata.org/sparql \
   -H 'Origin: http://localhost:8081' \
   -H 'Accept: application/sparql-results+json' \
   --data-urlencode 'query=SELECT ?score ?source ?date WHERE {
