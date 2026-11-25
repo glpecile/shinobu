@@ -43,8 +43,8 @@ export function onProviderConnected(listener: (id: ProviderId) => void): void {
 export function setProviderSession(id: ProviderId, session: ProviderSession): void {
   const previous = getProviderSession(id);
   const connecting = previous == null;
-  // A reconnect after a refused refresh, or under another username, may be another account.
-  if (connecting || previous.reconnectNeeded === true || previous.username !== session.username) {
+  // Letterboxd and Serializd name their account, so the same username is the same account.
+  if (connecting || previous.username !== session.username) {
     storage.set(epochKeyFor(id), String(Date.now()));
   }
   storage.set(keyFor(id), JSON.stringify(session));
@@ -56,15 +56,23 @@ export function clearProviderSession(id: ProviderId): void {
   storage.remove(epochKeyFor(id));
 }
 
+/**
+ * An OAuth connect's write. Its session names no account, so a reconnect over
+ * a kept one may be another account and always starts a new epoch.
+ */
+export function connectProviderSession(id: ProviderId, session: ProviderSession): void {
+  storage.set(epochKeyFor(id), String(Date.now()));
+  setProviderSession(id, session);
+}
+
 const epochKeyFor = (id: ProviderId) => `connectedAt.${id}`;
 
 /**
  * When this provider's session began, or null without one. A token refresh
- * keeps it. A connect with no session, over one marked `reconnectNeeded`,
- * or under another username changes it, so a queued log
- * bound to it never replays under another account
- * (`features/log-media/pending-logs.ts`). A session older than this key
- * reads as 0.
+ * keeps it. An OAuth connect, or a connect under another username, changes
+ * it, so a queued log bound to it never replays under another account
+ * (`features/log-media/pending-logs.ts`). A session older than this key reads
+ * as 0.
  */
 export function providerSessionEpoch(id: ProviderId): number | null {
   if (storage.getString(keyFor(id)) == null) return null;

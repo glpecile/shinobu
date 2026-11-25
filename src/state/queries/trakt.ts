@@ -22,6 +22,7 @@ import type { ProviderSession } from '@/types/session';
 import { useConnectedProviders } from '@/state/session';
 import {
   clearProviderSession,
+  connectProviderSession,
   getProviderSession,
   setProviderSession,
 } from '@/state/session/tokens';
@@ -63,7 +64,11 @@ export function exchangeTraktCode(params: {
   code: string;
   redirectUri: string;
 }): Promise<ProviderSession> {
-  return Effect.runPromise(exchangeCodeForSession(traktDeps(), params));
+  const tokens = {
+    ...tokenStore,
+    set: (session: ProviderSession) => connectProviderSession(Provider.Trakt, session),
+  };
+  return Effect.runPromise(exchangeCodeForSession({ ...traktDeps(), tokens }, params));
 }
 
 export const traktQueryKeys = {

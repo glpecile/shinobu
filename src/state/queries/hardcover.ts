@@ -38,6 +38,7 @@ import { Provider } from '@/lib/providers/types';
 import { getClientIdForProvider } from '@/state/session/provider-config';
 import {
   clearProviderSession,
+  connectProviderSession,
   getProviderSession,
   setProviderSession,
 } from '@/state/session/tokens';
@@ -80,7 +81,11 @@ export function exchangeHardcoverCode(params: {
   iss: string | null;
   redirectUri: string;
 }): Promise<ProviderSession> {
-  return Effect.runPromise(exchangeHardcoverCodeForSession(hardcoverDeps(), params));
+  const tokens = {
+    ...tokenStore,
+    set: (session: ProviderSession) => connectProviderSession(Provider.Hardcover, session),
+  };
+  return Effect.runPromise(exchangeHardcoverCodeForSession({ ...hardcoverDeps(), tokens }, params));
 }
 
 /**
