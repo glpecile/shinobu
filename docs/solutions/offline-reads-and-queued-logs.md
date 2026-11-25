@@ -21,6 +21,10 @@ window's events.
 - Every mutation runs with `networkMode: 'always'` (`query-client.ts`). A
   write never waits in memory for a connection. Offline, it fails with its
   per-provider links, and a log goes to the queue below.
+- No mutation enters the persisted snapshot (`shouldDehydrateMutation` in
+  `persist.ts`). `networkMode: 'always'` does not make this redundant: a
+  mutation that waits in its `scope` is paused too, and a restored one has no
+  `mutationFn`.
 
 ## Reads that work offline
 
