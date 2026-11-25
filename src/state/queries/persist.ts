@@ -278,5 +278,10 @@ export function createQueryPersister(): Persister {
 export const persistOptions = {
   buster: BUSTER,
   maxAge: MAX_AGE_MS,
-  dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+  dehydrateOptions: {
+    shouldDehydrateQuery: shouldPersistQuery,
+    // A mutation that waits in its `scope` is paused. Restored, it has no
+    // `mutationFn` and fails on the next focus.
+    shouldDehydrateMutation: () => false,
+  },
 } as const;

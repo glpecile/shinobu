@@ -57,13 +57,15 @@ export interface LogMediaVariables {
    * A retried provider that already has the watch then landed on the first
    * try, so it is skipped instead of being logged again as a rewatch.
    * `unsent` names targets whose request never left the device. They are sent
-   * even when their watch state can't be read.
+   * even when their watch state can't be read. `unanswered` names targets
+   * whose last try got no answer. They are sent again only where a read can
+   * prove the write did not land (`logReadProvesAbsence`).
    */
-  retryOf?: { rewatch: boolean; unsent?: readonly ProviderId[] };
+  retryOf?: { rewatch: boolean; unsent?: readonly ProviderId[]; unanswered?: readonly ProviderId[] };
   /**
    * Set by the pending-log replay only: the id of the record it sends again
-   * (`pending-logs.ts`). Nobody watches a replay, so a watch-state read that
-   * fails stops it before any write.
+   * (`pending-logs.ts`). Nobody watches a replay, so a target whose
+   * watch-state read gets no answer is not written.
    */
   replay?: string;
 }
@@ -136,6 +138,8 @@ export type LogMediaResult = ProviderWriteReport & {
   rewatch: boolean;
   /** Providers whose write waits in the pending queue. Not logged yet. */
   queued: ProviderId[];
+  /** The `retryOf.unanswered` this round ran with. A retry passes it on. */
+  unanswered?: readonly ProviderId[];
   /**
    * Resolves when the reads this log made stale are fetched again. Until
    * then the screens draw the log from `LoggedWatch` (`optimistic.ts`).

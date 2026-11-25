@@ -316,6 +316,20 @@ export function logAdapters(
   return { ...LOG_ADAPTERS, simkl: simklLogAdapter(queryClient) };
 }
 
+type LogAdapters = Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>;
+
+/** `adapters`, with the adapter of each provider in `entries` replaced by one that reports without writing. */
+function replaceAdapters<T>(
+  adapters: LogAdapters,
+  entries: Iterable<readonly [ProviderId, T]>,
+  adapterFor: (value: T) => WriteAdapter<LogMediaVariables>,
+): LogAdapters {
+  return {
+    ...adapters,
+    ...Object.fromEntries(Array.from(entries, ([provider, value]) => [provider, adapterFor(value)])),
+  };
+}
+
 /**
  * Turn each mapping-blocked provider's adapter into a no-op that resolves its
  * reason (plan 0027 R3/KTD3). Deliberately *not* a new `ProviderWriteOutcome`
@@ -324,17 +338,10 @@ export function logAdapters(
  * all treat it exactly like Serializd's own unresolvable-season skip.
  */
 export function withMappingSkips(
-  adapters: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>,
+  adapters: LogAdapters,
   mappingSkips: ReadonlyMap<ProviderId, string>,
-): Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>> {
-  if (mappingSkips.size === 0) return adapters;
-  const overrides = Object.fromEntries(
-    [...mappingSkips].map(([provider, reason]): [ProviderId, WriteAdapter<LogMediaVariables>] => [
-      provider,
-      () => Promise.resolve({ status: 'skipped', reason }),
-    ]),
-  );
-  return { ...adapters, ...overrides };
+): LogAdapters {
+  return replaceAdapters(adapters, mappingSkips, (reason) => () => Promise.resolve({ status: 'skipped', reason }));
 }
 
 /**
@@ -342,23 +349,22 @@ export function withMappingSkips(
  * failed write landed: resending could log the watch twice. The error keeps
  * it in `failed`, so the report links to the provider and Try again re-reads.
  */
-export function withUnconfirmed(
-  adapters: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>,
-  unconfirmed: readonly ProviderId[],
-): Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>> {
-  if (unconfirmed.length === 0) return adapters;
-  const overrides = Object.fromEntries(
-    unconfirmed.map((provider): [ProviderId, WriteAdapter<LogMediaVariables>] => [
-      provider,
-      () =>
-        Promise.reject(
-          new Error(
-            `Couldn't check whether the last try reached ${PROVIDERS[provider].label}, so it wasn't sent again.`,
-          ),
-        ),
-    ]),
+export function withUnconfirmed(adapters: LogAdapters, unconfirmed: readonly ProviderId[]): LogAdapters {
+  return replaceAdapters(
+    adapters,
+    unconfirmed.map((provider) => [provider, PROVIDERS[provider].label] as const),
+    (label) => () =>
+      Promise.reject(new Error(`Couldn't check whether the last try reached ${label}, so it wasn't sent again.`)),
   );
-  return { ...adapters, ...overrides };
+}
+
+/**
+ * Fails, without writing, each replayed target whose watch-state read got no
+ * answer. The read's own error is the outcome, so the report says the target
+ * could succeed later.
+ */
+export function withUnread(adapters: LogAdapters, unread: ReadonlyMap<ProviderId, unknown>): LogAdapters {
+  return replaceAdapters(adapters, unread, (error) => () => Promise.reject(error));
 }
 
 /** Serializd reconcile/progress reads share this staleness (KTD7/R17). */
@@ -639,7 +645,7 @@ async function resolveLogPlan(
  * A retry reads `fresh`: its failed write may have landed after the cached
  * read, so it refetches, and a failed read answers null ("unknown") instead.
  * A replay reads `strict`: nobody watches it, so a read that fails for now
- * throws, and the replay waits rather than guess.
+ * throws, and that target waits rather than guess (`LogWritePlan.unread`).
  *
  * Each provider is asked in its own numbering domain (plan 0027 R4): Trakt and
  * Serializd against `domains.canonical`, AniList against `domains.entry`.
@@ -977,6 +983,8 @@ export interface LogWritePlan {
   mappingSkips: ReadonlyMap<ProviderId, string>;
   /** Retried targets that can't say whether their failed write landed (`withUnconfirmed`). */
   unconfirmed: ProviderId[];
+  /** Replayed targets that wait, with the error of a watch-state read that got no answer (`withUnread`). */
+  unread: ReadonlyMap<ProviderId, unknown>;
   /** What every adapter sees: canonical `episodes` *and* entry `entryEpisodes`. */
   variables: LogMediaVariables;
   rewatch: boolean;
@@ -1007,6 +1015,7 @@ export async function planLogWrite(
   // a catch-up (plan 0027 R4).
   const reconcileTargets = targets.filter((provider) => !mappingSkips.has(provider));
   const retryOf = variables.retryOf;
+  const unread = new Map<ProviderId, unknown>();
   const answers = await Promise.all(
     reconcileTargets.map(async (provider) => ({
       provider,
@@ -1016,9 +1025,17 @@ export async function planLogWrite(
         item,
         domains,
         variables.replay != null ? 'strict' : retryOf != null ? 'fresh' : 'cached',
-      ),
+      ).catch((error: unknown) => {
+        unread.set(provider, error);
+        return null;
+      }),
     })),
   );
+  // A mapping skip is built from lookups that answer null when they fail.
+  // While a read gets no answer they may have failed the same way, so the
+  // skipped target waits too.
+  const [readError] = unread.values();
+  if (unread.size > 0) for (const provider of mappingSkips.keys()) unread.set(provider, readError);
   // A provider that can't report its state (null) is written but has no say
   // in catch-up vs. rewatch, like a mapping-skipped provider above.
   const records: ProviderWatchRecord[] = answers.flatMap(({ provider, hasIt }) =>
@@ -1040,10 +1057,18 @@ export async function planLogWrite(
   // flows through the normal fan-out merge (and plan 0022's manual link
   // fires); their adapter resolves the reason without writing anything.
   const writeTargets = targets.filter((provider) => !skipped.includes(provider));
+  // An unanswered write may have landed. "No watch found" clears it only on a
+  // provider whose read proves absence.
   const unconfirmed =
     retryOf?.rewatch === false
       ? answers
-          .filter(({ provider, hasIt }) => hasIt == null && retryOf.unsent?.includes(provider) !== true)
+          .filter(
+            ({ provider, hasIt }) =>
+              !unread.has(provider) &&
+              retryOf.unsent?.includes(provider) !== true &&
+              (hasIt == null ||
+                (!hasIt && retryOf.unanswered?.includes(provider) === true && !logReadProvesAbsence(provider))),
+          )
           .map(({ provider }) => provider)
       : [];
   const rewatch =
@@ -1072,6 +1097,7 @@ export async function planLogWrite(
     skipped,
     mappingSkips,
     unconfirmed,
+    unread,
     rewatch,
     variables: {
       ...rest,
@@ -1121,6 +1147,7 @@ function queueOffline(variables: LogMediaVariables, connected: readonly Provider
     failed: targets.filter((provider) => !queued.includes(provider)),
     skipped: [],
     queued,
+    unanswered: variables.retryOf?.unanswered,
     rewatch: false,
   };
 }
@@ -1151,13 +1178,21 @@ export function useLogMedia() {
         if (maybeLanded.length > 0) {
           variables = {
             ...intent,
-            retryOf: { rewatch: false, unsent: asked.filter((provider) => !maybeLanded.includes(provider)) },
+            retryOf: {
+              rewatch: false,
+              unsent: asked.filter((provider) => !maybeLanded.includes(provider)),
+              unanswered: maybeLanded,
+            },
           };
         }
       }
 
       const plan = await planLogWrite(queryClient, variables, connected);
-      const replayed = replay == null ? null : beginReplay(replay, variables.providers ?? []);
+      // An unread leg is not sent, so it stays as it was.
+      const replayed =
+        replay == null
+          ? null
+          : beginReplay(replay, (variables.providers ?? []).filter((provider) => !plan.unread.has(provider)));
       if (plan.targets.length === 0) {
         if (replay == null || replayed == null) {
           throw new Error(`No connected provider can log "${plan.item.title}"`);
@@ -1169,9 +1204,12 @@ export function useLogMedia() {
       const { item, targets, skipped } = plan;
 
       const result = await fanOutLog(
-        withUnconfirmed(
-          withMappingSkips(logAdapters(queryClient), plan.mappingSkips),
-          plan.unconfirmed,
+        withUnread(
+          withUnconfirmed(
+            withMappingSkips(logAdapters(queryClient), plan.mappingSkips),
+            plan.unconfirmed,
+          ),
+          plan.unread,
         ),
         plan.writeTargets,
         plan.variables,
@@ -1276,6 +1314,7 @@ export function useLogMedia() {
         failed: result.failed.filter((provider) => !queued.includes(provider)),
         skipped,
         queued,
+        unanswered: variables.retryOf?.unanswered,
         rewatch: plan.rewatch,
         settled,
       };
