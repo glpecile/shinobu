@@ -33,7 +33,7 @@ describe('getWikidataRatings', () => {
       // IMDb is recorded too; Simkl is where its score comes from.
       row('8.8/10', 'Q37312', 'Q107218751', '2026-02-21'),
     ], (query) => {
-      expect(query).toContain('(wdt:P4947 "27205")');
+      expect(query).toContain('?item wdt:P4947 "27205" .');
       expect(query).not.toContain('P4086');
     }), { tmdb: { kind: 'movie', id: 27205 }, mal: 1 }));
 
@@ -45,9 +45,16 @@ describe('getWikidataRatings', () => {
 
   test('anime without a TMDB id looks up by MAL and AniList, and no scores is an empty list', async () => {
     const ratings = await Effect.runPromise(getWikidataRatings(respond([], (query) => {
-      expect(query).toContain('(wdt:P4086 "52991") (wdt:P8729 "154587")');
+      expect(query).toContain('{ ?item wdt:P4086 "52991" . } UNION { ?item wdt:P8729 "154587" . }');
     }), { mal: 52991, anilist: 154587 }));
 
     expect(ratings).toEqual([]);
+  });
+
+  test('anime with a single provider id omits UNION', async () => {
+    await Effect.runPromise(getWikidataRatings(respond([], (query) => {
+      expect(query).toContain('?item wdt:P8729 "154587" .');
+      expect(query).not.toContain('UNION');
+    }), { anilist: 154587 }));
   });
 });
