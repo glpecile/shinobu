@@ -3,6 +3,8 @@ import {
   visibleByIds,
   type HiddenItem,
 } from '@/state/prefs/hidden-items';
+import { withLoggedEpisodes } from '@/features/log-media/optimistic';
+import { useLoggedWatches } from '@/features/log-media/logged-context';
 import { useSuspenseUpNextQuery, type UpNextResult } from '@/state/queries/up-next';
 
 import type { UpNextEntry } from './types';
@@ -14,9 +16,11 @@ import type { UpNextEntry } from './types';
  */
 export function useUpNextSections(now: Date): UpNextResult {
   const sections = useSuspenseUpNextQuery(now);
+  // A confirmed log moves its card now, before any provider read shows it.
+  const logged = useLoggedWatches();
   return {
     ...sections,
-    continueWatching: useVisibleEntries(sections.continueWatching),
+    continueWatching: useVisibleEntries(withLoggedEpisodes(sections.continueWatching, logged)),
     calendar: useVisibleEntries(sections.calendar),
   };
 }

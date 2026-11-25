@@ -80,6 +80,8 @@ error come from `useQuery`, `useMutation`, or `useTransition`, never from
   custody, migration of existing sessions, and review of web storage risk.
 - `react-native-nitro-fetch` on native and `fetch` on web, both behind
   `lib/http/client.ts`.
+- `expo-network` tells TanStack Query when native is offline (`lib/online`).
+  No Nitro module does this yet.
 - TMDB for metadata only. It is never a session, registry entry, or write target.
 - bun for packages, scripts, and `bun:test`. oxlint for `bun lint`.
 - React Compiler memoizes, so lint bans `useMemo` and `useCallback`. Opt out
@@ -186,10 +188,22 @@ never `pod update` (`docs/solutions/pod-install-stale-podfile-lock.md`).
   Adding a provider widens the unions and the registry, nothing else.
 - A failed write reaches the caller as that provider's result, never a boolean
   or a throw.
-- Every Hardcover write lands on a member's real account. Only a person makes
-  one, in the app. No agent, script, test or probe sends a Hardcover mutation,
-  and none sends one to check that a mutation works. Hardcover writes its own
+- Every Hardcover write lands on a member's real account, so each one starts
+  from a person's action in the app. The app may send that write later: a log
+  confirmed offline waits in the pending queue like any other provider's. No
+  agent, script, test or probe sends a Hardcover mutation, and none sends one
+  to check that a mutation works. Hardcover writes its own
   journal entries, so the adapter never does (`lib/providers/hardcover/writes.ts`).
+- A log confirmed offline waits in `features/log-media/pending-logs.ts` and
+  replays through `useLogMedia`. It never replays as a rewatch, under another
+  account, or after an unanswered write that no read can check
+  (`docs/solutions/offline-reads-and-queued-logs.md`). No other write waits:
+  mutations run with `networkMode: 'always'` and fail offline with their links.
+- A confirmed episode log is drawn at once, before a provider read shows it
+  (`features/log-media/optimistic.ts`). `useOptimistic` holds it while the
+  write runs, and the pending queue holds it offline. A card moves only to an
+  episode the data proves, and a failed write puts it back. The log path never
+  reconciles against this state.
 - Never a dead-end error. A write the platform can't do
   (`unsupportedWritePlatforms`), a failure, or a skip links to the item on that
   provider through `providerItemUrl` (`lib/providers/external-urls.ts`).

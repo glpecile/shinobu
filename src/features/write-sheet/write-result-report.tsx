@@ -123,6 +123,7 @@ export function WriteResultReport({
   const succeeded = outcomes
     .filter((outcome) => outcome.status === 'ok')
     .map((outcome) => outcome.provider);
+  const queued = outcomes.filter((outcome) => outcome.status === 'queued').map((outcome) => outcome.provider);
   const { reconcileSkipped, reasonedSkips } = splitSkippedOutcomes(outcomes);
   const okReasons = okReasonOutcomes(outcomes);
 
@@ -150,6 +151,11 @@ export function WriteResultReport({
             />
           ))}
         </View>
+      )}
+      {queued.length > 0 && (
+        <Text className="text-muted font-sans text-sm mt-3">
+          {`Saved offline. Logs to ${queued.map((id) => PROVIDERS[id].label).join(', ')} when you are back online.`}
+        </Text>
       )}
       {reconcileSkipped.length > 0 && reconcileLine != null && (
         <Text className="text-muted font-sans text-sm mt-3">

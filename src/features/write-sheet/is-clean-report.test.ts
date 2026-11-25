@@ -54,6 +54,14 @@ describe('isCleanWriteReport (plan 0032 KTD-3)', () => {
     ).toBe(false);
   });
 
+  test('a log saved for later closes the sheet: nothing is left to act on', () => {
+    expect(
+      isCleanWriteReport(
+        report({ queued: ['trakt'], outcomes: [{ provider: 'trakt', status: 'queued' }] }),
+      ),
+    ).toBe(true);
+  });
+
   test('a reconcile skip (no reason) is a footnote, not a recourse', () => {
     expect(
       isCleanWriteReport(

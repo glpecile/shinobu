@@ -9,6 +9,8 @@ import type { ProviderId } from '@/lib/providers/types';
 export interface WriteReportLike {
   succeeded: readonly ProviderId[];
   failed: readonly ProviderId[];
+  /** Log only: providers whose write waits in the pending queue. */
+  queued?: readonly ProviderId[];
   outcomes: readonly ProviderWriteOutcome[];
 }
 
@@ -17,12 +19,13 @@ export interface WriteReportLike {
  * the outcome fits in a toast (plan 0032 KTD-3). Toasts are announcement-only
  * (R7), so any post-write news with a recourse link — a failure, a reasoned
  * skip, a partial success — must keep the sheet open; upfront rows and
- * reason-less reconcile skips were visible pre-confirm and don't block.
+ * reason-less reconcile skips were visible pre-confirm and don't block. A log
+ * saved for later needs no recourse either, so it closes the sheet too.
  */
 export function isCleanWriteReport(report: WriteReportLike): boolean {
   const { reasonedSkips } = splitSkippedOutcomes(report.outcomes);
   return (
-    report.succeeded.length > 0 &&
+    (report.succeeded.length > 0 || (report.queued?.length ?? 0) > 0) &&
     report.failed.length === 0 &&
     reasonedSkips.length === 0 &&
     okReasonOutcomes(report.outcomes).length === 0

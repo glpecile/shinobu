@@ -14,12 +14,11 @@ import type { UpNextEpisodeEntry } from '@/features/up-next/types';
  * aired-but-unwatched backlog one confirm at a time. The write itself is the
  * shared `useLogMedia` fan-out — never a single-provider write (plan 0019 R7).
  *
- * The button owns nothing but the tap. Nothing advances optimistically
- * (KTD-6): once a write lands, the button spins until the Up Next slot's
- * awaited invalidation resolves, and the card then advances, moves, or
- * disappears purely from recomputed data — the button never animates a
- * counter of its own. The sheet lives above the card, which can unmount
- * mid-chain once the show is caught up.
+ * The button owns nothing but the tap. On Confirm the card moves at once, from
+ * `withLoggedEpisodes` (`features/log-media/optimistic.ts`), and the button
+ * spins on the moved card until the Up Next slot's awaited invalidation
+ * resolves. The button never animates a counter of its own. The sheet lives
+ * above the card, which can unmount mid-chain once the show is caught up.
  *
  * Typed to the `episode` arm of the union, not `UpNextEntry`: a release entry
  * has no episode to log (plan 0030 R5), so callers narrow rather than this

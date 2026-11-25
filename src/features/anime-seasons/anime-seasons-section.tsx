@@ -8,6 +8,8 @@ import { haptics } from '@/lib/haptics';
 import { Provider } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
 import { airedAnimeEpisodes } from '@/features/log-media/session/queue';
+import { withLoggedKeys } from '@/features/log-media/optimistic';
+import { useLoggedWatches } from '@/features/log-media/logged-context';
 import { useCatchUpControls } from '@/features/log-media/session/state';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import type { PendingLog } from '@/features/show-seasons/season-accordion';
@@ -94,7 +96,7 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
   const { openLog: openLogSession } = useCatchUpControls();
 
   const progress = entryState?.entry?.progress ?? item.currentProgress;
-  const watched = watchedKeys(progress);
+  const watched = withLoggedKeys(watchedKeys(progress), item, useLoggedWatches());
   const aired = new Set(airedAnimeEpisodes(item, season?.episodes ?? [], null).map((episode) => episode.number));
   const isEpisodeAired = (episode: NormalizedEpisode) => aired.has(episode.number);
 

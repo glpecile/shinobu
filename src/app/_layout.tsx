@@ -25,6 +25,8 @@ import { UpNextPrefetch } from "@/features/up-next/up-next-prefetch";
 import { SessionCacheSync } from "@/features/trackers/session-cache-sync";
 import { CatchUpLogSheet } from "@/features/log-media/session/catch-up-log-sheet";
 import { CatchUpLogProvider } from "@/features/log-media/session/state";
+import { PendingLogReplayer } from "@/features/log-media/pending-log-replayer";
+import { watchConnectivity } from "@/lib/online";
 import { usePageEnterStyle } from "@/lib/page-transition";
 import { SheetProvider } from "@/components/sheet";
 import { Platform, useColorScheme } from "react-native";
@@ -44,6 +46,7 @@ SplashScreen.preventAutoHideAsync();
 // route's first effect, which runs before any effect here could subscribe.
 onProviderConnected((id) => toast.success(`Connected to ${PROVIDERS[id].label}`));
 applyThemePreference();
+watchConnectivity();
 
 export default function Layout() {
   const [fontsLoaded, fontError] = useFonts(fonts);
@@ -176,6 +179,9 @@ export default function Layout() {
                 {/* Every logging trigger uses this host so a card or episode
                     row that re-keys after a write can't unmount its session. */}
                 <CatchUpLogSheet />
+                {/* Sends logs saved offline. After the Letterboxd bridge, so
+                    its WebView transport is registered before the first drain. */}
+                <PendingLogReplayer />
                 {/* The toast Toaster host — sonner-native on native, sonner
                     on web (plan 0032 U1). */}
                 <ToastHost />

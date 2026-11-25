@@ -1,6 +1,8 @@
 import {
   createContext,
+  startTransition,
   useContext,
+  useOptimistic,
   useRef,
   useState,
   type ReactNode,
@@ -8,6 +10,9 @@ import {
 
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import type { LogRequest } from '@/features/log-media/log-request';
+import { LoggedContext } from '@/features/log-media/logged-context';
+import { loggedWatch, type LoggedWatch } from '@/features/log-media/optimistic';
+import { usePendingLogs } from '@/features/log-media/pending-logs';
 import { haptics } from '@/lib/haptics';
 
 export interface CatchUpSession {
@@ -34,6 +39,8 @@ const StateContext = createContext<{
   busy: ReadonlyMap<string, number>;
 }>({ session: null, open: false, busy: new Map() });
 
+const NONE: readonly LoggedWatch[] = [];
+
 const ControlContext = createContext<{
   openCatchUp: (entry: UpNextEpisodeEntry) => void;
   openLog: (request: LogRequest) => void;
@@ -45,11 +52,19 @@ const ControlContext = createContext<{
    * progress or Up Next's next episode.
    */
   trackBusy: (itemId: string, work: Promise<unknown>) => void;
+  /**
+   * Draws `watch` as logged until `work` settles, and never rejects the
+   * caller. Pass the write chained to its `settled` refetches, so the real
+   * data is in place when the optimistic state ends. A write that fails ends
+   * it too, which is the rollback.
+   */
+  trackLog: (watch: LoggedWatch | null, work: Promise<unknown>) => void;
 }>({
   openCatchUp: () => {},
   openLog: () => {},
   closeCatchUp: () => {},
   trackBusy: () => {},
+  trackLog: () => {},
 });
 
 export function CatchUpLogProvider({ children }: { children: ReactNode }) {
@@ -58,6 +73,16 @@ export function CatchUpLogProvider({ children }: { children: ReactNode }) {
   const open = session != null && openId === session.id;
   const [busy, setBusy] = useState<ReadonlyMap<string, number>>(new Map());
   const idRef = useRef(0);
+  // What the screens draw ahead of the providers (`LoggedContext`): the logs
+  // still in flight (`trackLog`) and the logs that wait in the pending queue.
+  const [inFlight, addInFlight] = useOptimistic(NONE, (current, watch: LoggedWatch) => [...current, watch]);
+  // A record with every leg stopped is not logged, so it is not drawn as watched.
+  const queued = usePendingLogs().flatMap((record) =>
+    Object.values(record.legs).some((leg) => leg.state !== 'failed')
+      ? (loggedWatch(record.variables) ?? [])
+      : [],
+  );
+  const logged = inFlight.length + queued.length === 0 ? NONE : [...inFlight, ...queued];
 
   const bump = (itemId: string, delta: number) =>
     setBusy((current) => {
@@ -94,10 +119,19 @@ export function CatchUpLogProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const trackLog = (watch: LoggedWatch | null, work: Promise<unknown>) => {
+    if (watch == null) return;
+    // The optimistic state lives exactly as long as this action.
+    startTransition(async () => {
+      addInFlight(watch);
+      await work.catch(() => {});
+    });
+  };
+
   return (
     <StateContext.Provider value={{ session, open, busy }}>
-      <ControlContext.Provider value={{ openLog, openCatchUp, closeCatchUp, trackBusy }}>
-        {children}
+      <ControlContext.Provider value={{ openLog, openCatchUp, closeCatchUp, trackBusy, trackLog }}>
+        <LoggedContext.Provider value={logged}>{children}</LoggedContext.Provider>
       </ControlContext.Provider>
     </StateContext.Provider>
   );

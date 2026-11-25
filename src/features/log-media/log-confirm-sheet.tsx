@@ -36,6 +36,7 @@ import { parseTags } from './parse-tags';
 import { ReadingProgressField, readingSpan, readingTitle } from './reading-progress-field';
 import { StepperField } from './stepper-field';
 import { logToastCopy } from './toast-copy';
+import { loggedWatch } from './optimistic';
 import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit, useTargetSelection } from './use-log-targets';
 import { WatchedAtField } from './watched-at-field';
@@ -315,7 +316,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
         : undefined;
   const title =
     reading != null ? readingTitle(reading, inPages) : span == null ? request.title : `Log ${span}`;
-  const { trackBusy } = useCatchUpControls();
+  const { trackBusy, trackLog } = useCatchUpControls();
   const queryClient = useQueryClient();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
@@ -366,6 +367,10 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
       ...(retryOf != null ? { retryOf } : {}),
     });
+    trackLog(
+      loggedWatch({ item, episodes: request.episodes, entryEpisodes }),
+      write.then((result) => result.settled),
+    );
     // A reading item's button stays busy until its library entry and its
     // Continue Reading card are read again, so a second log never opens on
     // the page, chapter or status this one changed.

@@ -14,6 +14,23 @@ Replay a provider leg automatically only when nothing can have landed, or when
 a fresh reconcile read proves whether it did. Every other leg ends as a failure
 with the existing manual link.
 
+## As built
+
+`docs/solutions/offline-reads-and-queued-logs.md` describes what shipped. It
+differs from this plan in these points:
+
+- Native connectivity comes from `expo-network` (Open question 1).
+- Account protection uses a session epoch, not identity reads. A leg fails
+  when its provider was disconnected or can't be used. There is no "ask once"
+  step and no extra request (Open question 2).
+- An interactive log writes no record ahead. Only a replay does. A record is
+  written after a write gets no answer.
+- Every mutation runs with `networkMode: 'always'`, so no mutation pauses and
+  none reaches the query snapshot.
+- There is no per-drain cap. The drain is sequential and stops on the first
+  transient failure.
+- Pending is a sheet behind a button in the Diary header, not a list section.
+
 ## Evidence
 
 Read against `main` at `01e42b3`, assuming plans 005 (#369) and 014 (#385)

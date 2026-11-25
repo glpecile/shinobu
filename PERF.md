@@ -50,6 +50,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - Show each provider's result when it arrives. During a refetch, keep the complete cached result. (#328)
 - Render the item that is ready before its full catalog loads. (#347)
 - Do not make a detail read wait for Home to load. (#187)
+- Offline, pause a read. Do not retry it. Native reports connectivity through `lib/online`, so a read with no network sends 0 attempts, not 4, and resumes on reconnect. Not measured on a device. (#497)
 
 ## Invalidation
 
@@ -58,6 +59,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - Invalidate by media type. An episode cannot change the watched-movies library. (#383)
 - Limit pull-to-refresh to the current item's queries. (#330)
 - Write the confirmed result into the cache, so the tick shows before the refetch. (#296)
+- Draw a confirmed log before the provider answers. `useOptimistic` in `CatchUpLogProvider` holds it until the log's refetches land (`LogMediaResult.settled`), and a failed write ends it. Show only an episode the data proves. (#497)
 - Cancel reads that started before a write. If you do not, they put old data back. (#329)
 
 ## Prefetch

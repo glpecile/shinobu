@@ -1,4 +1,10 @@
-import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  onlineManager,
+  useMutation,
+  useQueryClient,
+  type InvalidateQueryFilters,
+  type QueryClient,
+} from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { logToAniList } from '@/lib/providers/anilist/writes';
@@ -46,7 +52,13 @@ import {
   cachedTmdbTvIdByTvdb,
 } from '@/state/queries/mapping';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { anilistMediaKind, resolveWriteTargets } from '@/lib/providers/routing';
+import {
+  anilistMediaKind,
+  canQueueLog,
+  isManualWriteTarget,
+  logReadProvesAbsence,
+  resolveWriteTargets,
+} from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
@@ -66,6 +78,13 @@ import { createAniListWriteQueue } from './anilist-write-queue';
 import { dayKeyForInstant } from '@/features/diary/merge';
 import { createSimklLogQueue } from './simkl-write-lock';
 import {
+  MAX_PENDING_LOGS,
+  beginReplay,
+  queuePendingLog,
+  settleReplay,
+  takePendingLegs,
+} from './pending-logs';
+import {
   anilistHasEpisodes,
   anilistHasFilm,
   reconcileLogTargets,
@@ -76,6 +95,7 @@ import {
 } from './reconcile';
 import {
   fanOutLog,
+  transientKind,
   type WriteAdapter,
   type LogMediaResult,
   type LogMediaVariables,
@@ -616,8 +636,10 @@ async function resolveLogPlan(
  * counts as "doesn't have it": the write is the user's actual intent, and a
  * duplicate on a provider beats silently dropping the log.
  *
- * A retry passes `fresh`: its failed write may have landed after the cached
+ * A retry reads `fresh`: its failed write may have landed after the cached
  * read, so it refetches, and a failed read answers null ("unknown") instead.
+ * A replay reads `strict`: nobody watches it, so a read that fails for now
+ * throws, and the replay waits rather than guess.
  *
  * Each provider is asked in its own numbering domain (plan 0027 R4): Trakt and
  * Serializd against `domains.canonical`, AniList against `domains.entry`.
@@ -627,9 +649,10 @@ async function providerHasWatch(
   provider: ProviderId,
   item: NormalizedMediaItem,
   domains: LogDomains,
-  fresh = false,
+  read: 'cached' | 'fresh' | 'strict' = 'cached',
 ): Promise<boolean | null> {
   const episodes = domains.canonical;
+  const fresh = read !== 'cached';
   const freshness = fresh ? { staleTime: 0 } : {};
   try {
     switch (provider) {
@@ -734,7 +757,8 @@ async function providerHasWatch(
         return entry?.statusId === HardcoverStatus.Read;
       }
     }
-  } catch {
+  } catch (error) {
+    if (read === 'strict' && transientKind(error) != null) throw error;
     return fresh ? null : false;
   }
 }
@@ -765,13 +789,17 @@ export function invalidateAfterLog(
   item: NormalizedMediaItem,
   succeeded: readonly ProviderId[],
   skipped: readonly ProviderId[] = [],
-) {
+): Promise<void> {
+  const refetches: Promise<void>[] = [];
+  const invalidate = (filters: InvalidateQueryFilters) => {
+    refetches.push(queryClient.invalidateQueries(filters));
+  };
   // The write changed watch history — refresh the reads that show it. Runs on
   // the *enriched* item (the mutation may have discovered ids the caller's
   // copy lacks), which is why this lives here and not in onSuccess.
   if (succeeded.includes(Provider.Trakt)) {
     const filmLike = item.type === 'MOVIE' || item.isFilm === true;
-    queryClient.invalidateQueries({
+    invalidate({
       queryKey: filmLike ? traktQueryKeys.watchedMovies() : traktQueryKeys.watchedShows(),
     });
     // Trakt removes a watched item from the watchlist server-side — "watching 1
@@ -780,28 +808,28 @@ export function invalidateAfterLog(
     // for the full window showing something the user has already watched (plan
     // 0031 KTD-5). The prefix, not a per-sort key: this path can't know which
     // type/sort the surface requested.
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
+    invalidate({ queryKey: traktQueryKeys.watchlistRoot() });
     const traktId = item.externalIds.trakt;
     if (!filmLike && traktId != null) {
       // TV logs also change this show's seasons/progress views (plan 0010).
-      queryClient.invalidateQueries({
+      invalidate({
         queryKey: traktQueryKeys.showProgress(traktId),
       });
     }
   }
   if (succeeded.includes(Provider.AniList)) {
-    if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
-    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.library() });
+    if (item.externalIds.anilist != null) invalidate({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
+    invalidate({ queryKey: anilistQueryKeys.library() });
     // The one list read this log can change: manga feeds Continue Reading and
     // the reading list, anime feeds Up Next and the watchlist.
-    queryClient.invalidateQueries({
+    invalidate({
       queryKey: anilistMediaKind(item) === 'MANGA'
         ? anilistQueryKeys.currentMangaEntries()
         : anilistQueryKeys.currentAnimeEntries(),
     });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {
-      queryClient.invalidateQueries({
+      invalidate({
         queryKey: anilistQueryKeys.entryState(mediaId),
       });
     }
@@ -813,24 +841,24 @@ export function invalidateAfterLog(
     // activities delta that gates their refetch (plan 0034 KTD-5). Registered
     // here before U7 flipped canRead — which is what made the flip
     // read-correct on day one.
-    queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() });
-    queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
+    invalidate({ queryKey: simklQueryKeys.allItemsRoot() });
+    invalidate({ queryKey: simklQueryKeys.activities() });
   }
   if (succeeded.includes(Provider.Hardcover)) {
-    queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.libraryRoot() });
-    queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.listRoot() });
+    invalidate({ queryKey: hardcoverQueryKeys.libraryRoot() });
+    invalidate({ queryKey: hardcoverQueryKeys.listRoot() });
   }
   if (succeeded.includes(Provider.Serializd)) {
     // The write moved progress — refresh it so the next reconcile sees it.
     const username = getSerializdUsername();
     if (username != null) {
-      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.watchedShows(username) });
+      invalidate({ queryKey: serializdQueryKeys.watchedShows(username) });
       // A log resumes a paused or dropped show, which Coming Soon leaves out.
-      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.trackingLists(username) });
-      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.upcoming(username) });
+      invalidate({ queryKey: serializdQueryKeys.trackingLists(username) });
+      invalidate({ queryKey: serializdQueryKeys.upcoming(username) });
       const tmdbId = item.externalIds.tmdb;
       if (tmdbId != null) {
-        queryClient.invalidateQueries({
+        invalidate({
           queryKey: serializdQueryKeys.progress(username, tmdbId),
         });
       }
@@ -842,7 +870,7 @@ export function invalidateAfterLog(
     const slug =
       item.externalIds.letterboxd ??
       (tmdb != null ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb)) ?? null : null);
-    queryClient.invalidateQueries({
+    invalidate({
       queryKey: letterboxdQueryKeys.filmWatchesRoot(),
       predicate: ({ queryKey }) =>
         (slug != null && (queryKey[3] === slug ||
@@ -853,12 +881,12 @@ export function invalidateAfterLog(
     // A pre-write RSS response must not repopulate the shared input as fresh.
     void queryClient.cancelQueries({ queryKey: DIARY_QUERY_ROOT });
     void queryClient.cancelQueries({ queryKey: letterboxdQueryKeys.diaryRoot() });
-    queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.diaryRoot(), refetchType: 'none' });
+    invalidate({ queryKey: letterboxdQueryKeys.diaryRoot(), refetchType: 'none' });
   }
   // Every diary provider's write lands a new log — the unified diary must
   // show it on its next visit (plan 0016 KTD9). One query, one invalidation.
   if (succeeded.length > 0) {
-    queryClient.invalidateQueries({ queryKey: DIARY_QUERY_ROOT });
+    invalidate({ queryKey: DIARY_QUERY_ROOT });
   }
   // Logs can change membership or status without a separate watchlist write.
   // Refresh the gather only after the provider entries it reads are stale.
@@ -868,7 +896,7 @@ export function invalidateAfterLog(
     succeeded.includes(Provider.Simkl) ||
     succeeded.includes(Provider.Hardcover)
   ) {
-    queryClient.invalidateQueries({ queryKey: watchlistQueryKeys.inputs() });
+    invalidate({ queryKey: watchlistQueryKeys.inputs() });
   }
   // **Last on purpose.** `invalidateQueries` starts the refetch of the active
   // Up Next query *synchronously*, and `fetchUpNextInputs` reaches its
@@ -896,8 +924,9 @@ export function invalidateAfterLog(
   const touched = (provider: ProviderId) =>
     succeeded.includes(provider) || skipped.includes(provider);
   if (touched(Provider.Trakt) || touched(Provider.AniList) || touched(Provider.Simkl)) {
-    queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
+    invalidate({ queryKey: upNextQueryKeys.inputs() });
   }
+  return Promise.all(refetches).then(() => undefined);
 }
 
 /**
@@ -981,7 +1010,13 @@ export async function planLogWrite(
   const answers = await Promise.all(
     reconcileTargets.map(async (provider) => ({
       provider,
-      hasIt: await providerHasWatch(queryClient, provider, item, domains, retryOf != null),
+      hasIt: await providerHasWatch(
+        queryClient,
+        provider,
+        item,
+        domains,
+        variables.replay != null ? 'strict' : retryOf != null ? 'fresh' : 'cached',
+      ),
     })),
   );
   // A provider that can't report its state (null) is written but has no say
@@ -1007,7 +1042,9 @@ export async function planLogWrite(
   const writeTargets = targets.filter((provider) => !skipped.includes(provider));
   const unconfirmed =
     retryOf?.rewatch === false
-      ? answers.filter(({ hasIt }) => hasIt == null).map(({ provider }) => provider)
+      ? answers
+          .filter(({ provider, hasIt }) => hasIt == null && retryOf.unsent?.includes(provider) !== true)
+          .map(({ provider }) => provider)
       : [];
   const rewatch =
     retryOf?.rewatch ??
@@ -1024,6 +1061,7 @@ export async function planLogWrite(
     episodes: _episodes,
     entryEpisodes: _entryEpisodes,
     retryOf: _retryOf,
+    replay: _replay,
     ...rest
   } = variables;
 
@@ -1046,6 +1084,48 @@ export async function planLogWrite(
 }
 
 /**
+ * A log confirmed with no connection: every target that may wait is saved to
+ * the pending queue, and nothing is planned, because a plan made offline is
+ * built from failed lookups. The replay plans it online. The item is routed
+ * as passed, so the providers the sheet selected are trusted.
+ */
+function queueOffline(variables: LogMediaVariables, connected: readonly ProviderId[]): LogMediaResult {
+  const platform = currentPlatform();
+  const userscript = hasLetterboxdUserscript();
+  const targets = (
+    variables.providers ??
+    resolveWriteTargets(variables.item, connected, { capability: 'log', platform, letterboxdUserscript: userscript })
+  ).filter(
+    (provider) => connected.includes(provider) && !isManualWriteTarget(provider, platform, 'log', userscript),
+  );
+  if (targets.length === 0) {
+    throw new Error(`No connected provider can log "${variables.item.title}"`);
+  }
+  const waiting = targets.filter((provider) => canQueueLog(provider, platform));
+  const saved = waiting.length > 0 && queuePendingLog(variables, waiting, 'unsent');
+  const queued = saved ? waiting : [];
+  const outcomes = targets.map((provider): ProviderWriteOutcome =>
+    queued.includes(provider)
+      ? { provider, status: 'queued' }
+      : {
+          provider,
+          status: 'error',
+          message: waiting.includes(provider)
+            ? `${MAX_PENDING_LOGS} logs already wait for a connection.`
+            : `You are offline, and ${PROVIDERS[provider].label} logs are not saved for later.`,
+        },
+  );
+  return {
+    outcomes,
+    succeeded: [],
+    failed: targets.filter((provider) => !queued.includes(provider)),
+    skipped: [],
+    queued,
+    rewatch: false,
+  };
+}
+
+/**
  * The unified log fan-out (plans 0008 + 0011, todos/005 + 002): enrich the
  * item's cross-provider identity (ani.zip), route to every connected provider
  * applicable to it, reconcile against what each provider already records
@@ -1058,10 +1138,33 @@ export function useLogMedia() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (variables: LogMediaVariables): Promise<LogMediaResult> => {
+    mutationFn: async (intent: LogMediaVariables): Promise<LogMediaResult> => {
+      const replay = intent.replay;
+      if (replay == null && !onlineManager.isOnline()) return queueOffline(intent, connected);
+
+      // A log made by hand takes over the queued legs of the same watch. One
+      // that may have landed makes this a retry, so it is never sent as a rewatch.
+      let variables = intent;
+      if (replay == null && intent.retryOf == null) {
+        const asked = intent.providers ?? connected;
+        const maybeLanded = takePendingLegs(intent, asked);
+        if (maybeLanded.length > 0) {
+          variables = {
+            ...intent,
+            retryOf: { rewatch: false, unsent: asked.filter((provider) => !maybeLanded.includes(provider)) },
+          };
+        }
+      }
+
       const plan = await planLogWrite(queryClient, variables, connected);
+      const replayed = replay == null ? null : beginReplay(replay, variables.providers ?? []);
       if (plan.targets.length === 0) {
-        throw new Error(`No connected provider can log "${plan.item.title}"`);
+        if (replay == null || replayed == null) {
+          throw new Error(`No connected provider can log "${plan.item.title}"`);
+        }
+        // Thrown, the record would block every log queued behind it.
+        settleReplay(replay, replayed, []);
+        return { outcomes: [], succeeded: [], failed: [], skipped: [], queued: [], rewatch: false };
       }
       const { item, targets, skipped } = plan;
 
@@ -1093,7 +1196,10 @@ export function useLogMedia() {
       // Both skip flavors ride along: reconcile skips (`skipped`) prove the
       // provider is ahead of the cached sections, and adapter skips
       // (`result.skipped`) cost only a recompute from warm caches.
-      invalidateAfterLog(queryClient, item, result.succeeded, [
+      // A retry or a replay reads fresh, so a skip there is a write that landed
+      // unseen: no earlier round refreshed the provider's other reads for it.
+      const landed = variables.retryOf == null ? result.succeeded : [...result.succeeded, ...skipped];
+      const settled = invalidateAfterLog(queryClient, item, landed, [
         ...skipped,
         ...result.skipped,
       ]);
@@ -1131,7 +1237,7 @@ export function useLogMedia() {
       // provider, in routing order (partial-failure contract, AGENTS.md).
       // Iterates `targets`, not `decisions`: mapping-skipped providers have no
       // decision but must still report their reasoned skip.
-      const outcomes: ProviderWriteOutcome[] = targets.map((provider) =>
+      let outcomes: ProviderWriteOutcome[] = targets.map((provider) =>
         skipped.includes(provider)
           ? { provider, status: 'skipped' }
           : (result.outcomes.find((o) => o.provider === provider) ?? {
@@ -1141,9 +1247,38 @@ export function useLogMedia() {
             }),
       );
 
+      let queued: ProviderId[] = [];
+      if (replay != null && replayed != null) {
+        settleReplay(replay, replayed, outcomes);
+      } else {
+        // No answer came back, so the write may have landed. Keep it where a
+        // fresh read can prove it did not, and send it again later. A rewatch
+        // has no such proof: the provider records the watch either way.
+        const unanswered = plan.rewatch
+          ? []
+          : outcomes
+              .filter((outcome) => outcome.status === 'error' && outcome.transient === 'network')
+              .map((outcome) => outcome.provider)
+              .filter((provider) => canQueueLog(provider, currentPlatform()) && logReadProvesAbsence(provider));
+        if (unanswered.length > 0 && queuePendingLog(intent, unanswered, 'uncertain')) {
+          queued = unanswered;
+          outcomes = outcomes.map((outcome) =>
+            queued.includes(outcome.provider) ? { provider: outcome.provider, status: 'queued' } : outcome,
+          );
+        }
+      }
+
       // `rewatch` is the log verb's own field, not the shared write core's
       // (plan 0031 KTD-4) — spliced back from the plan that computed it.
-      return { ...result, outcomes, skipped, rewatch: plan.rewatch };
+      return {
+        ...result,
+        outcomes,
+        failed: result.failed.filter((provider) => !queued.includes(provider)),
+        skipped,
+        queued,
+        rewatch: plan.rewatch,
+        settled,
+      };
     },
   });
 }
