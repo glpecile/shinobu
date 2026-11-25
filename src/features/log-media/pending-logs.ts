@@ -51,7 +51,15 @@ let snapshot: readonly PendingLog[] | null = null;
 /** Never on the server: MMKV is `localStorage` on web (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md). */
 function store(): MMKV | null {
   if (typeof window === 'undefined') return null;
-  storage ??= createMMKV({ id: 'pending-logs' });
+  if (storage == null) {
+    storage = createMMKV({ id: 'pending-logs' });
+    // Another web tab changed the queue: `save` writes nothing and refreshes this tab's snapshot.
+    if (process.env.EXPO_OS === 'web') {
+      window.addEventListener('storage', (event) => {
+        if (event.key == null || event.key.startsWith('pending-logs')) save(read());
+      });
+    }
+  }
   return storage;
 }
 

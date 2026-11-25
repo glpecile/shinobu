@@ -88,7 +88,8 @@ Rules that are easy to break:
   reconcile read, so the queue dedupes before it sends and never resends an
   unanswered Simkl write. The same holds for a Hardcover page log.
 - Web tabs share the queue. A drain runs inside `navigator.locks`, and does
-  not run where the API is missing.
+  not run where the API is missing. A tab shows another tab's changes through
+  the `storage` event.
 
 Limits: 50 records, 7 days. Past either, the log fails with its links. Nothing
 is dropped silently.
