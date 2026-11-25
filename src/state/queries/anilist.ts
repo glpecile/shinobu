@@ -1,5 +1,6 @@
 import {
   keepPreviousData,
+  onlineManager,
   useQuery,
   useQueryClient,
   useSuspenseInfiniteQuery,
@@ -15,7 +16,7 @@ import { Provider } from '@/lib/providers/types';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
-import { getAnimeRelations } from '@/lib/providers/anilist/relations';
+import { getAnimeRelations, type AnimeRelations } from '@/lib/providers/anilist/relations';
 import { getAniListLibrary } from '@/lib/providers/anilist/library';
 import {
   getCurrentAnime,
@@ -28,7 +29,7 @@ import {
   type SeasonalAnimePage,
 } from '@/lib/providers/anilist/reads';
 import { namesMatch, pickPersonMatch } from '@/lib/providers/tmdb/normalize';
-import type { AniListCurrentEntry, AniListMangaEntry } from '@/lib/providers/anilist/normalize';
+import { humanizeEnum, type AniListCurrentEntry, type AniListMangaEntry } from '@/lib/providers/anilist/normalize';
 import type {
   AnimeFormatFilter,
   AnimeSeasonWindow,
@@ -433,6 +434,47 @@ export function anilistRelationsQuery(queryClient: QueryClient, params: { mediaI
     },
     staleTime: EPISODES_STALE_MS,
   };
+}
+
+/**
+ * The one series AniList names as an anime's sequel, with the viewer's entry
+ * and its episodes, for carrying a log into the next season. Null when AniList
+ * names none or several, or a read fails. Give the sheet at most three seconds
+ * to find it, without canceling reads shared by detail screens.
+ */
+export async function fetchAniListSequel(
+  queryClient: QueryClient,
+  mediaId: number,
+): Promise<AnimeRelations | null> {
+  if (!onlineManager.isOnline() || tokenStore.get() == null) return null;
+  const revision = aniListSessionRevision();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), 3000); });
+  try {
+    const source = anilistRelationsQuery(queryClient, { mediaId, type: 'ANIME' });
+    // The final log invalidates progress. Its relation edges are still useful.
+    const cached = queryClient.getQueryData<AnimeRelations>(source.queryKey);
+    const entry = cached ?? await Promise.race([queryClient.fetchQuery({ ...source, retry: false }), deadline]);
+    const sequels = (entry?.relations ?? []).filter(
+      ({ relation, item }) =>
+        relation === humanizeEnum('SEQUEL') && item.type === 'ANIME' && item.isFilm !== true,
+    );
+    const sequelId = sequels.length === 1 ? sequels[0].item.externalIds.anilist : undefined;
+    if (sequelId == null || !onlineManager.isOnline() || revision !== aniListSessionRevision()) return null;
+    const sequel = await Promise.race([
+      queryClient.fetchQuery({
+        ...anilistRelationsQuery(queryClient, { mediaId: sequelId, type: 'ANIME' }),
+        staleTime: 0,
+        retry: false,
+      }),
+      deadline,
+    ]);
+    return onlineManager.isOnline() && revision === aniListSessionRevision() ? sequel : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**

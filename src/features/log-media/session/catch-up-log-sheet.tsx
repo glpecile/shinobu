@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -10,6 +10,7 @@ import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { DEFAULT_LOG_TAGS, LogConfirmForm, LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
 import { isEpisodeLog, type LogRequest } from '@/features/log-media/log-request';
 import { parseTags } from '@/features/log-media/parse-tags';
+import { sequelLogRequest } from '@/features/log-media/sequel-log';
 import { episodeNoticeToastCopy, logToastCopy } from '@/features/log-media/toast-copy';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit, useTargetSelection } from '@/features/log-media/use-log-targets';
@@ -24,8 +25,10 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { haptics } from '@/lib/haptics';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
+import { anilistQueryKeys, fetchAniListSequel } from '@/state/queries/anilist';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import { upNextQueryKeys } from '@/state/queries/up-next';
+import { providerSessionEpoch } from '@/state/session/tokens';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { chainFailure, chainLabel } from './chain-copy';
@@ -182,6 +185,10 @@ function EpisodeCatchUpForm({ request, open, onClose, onDismiss, onOpenRequest }
  * write lock means the second through last Simkl legs coalesce into one POST
  * that lands when the lock lifts (`features/log-media/simkl-write-lock.ts`).
  *
+ * AniList files each season of an anime as its own entry, so a chain that ends
+ * on an entry's final episode ends clean by opening the sequel's next aired
+ * episode as a new session. The sequel is another item with its own targets.
+ *
  * The card behind the sheet moves on each confirm (`optimistic.ts`), to the
  * chain's own next episode, and spins until its slot's awaited invalidation
  * resolves. A failed write puts the card back. The sheet is the plan; the
@@ -210,7 +217,8 @@ function CatchUpForm({
   const logMedia = useLogMedia();
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
-  const { trackBusy, trackLog } = useCatchUpControls();
+  const [findingSequel, startSequelHandoff] = useTransition();
+  const { trackBusy, trackLog, openLog } = useCatchUpControls();
   const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useTargetSelection(targets);
   const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
@@ -237,7 +245,7 @@ function CatchUpForm({
   const lastConfirmed =
     frozen != null && ledger.some((row) => sameEpisode(row.episode, frozen[frozen.length - 1]));
   const currentRow = ledger.find((row) => sameEpisode(row.episode, current));
-  const awaiting = lastConfirmed && currentRow?.status === 'pending';
+  const awaiting = findingSequel || (lastConfirmed && currentRow?.status === 'pending');
   // A re-press on the last episode is its retry — but only while it needs
   // one. Once it landed clean (and an earlier row is what keeps the sheet
   // open), offering "Log episode 5" again would just log it twice.
@@ -263,6 +271,8 @@ function CatchUpForm({
   const ledgerRef = useRef<LedgerRow[]>([]);
   /** Set once the chain's last episode has been confirmed. */
   const lastFiredRef = useRef(false);
+  /** The AniList session that was active when the finale was confirmed. */
+  const sequelEpochRef = useRef<number | null>(null);
 
   // The chain's end: every queued episode confirmed and every write settled.
   // Clean all round → close and announce; otherwise the sheet stays, the
@@ -304,7 +314,20 @@ function CatchUpForm({
         toast.success(copy.title, copy.message);
       }
     }
-    (onDismiss ?? onClose)();
+    const close = onDismiss ?? onClose;
+    const anilistId = item.externalIds.anilist;
+    const epoch = sequelEpochRef.current;
+    if (anilistId == null || epoch == null || epoch !== providerSessionEpoch(Provider.AniList) ||
+      rows.some((row) => (row.result?.queued.length ?? 0) > 0)) {
+      close();
+      return;
+    }
+    startSequelHandoff(async () => {
+      const sequel = sequelLogRequest(await fetchAniListSequel(queryClient, anilistId));
+      if (!openRef.current) return;
+      if (sequel != null && epoch === providerSessionEpoch(Provider.AniList)) (onOpenRequest ?? openLog)(sequel);
+      else close();
+    });
   }
 
   function variablesFor(episode: CatchUpEpisode): LogMediaVariables {
@@ -384,7 +407,15 @@ function CatchUpForm({
     const plan = queue ?? [current];
     if (frozen == null) setFrozen(plan);
     const episode = plan[index] ?? current;
-    if (index >= plan.length - 1) lastFiredRef.current = true;
+    if (index >= plan.length - 1) {
+      lastFiredRef.current = true;
+      const anilistId = item.externalIds.anilist;
+      if (episode.season == null && anilistId != null) {
+        const cached = queryClient.getQueryData<NormalizedMediaItem>(anilistQueryKeys.anime(anilistId));
+        const total = cached?.totalEpisodes ?? item.totalEpisodes;
+        if (episode.number === total) sequelEpochRef.current = providerSessionEpoch(Provider.AniList);
+      }
+    }
     fire(episode, variablesFor(episode), plan[index + 1]);
 
     if (index >= plan.length - 1) return;
@@ -436,6 +467,7 @@ function CatchUpForm({
     <WriteSheet.Step key={completionOffer != null ? 'completion' : reported ? 'report' : 'form'}>
       {completionOffer != null ? <LetterboxdCompletionOffer request={completionOffer} onClose={onClose} onOpenRequest={onOpenRequest} /> : reported ? (
         <ChainReport
+          findingSequel={findingSequel}
           item={item}
           landed={landed}
           ledger={ledger}
@@ -485,7 +517,7 @@ function CatchUpForm({
                 (`chainLabel`). It used to be a row per fired write above the
                 button — a scrolling receipt — and then a status line, which is
                 still a second thing to read about what the button does. */}
-            {!currentLanded && (
+            {(!currentLanded || findingSequel) && (
               <WriteSheet.Actions>
                 <Button
                   variant="log"
@@ -493,7 +525,7 @@ function CatchUpForm({
                   icon={<Button.Icon name="eye" />}
                   label={chainLabel(code, { landed, failed: problems.length, saved })}
                   loading={awaiting || queue == null}
-                  loadingLabel="Logging…"
+                  loadingLabel={findingSequel ? 'Finding next episode…' : 'Logging…'}
                   morphLabel
                   onPress={confirm}
                 />
@@ -521,6 +553,7 @@ function CatchUpForm({
  * the retry.
  */
 function ChainReport({
+  findingSequel,
   item,
   landed,
   ledger,
@@ -530,6 +563,7 @@ function ChainReport({
   selectedProviders,
   sending,
 }: {
+  findingSequel: boolean;
   item: NormalizedMediaItem;
   landed: number;
   ledger: readonly LedgerRow[];
@@ -555,15 +589,15 @@ function ChainReport({
   const retryable = ledger.filter(
     (row) => retryProviders(row, selectedProviders) != null,
   );
+  const pendingLabel = findingSequel ? 'Finding next episode…' : sending > 0 ? 'Retrying…' : null;
 
   return (
     <>
       <WriteSheet.Header done onClose={onDone}>
         <WriteSheet.Title>
-          {chainFailure(
-            problems.map((row) => catchUpEpisodeCode(row.episode)),
-            failedProviders,
-          )}
+          {problems.length > 0
+            ? chainFailure(problems.map((row) => catchUpEpisodeCode(row.episode)), failedProviders)
+            : sending > 0 ? 'Retrying…' : 'Logged'}
         </WriteSheet.Title>
       </WriteSheet.Header>
       {landed > 0 && succeededProviders.length > 0 && (
@@ -589,18 +623,18 @@ function ChainReport({
         />
       </View>
 
-      {retryable.length > 0 && (
+      {(retryable.length > 0 || pendingLabel != null) && (
         <WriteSheet.Actions>
           <Button
             variant="log"
             icon={<Button.Icon name="refresh" />}
             label={
-              retryable.length === 1
+              pendingLabel ?? (retryable.length === 1
                 ? capitalize(`retry ${catchUpEpisodeCode(retryable[0]!.episode)}`)
-                : `Retry ${retryable.length} episodes`
+                : `Retry ${retryable.length} episodes`)
             }
-            loading={sending > 0}
-            loadingLabel="Retrying…"
+            loading={pendingLabel != null}
+            loadingLabel={pendingLabel ?? undefined}
             onPress={onRetry}
           />
         </WriteSheet.Actions>

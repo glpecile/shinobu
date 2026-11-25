@@ -27,6 +27,7 @@ mock.module('react-native-mmkv', () => ({
 let requests = 0;
 let failureStatus: number | undefined;
 let progressOverride: number | undefined;
+let sequelProgress: number | undefined;
 let mangaList: unknown[] | undefined;
 mock.module('@/lib/http/client', () => ({
   httpFetch: async (url: string, init: RequestInit) => {
@@ -36,9 +37,16 @@ mock.module('@/lib/http/client', () => ({
     if (mangaList != null && JSON.parse(String(init.body)).query.includes('MediaListCollection')) {
       return Response.json({ data: { MediaListCollection: { lists: [{ entries: mangaList }] } } });
     }
-    if (JSON.parse(String(init.body)).query.includes('Page(page:')) return Response.json({ data: { Page: {
+    const { query, variables } = JSON.parse(String(init.body));
+    if (query.includes('Page(page:')) return Response.json({ data: { Page: {
       pageInfo: { hasNextPage: false }, media: Array.from({ length: 50 }, (_, i) => ({ id: i + 1, type: 'ANIME' })),
     } } });
+    if (variables.id === 2 && sequelProgress != null) {
+      return Response.json({ data: { Media: {
+        id: 2, type: 'ANIME', title: { romaji: 'Sequel' }, episodes: 12,
+        mediaListEntry: { id: 200, status: 'CURRENT', progress: sequelProgress },
+      } } });
+    }
     return new Response(JSON.stringify({ data: { Media: {
       id: 1, type: 'ANIME', title: { romaji: 'Title' }, description: 'Full synopsis',
       mediaListEntry: { id: 100, status: 'CURRENT', progress: progressOverride ?? (new Headers(init.headers).get('Authorization') === 'Bearer second' ? 2 : 1) },
@@ -54,7 +62,7 @@ mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
 
-const { anilistQueryKeys, fetchWatchlistAnime, fetchWatchlistManga, useAniListEpisodesQuery, useSuspenseAniListRelationsQuery, useAnimeByIdQuery, useAniListEntryStateQuery, useSuspenseSeasonalAnimePagesQuery } = await import('./anilist');
+const { anilistQueryKeys, anilistRelationsQuery, fetchAniListSequel, fetchWatchlistAnime, fetchWatchlistManga, useAniListEpisodesQuery, useSuspenseAniListRelationsQuery, useAnimeByIdQuery, useAniListEntryStateQuery, useSuspenseSeasonalAnimePagesQuery } = await import('./anilist');
 const { useSuspenseContinueReadingQuery } = await import('./continue-reading');
 const { setProviderSession, clearProviderSession } = await import('@/state/session/tokens');
 const { createQueryClient } = await import('./query-client');
@@ -112,6 +120,21 @@ test('metadata, progress, episodes and relations share a request and revalidate 
   client.clear();
   clearProviderSession('anilist');
   progressOverride = undefined;
+});
+
+test('sequel handoff sees progress recorded elsewhere while its details were still fresh', async () => {
+  setProviderSession('anilist', { accessToken: 'first' });
+  const client = createQueryClient();
+  try {
+    sequelProgress = 1;
+    await client.fetchQuery(anilistRelationsQuery(client, { mediaId: 2, type: 'ANIME' }));
+    sequelProgress = 2;
+    expect((await fetchAniListSequel(client, 1))?.entryState?.entry?.progress).toBe(2);
+  } finally {
+    client.clear();
+    clearProviderSession('anilist');
+    sequelProgress = undefined;
+  }
 });
 
 test('seasonal pagination uses the server flag and reuses Home’s cached first page', async () => {
