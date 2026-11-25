@@ -10,6 +10,7 @@ import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { DEFAULT_LOG_TAGS, LogConfirmForm, LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
 import { isEpisodeLog, type LogRequest } from '@/features/log-media/log-request';
 import { parseTags } from '@/features/log-media/parse-tags';
+import { sequelLogRequest } from '@/features/log-media/sequel-log';
 import { episodeNoticeToastCopy, logToastCopy } from '@/features/log-media/toast-copy';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit, useTargetSelection } from '@/features/log-media/use-log-targets';
@@ -24,6 +25,7 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { haptics } from '@/lib/haptics';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
+import { cachedAniListSequel } from '@/state/queries/anilist';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import { upNextQueryKeys } from '@/state/queries/up-next';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -182,6 +184,10 @@ function EpisodeCatchUpForm({ request, open, onClose, onDismiss, onOpenRequest }
  * write lock means the second through last Simkl legs coalesce into one POST
  * that lands when the lock lifts (`features/log-media/simkl-write-lock.ts`).
  *
+ * AniList files each season of an anime as its own entry, so a chain that ends
+ * on an entry's final episode ends clean by opening the sequel's next aired
+ * episode as a new session. The sequel is another item with its own targets.
+ *
  * The card behind the sheet moves on each confirm (`optimistic.ts`), to the
  * chain's own next episode, and spins until its slot's awaited invalidation
  * resolves. A failed write puts the card back. The sheet is the plan; the
@@ -210,7 +216,7 @@ function CatchUpForm({
   const logMedia = useLogMedia();
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
-  const { trackBusy, trackLog } = useCatchUpControls();
+  const { trackBusy, trackLog, openLog } = useCatchUpControls();
   const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useTargetSelection(targets);
   const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
@@ -263,6 +269,8 @@ function CatchUpForm({
   const ledgerRef = useRef<LedgerRow[]>([]);
   /** Set once the chain's last episode has been confirmed. */
   const lastFiredRef = useRef(false);
+  /** The sequel's next log, read from the press that confirms an entry's final episode. */
+  const sequelRef = useRef<Promise<LogRequest | null> | null>(null);
 
   // The chain's end: every queued episode confirmed and every write settled.
   // Clean all round → close and announce; otherwise the sheet stays, the
@@ -304,7 +312,16 @@ function CatchUpForm({
         toast.success(copy.title, copy.message);
       }
     }
-    (onDismiss ?? onClose)();
+    const close = onDismiss ?? onClose;
+    if (sequelRef.current == null) {
+      close();
+      return;
+    }
+    void sequelRef.current.then((sequel) => {
+      if (!openRef.current) return;
+      if (sequel != null) (onOpenRequest ?? openLog)(sequel);
+      else close();
+    });
   }
 
   function variablesFor(episode: CatchUpEpisode): LogMediaVariables {
@@ -384,7 +401,13 @@ function CatchUpForm({
     const plan = queue ?? [current];
     if (frozen == null) setFrozen(plan);
     const episode = plan[index] ?? current;
-    if (index >= plan.length - 1) lastFiredRef.current = true;
+    if (index >= plan.length - 1) {
+      lastFiredRef.current = true;
+      const anilistId = item.externalIds.anilist;
+      if (episode.season == null && anilistId != null && episode.number === item.totalEpisodes) {
+        sequelRef.current = cachedAniListSequel(queryClient, anilistId).then(sequelLogRequest);
+      }
+    }
     fire(episode, variablesFor(episode), plan[index + 1]);
 
     if (index >= plan.length - 1) return;

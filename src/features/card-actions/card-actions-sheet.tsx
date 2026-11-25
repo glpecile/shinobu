@@ -286,7 +286,7 @@ export function CardActionsSheet({
         )}
       {item != null && mode === 'log' && logRequest != null && (
         <LogSheetContent
-          key={`log-${item.id}-${logRequest.title}`}
+          key={`log-${logRequest.item.id}-${logRequest.title}`}
           onClose={() => setMode('actions')}
           onDismiss={onClose}
           onOpenRequest={setLogRequest}
