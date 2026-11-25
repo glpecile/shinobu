@@ -18,3 +18,10 @@ evidence fallback (`anilist-undated-episodes-arent-proof-of-airing.md`); Simkl
 can additionally bound them with its aired count. Unknown/failed evidence never
 fabricates subsequent episodes. Session-bound closing prevents a late result
 from dismissing a newer logging sheet.
+
+When continuing into an AniList sequel, read it after the finale's writes
+land. Starting before the write competes for AniList's request budget, and
+the observerless source query can publish pre-write progress after log
+invalidation. The source's cached relation edges are enough to identify the
+sequel. Refresh the sequel's own progress and bound the sheet's wait without
+canceling requests that a details screen might share.

@@ -10,7 +10,9 @@ import { airedAnimeEpisodes } from './session/queue';
 export function sequelLogRequest(sequel: AnimeRelations | null): LogRequest | null {
   if (sequel?.item == null || sequel.entryState == null || sequel.season == null) return null;
   const { item } = sequel;
-  const number = (sequel.entryState.entry?.progress ?? 0) + 1;
+  const { entry } = sequel.entryState;
+  if (entry?.status === 'COMPLETED') return null;
+  const number = (entry?.progress ?? 0) + 1;
   const aired = airedAnimeEpisodes(item, sequel.season.episodes, null);
   if (!aired.some((episode) => episode.number === number)) return null;
   return {

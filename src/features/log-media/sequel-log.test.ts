@@ -3,11 +3,11 @@ import type { AnimeRelations } from '@/lib/providers/anilist/relations';
 import type { AniListEntryState } from '@/lib/providers/anilist/reads';
 import { sequelLogRequest } from './sequel-log';
 
-const entry = (progress: number): AniListEntryState => ({
+const entry = (progress: number, status: 'CURRENT' | 'COMPLETED' = 'CURRENT'): AniListEntryState => ({
   total: 2,
   volumes: null,
   entry: {
-    id: 1, status: 'CURRENT', progress, progressVolumes: 0, repeat: 0,
+    id: 1, status, progress, progressVolumes: 0, repeat: 0,
     score: 0, notes: null, startedAt: null, customLists: [],
   },
 });
@@ -31,6 +31,10 @@ test('a finished entry continues at its sequel’s next aired episode', () => {
 
 test('a sequel whose next episode has not aired has nothing to log', () => {
   expect(sequelLogRequest({ ...sequel, entryState: entry(1) })).toBeNull();
+});
+
+test('a completed sequel stays complete even when its progress is zero', () => {
+  expect(sequelLogRequest({ ...sequel, entryState: entry(0, 'COMPLETED') })).toBeNull();
 });
 
 test('a public read cannot name the next episode', () => {
