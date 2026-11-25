@@ -37,6 +37,7 @@ import type { TokenStore } from '@/lib/providers/token-store';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import {
   clearProviderSession,
+  connectProviderSession,
   getProviderSession,
   setProviderSession,
   onSessionChange,
@@ -69,7 +70,7 @@ export function anilistDeps(): AniListDeps {
 export function connectAniListFromRedirect(url: string): boolean {
   const session = sessionFromImplicitRedirect(url, Date.now());
   if (session == null) return false;
-  setProviderSession(Provider.AniList, session);
+  connectProviderSession(Provider.AniList, session);
   return true;
 }
 

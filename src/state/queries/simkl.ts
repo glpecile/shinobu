@@ -27,6 +27,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import type { ProviderSession } from '@/types/session';
 import {
   clearProviderSession,
+  connectProviderSession,
   getProviderSession,
   setProviderSession,
 } from '@/state/session/tokens';
@@ -71,7 +72,11 @@ export function exchangeSimklCode(params: {
   state: string;
   redirectUri: string;
 }): Promise<ProviderSession> {
-  return Effect.runPromise(exchangeSimklCodeForSession(simklDeps(), params));
+  const tokens = {
+    ...tokenStore,
+    set: (session: ProviderSession) => connectProviderSession(Provider.Simkl, session),
+  };
+  return Effect.runPromise(exchangeSimklCodeForSession({ ...simklDeps(), tokens }, params));
 }
 
 export const simklQueryKeys = {

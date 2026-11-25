@@ -14,7 +14,8 @@ mock.module('react-native-mmkv', () => ({
   }),
 }));
 
-const { getProviderClientId, providerSessionEpoch, setProviderSession } = await import('./tokens');
+const { connectProviderSession, getProviderClientId, providerSessionEpoch, setProviderSession } =
+  await import('./tokens');
 
 test('web server rendering has no device client override', () => {
   const original = process.env.EXPO_OS;
@@ -29,14 +30,13 @@ test('web server rendering has no device client override', () => {
   }
 });
 
-test('a refresh keeps the session epoch and a reconnect after a refused refresh changes it', () => {
-  values.set('connectedAt.hardcover', '1');
-  values.set('session.hardcover', JSON.stringify({ accessToken: 'a' }));
+test('a refresh keeps the session epoch and a reconnect over the kept session changes it', () => {
+  values.set('connectedAt.trakt', '1');
+  values.set('session.trakt', JSON.stringify({ accessToken: 'a' }));
 
-  setProviderSession('hardcover', { accessToken: 'b' });
-  expect(providerSessionEpoch('hardcover')).toBe(1);
+  setProviderSession('trakt', { accessToken: 'b' });
+  expect(providerSessionEpoch('trakt')).toBe(1);
 
-  setProviderSession('hardcover', { accessToken: 'b', reconnectNeeded: true });
-  setProviderSession('hardcover', { accessToken: 'c' });
-  expect(providerSessionEpoch('hardcover')).not.toBe(1);
+  connectProviderSession('trakt', { accessToken: 'c' });
+  expect(providerSessionEpoch('trakt')).not.toBe(1);
 });

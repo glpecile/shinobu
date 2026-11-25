@@ -71,11 +71,13 @@ Rules that are easy to break:
   the drain before any write. Interactively, the same failure means "write".
 - **One record at a time, oldest first.** AniList keeps one counter. A
   transient failure stops the drain until the next trigger.
-- **A leg is bound to a session** (`providerSessionEpoch`). A disconnect and
-  reconnect changes the epoch, so the leg fails and is never sent under
-  another account. A token refresh keeps the epoch. A connected provider that
-  can't be used (Trakt without credentials) fails the leg too, because its
-  reconnect overwrites the session without changing the epoch.
+- **A leg is bound to a session** (`providerSessionEpoch`). A token refresh
+  keeps the epoch. An OAuth connect always changes it, also over a kept
+  session, because Trakt, Simkl, AniList and Hardcover sessions name no
+  account (`connectProviderSession`). Letterboxd and Serializd change it only
+  under another username. So the leg fails and is never sent under another
+  account. A connected provider that can't be used (Trakt without
+  credentials) fails the leg too.
 - **The same watch queued twice is one record.** A log made by hand takes over
   the queued legs of the same watch.
 - **Delivery is at-least-once only where it can be checked.** Simkl has no
