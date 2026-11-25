@@ -283,8 +283,17 @@ function CatchUpForm({
     }
     if (rows.length > 1) {
       const succeeded = new Set(rows.flatMap((row) => row.result?.succeeded ?? []));
+      const queued = new Set(rows.flatMap((row) => row.result?.queued ?? []));
       if (succeeded.size === 0) {
         toast.success('Saved offline', `${rows.length} episodes log when you are back online`);
+      } else if (queued.size > 0) {
+        // One episode can reach one provider and wait for another, so the counts overlap.
+        const reached = rows.filter((row) => (row.result?.succeeded.length ?? 0) > 0).length;
+        const waiting = rows.filter((row) => (row.result?.queued.length ?? 0) > 0).length;
+        toast.success(
+          'Logged',
+          `${reached} of ${rows.length} episodes reached ${labels([...succeeded])}. ${waiting} ${waiting === 1 ? 'waits' : 'wait'} for ${labels([...queued])}`,
+        );
       } else {
         toast.success('Caught up', `Logged ${rows.length} episodes to ${labels([...succeeded])}`);
       }
