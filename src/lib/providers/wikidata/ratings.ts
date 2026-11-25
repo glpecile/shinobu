@@ -36,13 +36,9 @@ function lookupPattern(lookup: WikidataLookup): string | null {
     const property = lookup.tmdb.kind === 'movie' ? 'P4947' : 'P4983';
     return `?item wdt:${property} "${lookup.tmdb.id}" .`;
   }
-  const patterns = [
-    ...(lookup.mal != null ? [`?item wdt:P4086 "${lookup.mal}" .`] : []),
-    ...(lookup.anilist != null ? [`?item wdt:P8729 "${lookup.anilist}" .`] : []),
-  ];
-  return patterns.length === 2
-    ? patterns.map((pattern) => `{ ${pattern} }`).join(' UNION ')
-    : patterns[0] ?? null;
+  const mal = lookup.mal != null ? `?item wdt:P4086 "${lookup.mal}" .` : null;
+  const anilist = lookup.anilist != null ? `?item wdt:P8729 "${lookup.anilist}" .` : null;
+  return mal != null && anilist != null ? `{ ${mal} } UNION { ${anilist} }` : mal ?? anilist;
 }
 
 const query = (pattern: string) => `SELECT ?score ?source ?method ?date ?rt ?mc WHERE {

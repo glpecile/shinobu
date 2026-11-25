@@ -50,4 +50,11 @@ describe('getWikidataRatings', () => {
 
     expect(ratings).toEqual([]);
   });
+
+  test('anime with a single provider id omits UNION', async () => {
+    await Effect.runPromise(getWikidataRatings(respond([], (query) => {
+      expect(query).toContain('?item wdt:P8729 "154587" .');
+      expect(query).not.toContain('UNION');
+    }), { anilist: 154587 }));
+  });
 });
