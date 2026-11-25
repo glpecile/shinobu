@@ -1,8 +1,8 @@
 import { LETTERBOXD_BASE_URL } from '@/lib/providers/letterboxd/config';
 
 /**
- * Historical Letterboxd write probe (plan 0018, todos/011). Keep it outside the production
- * Worker. The production relay remains GET-only.
+ * Letterboxd Workers-egress diagnostic (plan 0018, todos/011).
+ * The Worker dispatches it separately from the GET-only public read relay.
  */
 
 const SPIKE_PATH = '/api/letterboxd/spike/production-log-entries';

@@ -24,7 +24,10 @@ import { EpisodeCard } from './episode-card';
 const CARD_LAYOUT =
   Platform.OS === 'ios' ? LinearTransition.duration(DURATION.swap) : undefined;
 
-/** Off-web, where an exit clone reparents the card out of the rail (docs/solutions/reanimated-web-exiting-pulls-child-out-of-flow.md). */
+/**
+ * Skip the exit fade on web, where Reanimated pulls the card out of the rail's flow
+ * (docs/solutions/reanimated-web-exiting-pulls-child-out-of-flow.md).
+ */
 export const CARD_EXIT =
   Platform.OS === 'web' ? undefined : FadeOut.duration(DURATION.exit);
 

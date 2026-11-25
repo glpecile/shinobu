@@ -36,7 +36,6 @@ yarn-error.*
 !.env.template
 
 *.tsbuildinfo
-# Commit generated Uniwind types so CI can typecheck without Metro.
 .claude/settings.local.json
 
 .wrangler/

@@ -6,7 +6,8 @@ import {
 /**
  * Approved same-origin relay for allowlisted public Letterboxd reads. GET only, with no client
  * headers or cookies, no redirects, and no CORS headers. Serve only approved HTML or RSS with
- * a restrictive CSP.
+ * a restrictive CSP. Store and log nothing. Writes stay in authenticated clients
+ * (native WebView or web userscript).
  */
 
 const PROXY_PREFIX = `${LETTERBOXD_WEB_PROXY_BASE_URL}/`;
