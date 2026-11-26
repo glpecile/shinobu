@@ -12,7 +12,7 @@ import { useWindowDimensions } from '@/lib/window-dimensions';
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
-import { EmptyStateTile } from '@/components/empty-state-tile';
+import { CenteredNotice } from '@/components/centered-notice';
 import { List, type LegendListRef } from '@/components/List';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import {
@@ -591,7 +591,6 @@ export function DiaryList({
   const collapsedDays = useCollapsedDiaryDays();
   const inPages = useReadingInPages();
   const hiddenItems = useHiddenItems();
-  const muted = useThemeColor('--color-muted');
   const wide = useWindowDimensions().width >= SIDE_CALENDAR_MIN_WIDTH;
   let emptyIcon: React.ComponentProps<typeof Ionicons>['name'];
   let emptyTitle: string;
@@ -744,13 +743,11 @@ export function DiaryList({
           }
           ListEmptyComponent={
             <SectionEnter className="py-8" key={format}>
-              <EmptyStateTile
-                icon={<Ionicons accessible={false} color={muted} name={emptyIcon} size={44} />}
-                title={emptyTitle}
-              >
+              <CenteredNotice className="flex-none">
+                <CenteredNotice.Icon name={emptyIcon} />
+                <CenteredNotice.Title>{emptyTitle}</CenteredNotice.Title>
                 {hasNextPage && (
-                  <Button
-                    className="mt-6"
+                  <CenteredNotice.Action
                     icon={<Button.Icon name="chevron-down" />}
                     label="Load more"
                     loading={isFetchingNextPage}
@@ -758,7 +755,7 @@ export function DiaryList({
                     variant="quiet"
                   />
                 )}
-              </EmptyStateTile>
+              </CenteredNotice>
             </SectionEnter>
           }
           ListFooterComponent={

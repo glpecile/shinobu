@@ -1,4 +1,3 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useRef, useState, type ReactNode } from 'react';
 import {
   Platform,
@@ -24,7 +23,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
-import { EmptyStateTile } from '@/components/empty-state-tile';
+import { CenteredNotice } from '@/components/centered-notice';
 import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
 import { MediaCard } from '@/components/media-card';
@@ -43,7 +42,6 @@ import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
-import { useThemeColor } from '@/lib/theme-color';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import { useItemProgress, useProgressLibraries, type ProgressLibraries } from '@/state/queries/media-progress';
@@ -209,7 +207,6 @@ export function CreditTimeline({
   onItemActions,
 }: CreditTimelineProps) {
   const enter = usePageEnterStyle();
-  const muted = useThemeColor('--color-muted');
   const reduceMotion = useReducedMotion();
   const settle = useSharedValue(1);
   const settleStyle = useAnimatedStyle(() => ({
@@ -281,12 +278,11 @@ export function CreditTimeline({
         keyExtractor={(row) => row.key}
         ListEmptyComponent={
           <Column>
-            <EmptyStateTile
-              className="my-10"
-              description="Try another format or role."
-              icon={<Ionicons color={muted} name="film-outline" size={28} />}
-              title="Nothing for this filter"
-            />
+            <CenteredNotice className="flex-none my-10">
+              <CenteredNotice.Icon name="film-outline" />
+              <CenteredNotice.Title>Nothing for this filter</CenteredNotice.Title>
+              <CenteredNotice.Body>Try another format or role.</CenteredNotice.Body>
+            </CenteredNotice>
           </Column>
         }
         ListFooterComponent={
