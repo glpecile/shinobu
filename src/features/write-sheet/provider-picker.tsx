@@ -45,17 +45,21 @@ function ProviderToggle({
       onPress={onToggle}
     >
       <AnimatedView
-        className="absolute inset-0 bg-accent/10"
+        className="absolute inset-0 bg-accent-tonal"
         style={[SELECTION_FADE, { opacity: selected ? 1 : 0 }]}
       />
-      <View className="flex-row items-center gap-3">
+      <View className="flex-1 min-w-0 flex-row items-center gap-3 mr-3">
         <ProviderIcon id={id} size={18} />
-        <Text className="text-foreground font-sans-semibold text-sm">
+        <Text className="shrink-0 text-foreground font-sans-semibold text-sm">
           {descriptor.label}
         </Text>
-        {detail != null && <Text className="text-muted font-sans text-sm">{detail}</Text>}
+        {detail != null && (
+          <Text className="shrink text-muted font-sans text-sm" numberOfLines={1}>
+            {detail}
+          </Text>
+        )}
       </View>
-      <View>
+      <View className="shrink-0">
         <Ionicons color={muted} name="ellipse-outline" size={20} />
         <AnimatedView
           className="absolute inset-0"
@@ -81,7 +85,7 @@ function NoTargets({ onConnect }: { onConnect?: () => void }) {
   const connected = useConnectedProviders();
   const accent = useThemeColor('--color-accent');
   return (
-    <View className="rounded-full border border-border bg-surface px-4 py-3 flex-row items-center justify-between gap-3">
+    <View className="rounded-3xl border border-border bg-surface px-4 py-3 flex-row items-center justify-between gap-3">
       <Text className="text-muted font-sans text-sm flex-1" numberOfLines={2}>
         {connected.length === 0
           ? 'No trackers connected yet.'
@@ -114,8 +118,11 @@ function ProviderOptions({
   return (
     <View>
       {targets.length > 1 && (
-        <View className="flex-row justify-end gap-3 px-4 py-2 border-b border-border">
+        <View className="flex-row justify-end gap-1 px-2.5 border-b border-border">
           <PresstableOpacity
+            accessibilityLabel="Select all providers"
+            accessibilityRole="button"
+            className="min-h-11 min-w-11 items-center justify-center"
             onPress={() => {
               if (!allSelected) haptics.selection();
               onSelectAll();
@@ -125,6 +132,8 @@ function ProviderOptions({
           </PresstableOpacity>
           <PresstableOpacity
             accessibilityLabel="Select no providers"
+            accessibilityRole="button"
+            className="min-h-11 min-w-11 items-center justify-center"
             onPress={() => {
               if (anySelected) haptics.selection();
               onSelectNone();

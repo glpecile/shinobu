@@ -7,7 +7,6 @@ import { Linking, Platform, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
-import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
 import { TextField } from '@/components/text-field';
 import { SHINOBU_NATIVE_REDIRECT_URI, SHINOBU_WEB_DOMAIN } from '@/lib/config';
@@ -209,15 +208,17 @@ export function ConnectAniListButton() {
         onPress={() => void connect()}
       />
       {embeddedClientId === '' && storedClientId != null && (
-        <PresstableOpacity
+        <Button
           className="self-center"
+          icon={<Button.Icon name="create-outline" />}
+          label="Edit client ID"
           onPress={() => {
             clearProviderClientId(Provider.AniList);
             setStoredClientId(null);
           }}
-        >
-          <Text className="text-muted font-sans text-xs">Edit client ID</Text>
-        </PresstableOpacity>
+          size="sm"
+          variant="ghost"
+        />
       )}
     </View>
   );

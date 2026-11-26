@@ -32,6 +32,9 @@ export function WatchedAtField({ value, onChange, label = 'Watched on', children
           <View className="flex-row items-center gap-2">
             {value != null && (
               <PresstableOpacity
+                accessibilityLabel="Set to now"
+                accessibilityRole="button"
+                className="h-11 min-w-11 items-center justify-center"
                 onPress={() => {
                   haptics.selection();
                   onChange(null);
@@ -44,10 +47,16 @@ export function WatchedAtField({ value, onChange, label = 'Watched on', children
               </PresstableOpacity>
             )}
             <PresstableOpacity
+              accessibilityLabel={`${label}, ${value != null ? formatDate(value) : 'Just now'}`}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: open }}
+              aria-expanded={open}
+              className="h-11 justify-center"
               onPress={() => {
                 haptics.selection();
                 setOpen(!open);
               }}
+              pressBehavior="immediate"
             >
               <Text className="text-foreground font-sans-semibold text-sm">
                 {value != null ? formatDate(value) : 'Just now'}
