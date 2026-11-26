@@ -15,7 +15,7 @@ function GridSkeleton({ animated, count, offset = 0 }: { animated: boolean; coun
           key={index}
           style={{ width: `${100 / columns}%` }}
         >
-          <Skeleton animated={animated} className="w-full aspect-2/3 rounded-md" delay={staggerDelay(offset + index)} />
+          <Skeleton animated={animated} className="w-full aspect-2/3 rounded-lg" delay={staggerDelay(offset + index)} />
         </View>
       ))}
     </View>
