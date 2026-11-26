@@ -285,7 +285,7 @@ export function WatchlistRemovePicker({
     return (
       <WriteSheet.Step key="confirm">
         <WriteSheet.Header onClose={onCancel}>
-          <View className="size-12 rounded-2xl border border-border bg-background items-center justify-center mb-4">
+          <View className="size-12 rounded-xl border border-border bg-background items-center justify-center mb-4">
             <Ionicons
               accessibilityElementsHidden
               color={foreground}

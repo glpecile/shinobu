@@ -123,7 +123,7 @@ export function PosterCell({
       >
         <PresstableScale
           accessibilityLabel={accessibilityLabel}
-          className="w-full h-full rounded-md overflow-hidden border border-border/40 bg-surface"
+          className="w-full h-full rounded-lg overflow-hidden border border-border/50 bg-surface"
           onLongPress={() => onActions(item)}
           onPress={() => {
             prefetchDetails(item);

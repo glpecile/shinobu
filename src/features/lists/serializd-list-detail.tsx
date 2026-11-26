@@ -6,10 +6,9 @@ import { useWindowDimensions } from '@/lib/window-dimensions';
 import { ActionableRow } from '@/components/actionable-row';
 import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
-import { Image } from '@/components/image';
 import { List } from '@/components/List';
-import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { RefreshControl } from '@/components/refresh-control';
+import { SmallPoster } from '@/components/small-poster';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { WatchedMark } from '@/components/watched-mark';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -86,7 +85,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
             showActions={target != null}
             leading={
               <>
-                {entry.item.coverImage === '' ? <PosterPlaceholder className="w-12 h-18 rounded" /> : <Image className="w-12 h-18 rounded" contentFit="cover" recyclingKey={entry.id} source={{ uri: entry.item.coverImage }} />}
+                <SmallPoster recyclingKey={entry.id} size="md" uri={entry.item.coverImage} />
                 <View className="shrink ml-4">
                   <Text className="font-sans-semibold text-foreground text-base" numberOfLines={2}>{entry.item.title}</Text>
                   <Text className="font-sans text-muted text-xs mt-1" numberOfLines={2}>{entry.subtitle}</Text>

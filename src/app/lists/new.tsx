@@ -23,7 +23,7 @@ function NewListWithItem({ id, type, ...props }: Props & { id: string; type: Med
     <View accessibilityLabel="Loading starting title" className="w-full max-w-2xl self-center px-6 gap-6">
       {props.providers.length > 1 && <Skeleton className="h-8 w-72 rounded-full self-center" />}
       <View className="gap-2"><Skeleton className="h-4 w-12 rounded" /><Skeleton className="h-10 w-full rounded-full" /></View>
-      <View className="gap-2"><Skeleton className="h-4 w-24 rounded" /><Skeleton className="h-22 w-full rounded-2xl" /></View>
+      <View className="gap-2"><Skeleton className="h-4 w-24 rounded" /><Skeleton className="h-22 w-full rounded-xl" /></View>
     </View>
   </View>;
   return <NewListScreen {...props} initialItems={item == null ? [] : [item]} />;

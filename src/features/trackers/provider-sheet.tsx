@@ -71,7 +71,7 @@ function ProviderSheetContent({
       )}
       <View className="flex-1 min-w-0">
         {account.loading === true ? (
-          <Skeleton className="h-4 w-24 rounded-sm my-1" />
+          <Skeleton className="h-4 w-24 rounded my-1" />
         ) : (
           <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
             {name}
