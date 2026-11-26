@@ -83,13 +83,11 @@ function DiaryScreen() {
     content = <DiaryWelcome timeZone={diary.timeZone} />;
   } else if (diary.activeProviders.length === 0) {
     content = (
-      <View className="flex-1 pb-16">
-        <CenteredNotice>
-          <CenteredNotice.Icon name="phone-portrait-outline" />
-          <CenteredNotice.Title>Open your diary on mobile</CenteredNotice.Title>
-          <CenteredNotice.Body>Letterboxd can only be read from the mobile app — open Shinobu on your phone to see your diary.</CenteredNotice.Body>
-        </CenteredNotice>
-      </View>
+      <CenteredNotice className="mb-16">
+        <CenteredNotice.Icon name="phone-portrait-outline" />
+        <CenteredNotice.Title>Open your diary on mobile</CenteredNotice.Title>
+        <CenteredNotice.Body>Letterboxd can only be read from the mobile app — open Shinobu on your phone to see your diary.</CenteredNotice.Body>
+      </CenteredNotice>
     );
   } else if (diary.isLoading) {
     // Wait for all providers before revealing so staggered arrivals don't reshuffle rows (docs/solutions/diary-reshuffles-while-providers-land.md).
@@ -97,28 +95,24 @@ function DiaryScreen() {
     content = <DiaryListSkeleton />;
   } else if (diary.allFailed && diary.entryCount === 0) {
     content = (
-      <View className="flex-1 pb-16">
-        <CenteredNotice>
-          <CenteredNotice.Icon name="cloud-offline-outline" />
-          <CenteredNotice.Title>Couldn't load your diary</CenteredNotice.Title>
-          <CenteredNotice.Body>Something went wrong reaching your trackers. Check your connection and try again.</CenteredNotice.Body>
-          <CenteredNotice.Action
-            icon={<Button.Icon name="refresh" />}
-            label="Try again"
-            onPress={() => diary.refetch()}
-          />
-        </CenteredNotice>
-      </View>
+      <CenteredNotice className="mb-16">
+        <CenteredNotice.Icon name="cloud-offline-outline" />
+        <CenteredNotice.Title>Couldn't load your diary</CenteredNotice.Title>
+        <CenteredNotice.Body>Something went wrong reaching your trackers. Check your connection and try again.</CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="refresh" />}
+          label="Try again"
+          onPress={() => diary.refetch()}
+        />
+      </CenteredNotice>
     );
   } else if (diary.entryCount === 0 && !diary.hasNextPage) {
     content = (
-      <View className="flex-1 pb-16">
-        <CenteredNotice>
-          <CenteredNotice.Icon name="book-outline" />
-          <CenteredNotice.Title>No logs yet</CenteredNotice.Title>
-          <CenteredNotice.Body>Log a movie, show, or anime and it'll show up here — and in every tracker you've connected.</CenteredNotice.Body>
-        </CenteredNotice>
-      </View>
+      <CenteredNotice className="mb-16">
+        <CenteredNotice.Icon name="book-outline" />
+        <CenteredNotice.Title>No logs yet</CenteredNotice.Title>
+        <CenteredNotice.Body>Log a movie, show, or anime and it'll show up here — and in every tracker you've connected.</CenteredNotice.Body>
+      </CenteredNotice>
     );
   } else {
     filter = formatControl;

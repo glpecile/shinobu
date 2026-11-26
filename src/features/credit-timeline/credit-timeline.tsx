@@ -33,6 +33,7 @@ import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import { useScrolledTitle } from '@/components/scrolled-title';
 import { SCROLL_TO_TOP_THRESHOLD, ScrollToTopFab } from '@/components/scroll-to-top-fab';
 import { Section } from '@/components/section';
+import { SectionEnter } from '@/components/section-enter';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { WatchedMark } from '@/components/watched-mark';
@@ -278,11 +279,13 @@ export function CreditTimeline({
         keyExtractor={(row) => row.key}
         ListEmptyComponent={
           <Column>
-            <CenteredNotice className="flex-none my-10">
-              <CenteredNotice.Icon name="film-outline" />
-              <CenteredNotice.Title>Nothing for this filter</CenteredNotice.Title>
-              <CenteredNotice.Body>Try another format or role.</CenteredNotice.Body>
-            </CenteredNotice>
+            <SectionEnter>
+              <CenteredNotice className="flex-none my-10">
+                <CenteredNotice.Icon name="film-outline" />
+                <CenteredNotice.Title>Nothing for this filter</CenteredNotice.Title>
+                <CenteredNotice.Body>Try another format or role.</CenteredNotice.Body>
+              </CenteredNotice>
+            </SectionEnter>
           </Column>
         }
         ListFooterComponent={

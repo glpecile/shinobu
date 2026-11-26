@@ -592,6 +592,7 @@ function DetailsScreen() {
                 icon={<Button.Icon name="open-outline" />}
                 label="Open original page"
                 onPress={() => openExternalUrl(externalUrl)}
+                variant={provider === Provider.Trakt || needsHardcover ? 'quiet' : 'primary'}
               />
             )}
             {(provider === Provider.Trakt || needsHardcover) && (

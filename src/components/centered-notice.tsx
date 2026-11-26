@@ -27,7 +27,12 @@ function CenteredNoticeGlyph({ children }: { children: ReactNode }) {
 function CenteredNoticeIcon({ name }: { name: ComponentProps<typeof Ionicons>['name'] }) {
   const muted = useThemeColor('--color-muted');
   return (
-    <View className="mb-4">
+    <View
+      accessibilityElementsHidden
+      aria-hidden
+      className="mb-4"
+      importantForAccessibility="no-hide-descendants"
+    >
       <Ionicons color={muted} name={name} size={44} />
     </View>
   );
@@ -35,13 +40,15 @@ function CenteredNoticeIcon({ name }: { name: ComponentProps<typeof Ionicons>['n
 
 function CenteredNoticeTitle({ children }: { children: ReactNode }) {
   return (
-    <Text className="text-2xl font-display text-foreground text-center">{children}</Text>
+    <Text className="text-2xl font-display text-foreground text-center max-w-full web:wrap-anywhere">
+      {children}
+    </Text>
   );
 }
 
 function CenteredNoticeBody({ children }: { children: ReactNode }) {
   return (
-    <Text className="text-base font-sans text-muted mt-3 text-center max-w-xs leading-relaxed">
+    <Text className="text-base font-sans text-muted mt-3 text-center w-full max-w-xs leading-relaxed web:wrap-anywhere">
       {children}
     </Text>
   );
