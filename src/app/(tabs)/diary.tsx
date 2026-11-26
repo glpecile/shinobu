@@ -1,4 +1,3 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ErrorBoundaryProps } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -7,7 +6,6 @@ import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
-import { EmptyStateTile } from '@/components/empty-state-tile';
 import {
   homeHeaderClassName,
   homeHeaderTitleSize,
@@ -23,7 +21,6 @@ import { PendingLogs } from '@/features/log-media/pending-logs-sheet';
 import { cn } from '@/lib/cn';
 import { feedReadsType } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
-import { useThemeColor } from '@/lib/theme-color';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
 
@@ -61,17 +58,6 @@ function DiaryHeader({ children }: { children?: React.ReactNode }) {
   );
 }
 
-function StateIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['name'] }) {
-  const muted = useThemeColor('--color-muted');
-  return (
-    <Ionicons
-      color={muted}
-      name={name}
-      size={44}
-    />
-  );
-}
-
 export default function DiaryTab() {
   return (
     <DeferredTab>
@@ -97,13 +83,11 @@ function DiaryScreen() {
     content = <DiaryWelcome timeZone={diary.timeZone} />;
   } else if (diary.activeProviders.length === 0) {
     content = (
-      <View className="flex-1 justify-center pb-16">
-        <EmptyStateTile
-          description="Letterboxd can only be read from the mobile app — open Shinobu on your phone to see your diary."
-          icon={<StateIcon name="phone-portrait-outline" />}
-          title="Open your diary on mobile"
-        />
-      </View>
+      <CenteredNotice className="mb-16">
+        <CenteredNotice.Icon name="phone-portrait-outline" />
+        <CenteredNotice.Title>Open your diary on mobile</CenteredNotice.Title>
+        <CenteredNotice.Body>Letterboxd can only be read from the mobile app — open Shinobu on your phone to see your diary.</CenteredNotice.Body>
+      </CenteredNotice>
     );
   } else if (diary.isLoading) {
     // Wait for all providers before revealing so staggered arrivals don't reshuffle rows (docs/solutions/diary-reshuffles-while-providers-land.md).
@@ -111,28 +95,24 @@ function DiaryScreen() {
     content = <DiaryListSkeleton />;
   } else if (diary.allFailed && diary.entryCount === 0) {
     content = (
-      <View className="flex-1 justify-center pb-16">
-        <EmptyStateTile
-          cta={{
-            icon: <Button.Icon name="refresh" />,
-            label: 'Try again',
-            onPress: () => diary.refetch(),
-          }}
-          description="Something went wrong reaching your trackers. Check your connection and try again."
-          icon={<StateIcon name="cloud-offline-outline" />}
-          title="Couldn't load your diary"
+      <CenteredNotice className="mb-16">
+        <CenteredNotice.Icon name="cloud-offline-outline" />
+        <CenteredNotice.Title>Couldn't load your diary</CenteredNotice.Title>
+        <CenteredNotice.Body>Something went wrong reaching your trackers. Check your connection and try again.</CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="refresh" />}
+          label="Try again"
+          onPress={() => diary.refetch()}
         />
-      </View>
+      </CenteredNotice>
     );
   } else if (diary.entryCount === 0 && !diary.hasNextPage) {
     content = (
-      <View className="flex-1 justify-center pb-16">
-        <EmptyStateTile
-          description="Log a movie, show, or anime and it'll show up here — and in every tracker you've connected."
-          icon={<StateIcon name="book-outline" />}
-          title="No logs yet"
-        />
-      </View>
+      <CenteredNotice className="mb-16">
+        <CenteredNotice.Icon name="book-outline" />
+        <CenteredNotice.Title>No logs yet</CenteredNotice.Title>
+        <CenteredNotice.Body>Log a movie, show, or anime and it'll show up here — and in every tracker you've connected.</CenteredNotice.Body>
+      </CenteredNotice>
     );
   } else {
     filter = formatControl;

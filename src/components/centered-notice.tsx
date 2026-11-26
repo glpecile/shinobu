@@ -27,7 +27,12 @@ function CenteredNoticeGlyph({ children }: { children: ReactNode }) {
 function CenteredNoticeIcon({ name }: { name: ComponentProps<typeof Ionicons>['name'] }) {
   const muted = useThemeColor('--color-muted');
   return (
-    <View className="mb-4">
+    <View
+      accessibilityElementsHidden
+      aria-hidden
+      className="mb-4"
+      importantForAccessibility="no-hide-descendants"
+    >
       <Ionicons color={muted} name={name} size={44} />
     </View>
   );
@@ -35,13 +40,15 @@ function CenteredNoticeIcon({ name }: { name: ComponentProps<typeof Ionicons>['n
 
 function CenteredNoticeTitle({ children }: { children: ReactNode }) {
   return (
-    <Text className="text-2xl font-display text-foreground text-center">{children}</Text>
+    <Text className="text-2xl font-display text-foreground text-center max-w-full web:wrap-anywhere">
+      {children}
+    </Text>
   );
 }
 
 function CenteredNoticeBody({ children }: { children: ReactNode }) {
   return (
-    <Text className="text-base font-sans text-muted mt-3 text-center max-w-xs leading-relaxed">
+    <Text className="text-base font-sans text-muted mt-3 text-center w-full max-w-xs leading-relaxed web:wrap-anywhere">
       {children}
     </Text>
   );
@@ -51,8 +58,13 @@ function CenteredNoticeAction(props: Omit<ComponentProps<typeof Button>, 'classN
   return <Button {...props} className="mt-6" />;
 }
 
+function CenteredNoticeActions({ children }: { children: ReactNode }) {
+  return <View className="mt-6 flex-row flex-wrap justify-center gap-3">{children}</View>;
+}
+
 CenteredNotice.Glyph = CenteredNoticeGlyph;
 CenteredNotice.Icon = CenteredNoticeIcon;
 CenteredNotice.Title = CenteredNoticeTitle;
 CenteredNotice.Body = CenteredNoticeBody;
 CenteredNotice.Action = CenteredNoticeAction;
+CenteredNotice.Actions = CenteredNoticeActions;

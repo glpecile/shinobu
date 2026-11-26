@@ -12,6 +12,7 @@ import { useWindowDimensions } from '@/lib/window-dimensions';
 import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
+import { CenteredNotice } from '@/components/centered-notice';
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton, useFloatingBackButtonClearance } from '@/components/floating-back-button';
 import { FloatingShareButton } from '@/components/floating-share-button';
@@ -555,50 +556,60 @@ function DetailsScreen() {
     // Trakt movie and show IDs overlap.
     if (id.startsWith('trakt-') && mediaType == null) {
       return (
-        <View className="flex-1 bg-background items-center justify-center px-8 gap-3">
-          <Head><title>Select media type — Shinobu</title></Head>
-          <Text className="text-2xl font-display text-foreground">Movie or TV show?</Text>
-          <Text className="text-muted font-sans text-center">This older Trakt link doesn’t specify its media type.</Text>
-          <Button icon={<Button.Icon name="open-outline" />} label="Open movie" onPress={() => router.replace(routes.details(id, 'MOVIE'))} />
-          <Button icon={<Button.Icon name="open-outline" />} label="Open TV show" onPress={() => router.replace(routes.details(id, 'TV'))} />
-          <Button icon={<Button.Icon name="arrow-back" />} label="Go back" onPress={goBack} />
+        <View className="flex-1 bg-background">
+          <CenteredNotice>
+            <Head><title>Select media type — Shinobu</title></Head>
+            <CenteredNotice.Title>Movie or TV show?</CenteredNotice.Title>
+            <CenteredNotice.Body>This older Trakt link doesn’t specify its media type.</CenteredNotice.Body>
+            <CenteredNotice.Actions>
+              <Button icon={<Button.Icon name="open-outline" />} label="Open movie" onPress={() => router.replace(routes.details(id, 'MOVIE'))} />
+              <Button icon={<Button.Icon name="open-outline" />} label="Open TV show" onPress={() => router.replace(routes.details(id, 'TV'))} />
+              <Button icon={<Button.Icon name="arrow-back" />} label="Go back" onPress={goBack} variant="quiet" />
+            </CenteredNotice.Actions>
+          </CenteredNotice>
         </View>
       );
     }
     const externalUrl = mediaLinkUrl(id, mediaType);
     const needsHardcover = provider === Provider.Hardcover && !connected.includes(Provider.Hardcover);
     return (
-      <View className="flex-1 bg-background items-center justify-center px-8">
-        <Head>
-          <title>Not found — Shinobu</title>
-        </Head>
-        <Text className="text-2xl font-display text-foreground mb-2">
-          Not found
-        </Text>
-        <Text className="text-muted font-sans text-center mb-6">
-          {provider === Provider.Trakt
-            ? 'This linked item could not be loaded. Trakt links require your own client credentials in Settings.'
-            : needsHardcover
-              ? 'This book could not be loaded. Book links open once Hardcover is connected in Settings.'
-              : 'This linked item could not be loaded.'}
-        </Text>
-        {externalUrl != null && (
-          <Button
-            icon={<Button.Icon name="open-outline" />}
-            label="Open original page"
-            className="mb-3"
-            onPress={() => openExternalUrl(externalUrl)}
-          />
-        )}
-        {(provider === Provider.Trakt || needsHardcover) && (
-          <Button
-            icon={<Button.Icon name="link-outline" />}
-            label="Open Settings"
-            className="mb-3"
-            onPress={() => router.replace(routes.settings)}
-          />
-        )}
-        <Button icon={<Button.Icon name="arrow-back" />} label="Go back" onPress={goBack} />
+      <View className="flex-1 bg-background">
+        <CenteredNotice>
+          <Head>
+            <title>Not found — Shinobu</title>
+          </Head>
+          <CenteredNotice.Title>Not found</CenteredNotice.Title>
+          <CenteredNotice.Body>
+            {provider === Provider.Trakt
+              ? 'This linked item could not be loaded. Trakt links require your own client credentials in Settings.'
+              : needsHardcover
+                ? 'This book could not be loaded. Book links open once Hardcover is connected in Settings.'
+                : 'This linked item could not be loaded.'}
+          </CenteredNotice.Body>
+          <CenteredNotice.Actions>
+            {externalUrl != null && (
+              <Button
+                icon={<Button.Icon name="open-outline" />}
+                label="Open original page"
+                onPress={() => openExternalUrl(externalUrl)}
+                variant={provider === Provider.Trakt || needsHardcover ? 'quiet' : 'primary'}
+              />
+            )}
+            {(provider === Provider.Trakt || needsHardcover) && (
+              <Button
+                icon={<Button.Icon name="link-outline" />}
+                label="Open Settings"
+                onPress={() => router.replace(routes.settings)}
+              />
+            )}
+            <Button
+              icon={<Button.Icon name="arrow-back" />}
+              label="Go back"
+              onPress={goBack}
+              variant={externalUrl != null || provider === Provider.Trakt || needsHardcover ? 'quiet' : 'primary'}
+            />
+          </CenteredNotice.Actions>
+        </CenteredNotice>
       </View>
     );
   }
