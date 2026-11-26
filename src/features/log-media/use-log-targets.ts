@@ -26,7 +26,14 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
   const letterboxdUserscript = useLetterboxdUserscript();
 
   const { data, isError } = useQuery({
-    queryKey: ['log-targets', item.id, item.tmdbTvVariant ?? null, ...connected, platform, letterboxdUserscript],
+    queryKey: [
+      'log-targets',
+      item.id,
+      item.tmdbTvVariant ?? null,
+      ...connected,
+      platform,
+      letterboxdUserscript,
+    ],
     queryFn: async () => {
       const enriched = await enrichExternalIds(queryClient, item, connected);
       return {
@@ -37,12 +44,19 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
     },
   });
 
-  return data ?? { ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript), unmatched: [], enriched: isError ? item : undefined };
+  return (
+    data ?? {
+      ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript),
+      unmatched: [],
+      enriched: isError ? item : undefined,
+    }
+  );
 }
 
 export function useTargetSelection(targets: readonly ProviderId[]) {
   const [deselected, setDeselected] = useState<readonly ProviderId[]>([]);
   const selected = targets.filter((id) => !deselected.includes(id));
-  const setSelected = (next: readonly ProviderId[]) => setDeselected(targets.filter((id) => !next.includes(id)));
+  const setSelected = (next: readonly ProviderId[]) =>
+    setDeselected(targets.filter((id) => !next.includes(id)));
   return [selected, setSelected] as const;
 }

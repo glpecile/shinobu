@@ -7,15 +7,23 @@
     "directory": "./dist",
     "binding": "ASSETS",
     // Handle API routes before the asset 404 and inject link previews on dynamic routes.
-     "run_worker_first": [
-      "/api/serializd/*", "/api/letterboxd/*", "/api/fourchan/*", "/api/reddit/*",
-      "/og/*", "/details/*", "/episode/*", "/person/*", "/studio/*", "/lists/*"
+    "run_worker_first": [
+      "/api/serializd/*",
+      "/api/letterboxd/*",
+      "/api/fourchan/*",
+      "/api/reddit/*",
+      "/og/*",
+      "/details/*",
+      "/episode/*",
+      "/person/*",
+      "/studio/*",
+      "/lists/*",
     ],
     "html_handling": "drop-trailing-slash",
     // build:web supplies Cloudflare's 404.html from Expo's +not-found.html.
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
   },
   // The link-preview card renderer (worker/og-image.tsx) imports its fonts.
   "rules": [{ "type": "Data", "globs": ["**/*.ttf"], "fallthrough": true }],
-  "routes": [{ "pattern": "shinobu.glpecile.xyz", "custom_domain": true }]
+  "routes": [{ "pattern": "shinobu.glpecile.xyz", "custom_domain": true }],
 }

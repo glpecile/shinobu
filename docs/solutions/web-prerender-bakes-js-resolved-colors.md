@@ -24,12 +24,12 @@ nothing there:
   behind it.
 
 **React does not patch a hydrated element's inline `style`.** The client
-render computes the right color, sees no change against what *it* rendered,
+render computes the right color, sees no change against what _it_ rendered,
 and never writes the attribute — so the prerendered value survives for the
 whole of a visitor's first page. Client-side navigations mount fresh nodes and
 look correct, which is why the app seemed fine until you reloaded.
 
-That also explains the fade: `contentStyle` carries both the background *and*
+That also explains the fade: `contentStyle` carries both the background _and_
 the page-enter keyframes, so the screen container is the thing whose opacity
 animates, and React Navigation's light theme background is what showed through
 underneath it. White → black, every navigation.
@@ -88,7 +88,7 @@ combinations.
 
 ## The two exceptions
 
-A colour that is *composed* rather than painted can't be a `var()`: the hero
+A colour that is _composed_ rather than painted can't be a `var()`: the hero
 scrims in `app/details/[id].tsx` and `features/episode-details/screen/index.tsx`
 build their transparent stop by concatenating an alpha pair onto the value
 (`${background}00`), and `var(--color-background)00` is not a colour. Those two

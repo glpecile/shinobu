@@ -17,8 +17,7 @@ export function useNewTabPress(href: string): NewTabPress {
   const modifierHeldRef = useRef(false);
 
   function onPointerDown(event: PointerEvent) {
-    modifierHeldRef.current =
-      event.nativeEvent.metaKey || event.nativeEvent.ctrlKey;
+    modifierHeldRef.current = event.nativeEvent.metaKey || event.nativeEvent.ctrlKey;
   }
 
   function opened(): boolean {

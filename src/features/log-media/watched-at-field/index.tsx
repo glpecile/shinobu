@@ -21,7 +21,12 @@ function formatDate(date: Date): string {
   });
 }
 
-export function WatchedAtField({ value, onChange, label = 'Watched on', children }: WatchedAtFieldProps) {
+export function WatchedAtField({
+  value,
+  onChange,
+  label = 'Watched on',
+  children,
+}: WatchedAtFieldProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -41,9 +46,7 @@ export function WatchedAtField({ value, onChange, label = 'Watched on', children
                   setOpen(false);
                 }}
               >
-                <Text className="text-accent font-sans-semibold text-sm">
-                  Now
-                </Text>
+                <Text className="text-accent font-sans-semibold text-sm">Now</Text>
               </PresstableOpacity>
             )}
             <PresstableOpacity

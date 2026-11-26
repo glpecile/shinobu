@@ -48,10 +48,10 @@ ani.zip serves the community anime-lists dataset
 value. The dataset, counted on 2026-11-12 for entries with an AniList id and a
 TMDB id:
 
-| ani.zip record | TMDB id is a TV id | TMDB id is a movie id |
-|----------------|-------------------:|----------------------:|
-| has `thetvdb_id` | 6,953 | 253 |
-| has no `thetvdb_id` | 8 | 1,066 |
+| ani.zip record      | TMDB id is a TV id | TMDB id is a movie id |
+| ------------------- | -----------------: | --------------------: |
+| has `thetvdb_id`    |              6,953 |                   253 |
+| has no `thetvdb_id` |                  8 |                 1,066 |
 
 So: **a record with a TVDB id carries a TV id (96.5%), and a record without a
 TVDB id carries a movie id (99.3%).** `mappings.type` does not tell the kind:
@@ -94,26 +94,26 @@ export interface AniZipIds {
 `src/features/log-media/enrich.ts:141-160` (the bug, the reverse map):
 
 ```ts
-  // Trakt-origin movie/TV → reverse-map into AniList's world, which also
-  // names the cour Simkl tracks a later season under.
-  if (
-    isMovieTv &&
-    externalIds.anilist == null &&
-    (connected.includes(Provider.AniList) || connected.includes(Provider.Simkl))
-  ) {
-    const lookup: AniZipLookup | null =
-      item.type === 'TV' && externalIds.tvdb != null
-        ? { tvdbId: externalIds.tvdb }
-        : item.type === 'MOVIE' && externalIds.tmdb != null
-          ? { tmdbId: externalIds.tmdb }
-          : null;
-    if (lookup != null) {
-      const mapped = await cachedAniZipIds(queryClient, lookup);
-      if (mapped?.anilist != null) {
-        externalIds = { ...externalIds, anilist: mapped.anilist };
-      }
+// Trakt-origin movie/TV → reverse-map into AniList's world, which also
+// names the cour Simkl tracks a later season under.
+if (
+  isMovieTv &&
+  externalIds.anilist == null &&
+  (connected.includes(Provider.AniList) || connected.includes(Provider.Simkl))
+) {
+  const lookup: AniZipLookup | null =
+    item.type === 'TV' && externalIds.tvdb != null
+      ? { tvdbId: externalIds.tvdb }
+      : item.type === 'MOVIE' && externalIds.tmdb != null
+        ? { tmdbId: externalIds.tmdb }
+        : null;
+  if (lookup != null) {
+    const mapped = await cachedAniZipIds(queryClient, lookup);
+    if (mapped?.anilist != null) {
+      externalIds = { ...externalIds, anilist: mapped.anilist };
     }
   }
+}
 ```
 
 Two fallbacks follow this block in the same function and stay as they are:
@@ -152,17 +152,18 @@ export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Install | `bun install --frozen-lockfile` | exit 0 |
-| Typecheck | `bun typecheck` | exit 0, no errors |
-| Lint | `bun lint` | exit 0 |
-| Focused tests | `bun test --isolate src/features/log-media/enrich.test.ts src/lib/providers/mapping/anizip.test.ts src/state/queries/mapping.test.ts` | all pass |
-| Full tests | `bun run test` | all pass |
+| Purpose       | Command                                                                                                                               | Expected on success |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| Install       | `bun install --frozen-lockfile`                                                                                                       | exit 0              |
+| Typecheck     | `bun typecheck`                                                                                                                       | exit 0, no errors   |
+| Lint          | `bun lint`                                                                                                                            | exit 0              |
+| Focused tests | `bun test --isolate src/features/log-media/enrich.test.ts src/lib/providers/mapping/anizip.test.ts src/state/queries/mapping.test.ts` | all pass            |
+| Full tests    | `bun run test`                                                                                                                        | all pass            |
 
 ## Scope
 
 **In scope** (the only files you should modify):
+
 - `src/lib/providers/mapping/anizip.ts`
 - `src/lib/providers/mapping/anizip.test.ts`
 - `src/features/log-media/enrich.ts`
@@ -172,6 +173,7 @@ export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
 - `plans/README.md` (status row)
 
 **Out of scope** (do NOT touch, even though they look related):
+
 - The forward direction in `enrich.ts` (the block that starts with the comment
   `// AniList-origin anime → movie/TV-side ids`). Plan 034 changes it.
 - `src/state/queries/media-details.ts`. Plan 034 changes it.
@@ -264,6 +266,7 @@ In `src/features/log-media/enrich.test.ts`:
    ```
 
    and add `import type { AniZipIds } from '@/lib/providers/mapping/anizip';`.
+
 2. Add one test inside the existing
    `describe('enrichExternalIds — anime film AniList fallback', …)`:
 
@@ -272,7 +275,11 @@ In `src/features/log-media/enrich.test.ts`:
    test('ignores an ani.zip record whose TMDB id is a TV id', async () => {
      anizipBridge = { anilist: 16498, tvdb: 267440, tmdb: 1429 };
 
-     const enriched = await enrichExternalIds(client, chao({ externalIds: { trakt: 1, tmdb: 1429 } }), ALL);
+     const enriched = await enrichExternalIds(
+       client,
+       chao({ externalIds: { trakt: 1, tmdb: 1429 } }),
+       ALL,
+     );
      anizipBridge = null;
 
      expect(enriched.externalIds.anilist).toBeUndefined();
@@ -280,7 +287,7 @@ In `src/features/log-media/enrich.test.ts`:
    ```
 
    The existing test `skips the search entirely when ani.zip already resolved
-   the id` already pins the accepted branch (a record with no TVDB id). Do not
+the id` already pins the accepted branch (a record with no TVDB id). Do not
    add a second one.
 
 In `src/lib/providers/mapping/anizip.test.ts`: do **not** add a test for

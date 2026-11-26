@@ -13,30 +13,34 @@ const ids = (externalIds: Record<string, number | string> = {}) => ({ externalId
 
 describe('providerItemUrl', () => {
   it('builds a Trakt movie URL from a trakt id', () => {
-    expect(
-      providerItemUrl('trakt', { type: 'MOVIE', ...ids({ trakt: 123 }) }),
-    ).toBe('https://trakt.tv/movies/123');
+    expect(providerItemUrl('trakt', { type: 'MOVIE', ...ids({ trakt: 123 }) })).toBe(
+      'https://trakt.tv/movies/123',
+    );
   });
 
   it('builds a Trakt search-redirect URL for a show with only a tmdb id', () => {
-    expect(
-      providerItemUrl('trakt', { type: 'TV', ...ids({ tmdb: 456 }) }),
-    ).toBe('https://trakt.tv/search/tmdb/456?id_type=show');
+    expect(providerItemUrl('trakt', { type: 'TV', ...ids({ tmdb: 456 }) })).toBe(
+      'https://trakt.tv/search/tmdb/456?id_type=show',
+    );
   });
 
   it('builds a Hardcover book URL from the book id', () => {
-    expect(
-      providerItemUrl('hardcover', { type: 'BOOK', ...ids({ hardcover: 42 }) }),
-    ).toBe('https://hardcover.app/id/book/42');
+    expect(providerItemUrl('hardcover', { type: 'BOOK', ...ids({ hardcover: 42 }) })).toBe(
+      'https://hardcover.app/id/book/42',
+    );
   });
 
   it('builds an AniList manga URL', () => {
-    expect(
-      providerItemUrl('anilist', { type: 'MANGA', ...ids({ anilist: 789 }) }),
-    ).toBe('https://anilist.co/manga/789');
+    expect(providerItemUrl('anilist', { type: 'MANGA', ...ids({ anilist: 789 }) })).toBe(
+      'https://anilist.co/manga/789',
+    );
     // A book grouped under its AniList entry links to it (plan 0117 B6).
     expect(
-      providerItemUrl('anilist', { type: 'BOOK', ...ids({ hardcover: 61 }), bridgedAniList: { id: 143703, title: 'Nisemonogatari' } }),
+      providerItemUrl('anilist', {
+        type: 'BOOK',
+        ...ids({ hardcover: 61 }),
+        bridgedAniList: { id: 143703, title: 'Nisemonogatari' },
+      }),
     ).toBe('https://anilist.co/manga/143703');
   });
 
@@ -69,9 +73,9 @@ describe('providerItemUrl', () => {
   });
 
   it('builds a Serializd URL from a tmdb id', () => {
-    expect(
-      providerItemUrl('serializd', { type: 'TV', ...ids({ tmdb: 654 }) }),
-    ).toBe('https://serializd.com/show/654');
+    expect(providerItemUrl('serializd', { type: 'TV', ...ids({ tmdb: 654 }) })).toBe(
+      'https://serializd.com/show/654',
+    );
   });
 
   it('returns null for every provider with empty externalIds', () => {
@@ -82,21 +86,21 @@ describe('providerItemUrl', () => {
   });
 
   it('routes an anime film to a movie-shaped Trakt URL', () => {
-    expect(
-      providerItemUrl('trakt', { type: 'ANIME', isFilm: true, ...ids({ trakt: 111 }) }),
-    ).toBe('https://trakt.tv/movies/111');
+    expect(providerItemUrl('trakt', { type: 'ANIME', isFilm: true, ...ids({ trakt: 111 }) })).toBe(
+      'https://trakt.tv/movies/111',
+    );
   });
 
   it('routes an anime series to a show-shaped Trakt URL', () => {
-    expect(
-      providerItemUrl('trakt', { type: 'ANIME', ...ids({ trakt: 222 }) }),
-    ).toBe('https://trakt.tv/shows/222');
+    expect(providerItemUrl('trakt', { type: 'ANIME', ...ids({ trakt: 222 }) })).toBe(
+      'https://trakt.tv/shows/222',
+    );
   });
 
   it('builds an AniList anime URL (non-manga branch)', () => {
-    expect(
-      providerItemUrl('anilist', { type: 'ANIME', ...ids({ anilist: 555 }) }),
-    ).toBe('https://anilist.co/anime/555');
+    expect(providerItemUrl('anilist', { type: 'ANIME', ...ids({ anilist: 555 }) })).toBe(
+      'https://anilist.co/anime/555',
+    );
   });
 
   // Plan 0034 U1: Simkl pages are shape-keyed by the simkl id — /tv, /movies,
@@ -118,9 +122,9 @@ describe('providerItemUrl', () => {
     expect(providerItemUrl('simkl', { type: 'ANIME', ...ids({ simkl: 333 }) })).toBe(
       'https://simkl.com/anime/333',
     );
-    expect(
-      providerItemUrl('simkl', { type: 'ANIME', isFilm: true, ...ids({ simkl: 333 }) }),
-    ).toBe('https://simkl.com/anime/333');
+    expect(providerItemUrl('simkl', { type: 'ANIME', isFilm: true, ...ids({ simkl: 333 }) })).toBe(
+      'https://simkl.com/anime/333',
+    );
   });
 
   it('falls back to the tmdb redirect for Simkl when no simkl id exists', () => {
@@ -136,9 +140,7 @@ describe('providerItemUrl', () => {
   });
 
   it('returns null for Simkl on MANGA or with no usable id', () => {
-    expect(
-      providerItemUrl('simkl', { type: 'MANGA', ...ids({ simkl: 1, tmdb: 2 }) }),
-    ).toBeNull();
+    expect(providerItemUrl('simkl', { type: 'MANGA', ...ids({ simkl: 1, tmdb: 2 }) })).toBeNull();
     expect(providerItemUrl('simkl', { type: 'TV', ...ids({ trakt: 1 }) })).toBeNull();
     expect(providerItemUrl('simkl', { type: 'TV', ...ids() })).toBeNull();
   });
@@ -155,9 +157,9 @@ describe('tmdbItemUrl', () => {
   });
 
   it('sends an anime film to /movie and an anime series to /tv', () => {
-    expect(
-      tmdbItemUrl({ type: 'ANIME', isFilm: true, ...ids({ tmdb: 56 }) }),
-    ).toBe('https://www.themoviedb.org/movie/56');
+    expect(tmdbItemUrl({ type: 'ANIME', isFilm: true, ...ids({ tmdb: 56 }) })).toBe(
+      'https://www.themoviedb.org/movie/56',
+    );
     expect(tmdbItemUrl({ type: 'ANIME', ...ids({ tmdb: 78 }) })).toBe(
       'https://www.themoviedb.org/tv/78',
     );
@@ -246,9 +248,9 @@ describe('providerPersonUrl', () => {
   });
 
   it('deep-links AniList by staff id (plan 0035 R11)', () => {
-    expect(
-      providerPersonUrl('anilist', { name: 'Hayao Miyazaki', anilistId: 96_879 }),
-    ).toBe('https://anilist.co/staff/96879');
+    expect(providerPersonUrl('anilist', { name: 'Hayao Miyazaki', anilistId: 96_879 })).toBe(
+      'https://anilist.co/staff/96879',
+    );
   });
 
   it('returns null for AniList without a resolved id — never a name search', () => {
@@ -275,8 +277,8 @@ describe('letterboxdStudioUrl (plan 0035 R9)', () => {
 describe('providerStudioUrl (plan 0035 R9/R10)', () => {
   it('links AniList only with a resolved id — never a name search', () => {
     expect(providerStudioUrl('anilist', { name: 'Studio Ghibli' })).toBeNull();
-    expect(
-      providerStudioUrl('anilist', { name: 'Studio Ghibli', anilistId: 21 }),
-    ).toBe('https://anilist.co/studio/21');
+    expect(providerStudioUrl('anilist', { name: 'Studio Ghibli', anilistId: 21 })).toBe(
+      'https://anilist.co/studio/21',
+    );
   });
 });

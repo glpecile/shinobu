@@ -3,7 +3,10 @@ import { RefreshControl as GestureRefreshControl } from 'react-native-gesture-ha
 
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 
-type RefreshControlProps = Omit<ComponentProps<typeof GestureRefreshControl>, 'onRefresh' | 'refreshing'> & {
+type RefreshControlProps = Omit<
+  ComponentProps<typeof GestureRefreshControl>,
+  'onRefresh' | 'refreshing'
+> & {
   onRefresh: () => Promise<unknown>;
   /** Double-tapping this tab runs the same refresh, spinner included. */
   tab?: string;

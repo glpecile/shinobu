@@ -144,9 +144,9 @@ describe('runWatchlistWrite — the fan-out contract', () => {
       isFilm: false,
       externalIds: {},
     };
-    await expect(runWatchlistWrite(client, manga, ['trakt', 'serializd'], {}, fakeDeps())).rejects.toThrow(
-      /No connected provider can watchlist/,
-    );
+    await expect(
+      runWatchlistWrite(client, manga, ['trakt', 'serializd'], {}, fakeDeps()),
+    ).rejects.toThrow(/No connected provider can watchlist/);
   });
 });
 
@@ -186,5 +186,4 @@ describe('runWatchlistWrite — agenda coherence (R19/R20)', () => {
 
     expect(refreshCalls).toEqual([{ throttle: false }]);
   });
-
 });

@@ -51,8 +51,9 @@ export function simklEpisodeIsWatched(
   number: number,
   firstAired: string | undefined,
 ): boolean {
-  return state != null && (
-    state.watchedKeys.has(`${season}-${number}`) ||
-    ((state.completedAll || state.completedSeasons.has(season)) && hasAired(firstAired))
+  return (
+    state != null &&
+    (state.watchedKeys.has(`${season}-${number}`) ||
+      ((state.completedAll || state.completedSeasons.has(season)) && hasAired(firstAired)))
   );
 }

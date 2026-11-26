@@ -82,12 +82,12 @@ must succeed without any secrets.
 
 ## Commands you will need
 
-| Purpose     | Command                          | Expected on success |
-|-------------|----------------------------------|---------------------|
-| Install     | `bun install --frozen-lockfile`  | exit 0              |
-| Web export  | `bun run build:web`              | exit 0, `dist/index.html` exists |
-| Doctor      | `bunx expo-doctor`               | exit 0, or a list of findings |
-| YAML parses | `python3 -c "import yaml;yaml.safe_load(open('.github/workflows/ci.yml'))"` | exit 0 |
+| Purpose     | Command                                                                     | Expected on success              |
+| ----------- | --------------------------------------------------------------------------- | -------------------------------- |
+| Install     | `bun install --frozen-lockfile`                                             | exit 0                           |
+| Web export  | `bun run build:web`                                                         | exit 0, `dist/index.html` exists |
+| Doctor      | `bunx expo-doctor`                                                          | exit 0, or a list of findings    |
+| YAML parses | `python3 -c "import yaml;yaml.safe_load(open('.github/workflows/ci.yml'))"` | exit 0                           |
 
 ## Scope
 
@@ -117,24 +117,24 @@ Add, beside `checks`, using the same setup steps as `checks` (copy the pinned
 `uses:` lines exactly as they are in the file at that point):
 
 ```yaml
-  web-export:
-    runs-on: ubuntu-latest
-    steps:
-      # same checkout / setup-node / setup-bun steps as `checks`
-      - run: bun install --frozen-lockfile
-      # The static pre-render is the web app; deploys are manual, so this is
-      # the only place a pre-render crash is caught before release.
-      - run: bun run build:web
+web-export:
+  runs-on: ubuntu-latest
+  steps:
+    # same checkout / setup-node / setup-bun steps as `checks`
+    - run: bun install --frozen-lockfile
+    # The static pre-render is the web app; deploys are manual, so this is
+    # the only place a pre-render crash is caught before release.
+    - run: bun run build:web
 
-  expo-doctor:
-    runs-on: ubuntu-latest
-    # Queries Expo's version API, so it can fail for network reasons; it
-    # reports on PRs without blocking them (same reasoning as link-health.yml).
-    continue-on-error: true
-    steps:
-      # same setup steps
-      - run: bun install --frozen-lockfile
-      - run: bunx expo-doctor
+expo-doctor:
+  runs-on: ubuntu-latest
+  # Queries Expo's version API, so it can fail for network reasons; it
+  # reports on PRs without blocking them (same reasoning as link-health.yml).
+  continue-on-error: true
+  steps:
+    # same setup steps
+    - run: bun install --frozen-lockfile
+    - run: bunx expo-doctor
 ```
 
 Extend the header comment's first sentence to mention the web export, and add

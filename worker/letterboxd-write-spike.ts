@@ -62,8 +62,7 @@ export async function handleLetterboxdWriteSpike(
   }
 
   const excerpt = (await upstream.text()).slice(0, BODY_EXCERPT_BYTES);
-  const challenged =
-    upstream.status === 403 && excerpt.includes('Just a moment');
+  const challenged = upstream.status === 403 && excerpt.includes('Just a moment');
   return spikeResponse(upstream.status, {
     challenged,
     upstreamStatus: upstream.status,

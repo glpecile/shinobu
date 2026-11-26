@@ -28,7 +28,7 @@ have changed.
 
 - Trakt is **web-enabled**: both the read path and OAuth run in the browser. No
   platform-availability field needed in `src/lib/providers/registry.ts` for Trakt.
-- Caveat that is *not* CORS: Trakt's token exchange requires `client_secret` (no
+- Caveat that is _not_ CORS: Trakt's token exchange requires `client_secret` (no
   PKCE support), so the secret ships in the client bundle on every platform. This
   is normal for Trakt's ecosystem (their API docs assume open-source clients embed
   it), but it's worth knowing it isn't secret in practice.

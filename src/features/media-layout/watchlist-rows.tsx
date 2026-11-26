@@ -81,10 +81,7 @@ export function WatchlistRow({
         <>
           <RowPoster item={item} />
           <View className="shrink ml-4">
-            <Text
-              className="text-foreground font-sans-semibold text-base"
-              numberOfLines={1}
-            >
+            <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
               {item.title}
             </Text>
             <Text className="text-muted font-sans text-xs mt-1">
@@ -136,11 +133,16 @@ export function WatchlistRows({
       onEndReachedThreshold={0.6}
       // docs/solutions/diary-scroll-jank-is-row-mount-cost.md
       recycleItems
-      refreshControl={
-        <RefreshControl onRefresh={onRefresh} />
-      }
+      refreshControl={<RefreshControl onRefresh={onRefresh} />}
       renderItem={({ item: entry }) => (
-        <WatchlistRow item={entry.item} sources={entry.sources} onActions={onItemActions} onPress={onItemPress} showActions={showActions} watched={watched?.(entry.item)} />
+        <WatchlistRow
+          item={entry.item}
+          sources={entry.sources}
+          onActions={onItemActions}
+          onPress={onItemPress}
+          showActions={showActions}
+          watched={watched?.(entry.item)}
+        />
       )}
       ListFooterComponent={footer}
     />

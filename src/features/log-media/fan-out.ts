@@ -26,14 +26,17 @@ export interface LogMediaVariables {
    * Retry context from the prior round: `unsent` targets never left the device;
    * `unanswered` targets got no response and retry only where a read proves absence.
    */
-  retryOf?: { rewatch: boolean; unsent?: readonly ProviderId[]; unanswered?: readonly ProviderId[] };
+  retryOf?: {
+    rewatch: boolean;
+    unsent?: readonly ProviderId[];
+    unanswered?: readonly ProviderId[];
+  };
   /** Pending-log record id; skips targets whose watch-state read gets no answer. */
   replay?: string;
 }
 
 export type ProviderWriteResult =
-  | { status: 'ok'; reason?: string }
-  | { status: 'skipped'; reason: string };
+  { status: 'ok'; reason?: string } | { status: 'skipped'; reason: string };
 
 export type WriteAdapter<V> = (variables: V) => Promise<ProviderWriteResult>;
 
@@ -104,7 +107,12 @@ export async function runProviderWrites<V>(
         }
         return { provider, status: 'ok' };
       } catch (error) {
-        return { provider, status: 'error', message: errorMessage(error), transient: transientKind(error) };
+        return {
+          provider,
+          status: 'error',
+          message: errorMessage(error),
+          transient: transientKind(error),
+        };
       }
     }),
   );

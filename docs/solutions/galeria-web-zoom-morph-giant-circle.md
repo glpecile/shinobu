@@ -20,7 +20,7 @@ a circular avatar:
    image. galeria itself `console.error`s about this exact case ("does not have
    the same aspect ratio as its child… might result in a weird animation").
 2. **Border-radius + size morph.** On close, framer-motion animates the
-   fullscreen image's size *and* `border-radius` back toward the little circle —
+   fullscreen image's size _and_ `border-radius` back toward the little circle —
    mid-flight that's the giant circle sweeping across the page.
 
 This is inherent to galeria's web transition; it fights the circular-avatar

@@ -91,12 +91,8 @@ function normalizePerson(raw: TmdbPersonResponse): NormalizedPerson {
     ...(raw.biography != null && raw.biography !== ''
       ? { biography: raw.biography.replace(/\n\s*\n/g, '\n') }
       : {}),
-    ...(raw.birthday != null && raw.birthday !== ''
-      ? { birthday: raw.birthday }
-      : {}),
-    ...(raw.deathday != null && raw.deathday !== ''
-      ? { deathday: raw.deathday }
-      : {}),
+    ...(raw.birthday != null && raw.birthday !== '' ? { birthday: raw.birthday } : {}),
+    ...(raw.deathday != null && raw.deathday !== '' ? { deathday: raw.deathday } : {}),
     ...(raw.place_of_birth != null && raw.place_of_birth !== ''
       ? { birthplace: raw.place_of_birth }
       : {}),
@@ -119,26 +115,26 @@ export type TmdbKind = 'movie' | 'tv';
  * cold deep link (`/details/tmdb-tv-32905` refreshed in a browser tab): no
  * cache holds the item, but the id alone says what to fetch.
  */
-export function parseTmdbItemId(
-  id: string,
-): { kind: TmdbKind; tmdbId: number } | null {
+export function parseTmdbItemId(id: string): { kind: TmdbKind; tmdbId: number } | null {
   const match = /^tmdb-(movie|tv)-(\d+)$/.exec(id);
   if (match == null) return null;
   return { kind: match[1] as TmdbKind, tmdbId: Number(match[2]) };
 }
 
 /** TMDB reports 0 for an unrated title, not null, so 0 means no score. */
-function tmdbRatings(
-  raw: Pick<TmdbCreditBase, 'vote_average' | 'vote_count'>,
-): { ratings?: NormalizedRating[] } {
+function tmdbRatings(raw: Pick<TmdbCreditBase, 'vote_average' | 'vote_count'>): {
+  ratings?: NormalizedRating[];
+} {
   if (raw.vote_average == null || raw.vote_average <= 0) return {};
   return {
-    ratings: [{
-      source: 'tmdb',
-      value: raw.vote_average,
-      scale: 10,
-      ...(raw.vote_count != null && raw.vote_count > 0 ? { votes: raw.vote_count } : {}),
-    }],
+    ratings: [
+      {
+        source: 'tmdb',
+        value: raw.vote_average,
+        scale: 10,
+        ...(raw.vote_count != null && raw.vote_count > 0 ? { votes: raw.vote_count } : {}),
+      },
+    ],
   };
 }
 
@@ -157,9 +153,7 @@ function normalizeKindedItem(
     title,
     coverImage: tmdbImageUrl(raw.poster_path, 'w342'),
     backdropImage: tmdbImageUrl(raw.backdrop_path, 'w780'),
-    ...(raw.overview != null && raw.overview !== ''
-      ? { overview: raw.overview }
-      : {}),
+    ...(raw.overview != null && raw.overview !== '' ? { overview: raw.overview } : {}),
     ...(Number.isFinite(year) && year > 0 ? { year } : {}),
     // Keep the full date, not just the derived year: the log button needs it
     // to refuse a film that isn't out yet (same gate as an unaired episode).
@@ -174,12 +168,8 @@ function normalizeKindedItem(
 }
 
 /** Combined-credits entries carry their kind in `media_type`; others drop out. */
-function normalizeCredit(
-  raw: TmdbCreditBase,
-  nowIso: string,
-): NormalizedMediaItem | null {
-  const kind =
-    raw.media_type === 'movie' ? 'movie' : raw.media_type === 'tv' ? 'tv' : null;
+function normalizeCredit(raw: TmdbCreditBase, nowIso: string): NormalizedMediaItem | null {
+  const kind = raw.media_type === 'movie' ? 'movie' : raw.media_type === 'tv' ? 'tv' : null;
   if (kind == null) return null;
   return normalizeKindedItem(raw, kind, nowIso);
 }
@@ -196,10 +186,7 @@ function creditDate(raw: TmdbCreditBase): string | null {
 interface RowAccumulator {
   role: string;
   /** Keyed by normalized item id — a show reappears once per character/job. */
-  entries: Map<
-    string,
-    { item: NormalizedMediaItem; date: string | null; details: string[] }
-  >;
+  entries: Map<string, { item: NormalizedMediaItem; date: string | null; details: string[] }>;
 }
 
 function accumulate(
@@ -239,10 +226,7 @@ function accumulate(
  * stray separator**; a credit with neither year nor role contributes nothing at
  * all, which is what keeps its subtitle key out of the map entirely.
  */
-export function creditSubtitle(entry: {
-  item: NormalizedMediaItem;
-  details: string[];
-}): string {
+export function creditSubtitle(entry: { item: NormalizedMediaItem; details: string[] }): string {
   const role = entry.details.join(', ');
   const year = entry.item.year;
   if (year == null) return role;
@@ -255,10 +239,7 @@ export function creditSubtitle(entry: {
  * (unreleased/unscheduled) work leading. Row order: the person's
  * known-for department first, then by row size.
  */
-export function normalizeCreditRows(
-  raw: TmdbPersonResponse,
-  nowIso: string,
-): PersonCreditRow[] {
+export function normalizeCreditRows(raw: TmdbPersonResponse, nowIso: string): PersonCreditRow[] {
   const rows = new Map<string, RowAccumulator>();
   for (const credit of raw.combined_credits?.cast ?? []) {
     accumulate(rows, ACTING_ROLE, credit, credit.character ?? '', nowIso);
@@ -354,7 +335,8 @@ function normalizeTvCredits(raw: TmdbPersonResponse): Record<string, TvCredit[]>
       creditId: credit.credit_id,
       kind,
       role,
-      episodeCount: credit.episode_count != null && credit.episode_count > 0 ? credit.episode_count : null,
+      episodeCount:
+        credit.episode_count != null && credit.episode_count > 0 ? credit.episode_count : null,
     });
   }
   return byShow;
@@ -383,14 +365,18 @@ export function normalizeCreditEpisodes(raw: TmdbCreditResponse): CreditEpisode[
     .flatMap((episode) =>
       episode?.season_number == null || episode.episode_number == null
         ? []
-        : [{ season: episode.season_number, number: episode.episode_number, title: episode.name ?? '' }],
+        : [
+            {
+              season: episode.season_number,
+              number: episode.episode_number,
+              title: episode.name ?? '',
+            },
+          ],
     )
     .sort((a, b) => a.season - b.season || a.number - b.number);
 }
 
-export function normalizePersonSearch(
-  raw: TmdbPersonSearchResponse,
-): PersonMatch[] {
+export function normalizePersonSearch(raw: TmdbPersonSearchResponse): PersonMatch[] {
   return (raw.results ?? [])
     .map((entry) => ({
       tmdbId: entry.id,
@@ -440,18 +426,13 @@ export function namesMatch(a: string, b: string): boolean {
  * given-name-first), then TMDB's own relevance order as the fuzzy fallback —
  * the caller opted into name search knowing it's fuzzy.
  */
-export function pickPersonMatch<T extends { name: string }>(
-  results: T[],
-  query: string,
-): T | null {
+export function pickPersonMatch<T extends { name: string }>(results: T[], query: string): T | null {
   if (results.length === 0) return null;
   const wanted = foldName(query);
   const exact = results.find((result) => foldName(result.name) === wanted);
   if (exact != null) return exact;
   const wantedSorted = foldNameSorted(query);
-  const reordered = results.find(
-    (result) => foldNameSorted(result.name) === wantedSorted,
-  );
+  const reordered = results.find((result) => foldNameSorted(result.name) === wantedSorted);
   return reordered ?? results[0];
 }
 
@@ -680,7 +661,10 @@ function normalizeCrewEntries(
     const index = order.indexOf(entry.department);
     return index === -1 ? order.length : index;
   };
-  const byPerson = new Map<string, { member: NormalizedCrewMember; jobs: string[]; rank: number }>();
+  const byPerson = new Map<
+    string,
+    { member: NormalizedCrewMember; jobs: string[]; rank: number }
+  >();
 
   for (const entry of entries) {
     if (entry.name == null || entry.name === '') continue;
@@ -713,9 +697,7 @@ function normalizeCrewEntries(
     .map((entry) => ({ ...entry.member, job: entry.jobs.join(', ') }));
 }
 
-function normalizeCompanies(
-  companies: TmdbCompanyRef[] | undefined,
-): NormalizedStudio[] {
+function normalizeCompanies(companies: TmdbCompanyRef[] | undefined): NormalizedStudio[] {
   return (companies ?? [])
     .filter((company) => company.name != null && company.name !== '')
     .map((company) => {
@@ -734,9 +716,7 @@ function catalogueExtras(
   runtime: number | undefined,
   totalEpisodes: number | undefined,
 ): Partial<NormalizedMediaItem> {
-  const genres = (raw.genres ?? [])
-    .map((genre) => genre.name ?? '')
-    .filter((name) => name !== '');
+  const genres = (raw.genres ?? []).map((genre) => genre.name ?? '').filter((name) => name !== '');
   const original = raw.original_title ?? raw.original_name ?? '';
   const title = raw.title ?? raw.name ?? '';
   return {
@@ -801,12 +781,10 @@ export function normalizeTvCatalogue(
   return {
     catalogue: {
       ...item,
-      ...(raw.status != null ? { seriesEnded: raw.status === 'Ended' || raw.status === 'Canceled' } : {}),
-      ...catalogueExtras(
-        raw,
-        raw.episode_run_time?.[0],
-        raw.number_of_episodes ?? undefined,
-      ),
+      ...(raw.status != null
+        ? { seriesEnded: raw.status === 'Ended' || raw.status === 'Canceled' }
+        : {}),
+      ...catalogueExtras(raw, raw.episode_run_time?.[0], raw.number_of_episodes ?? undefined),
       ...imdbId(item, raw.external_ids?.imdb_id),
     },
     cast: normalizeCastEntries(
@@ -983,9 +961,7 @@ export interface TmdbCompanySearchResponse {
   }>;
 }
 
-export function normalizeCompanySearch(
-  raw: TmdbCompanySearchResponse,
-): PersonMatch[] {
+export function normalizeCompanySearch(raw: TmdbCompanySearchResponse): PersonMatch[] {
   return (raw.results ?? [])
     .map((entry) => ({
       tmdbId: entry.id,

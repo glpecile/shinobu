@@ -2,10 +2,7 @@ import * as Clock from 'effect/Clock';
 import * as Effect from 'effect/Effect';
 
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
-import type {
-  SeasonLayout,
-  SeasonSlot,
-} from '@/lib/providers/mapping/season-layout';
+import type { SeasonLayout, SeasonSlot } from '@/lib/providers/mapping/season-layout';
 import { orderSeasons } from '@/lib/providers/trakt/normalize';
 import type { NormalizedMediaItem, NormalizedSeason } from '@/types/media';
 import { tmdbRequest } from './api';
@@ -254,7 +251,9 @@ export function getTvSeasons(
       Object.assign(appended, raw);
     }
     return orderSeasons(
-      numbers.map((number) => normalizeTmdbSeason(number, appended[`season/${number}`]?.episodes ?? [])),
+      numbers.map((number) =>
+        normalizeTmdbSeason(number, appended[`season/${number}`]?.episodes ?? []),
+      ),
     );
   });
 }
@@ -322,8 +321,7 @@ export function searchMovie(
   params: { query: string; year?: number | undefined },
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   return Effect.gen(function* () {
-    const yearParam =
-      params.year == null ? '' : `&primary_release_year=${params.year}`;
+    const yearParam = params.year == null ? '' : `&primary_release_year=${params.year}`;
     const raw = yield* tmdbRequest<TmdbSearchResponse>(
       deps,
       `/search/movie?query=${encodeURIComponent(params.query)}&include_adult=false${yearParam}`,
@@ -372,10 +370,9 @@ export function findByTvdbId(
   deps: TmdbDeps,
   params: { tvdbId: number },
 ): Effect.Effect<number | null, ProviderError> {
-  return tmdbRequest<TmdbFindResponse>(
-    deps,
-    `/find/${params.tvdbId}?external_source=tvdb_id`,
-  ).pipe(Effect.map((response) => response.tv_results?.[0]?.id ?? null));
+  return tmdbRequest<TmdbFindResponse>(deps, `/find/${params.tvdbId}?external_source=tvdb_id`).pipe(
+    Effect.map((response) => response.tv_results?.[0]?.id ?? null),
+  );
 }
 
 /** The TMDB person behind an incoming `imdb.com/name/` link, or null when TMDB has no match. */

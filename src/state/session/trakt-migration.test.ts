@@ -29,16 +29,11 @@ mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
 
-const {
-  providerIsUsable,
-  traktNeedsCredentials,
-  usableProviderIds,
-} = await import('./trakt-migration');
+const { providerIsUsable, traktNeedsCredentials, usableProviderIds } =
+  await import('./trakt-migration');
 const { setProviderClientId, setProviderSession } = await import('./tokens');
 const { getClientIdForProvider } = await import('./provider-config');
-const { traktClientId, traktClientSecret } = await import(
-  '@/lib/providers/trakt/config'
-);
+const { traktClientId, traktClientSecret } = await import('@/lib/providers/trakt/config');
 
 const ORIGINAL_ENV_ID = process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID;
 const ORIGINAL_ENV_SECRET = process.env.EXPO_PUBLIC_TRAKT_CLIENT_SECRET;
@@ -65,10 +60,7 @@ describe('env detachment (R12)', () => {
   });
 
   test('.env.template carries no Trakt entries', () => {
-    const template = readFileSync(
-      join(import.meta.dir, '../../../.env.template'),
-      'utf8',
-    );
+    const template = readFileSync(join(import.meta.dir, '../../../.env.template'), 'utf8');
     expect(template).not.toContain('EXPO_PUBLIC_TRAKT');
   });
 });
@@ -99,7 +91,11 @@ describe('MigrationNeeded: token stored, no user creds (R13)', () => {
 
 describe('Hardcover ended the session', () => {
   test('a session marked reconnectNeeded is kept and gated out of the usable set', () => {
-    setProviderSession('hardcover', { accessToken: 'at', refreshToken: 'rt', reconnectNeeded: true });
+    setProviderSession('hardcover', {
+      accessToken: 'at',
+      refreshToken: 'rt',
+      reconnectNeeded: true,
+    });
 
     expect(providerIsUsable('hardcover')).toBe(false);
     expect(usableProviderIds()).not.toContain('hardcover');

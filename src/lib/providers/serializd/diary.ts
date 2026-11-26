@@ -29,10 +29,7 @@ interface RawDiaryResponse {
  * (exhausted). Unlike Letterboxd's single RSS window this is a real paginated
  * infinite query.
  */
-export function serializdNextPage(
-  page: SerializdDiaryPage,
-  current: number,
-): number | undefined {
+export function serializdNextPage(page: SerializdDiaryPage, current: number): number | undefined {
   return current < page.totalPages ? current + 1 : undefined;
 }
 

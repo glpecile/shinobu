@@ -34,13 +34,9 @@ function readCredentials(id: ProviderId): ProviderCredentials | null {
  */
 export function useProviderCredentials(
   id: ProviderId,
-): [
-  ProviderCredentials | null,
-  (credentials: ProviderCredentials) => void,
-  () => void,
-] {
-  const [credentials, setCredentials] = useState<ProviderCredentials | null>(
-    () => (typeof window === 'undefined' ? null : readCredentials(id)),
+): [ProviderCredentials | null, (credentials: ProviderCredentials) => void, () => void] {
+  const [credentials, setCredentials] = useState<ProviderCredentials | null>(() =>
+    typeof window === 'undefined' ? null : readCredentials(id),
   );
 
   const save = (next: ProviderCredentials) => {

@@ -26,7 +26,14 @@ function loadErrorBody(provider: ListSummary['provider']) {
   }
 }
 
-export function ListsLoadError({ provider, url, index = false, title = 'List', shareHref, onRetry }: {
+export function ListsLoadError({
+  provider,
+  url,
+  index = false,
+  title = 'List',
+  shareHref,
+  onRetry,
+}: {
   provider: ListSummary['provider'];
   url: string;
   index?: boolean;
@@ -34,21 +41,40 @@ export function ListsLoadError({ provider, url, index = false, title = 'List', s
   shareHref?: string;
   onRetry: () => unknown;
 }) {
-  return <>
-    {!index && <ListsHeader provider={provider} shareHref={shareHref} title={title} />}
-    <CenteredNotice>
-      <CenteredNotice.Icon name="list-outline" />
-      <CenteredNotice.Title>Couldn’t load {index ? 'your lists' : 'this list'}</CenteredNotice.Title>
-      <CenteredNotice.Body>{loadErrorBody(provider)}</CenteredNotice.Body>
-      <View className="mt-6 items-center gap-3">
-        <Button icon={<Button.Icon name="refresh" />} label="Try again" onPress={() => void onRetry()} />
-        {!index && <ProviderListLink provider={provider} url={url} />}
-      </View>
-    </CenteredNotice>
-  </>;
+  return (
+    <>
+      {!index && <ListsHeader provider={provider} shareHref={shareHref} title={title} />}
+      <CenteredNotice>
+        <CenteredNotice.Icon name="list-outline" />
+        <CenteredNotice.Title>
+          Couldn’t load {index ? 'your lists' : 'this list'}
+        </CenteredNotice.Title>
+        <CenteredNotice.Body>{loadErrorBody(provider)}</CenteredNotice.Body>
+        <View className="mt-6 items-center gap-3">
+          <Button
+            icon={<Button.Icon name="refresh" />}
+            label="Try again"
+            onPress={() => void onRetry()}
+          />
+          {!index && <ProviderListLink provider={provider} url={url} />}
+        </View>
+      </CenteredNotice>
+    </>
+  );
 }
 
-export function ListsPage({ provider, title = 'List', url, shareHref, index = false, embedded = false, unavailable = 'invalid', children, fallback, contentKey }: {
+export function ListsPage({
+  provider,
+  title = 'List',
+  url,
+  shareHref,
+  index = false,
+  embedded = false,
+  unavailable = 'invalid',
+  children,
+  fallback,
+  contentKey,
+}: {
   provider: ListSummary['provider'];
   title?: string;
   url: string | null;
@@ -66,7 +92,11 @@ export function ListsPage({ provider, title = 'List', url, shareHref, index = fa
   const prompt = useHardcoverListsPrompt();
   return (
     <View className="flex-1 bg-background">
-      {!embedded && <Head><title>{`${title} — Shinobu`}</title></Head>}
+      {!embedded && (
+        <Head>
+          <title>{`${title} — Shinobu`}</title>
+        </Head>
+      )}
       {index && !embedded && <ListsHeader morphTitle provider={provider} title={title} />}
       {url == null ? (
         <>
@@ -76,19 +106,46 @@ export function ListsPage({ provider, title = 'List', url, shareHref, index = fa
               <CenteredNotice.Icon name="list-outline" />
               <CenteredNotice.Title>{prompt.title}</CenteredNotice.Title>
               <CenteredNotice.Body>{prompt.body}</CenteredNotice.Body>
-              <View className="mt-6 w-full max-w-xs"><ConnectHardcoverButton /></View>
+              <View className="mt-6 w-full max-w-xs">
+                <ConnectHardcoverButton />
+              </View>
             </CenteredNotice>
-          ) : <CenteredNotice>
-            <CenteredNotice.Icon name="list-outline" />
-            <CenteredNotice.Title>{unavailable === 'connect' ? `Connect ${label}` : 'Invalid list link'}</CenteredNotice.Title>
-            <CenteredNotice.Body>{unavailable === 'connect' ? `Connect ${label} to browse your created and liked lists.` : `This link doesn’t identify a ${label} list page.`}</CenteredNotice.Body>
-            <CenteredNotice.Action icon={<Button.Icon name={unavailable === 'connect' ? 'link-outline' : 'home-outline'} />} label={unavailable === 'connect' ? `Connect ${label}` : 'Go home'} onPress={() => pushRoute(unavailable === 'connect' ? routes.settings : routes.home)} />
-          </CenteredNotice>}
+          ) : (
+            <CenteredNotice>
+              <CenteredNotice.Icon name="list-outline" />
+              <CenteredNotice.Title>
+                {unavailable === 'connect' ? `Connect ${label}` : 'Invalid list link'}
+              </CenteredNotice.Title>
+              <CenteredNotice.Body>
+                {unavailable === 'connect'
+                  ? `Connect ${label} to browse your created and liked lists.`
+                  : `This link doesn’t identify a ${label} list page.`}
+              </CenteredNotice.Body>
+              <CenteredNotice.Action
+                icon={
+                  <Button.Icon name={unavailable === 'connect' ? 'link-outline' : 'home-outline'} />
+                }
+                label={unavailable === 'connect' ? `Connect ${label}` : 'Go home'}
+                onPress={() => pushRoute(unavailable === 'connect' ? routes.settings : routes.home)}
+              />
+            </CenteredNotice>
+          )}
         </>
       ) : (
-        <ErrorBoundary key={contentKey ?? url} onReset={reset} fallbackRender={({ resetErrorBoundary }) => (
-          <ListsLoadError index={index} onRetry={resetErrorBoundary} provider={provider} shareHref={shareHref} title={title} url={url} />
-        )}>
+        <ErrorBoundary
+          key={contentKey ?? url}
+          onReset={reset}
+          fallbackRender={({ resetErrorBoundary }) => (
+            <ListsLoadError
+              index={index}
+              onRetry={resetErrorBoundary}
+              provider={provider}
+              shareHref={shareHref}
+              title={title}
+              url={url}
+            />
+          )}
+        >
           <Suspense fallback={fallback}>{children}</Suspense>
         </ErrorBoundary>
       )}

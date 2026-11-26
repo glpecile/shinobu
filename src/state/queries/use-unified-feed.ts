@@ -27,11 +27,7 @@ import { refreshUpNextInputs } from './up-next';
 import { refreshWatchlistInputs } from './watchlist';
 
 type FeedSlot =
-  | 'trendingMovies'
-  | 'trendingShows'
-  | 'seasonalAnime'
-  | 'animeMovies'
-  | 'yourWatchlist';
+  'trendingMovies' | 'trendingShows' | 'seasonalAnime' | 'animeMovies' | 'yourWatchlist';
 
 export interface UnifiedFeedResult {
   trendingMovies: NormalizedMediaItem[];
@@ -63,18 +59,20 @@ const CATALOGUE_STALE_MS = 15 * 60_000;
 export const feedOptions = {
   trendingMovies: () => ({
     queryKey: simklQueryKeys.trending('movies'),
-    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getTrending(simklDeps(), 'movies'), { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(getTrending(simklDeps(), 'movies'), { signal }),
     staleTime: CATALOGUE_STALE_MS,
   }),
   trendingShows: () => ({
     queryKey: simklQueryKeys.trending('tv'),
-    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getTrending(simklDeps(), 'tv'), { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(getTrending(simklDeps(), 'tv'), { signal }),
     staleTime: CATALOGUE_STALE_MS,
   }),
   seasonalAnime: (season: AnimeSeasonWindow, format: AnimeFormatFilter = 'TV') => ({
     queryKey: anilistQueryKeys.seasonalAnime(season, format),
     queryFn: ({ signal }: { signal: AbortSignal }) => fetchSeasonalAnime(season, format, 1, signal),
-    select: (data: FeedData) => Array.isArray(data) ? data : data.items,
+    select: (data: FeedData) => (Array.isArray(data) ? data : data.items),
     staleTime: CATALOGUE_STALE_MS,
   }),
   yourWatchlist: (username: string) => letterboxdWatchlistOptions(username),
@@ -164,7 +162,10 @@ export function useRefetchUnifiedFeed() {
       ...(feedProviders.includes(Provider.Serializd)
         ? [
             queryClient.invalidateQueries({ queryKey: serializdQueryKeys.listsRoot() }),
-            queryClient.refetchQueries({ queryKey: [...serializdQueryKeys.all, 'upcoming'], type: 'active' }),
+            queryClient.refetchQueries({
+              queryKey: [...serializdQueryKeys.all, 'upcoming'],
+              type: 'active',
+            }),
           ]
         : []),
     ]);
@@ -195,10 +196,7 @@ export function useUnifiedFeed(): UnifiedFeedResult {
       provider: queries[index].provider,
       error: result.error,
     }))
-    .filter(
-      (entry): entry is { provider: ProviderId; error: Error } =>
-        entry.error != null,
-    );
+    .filter((entry): entry is { provider: ProviderId; error: Error } => entry.error != null);
 
   function refetch() {
     return Promise.allSettled(results.map((result) => result.refetch()));

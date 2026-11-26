@@ -2,7 +2,7 @@
 
 **Symptom (2026-07-27).** Giving the log sheet's tag chips a rise-and-fade
 entrance broke the picker on web: pressing "Show more" painted every chip on top
-of the confirm and Cancel buttons, and "Show less" landed *inside* the first
+of the confirm and Cancel buttons, and "Show less" landed _inside_ the first
 chip. Collapsed, it looked fine — which is what made it confusing.
 
 The chips were laid out correctly (wrapped rows, right spacing) but occupied no
@@ -87,7 +87,7 @@ reproduced through a throwaway `src/app/tag-probe.tsx` route (seeded with
 `web-headless-smoke-test-playwright.md`. The assertion that catches it:
 
 ```js
-[...row.children].filter((c) => getComputedStyle(c).position === 'absolute').length === 0
+[...row.children].filter((c) => getComputedStyle(c).position === 'absolute').length === 0;
 ```
 
 ## Related

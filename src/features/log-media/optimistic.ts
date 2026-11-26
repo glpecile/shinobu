@@ -31,16 +31,26 @@ function sameMedia(a: NormalizedMediaItem, b: NormalizedMediaItem): boolean {
   );
 }
 
-function covers(watches: readonly LoggedWatch[], episode: Pick<UpNextEpisode, 'season' | 'number'>): boolean {
+function covers(
+  watches: readonly LoggedWatch[],
+  episode: Pick<UpNextEpisode, 'season' | 'number'>,
+): boolean {
   return watches.some((watch) =>
     episode.season != null
-      ? watch.episodes.some((logged) => logged.season === episode.season && logged.number === episode.number)
+      ? watch.episodes.some(
+          (logged) => logged.season === episode.season && logged.number === episode.number,
+        )
       : watch.entryEpisodes.includes(episode.number),
   );
 }
 
-function advance(entry: UpNextEpisodeEntry, watches: readonly LoggedWatch[]): UpNextEpisodeEntry | null {
-  const proven = watches.map((watch) => watch.next).find((next) => next != null && !covers(watches, next));
+function advance(
+  entry: UpNextEpisodeEntry,
+  watches: readonly LoggedWatch[],
+): UpNextEpisodeEntry | null {
+  const proven = watches
+    .map((watch) => watch.next)
+    .find((next) => next != null && !covers(watches, next));
   const behind = entry.episodesBehind;
   if (proven != null) {
     return {
@@ -56,13 +66,17 @@ function advance(entry: UpNextEpisodeEntry, watches: readonly LoggedWatch[]): Up
   return left < 1 ? null : { ...entry, episode: { number }, episodesBehind: left };
 }
 
-export function withLoggedEpisodes(entries: UpNextEntry[], logged: readonly LoggedWatch[]): UpNextEntry[] {
+export function withLoggedEpisodes(
+  entries: UpNextEntry[],
+  logged: readonly LoggedWatch[],
+): UpNextEntry[] {
   if (logged.length === 0) return entries;
   let changed = false;
   const next = entries.flatMap((entry): UpNextEntry[] => {
     if (entry.kind !== 'episode') return [entry];
     const watches = logged.filter(
-      (watch) => sameMedia(watch.item, entry.item) || entry.twinIds?.includes(watch.item.id) === true,
+      (watch) =>
+        sameMedia(watch.item, entry.item) || entry.twinIds?.includes(watch.item.id) === true,
     );
     if (!covers(watches, entry.episode)) return [entry];
     changed = true;

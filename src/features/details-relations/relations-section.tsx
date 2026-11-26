@@ -13,7 +13,15 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
 const ALIGN_TO_COLUMN = '-mx-4 -mb-6 mt-8';
 
-function RelationsRow({ mediaId, type, onItemActions }: { mediaId: number; type: MediaType; onItemActions: (item: NormalizedMediaItem) => void }) {
+function RelationsRow({
+  mediaId,
+  type,
+  onItemActions,
+}: {
+  mediaId: number;
+  type: MediaType;
+  onItemActions: (item: NormalizedMediaItem) => void;
+}) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId, type });
   if (data.relations.length === 0) return null;
   return (
@@ -32,7 +40,15 @@ function RelationsRow({ mediaId, type, onItemActions }: { mediaId: number; type:
   );
 }
 
-function RecommendationsAndTags({ mediaId, type, onItemActions }: { mediaId: number; type: MediaType; onItemActions: (item: NormalizedMediaItem) => void }) {
+function RecommendationsAndTags({
+  mediaId,
+  type,
+  onItemActions,
+}: {
+  mediaId: number;
+  type: MediaType;
+  onItemActions: (item: NormalizedMediaItem) => void;
+}) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId, type });
   return (
     <>
@@ -67,7 +83,13 @@ function RecommendationsAndTags({ mediaId, type, onItemActions }: { mediaId: num
 
 const SIMILAR_BOOKS_LIMIT = 20;
 
-function SimilarBooksCarousel({ ids, onItemActions }: { ids: readonly number[]; onItemActions: (item: NormalizedMediaItem) => void }) {
+function SimilarBooksCarousel({
+  ids,
+  onItemActions,
+}: {
+  ids: readonly number[];
+  onItemActions: (item: NormalizedMediaItem) => void;
+}) {
   const { data } = useSuspenseHardcoverBooksQuery(ids);
   if (data.length === 0) return null;
   return (
@@ -83,7 +105,13 @@ function SimilarBooksCarousel({ ids, onItemActions }: { ids: readonly number[]; 
   );
 }
 
-function SimilarBooks({ item, onItemActions }: { item: NormalizedMediaItem; onItemActions: (item: NormalizedMediaItem) => void }) {
+function SimilarBooks({
+  item,
+  onItemActions,
+}: {
+  item: NormalizedMediaItem;
+  onItemActions: (item: NormalizedMediaItem) => void;
+}) {
   const { data } = useSuspenseMediaDetailsQuery(item);
   const ids = data.similarBookIds?.slice(0, SIMILAR_BOOKS_LIMIT) ?? [];
   if (ids.length === 0) return null;
@@ -96,11 +124,7 @@ function CarouselSkeleton() {
       <Skeleton className="h-6 w-24 rounded mb-4" />
       <View className="flex-row gap-3 overflow-hidden">
         {[0, 1, 2].map((index) => (
-          <Skeleton
-            className="w-40 h-60 rounded-lg"
-            delay={staggerDelay(index)}
-            key={index}
-          />
+          <Skeleton className="w-40 h-60 rounded-lg" delay={staggerDelay(index)} key={index} />
         ))}
       </View>
     </View>
@@ -119,7 +143,11 @@ export function RelationsSection({
   if (item.externalIds.anilist == null) return null;
   return (
     <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
-      <RelationsRow mediaId={item.externalIds.anilist} onItemActions={onItemActions} type={item.type} />
+      <RelationsRow
+        mediaId={item.externalIds.anilist}
+        onItemActions={onItemActions}
+        type={item.type}
+      />
     </SuspenseSection>
   );
 }
@@ -136,7 +164,11 @@ export function RecommendationsAndTagsSection({
   if (item.externalIds.anilist == null) return null;
   return (
     <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
-      <RecommendationsAndTags mediaId={item.externalIds.anilist} onItemActions={onItemActions} type={item.type} />
+      <RecommendationsAndTags
+        mediaId={item.externalIds.anilist}
+        onItemActions={onItemActions}
+        type={item.type}
+      />
     </SuspenseSection>
   );
 }

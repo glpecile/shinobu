@@ -31,11 +31,8 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const {
-  hasWatchlistReadLeg,
-  shouldOfferWatchlistAdd,
-  splitWatchlistRemoveTargets,
-} = await import('./remove-targets');
+const { hasWatchlistReadLeg, shouldOfferWatchlistAdd, splitWatchlistRemoveTargets } =
+  await import('./remove-targets');
 
 const CONNECTED: ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
 
@@ -64,40 +61,49 @@ function series(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaIt
   });
 }
 
-function entryFor(
-  item: NormalizedMediaItem,
-  sources: ProviderId[],
-): WatchlistEntry {
+function entryFor(item: NormalizedMediaItem, sources: ProviderId[]): WatchlistEntry {
   return { id: item.id, item, sources, sourceIds: [item.id] };
 }
 
 describe('a grouped book’s removal', () => {
   const book = film({
-    id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61, anilist: 999 },
+    id: 'hardcover-61',
+    type: 'BOOK',
+    externalIds: { hardcover: 61, anilist: 999 },
     bridgedAniList: { id: 143703, title: 'Nisemonogatari' },
   });
 
   test('a merged card removes the entry it holds, whatever the search said', () => {
-    const split = splitWatchlistRemoveTargets(book, ['anilist', 'hardcover'], ['anilist', 'hardcover'], 'ios', []);
+    const split = splitWatchlistRemoveTargets(
+      book,
+      ['anilist', 'hardcover'],
+      ['anilist', 'hardcover'],
+      'ios',
+      [],
+    );
     expect(split.item.externalIds).toEqual({ hardcover: 61, anilist: 143703 });
   });
 
   test('a book alone on Hardcover never reaches AniList, unless AniList’s list couldn’t say', () => {
     const connected: ProviderId[] = ['anilist', 'hardcover'];
-    expect(splitWatchlistRemoveTargets(book, ['hardcover'], connected, 'ios', [])).toMatchObject({ targets: ['hardcover'], unknown: [] });
-    expect(splitWatchlistRemoveTargets(book, ['hardcover'], connected, 'ios', [{ provider: 'anilist', message: 'down' }]))
-      .toMatchObject({ targets: ['hardcover'], unknown: ['anilist'] });
+    expect(splitWatchlistRemoveTargets(book, ['hardcover'], connected, 'ios', [])).toMatchObject({
+      targets: ['hardcover'],
+      unknown: [],
+    });
+    expect(
+      splitWatchlistRemoveTargets(book, ['hardcover'], connected, 'ios', [
+        { provider: 'anilist', message: 'down' },
+      ]),
+    ).toMatchObject({ targets: ['hardcover'], unknown: ['anilist'] });
   });
 });
 
 describe('hasWatchlistReadLeg — who can prove absence (R35)', () => {
   test('a leg that errored on this gather makes its provider unknown, not absent', () => {
     expect(hasWatchlistReadLeg('trakt', CONNECTED, [])).toBe(true);
-    expect(
-      hasWatchlistReadLeg('trakt', CONNECTED, [
-        { provider: 'trakt', message: '502' },
-      ]),
-    ).toBe(false);
+    expect(hasWatchlistReadLeg('trakt', CONNECTED, [{ provider: 'trakt', message: '502' }])).toBe(
+      false,
+    );
   });
 
   test('a provider that is not connected has no leg either', () => {
@@ -106,21 +112,13 @@ describe('hasWatchlistReadLeg — who can prove absence (R35)', () => {
 
   test('a leg that read only part of the list has not proven absence', () => {
     expect(hasWatchlistReadLeg('letterboxd', CONNECTED, [], [])).toBe(true);
-    expect(
-      hasWatchlistReadLeg('letterboxd', CONNECTED, [], ['letterboxd']),
-    ).toBe(false);
+    expect(hasWatchlistReadLeg('letterboxd', CONNECTED, [], ['letterboxd'])).toBe(false);
   });
 });
 
 describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => {
   test('a Trakt-only series writes to Trakt alone, with Serializd unknown', () => {
-    const split = splitWatchlistRemoveTargets(
-      series(),
-      ['trakt'],
-      CONNECTED,
-      'ios',
-      [],
-    );
+    const split = splitWatchlistRemoveTargets(series(), ['trakt'], CONNECTED, 'ios', []);
     expect(split.targets).toEqual(['trakt']);
     expect(split.manual).toEqual([]);
     expect(split.unknown).toEqual(['serializd']);
@@ -154,20 +152,21 @@ describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => 
       expect(split.targets).toEqual(['trakt', 'letterboxd']);
       expect(split.manual).toEqual([]);
     }
-    const web = splitWatchlistRemoveTargets(
+    const web = splitWatchlistRemoveTargets(film(), ['trakt', 'letterboxd'], CONNECTED, 'web', []);
+    expect(web.targets).toEqual(['trakt']);
+    expect(web.manual).toEqual(['letterboxd']);
+    const scripted = splitWatchlistRemoveTargets(
       film(),
       ['trakt', 'letterboxd'],
       CONNECTED,
       'web',
       [],
+      [],
+      true,
     );
-    expect(web.targets).toEqual(['trakt']);
-    expect(web.manual).toEqual(['letterboxd']);
-    const scripted = splitWatchlistRemoveTargets(film(), ['trakt', 'letterboxd'], CONNECTED, 'web', [], [], true);
     expect(scripted.targets).toEqual(['trakt', 'letterboxd']);
     expect(scripted.manual).toEqual([]);
   });
-
 });
 
 describe('shouldOfferWatchlistAdd — R12 as amended for /watchlist', () => {
@@ -194,8 +193,8 @@ describe('shouldOfferWatchlistAdd — R12 as amended for /watchlist', () => {
         { provider: 'letterboxd', message: '502' },
       ]),
     ).toBe(false);
-    expect(
-      shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios', [], ['letterboxd']),
-    ).toBe(false);
+    expect(shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios', [], ['letterboxd'])).toBe(
+      false,
+    );
   });
 });

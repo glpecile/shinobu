@@ -34,7 +34,7 @@ On web, a Letterboxd-connected user who logs a movie gets a per-provider failure
 
 **Routing & capability**
 
-- R1. The provider registry (`src/lib/providers/registry.ts`) declares, per provider, platforms where writes are unsupported; Letterboxd declares web. Routing (`src/lib/providers/routing.ts`) exposes a pure split of log targets into *writable* and *manual-only* given `(item, connected, platform)` — no `Platform.OS` reads inside the pure functions, no provider conditionals at call sites.
+- R1. The provider registry (`src/lib/providers/registry.ts`) declares, per provider, platforms where writes are unsupported; Letterboxd declares web. Routing (`src/lib/providers/routing.ts`) exposes a pure split of log targets into _writable_ and _manual-only_ given `(item, connected, platform)` — no `Platform.OS` reads inside the pure functions, no provider conditionals at call sites.
 - R2. Manual-only providers are excluded from the fan-out write set (never attempted, never counted as failures) while remaining visible as applicable targets.
 
 **Log sheet (upfront affordance)**
@@ -64,7 +64,7 @@ On web, a Letterboxd-connected user who logs a movie gets a per-provider failure
 **Out of scope**
 
 - Any Letterboxd write attempt from web, proxied or direct (standing prohibition).
-- Registry `canWrite` changes — Letterboxd stays write-capable; the new axis is *platform* support, not capability.
+- Registry `canWrite` changes — Letterboxd stays write-capable; the new axis is _platform_ support, not capability.
 
 ---
 
@@ -72,7 +72,7 @@ On web, a Letterboxd-connected user who logs a movie gets a per-provider failure
 
 ### Key Technical Decisions
 
-- KTD-1. **Platform is data, not environment.** `ProviderDescriptor` gains an optional `unsupportedWritePlatforms?: readonly string[]` (Letterboxd: `['web']`); routing gains `splitLogTargets(item, connected, platform): { writable: ProviderId[]; manual: ProviderId[] }` built on the existing `providersForLog` logic. Callers (the `use-log-targets.ts` hook) pass `process.env.EXPO_OS`-derived platform once; pure functions stay clock/platform-free and unit-testable. Rejected: flipping `canWrite` per platform at module load (hides the target from the sheet entirely — the point is to *show* it as manual) and `Platform.OS` reads inside routing (untestable).
+- KTD-1. **Platform is data, not environment.** `ProviderDescriptor` gains an optional `unsupportedWritePlatforms?: readonly string[]` (Letterboxd: `['web']`); routing gains `splitLogTargets(item, connected, platform): { writable: ProviderId[]; manual: ProviderId[] }` built on the existing `providersForLog` logic. Callers (the `use-log-targets.ts` hook) pass `process.env.EXPO_OS`-derived platform once; pure functions stay clock/platform-free and unit-testable. Rejected: flipping `canWrite` per platform at module load (hides the target from the sheet entirely — the point is to _show_ it as manual) and `Platform.OS` reads inside routing (untestable).
 - KTD-2. **`src/lib/providers/external-urls.ts` is shared with plan 0023** (provider source links). Whichever plan lands first creates it with the R8 contract exactly; the second plan extends/reuses — check for the file before creating, and reconcile signatures rather than duplicating.
 - KTD-3. **Manual row is presentation, not a fifth outcome status.** The fan-out contract (`ProviderLogOutcome`) is untouched; manual-only providers never enter `fanOutLog`, so no new status value propagates through result handling. The sheet derives its manual rows from the routing split, and the result links derive from existing `error`/`skipped+reason` outcomes. Rejected: adding a `manual` outcome status (would ripple through `LogMediaResult` consumers for a purely presentational concern).
 - KTD-4. **One `openExternalUrl(url)` helper** (`src/lib/open-external-url.ts`): web → `window.open(url, '_blank', 'noopener')` via platform file; native → `WebBrowser.openBrowserAsync`. Follows the platform-file convention; components never import `expo-web-browser` or touch `window` directly.
@@ -94,7 +94,7 @@ On web, a Letterboxd-connected user who logs a movie gets a per-provider failure
 **Files:** `src/lib/providers/external-urls.ts`, `src/lib/providers/external-urls.test.ts`.
 **Approach:** Input `(providerId, Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>)`; movie/show shape decided like `routing.ts`'s `effectiveTypes` (anime film → movie URLs; anime series → show URLs for Trakt). Returns `string | null`.
 **Test scenarios:** (1) Trakt movie with trakt id → `/movies/{id}`; (2) Trakt show with only tmdb → search-redirect URL with `id_type=show`; (3) AniList manga → `/manga/{id}`; (4) Letterboxd with slug → `/film/{slug}/`; (5) Letterboxd, no slug, tmdb present, `type: 'ANIME', isFilm: true` → `/tmdb/{id}`; (6) Letterboxd for a TV item → null (movies only); (7) Serializd without tmdb → null; (8) every provider with empty `externalIds` → null.
-**Execution note:** Test-first; this table *is* the contract plan 0023 reuses.
+**Execution note:** Test-first; this table _is_ the contract plan 0023 reuses.
 **Verification:** `bun test`, `bun typecheck`, `bun lint`.
 
 ### U2. `openExternalUrl` helper

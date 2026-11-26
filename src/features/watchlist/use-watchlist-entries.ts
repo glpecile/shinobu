@@ -1,8 +1,5 @@
 import { useHiddenItems, visibleByIds } from '@/state/prefs/hidden-items';
-import {
-  useSuspenseWatchlistInputsQuery,
-  type WatchlistInputs,
-} from '@/state/queries/watchlist';
+import { useSuspenseWatchlistInputsQuery, type WatchlistInputs } from '@/state/queries/watchlist';
 import { useMangaListQuery } from '@/state/queries/anilist';
 
 import { computeWatchlist } from './compute';

@@ -11,8 +11,8 @@ and the diary pages were spiked.
 
 ## What was verified (2026-07-25, browser UA, plain HTTP client)
 
-| URL | Result |
-|---|---|
+| URL            | Result                                                                                              |
+| -------------- | --------------------------------------------------------------------------------------------------- |
 | `{user}/tags/` | **200**, ~69 KB, no challenge — the full film-tag index, **already sorted by frequency descending** |
 
 Verified against `davidehrlich`. This is the notable part: the deeper diary pages
@@ -26,12 +26,13 @@ non-browser client can actually read, so no WebView channel is needed.
 
 ```html
 <ul class="js-tags-section tags tags-columns" data-edit-modal-action="/ajax/tag/edit/" ...>
-    <li class="hoverable" >
-        <a href="/davidehrlich/tag/criterion-collection/films/" title="criterion collection">criterion collection</a>
-        <span class="detail -has-count">
-            11
-        </span>
-    </li>
+  <li class="hoverable">
+    <a href="/davidehrlich/tag/criterion-collection/films/" title="criterion collection"
+      >criterion collection</a
+    >
+    <span class="detail -has-count"> 11 </span>
+  </li>
+</ul>
 ```
 
 Three non-obvious details, all of which the parser is pinned to by fixture tests
@@ -39,7 +40,7 @@ Three non-obvious details, all of which the parser is pinned to by fixture tests
 
 - **The count is whitespace-padded** (`\n            11\n        `). Trim, then
   `Number()` — never a substring index.
-- **The display name appears twice**, in the `title` attribute *and* as the link
+- **The display name appears twice**, in the `title` attribute _and_ as the link
   text. `title` is the reliable one (flat, no nested markup); the link text is only
   the fallback, and it is tag-stripped before use.
 - **Tag names carry spaces and HTML entities** (`&amp;`, `&#39;`) — decoded with the
@@ -81,7 +82,7 @@ The picker reads two independent lists and neither is required:
    vocabulary changes on the order of weeks.
 2. **Local** — `state/prefs/recent-tags.ts`, a capped (30) most-recent-first MMKV
    list written by `use-log-media.ts` when a fan-out succeeds. Offline, instant, and
-   the *only* source that knows a tag the user invented seconds ago — the remote page
+   the _only_ source that knows a tag the user invented seconds ago — the remote page
    won't list it until the next scrape. Deduped case-insensitively because Letterboxd
    folds tag case.
 

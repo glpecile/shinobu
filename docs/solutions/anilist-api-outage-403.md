@@ -9,18 +9,34 @@ the provider layer went red for as long as AniList was down.
 
 ## What the two answers mean
 
-`POST https://graphql.anilist.co` answers by *API state*: `400` normally
+`POST https://graphql.anilist.co` answers by _API state_: `400` normally
 (exists, parsed the request, rejected the empty body), `403` with a
 GraphQL-shaped body during the outage:
 
 ```json
-{ "errors": [ { "message": "The AniList API has been temporarily disabled due to severe stability issues.", "status": 403 } ] }
+{
+  "errors": [
+    {
+      "message": "The AniList API has been temporarily disabled due to severe stability issues.",
+      "status": 403
+    }
+  ]
+}
 ```
 
-`GET https://graphql.anilist.co` answers by *route*, outage or not:
+`GET https://graphql.anilist.co` answers by _route_, outage or not:
 
 ```json
-{ "data": null, "errors": [ { "message": "Not Found.", "hint": "Use POST request to access graphql subdomain.", "status": 404 } ] }
+{
+  "data": null,
+  "errors": [
+    {
+      "message": "Not Found.",
+      "hint": "Use POST request to access graphql subdomain.",
+      "status": 404
+    }
+  ]
+}
 ```
 
 The GET body is the endpoint's own router speaking. A moved or dead host
@@ -31,10 +47,10 @@ would 404 without that hint.
 The owner could use AniList from the web app while the simulator showed the
 403 all day. Bisecting a real Chrome request's headers with curl:
 
-| Request | Answer |
-| --- | --- |
+| Request                                                                      | Answer                                                               |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | No `Referer` (curl, nitro-fetch), any `User-Agent`, with or without `Origin` | 403, the "temporarily disabled" body, **no `X-RateLimit-*` headers** |
-| Any `Referer` value at all (`x` works) | 200, `X-RateLimit-Remaining: 20` of 30 |
+| Any `Referer` value at all (`x` works)                                       | 200, `X-RateLimit-Remaining: 20` of 30                               |
 
 So it is an edge rule shedding referer-less (non-browser) clients during
 their incident, not rate limiting and not a query problem. Browsers set

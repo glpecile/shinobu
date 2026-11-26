@@ -16,8 +16,8 @@ Plan 0032 shipped the picker-then-toast idiom with one rule too strict, and
 plan 0031 left one adapter gated on evidence that has since been recorded.
 This plan closes both gaps:
 
-- **Objective (toast rule):** a write whose only "leftover" is an *upfront
-  manual row* ends in a toast and closes the sheet. Today
+- **Objective (toast rule):** a write whose only "leftover" is an _upfront
+  manual row_ ends in a toast and closes the sheet. Today
   `isCleanWriteReport(report, report.manual)` treats the manual bucket as
   "something left to read", so adding a film to Trakt while Letterboxd sits in
   the manual bucket keeps the sheet open with an inline "Added to Trakt." line
@@ -36,7 +36,7 @@ This plan closes both gaps:
   unaffected, `docs/solutions/letterboxd-web-proxy.md`).
 - **Authority:** AGENTS.md overrides this plan where they conflict. The
   captured-endpoint doc is the evidence contract R37/KTD-6 demanded; nothing
-  here re-opens plan 0031's data-loss guards for the *other* providers
+  here re-opens plan 0031's data-loss guards for the _other_ providers
   (Serializd's two gates in `registry.ts` are untouched).
 
 ## Owner decisions
@@ -45,7 +45,7 @@ This plan closes both gaps:
 
 - Upfront manual rows do not block the clean close. Post-write news only.
 - The remove verb's `unknown` bucket follows the same rule: those rows render
-  in the same `ManualWriteRows` slot *before* confirm, so they are equally
+  in the same `ManualWriteRows` slot _before_ confirm, so they are equally
   not news. R35's "withhold the settled Removed label" concern lives on the
   settled-label surface (`useIsWatchlisted`), not on the sheet-close rule.
 - Letterboxd becomes a real watchlist write target on native, both verbs.
@@ -71,7 +71,7 @@ WebView session.
 
 - **R1 (clean = post-write news only).** `isCleanWriteReport` returns clean
   when: at least one provider succeeded, none failed, and no outcome is a
-  *reasoned* skip. Upfront rows — the add's `manual`, the remove's `manual`
+  _reasoned_ skip. Upfront rows — the add's `manual`, the remove's `manual`
   and `unknown` — no longer factor in. The `leftover` parameter is deleted,
   not defaulted: a parameter nothing should pass is a parameter someone will
   pass.
@@ -120,14 +120,14 @@ WebView session.
   `manual` is "not news" because the user saw it, `unknown` is too — keeping
   it as a blocker would mean two visually identical pre-confirm rows with
   opposite close behavior, which is exactly the kind of invisible distinction
-  plan 0032 KTD-3 exists to prevent. What `unknown` *still* does is withhold
+  plan 0032 KTD-3 exists to prevent. What `unknown` _still_ does is withhold
   the settled "Removed" label — that lives elsewhere and is untouched.
 - **KTD-2 (post-write `manual` can theoretically widen).** The mutation
   re-plans on the enriched item, so `report.manual` could name a provider the
   unenriched pre-confirm split didn't show. Accepted: enrichment "only ever
   widens", the pickers' own split hooks run the same enrichment through the
   same cache, and the window is a frame. A provider gained by enrichment is
-  still an *upfront-class* fact (a deep link, not a report), so the toast is
+  still an _upfront-class_ fact (a deep link, not a report), so the toast is
   still the right ending.
 - **KTD-3 (CSRF source: metadata call, not `supermodelCSRF`).** The diary
   write reads `window.supermodelCSRF` off the film page. The watchlist
@@ -142,7 +142,7 @@ WebView session.
   internals — not a generic "run any script" surface, which would be an
   invitation to bypass the documented endpoints.
 - **KTD-5 (KTD-6 of plan 0031 is discharged, not waived).** The original
-  hazard was a *toggle* endpoint where a wrong idempotency guess removes a
+  hazard was a _toggle_ endpoint where a wrong idempotency guess removes a
   film while reporting success. The capture classifies the endpoint as a
   declarative state set: the body carries the target state, a repeat add is
   idempotent, and the 204 is unambiguous. The hazard does not exist on this
@@ -241,7 +241,7 @@ failure.
 - Full gate: `bun lint`, typecheck, `bun test`, `bun check:classnames`,
   `bun check:router-push`.
 - iOS simulator (argent): watchlist-add picker on a film shows Letterboxd as
-  a *selectable target* (not a manual row); a Trakt-only add with a manual
+  a _selectable target_ (not a manual row); a Trakt-only add with a manual
   row elsewhere ends in a toast and a closed sheet; the log verb's confirm
   with a manual target present also ends in a toast.
 - Android is not gated on this host (unreliable emulator — see memory).

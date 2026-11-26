@@ -48,10 +48,11 @@ export function PresstableScale({
   onLongPress,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onPressIn' | 'onLongPress'> & PressBehaviorProps & {
-  minScale?: number;
-  onLongPress?: () => void;
-}) {
+}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onPressIn' | 'onLongPress'> &
+  PressBehaviorProps & {
+    minScale?: number;
+    onLongPress?: () => void;
+  }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
   const reduceMotion = useReducedMotion();
   // Android refresh pulls can leave the button without activating a scroll gesture.
@@ -73,11 +74,12 @@ export function PresstableOpacity({
   onLongPress,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn' | 'onLongPress'> & PressBehaviorProps & {
-  onLongPress?: () => void;
-  /** Web-only DOM handler, typed here because callers type-check against this file. */
-  onMouseDown?: MouseEventHandler<HTMLElement>;
-}) {
+}: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn' | 'onLongPress'> &
+  PressBehaviorProps & {
+    onLongPress?: () => void;
+    /** Web-only DOM handler, typed here because callers type-check against this file. */
+    onMouseDown?: MouseEventHandler<HTMLElement>;
+  }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
   return (
     <UniwindPressableOpacity

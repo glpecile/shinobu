@@ -1,4 +1,9 @@
-import { isCancelledError, QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query';
+import {
+  isCancelledError,
+  QueryClient,
+  QueryClientProvider,
+  QueryObserver,
+} from '@tanstack/react-query';
 import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
@@ -102,9 +107,7 @@ const {
   mappingQueryKeys,
   useTraktIdentityQuery,
 } = await import('./mapping');
-const { setProviderClientId, clearProviderClientId } = await import(
-  '@/state/session/tokens'
-);
+const { setProviderClientId, clearProviderClientId } = await import('@/state/session/tokens');
 const { clearTmdbToken } = await import('@/state/session/tmdb-token');
 
 beforeEach(() => {
@@ -135,7 +138,10 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
   test('with Trakt credentials, resolves via Trakt and never touches Simkl', async () => {
     setProviderClientId('trakt', 'trakt-cid');
     routes = [
-      ['api.trakt.tv/search/tmdb/949', [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }]],
+      [
+        'api.trakt.tv/search/tmdb/949',
+        [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }],
+      ],
     ];
 
     const result = await cachedTraktLookup(freshClient(), {
@@ -150,14 +156,18 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
   });
 
   test('without Trakt credentials, detail identity and public lookup share one Simkl request', async () => {
-    routes = [
-      ['api.simkl.com/search/id', [{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]],
-    ];
+    routes = [['api.simkl.com/search/id', [{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]]];
 
     const client = freshClient();
     const item: NormalizedMediaItem = {
-      id: 'tmdb-movie-949', title: 'Heat', type: 'MOVIE', coverImage: '',
-      currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 949 },
+      id: 'tmdb-movie-949',
+      title: 'Heat',
+      type: 'MOVIE',
+      coverImage: '',
+      currentProgress: 0,
+      progressUnit: 'episode',
+      lastUpdated: '',
+      externalIds: { tmdb: 949 },
     };
     let publicLookup!: ReturnType<typeof useSimklLookupQuery>;
     let identityLookup!: ReturnType<typeof useTraktIdentityQuery>;
@@ -202,7 +212,10 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
       publicLookup.refetch({ throwOnError: true }),
       cachedTraktLookup(client, { source: 'tmdb', id: 949, kind: 'movie' }),
     ]);
-    expect(publicResult).toMatchObject({ status: 'rejected', reason: { _tag: 'ProviderRateLimitError' } });
+    expect(publicResult).toMatchObject({
+      status: 'rejected',
+      reason: { _tag: 'ProviderRateLimitError' },
+    });
     expect(identity).toMatchObject({ status: 'fulfilled', value: null });
     client.clear();
   });
@@ -219,17 +232,29 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
     }
     function IdentityRead() {
       useTraktIdentityQuery({
-        id: 'tmdb-movie-949', title: 'Heat', type: 'MOVIE', coverImage: '',
-        currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: tmdbId },
+        id: 'tmdb-movie-949',
+        title: 'Heat',
+        type: 'MOVIE',
+        coverImage: '',
+        currentProgress: 0,
+        progressUnit: 'episode',
+        lastUpdated: '',
+        externalIds: { tmdb: tmdbId },
       });
       return null;
     }
     renderToString(createElement(QueryClientProvider, { client }, createElement(PublicRead)));
     const publicQuery = client.getQueryCache().getAll().at(-1)!;
-    const publicObserver = new QueryObserver(client, { ...publicQuery.options, queryKey: publicQuery.queryKey });
+    const publicObserver = new QueryObserver(client, {
+      ...publicQuery.options,
+      queryKey: publicQuery.queryKey,
+    });
     renderToString(createElement(QueryClientProvider, { client }, createElement(IdentityRead)));
     const identityQuery = client.getQueryCache().getAll().at(-1)!;
-    const identityObserver = new QueryObserver(client, { ...identityQuery.options, queryKey: identityQuery.queryKey });
+    const identityObserver = new QueryObserver(client, {
+      ...identityQuery.options,
+      queryKey: identityQuery.queryKey,
+    });
     const unsubscribePublic = publicObserver.subscribe(() => {});
     const unsubscribeIdentity = identityObserver.subscribe(() => {});
     const lookup = cachedTraktLookup(client, { source: 'tmdb', id: 949, kind: 'movie' });
@@ -264,8 +289,10 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
     const response = Promise.withResolvers<Response>();
     const started = Promise.withResolvers<void>();
     pendingResponse = { promise: response.promise, started: () => started.resolve() };
-    const result = cachedTraktLookup(client, { source: 'tmdb', id: 949, kind: 'movie' })
-      .then(() => false, isCancelledError);
+    const result = cachedTraktLookup(client, { source: 'tmdb', id: 949, kind: 'movie' }).then(
+      () => false,
+      isCancelledError,
+    );
     await started.promise;
     await client.cancelQueries();
     expect(await result).toBe(true);
@@ -282,12 +309,17 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
     expect(await cachedTraktLookup(client, params)).toBeNull();
 
     routes = [
-      ['api.trakt.tv/search/tmdb/949', [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }]],
+      [
+        'api.trakt.tv/search/tmdb/949',
+        [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }],
+      ],
     ];
     const result = await cachedTraktLookup(client, params);
 
     expect(result?.id).toBe('trakt-1');
-    expect(requestedUrls.filter((url) => url.includes('api.trakt.tv/search/tmdb/949'))).toHaveLength(2);
+    expect(
+      requestedUrls.filter((url) => url.includes('api.trakt.tv/search/tmdb/949')),
+    ).toHaveLength(2);
     client.clear();
   });
 });
@@ -330,10 +362,7 @@ describe('cachedSeasonLayout (plan 0034 KTD-8)', () => {
   test('TMDB answers first regardless of Trakt credentials', async () => {
     setProviderClientId('trakt', 'trakt-cid');
     routes = [
-      [
-        'api.themoviedb.org/3/tv/100',
-        { seasons: [{ season_number: 1, episode_count: 12 }] },
-      ],
+      ['api.themoviedb.org/3/tv/100', { seasons: [{ season_number: 1, episode_count: 12 }] }],
     ];
 
     const layout = await cachedSeasonLayout(freshClient(), { tmdb: 100, trakt: 200 });
@@ -385,7 +414,10 @@ describe('connecting a provider mid-session is a cache miss, not a stale record'
     const client = freshClient();
     routes = [
       ['api.simkl.com/search/id', [{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]],
-      ['api.trakt.tv/search/tmdb/949', [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }]],
+      [
+        'api.trakt.tv/search/tmdb/949',
+        [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }],
+      ],
     ];
     const params = { source: 'tmdb', id: 949, kind: 'movie' } as const;
 
@@ -401,9 +433,7 @@ describe('connecting a provider mid-session is a cache miss, not a stale record'
 
   test('while the source set is unchanged, the forever-cache still serves repeats without a request', async () => {
     const client = freshClient();
-    routes = [
-      ['api.simkl.com/search/id', [{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]],
-    ];
+    routes = [['api.simkl.com/search/id', [{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]]];
     const params = { source: 'tmdb', id: 949, kind: 'movie' } as const;
 
     await cachedTraktLookup(client, params);
@@ -449,9 +479,7 @@ describe('connecting a provider mid-session is a cache miss, not a stale record'
 
   test('a token-less TMDB movie-id miss re-resolves once a token is saved', async () => {
     const client = freshClient();
-    expect(
-      await cachedTmdbMovieIdByTitle(client, { title: 'Heat', year: 1995 }),
-    ).toBeNull();
+    expect(await cachedTmdbMovieIdByTitle(client, { title: 'Heat', year: 1995 })).toBeNull();
 
     process.env.EXPO_PUBLIC_TMDB_TOKEN = 'tmdb-token';
     clearTmdbToken();
@@ -462,9 +490,7 @@ describe('connecting a provider mid-session is a cache miss, not a stale record'
       ],
     ];
 
-    expect(
-      await cachedTmdbMovieIdByTitle(client, { title: 'Heat', year: 1995 }),
-    ).toBe(949);
+    expect(await cachedTmdbMovieIdByTitle(client, { title: 'Heat', year: 1995 })).toBe(949);
   });
 });
 
@@ -473,8 +499,16 @@ describe('useAniListIdByTmdbQuery', () => {
     const client = freshClient();
     client.setQueryData(mappingQueryKeys.anizip({ tmdbId: 949 }), null);
     const item: NormalizedMediaItem = {
-      id: 'tmdb-movie-949', title: 'Heat', type: 'MOVIE', year: 1995, genres: ['Crime'],
-      coverImage: '', currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 949 },
+      id: 'tmdb-movie-949',
+      title: 'Heat',
+      type: 'MOVIE',
+      year: 1995,
+      genres: ['Crime'],
+      coverImage: '',
+      currentProgress: 0,
+      progressUnit: 'episode',
+      lastUpdated: '',
+      externalIds: { tmdb: 949 },
     };
     function Read() {
       useAniListIdByTmdbQuery(item);
@@ -497,31 +531,51 @@ describe('useAniListIdByTmdbQuery', () => {
 describe('cachedAniZipIds', () => {
   test('an unmapped AniList record is asked again after a day', async () => {
     const client = freshClient();
-    client.setQueryData(mappingQueryKeys.anizip({ anilistId: 177686 }), { anilist: 177686 }, {
-      updatedAt: Date.now() - 25 * 60 * 60_000,
-    });
-    routes = [['anilist_id=177686', { mappings: { anilist_id: 177686, themoviedb_id: '1294972' } }]];
+    client.setQueryData(
+      mappingQueryKeys.anizip({ anilistId: 177686 }),
+      { anilist: 177686 },
+      {
+        updatedAt: Date.now() - 25 * 60 * 60_000,
+      },
+    );
+    routes = [
+      ['anilist_id=177686', { mappings: { anilist_id: 177686, themoviedb_id: '1294972' } }],
+    ];
 
     expect(await cachedAniZipIds(client, { anilistId: 177686 })).toMatchObject({ tmdb: 1294972 });
   });
 
   test('a failed refetch keeps the stale record', async () => {
     const client = freshClient();
-    client.setQueryData(mappingQueryKeys.anizip({ anilistId: 177686 }), { anilist: 177686, imdb: 'tt1' }, {
-      updatedAt: Date.now() - 25 * 60 * 60_000,
-    });
+    client.setQueryData(
+      mappingQueryKeys.anizip({ anilistId: 177686 }),
+      { anilist: 177686, imdb: 'tt1' },
+      {
+        updatedAt: Date.now() - 25 * 60 * 60_000,
+      },
+    );
     routes = [['anilist_id=177686', {}, 500]];
 
-    expect(await cachedAniZipIds(client, { anilistId: 177686 })).toEqual({ anilist: 177686, imdb: 'tt1' });
+    expect(await cachedAniZipIds(client, { anilistId: 177686 })).toEqual({
+      anilist: 177686,
+      imdb: 'tt1',
+    });
   });
 
   test('a mapped record is never asked again', async () => {
     const client = freshClient();
-    client.setQueryData(mappingQueryKeys.anizip({ anilistId: 16498 }), { anilist: 16498, tvdb: 267440 }, {
-      updatedAt: Date.now() - 400 * 24 * 60 * 60_000,
-    });
+    client.setQueryData(
+      mappingQueryKeys.anizip({ anilistId: 16498 }),
+      { anilist: 16498, tvdb: 267440 },
+      {
+        updatedAt: Date.now() - 400 * 24 * 60 * 60_000,
+      },
+    );
 
-    expect(await cachedAniZipIds(client, { anilistId: 16498 })).toEqual({ anilist: 16498, tvdb: 267440 });
+    expect(await cachedAniZipIds(client, { anilistId: 16498 })).toEqual({
+      anilist: 16498,
+      tvdb: 267440,
+    });
     expect(requestedUrls).toHaveLength(0);
   });
 });

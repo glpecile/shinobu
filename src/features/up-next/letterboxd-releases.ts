@@ -8,10 +8,7 @@ const LETTERBOXD_RESOLVE_CAP = 30;
 
 const RESOLVE_CONCURRENCY = 4;
 
-const RENDERED_KINDS: ReadonlyArray<UpNextRelease['kind']> = [
-  'theatrical',
-  'digital',
-];
+const RENDERED_KINDS: ReadonlyArray<UpNextRelease['kind']> = ['theatrical', 'digital'];
 
 /** Keeps yearless films (Letterboxd omits year on announced-but-unscheduled titles) and filters against local year. */
 export function selectReleaseCandidates(
@@ -45,9 +42,7 @@ function releaseInputs(film: NormalizedMediaItem): ReleaseUpNextInput[] {
   if (calendar == null) return [];
   return RENDERED_KINDS.flatMap((kind) => {
     const date = calendar[kind];
-    return date == null
-      ? []
-      : [{ item: film, kind, date, source: Provider.Letterboxd }];
+    return date == null ? [] : [{ item: film, kind, date, source: Provider.Letterboxd }];
   });
 }
 
@@ -63,8 +58,6 @@ async function mapBounded<In, Out>(
       results.set(index, await run(items[index] as In));
     }
   };
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, worker),
-  );
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return items.map((_, index) => results.get(index) as Out);
 }

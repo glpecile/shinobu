@@ -12,12 +12,19 @@ type AccessibilityActionProps = {
   onAccessibilityAction?: (event: { nativeEvent: { actionName: string } }) => void;
 };
 
-function NativePressable({ onPress, accessibilityActions, onAccessibilityAction }: { onPress?: () => void } & AccessibilityActionProps) {
+function NativePressable({
+  onPress,
+  accessibilityActions,
+  onAccessibilityAction,
+}: { onPress?: () => void } & AccessibilityActionProps) {
   return (
     <>
       <button onClick={onPress}>Press</button>
       {accessibilityActions?.map((action) => (
-        <button key={action.name} onClick={() => onAccessibilityAction?.({ nativeEvent: { actionName: action.name } })}>
+        <button
+          key={action.name}
+          onClick={() => onAccessibilityAction?.({ nativeEvent: { actionName: action.name } })}
+        >
           {action.label}
         </button>
       ))}
@@ -25,15 +32,34 @@ function NativePressable({ onPress, accessibilityActions, onAccessibilityAction 
   );
 }
 mock.module('pressto', () => ({
-  createAnimatedPressable: (animate: (progress: number, options: object) => { opacity?: number; transform?: { scale: number }[] }) =>
+  createAnimatedPressable: (
+    animate: (
+      progress: number,
+      options: object,
+    ) => { opacity?: number; transform?: { scale: number }[] },
+  ) =>
     function ScalePressable({ metadata, onPress }: { metadata: object; onPress?: () => void }) {
-      const style = animate(1, { metadata, config: { baseScale: 1, minScale: 0.96, activeOpacity: 0.6 } });
-      return <button onClick={onPress} style={{ opacity: style.opacity, transform: style.transform == null ? undefined : `scale(${style.transform[0].scale})` }}>Press</button>;
+      const style = animate(1, {
+        metadata,
+        config: { baseScale: 1, minScale: 0.96, activeOpacity: 0.6 },
+      });
+      return (
+        <button
+          onClick={onPress}
+          style={{
+            opacity: style.opacity,
+            transform: style.transform == null ? undefined : `scale(${style.transform[0].scale})`,
+          }}
+        >
+          Press
+        </button>
+      );
     },
   PressableOpacity: NativePressable,
 }));
 mock.module('react-native-reanimated', () => ({
-  interpolate: (value: number, _input: number[], output: number[]) => output[0] + value * (output[1] - output[0]),
+  interpolate: (value: number, _input: number[], output: number[]) =>
+    output[0] + value * (output[1] - output[0]),
   useReducedMotion: () => reduceMotion,
 }));
 mock.module('@/lib/with-uniwind', () => ({ withUniwind: (component: unknown) => component }));

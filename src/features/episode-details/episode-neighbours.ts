@@ -5,10 +5,7 @@ export interface EpisodeRef {
   number: number;
 }
 
-export function episodeOrder(
-  seasons: readonly NormalizedSeason[],
-  season: number,
-): EpisodeRef[] {
+export function episodeOrder(seasons: readonly NormalizedSeason[], season: number): EpisodeRef[] {
   return [...seasons]
     .filter((entry) => (entry.number === 0) === (season === 0))
     .sort((a, b) => a.number - b.number)
@@ -25,9 +22,7 @@ export function episodeNeighbours(
   number: number,
 ): { prev?: EpisodeRef; next?: EpisodeRef } {
   const ordered = episodeOrder(seasons, season);
-  const index = ordered.findIndex(
-    (entry) => entry.season === season && entry.number === number,
-  );
+  const index = ordered.findIndex((entry) => entry.season === season && entry.number === number);
   if (index === -1) return {};
   const prev = ordered[index - 1];
   const next = ordered[index + 1];

@@ -25,18 +25,11 @@ const KEY = 'recentTags';
 
 describe('mergeRecentTags', () => {
   test('preserves the order within a single batch', () => {
-    expect(mergeRecentTags([], ['first', 'second', 'third'])).toEqual([
-      'first',
-      'second',
-      'third',
-    ]);
+    expect(mergeRecentTags([], ['first', 'second', 'third'])).toEqual(['first', 'second', 'third']);
   });
 
   test('de-dupes case-insensitively, keeping the newest casing once', () => {
-    expect(mergeRecentTags(['rewatch', 'nyff'], ['ReWatch'])).toEqual([
-      'ReWatch',
-      'nyff',
-    ]);
+    expect(mergeRecentTags(['rewatch', 'nyff'], ['ReWatch'])).toEqual(['ReWatch', 'nyff']);
     expect(mergeRecentTags([], ['dupe', 'DUPE'])).toEqual(['dupe']);
   });
 

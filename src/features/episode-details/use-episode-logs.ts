@@ -45,9 +45,7 @@ export function useEpisodeLogs(
       provider: Provider.Simkl,
       ...(simklEpisode.watchedAt != null ? { watchedAt: simklEpisode.watchedAt } : {}),
     });
-  } else if (
-    simklEpisodeIsWatched(simkl.data, season, number, firstAired)
-  ) {
+  } else if (simklEpisodeIsWatched(simkl.data, season, number, firstAired)) {
     logs.push({ provider: Provider.Simkl });
   }
   return logs;

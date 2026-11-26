@@ -28,7 +28,10 @@ const clientIdSchema = z.object({
     .string()
     .trim()
     .min(1, 'Paste your Client ID first.')
-    .regex(/^\d+$/, "That doesn't look like a Client ID — it's the short number on your AniList client's page."),
+    .regex(
+      /^\d+$/,
+      "That doesn't look like a Client ID — it's the short number on your AniList client's page.",
+    ),
 });
 
 type ClientIdForm = z.infer<typeof clientIdSchema>;
@@ -84,14 +87,8 @@ export function useAniListConnect() {
 }
 
 export function ConnectAniListButton() {
-  const {
-    connect,
-    status,
-    clientId,
-    embeddedClientId,
-    storedClientId,
-    setStoredClientId,
-  } = useAniListConnect();
+  const { connect, status, clientId, embeddedClientId, storedClientId, setStoredClientId } =
+    useAniListConnect();
 
   const {
     control,
@@ -113,8 +110,8 @@ export function ConnectAniListButton() {
     return (
       <View className="w-full gap-4">
         <Text className="text-muted font-sans text-sm">
-          Shinobu talks to AniList through your own (free) AniList API client —
-          one-time setup, under a minute, no secret needed.
+          Shinobu talks to AniList through your own (free) AniList API client — one-time setup,
+          under a minute, no secret needed.
         </Text>
 
         <Collapsible label="How to create the AniList client">
@@ -134,8 +131,8 @@ export function ConnectAniListButton() {
 
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Set <Text className="text-foreground font-sans-semibold">Redirect URL</Text>{' '}
-                to exactly:
+                Set <Text className="text-foreground font-sans-semibold">Redirect URL</Text> to
+                exactly:
               </Text>
               <View className="border border-border bg-surface px-2 py-1 rounded-md self-start">
                 <Text className="text-foreground font-sans text-xs" selectable>
@@ -143,16 +140,16 @@ export function ConnectAniListButton() {
                 </Text>
               </View>
               <Text className="text-muted font-sans text-xs">
-                AniList allows one redirect URL per client — to connect on
-                another device type too, create a second client there.
+                AniList allows one redirect URL per client — to connect on another device type too,
+                create a second client there.
               </Text>
             </Steps.Item>
 
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
                 Save, then copy the client's{' '}
-                <Text className="text-foreground font-sans-semibold">ID</Text>{' '}
-                (a short number) and paste it below.
+                <Text className="text-foreground font-sans-semibold">ID</Text> (a short number) and
+                paste it below.
               </Text>
             </Steps.Item>
           </Steps>
@@ -174,9 +171,7 @@ export function ConnectAniListButton() {
           )}
         />
         {errors.clientId != null && (
-          <Text className="text-accent font-sans text-xs">
-            {errors.clientId.message}
-          </Text>
+          <Text className="text-accent font-sans text-xs">{errors.clientId.message}</Text>
         )}
         <Button
           icon={<Button.Icon name="link-outline" />}
@@ -192,8 +187,8 @@ export function ConnectAniListButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        You sign in on AniList's own site, and Shinobu keeps only the resulting
-        access token on this device — your password is never sent to Shinobu.
+        You sign in on AniList's own site, and Shinobu keeps only the resulting access token on this
+        device — your password is never sent to Shinobu.
       </Text>
       {status === 'error' && (
         <Text className="text-accent font-sans text-xs">

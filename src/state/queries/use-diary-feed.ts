@@ -12,10 +12,7 @@ import { getReadingJournal } from '@/lib/providers/hardcover/reads';
 import { bridgeBooks } from '@/lib/providers/reading-bridge';
 import { getDiary } from '@/lib/providers/letterboxd/diary';
 import { aniZipTmdbKind } from '@/lib/providers/mapping/anizip';
-import {
-  getSerializdDiary,
-  serializdNextPage,
-} from '@/lib/providers/serializd/diary';
+import { getSerializdDiary, serializdNextPage } from '@/lib/providers/serializd/diary';
 import { providersForFeed } from '@/lib/providers/routing';
 import { simklDiaryEntries } from '@/lib/providers/simkl/diary';
 import { getHistory, getMovieHistory } from '@/lib/providers/trakt/reads';
@@ -77,7 +74,8 @@ async function fetchAniListActivityPage(
   const deps = anilistDeps();
   const viewer = await queryClient.fetchQuery({
     queryKey: anilistQueryKeys.viewer(),
-    queryFn: ({ signal: viewerSignal }) => Effect.runPromise(getViewer(deps), { signal: viewerSignal }),
+    queryFn: ({ signal: viewerSignal }) =>
+      Effect.runPromise(getViewer(deps), { signal: viewerSignal }),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
   });
@@ -99,7 +97,13 @@ function unbridgedAniListIds(entries: readonly NormalizedDiaryEntry[]): number[]
   const ids = new Set<number>();
   for (const { provider, item } of entries) {
     const { anilist, tmdb } = item.externalIds;
-    if (provider === Provider.AniList && item.type === 'ANIME' && item.isFilm !== true && tmdb == null && anilist != null) {
+    if (
+      provider === Provider.AniList &&
+      item.type === 'ANIME' &&
+      item.isFilm !== true &&
+      tmdb == null &&
+      anilist != null
+    ) {
       ids.add(anilist);
     }
   }
@@ -134,11 +138,16 @@ function withBridgedBooks(
   entries: NormalizedDiaryEntry[],
   list: readonly NormalizedMediaItem[],
 ): NormalizedDiaryEntry[] {
-  const bridged = bridgeBooks(entries.map((entry) => entry.item), list);
+  const bridged = bridgeBooks(
+    entries.map((entry) => entry.item),
+    list,
+  );
   if (bridged.size === 0) return entries;
   return entries.map((entry) => {
     const grouping = bridged.get(entry.item.id);
-    return grouping == null ? entry : { ...entry, item: { ...entry.item, bridgedAniList: grouping } };
+    return grouping == null
+      ? entry
+      : { ...entry, item: { ...entry.item, bridgedAniList: grouping } };
   });
 }
 
@@ -152,7 +161,10 @@ function withShowTmdbIds(
     const showTmdb = anilist == null || tmdb != null ? undefined : tmdbByAniList[anilist];
     return showTmdb == null
       ? entry
-      : { ...entry, item: { ...entry.item, externalIds: { ...entry.item.externalIds, tmdb: showTmdb } } };
+      : {
+          ...entry,
+          item: { ...entry.item, externalIds: { ...entry.item.externalIds, tmdb: showTmdb } },
+        };
   });
 }
 
@@ -168,7 +180,12 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
     return { entries, next: pageAfter(entries, page) };
   },
   anilist: async (queryClient, page, signal) => {
-    const { entries, hasNextPage, readTo } = await fetchAniListActivityPage(queryClient, page, undefined, signal);
+    const { entries, hasNextPage, readTo } = await fetchAniListActivityPage(
+      queryClient,
+      page,
+      undefined,
+      signal,
+    );
     return { entries, next: hasNextPage ? page + 1 : undefined, readTo };
   },
   // Letterboxd supplies one RSS window. Deeper HTML pages are Cloudflare-walled
@@ -179,10 +196,9 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
   }),
   // A real paginated read; `readTo` carries the server's page order (KTD8).
   serializd: async (_queryClient, page, signal) => {
-    const result = await Effect.runPromise(
-      getSerializdDiary(serializdDeps(), { page }),
-      { signal },
-    );
+    const result = await Effect.runPromise(getSerializdDiary(serializdDeps(), { page }), {
+      signal,
+    });
     return {
       entries: result.entries,
       next: serializdNextPage(result, page),
@@ -259,9 +275,7 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   const query = useInfiniteQuery({
     queryKey: diaryQueryKeys.feed(active, letterboxdUsername, serializdUsername),
     queryFn: ({ pageParam, signal }) => fetchDiaryPage(queryClient, pageParam, signal),
-    initialPageParam: Object.fromEntries(
-      active.map((provider) => [provider, 1]),
-    ) as DiaryCursor,
+    initialPageParam: Object.fromEntries(active.map((provider) => [provider, 1])) as DiaryCursor,
     getNextPageParam: (_last, pages) => nextDiaryCursor(pages),
     staleTime: DIARY_STALE_MS,
     enabled: active.length > 0,
@@ -286,7 +300,10 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   });
 
   return {
-    days: groupDiaryEntries(withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList), timeZone),
+    days: groupDiaryEntries(
+      withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList),
+      timeZone,
+    ),
     timeZone,
     activeProviders: active,
     entryCount: merged.length,
@@ -305,8 +322,14 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     refetch: async () => {
       await queryClient.cancelQueries({ queryKey: letterboxdQueryKeys.diaryRoot() });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot(), refetchType: 'none' }),
-        queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.diaryRoot(), refetchType: 'none' }),
+        queryClient.invalidateQueries({
+          queryKey: simklQueryKeys.allItemsRoot(),
+          refetchType: 'none',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: letterboxdQueryKeys.diaryRoot(),
+          refetchType: 'none',
+        }),
       ]);
       return query.refetch();
     },
@@ -351,16 +374,20 @@ export function useFilmPlaysQuery(item: NormalizedMediaItem) {
           ? Effect.runPromise(getMovieHistory(traktDeps(), { traktId: trakt }), { signal })
           : [],
         providers.includes(Provider.AniList) && anilist != null
-          ? fetchAniListActivityPage(queryClient, 1, anilist, signal).then((result) => result.entries)
+          ? fetchAniListActivityPage(queryClient, 1, anilist, signal).then(
+              (result) => result.entries,
+            )
           : [],
         providers.includes(Provider.Letterboxd) && (tmdb != null || letterboxd != null)
-          ? queryClient.fetchQuery(letterboxdDiaryQuery()).then((entries) =>
-              entries.filter(
-                (entry) =>
-                  (tmdb != null && entry.item.externalIds.tmdb === tmdb) ||
-                  (letterboxd != null && entry.item.externalIds.letterboxd === letterboxd),
-              ),
-            )
+          ? queryClient
+              .fetchQuery(letterboxdDiaryQuery())
+              .then((entries) =>
+                entries.filter(
+                  (entry) =>
+                    (tmdb != null && entry.item.externalIds.tmdb === tmdb) ||
+                    (letterboxd != null && entry.item.externalIds.letterboxd === letterboxd),
+                ),
+              )
           : [],
       ]);
       return settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));

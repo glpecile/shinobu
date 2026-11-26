@@ -15,7 +15,7 @@ it off the main thread, so nothing the app does can reach it, while on native it
 runs on the UI thread — the thread that also renders cells and mounts views.
 
 1. **Three walls, not one.** `season-pager.tsx` deliberately keeps the selected
-   cour *and its two neighbours* mounted. A format change is a prop change for
+   cour _and its two neighbours_ mounted. A format change is a prop change for
    all three, so one tap re-read AniList, re-warmed posters and re-rendered
    cells for three walls at once — and cost three requests against the 30/min
    budget (`anilist-rate-limit-retry-storm.md`).
@@ -26,7 +26,7 @@ runs on the UI thread — the thread that also renders cells and mounts views.
 3. **A desktop's worth of poster warm-up.** `useWarmPosters` suspends the swap
    until the first screen of posters is prefetched
    (`wall-swap-black-flash-posters-not-decoded.md`); "first screen" was the
-   constant 24 — eight columns by three rows, a *desktop* wall. On a phone
+   constant 24 — eight columns by three rows, a _desktop_ wall. On a phone
    showing nine, every switch waited on three screens of images it would never
    paint. This is the gap between the pill landing and the cards changing.
 
@@ -44,7 +44,7 @@ runs on the UI thread — the thread that also renders cells and mounts views.
 ## Keep the skeleton: a router param update is a transition on native only
 
 Dropping the format from the wall's key (no remount) removed the stutter and
-also removed the *feedback*: on native the tap changed nothing visible until the
+also removed the _feedback_: on native the tap changed nothing visible until the
 new posters arrived. Web did not have this problem — a route param update is a
 React transition on native, which keeps the old content revealed while the new
 render suspends, and is not one on web, where the boundary falls back.
@@ -52,7 +52,7 @@ render suspends, and is not one on web, where the boundary falls back.
 So the boundary is keyed by format as it already was by year: a fresh boundary
 is React's documented opt-out from a transition's held content, it shows its
 skeleton at once, and both platforms now answer the tap the same way. Keyed by
-the format the page is *rendering*, not the URL's — an off-screen cour trails,
+the format the page is _rendering_, not the URL's — an off-screen cour trails,
 and a key running ahead of its prop remounts it onto the format it already had.
 
 ## Rule

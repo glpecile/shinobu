@@ -2,9 +2,9 @@
 
 **Symptom (2026-10-20).** Two AniList-origin anime would not log to Serializd:
 
-- *Koori no Jouheki 2nd Season* (AniList 213805): "ani.zip has no episode
+- _Koori no Jouheki 2nd Season_ (AniList 213805): "ani.zip has no episode
   mapping for this entry yet".
-- *Cyberpunk: Edgerunners 2* (AniList 195539): "couldn't read this show's
+- _Cyberpunk: Edgerunners 2_ (AniList 195539): "couldn't read this show's
   season list to place the episode".
 
 ## Causes
@@ -64,7 +64,7 @@ numbering, unchanged input, and the canonical-show-only boundary.
 
 ## A TMDB season 2 log missed AniList and Simkl (2026-10-28)
 
-Logging S2E1 of *Cyberpunk: Edgerunners* from its TMDB page (105248, S1 10 +
+Logging S2E1 of _Cyberpunk: Edgerunners_ from its TMDB page (105248, S1 10 +
 S2 10) reached neither AniList nor Simkl. Enrichment maps TVDB 384541 to the
 first cour, AniList 120377. Routing then drops AniList for any season-2+
 canonical batch, and Simkl received a `shows[]` S2 write keyed to the show's

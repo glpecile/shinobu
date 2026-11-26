@@ -7,15 +7,11 @@ describe('resolveTmdbToken', () => {
     expect(resolveTmdbToken({ builder: 'builder-token', stored: 'user-token' })).toBe(
       'builder-token',
     );
-    expect(resolveTmdbToken({ builder: 'builder-token', stored: null })).toBe(
-      'builder-token',
-    );
+    expect(resolveTmdbToken({ builder: 'builder-token', stored: null })).toBe('builder-token');
   });
 
   test('the stored token stands in when the build ships none', () => {
-    expect(resolveTmdbToken({ builder: '', stored: 'user-token' })).toBe(
-      'user-token',
-    );
+    expect(resolveTmdbToken({ builder: '', stored: 'user-token' })).toBe('user-token');
   });
 
   test('clearing the stored token returns to empty — no TMDB at all', () => {

@@ -24,7 +24,11 @@ export async function enrichExternalIds(
   if (item.tmdbTvVariant != null) return item;
 
   if (item.type === 'BOOK') {
-    if (item.externalIds.hardcover == null || item.externalIds.anilist != null || !connected.includes(Provider.AniList)) {
+    if (
+      item.externalIds.hardcover == null ||
+      item.externalIds.anilist != null ||
+      !connected.includes(Provider.AniList)
+    ) {
       return item;
     }
     const bridge = await cachedReadingBridge(queryClient, item);
@@ -52,7 +56,8 @@ export async function enrichExternalIds(
   ) {
     const film = await cachedLetterboxdFilm(queryClient, externalIds.letterboxd);
     if (film?.tmdbTvVariant != null) return { ...item, tmdbTvVariant: film.tmdbTvVariant };
-    if (film?.externalIds.tmdb != null) externalIds = { ...externalIds, tmdb: film.externalIds.tmdb };
+    if (film?.externalIds.tmdb != null)
+      externalIds = { ...externalIds, tmdb: film.externalIds.tmdb };
   }
 
   if (
@@ -83,7 +88,8 @@ export async function enrichExternalIds(
     (connected.includes(Provider.Trakt) ||
       connected.includes(Provider.Serializd) ||
       connected.includes(Provider.Simkl) ||
-      ((item.isFilm === true || item.totalEpisodes === 1) && connected.includes(Provider.Letterboxd)))
+      ((item.isFilm === true || item.totalEpisodes === 1) &&
+        connected.includes(Provider.Letterboxd)))
   ) {
     const anizip = await cachedAniZipIds(queryClient, {
       anilistId: externalIds.anilist,
@@ -113,14 +119,19 @@ export async function enrichExternalIds(
     // The bridge gives one TMDB id without its kind (aniZipTmdbKind): a film
     // filed as a show's special carries the show's TV id.
     const bridgedTmdb =
-      !fromAniZip || aniZipTmdbKind(bridged) === (isFilm ? 'movie' : 'tv') ? bridged?.tmdb : undefined;
-    const match = isFilm && bridgedTmdb == null ? await cachedTmdbAnimeMatch(queryClient, item) : null;
+      !fromAniZip || aniZipTmdbKind(bridged) === (isFilm ? 'movie' : 'tv')
+        ? bridged?.tmdb
+        : undefined;
+    const match =
+      isFilm && bridgedTmdb == null ? await cachedTmdbAnimeMatch(queryClient, item) : null;
     // A film's TVDB id names its parent show, never the film.
     const tvdb = isFilm ? undefined : bridged?.tvdb;
     // ani.zip's themoviedb_id can point to a nonexistent TMDB id (e.g. a sequel cour), so prefer TVDB → TMDB.
     const tmdb =
       match?.tmdbId ??
-      (tvdb != null ? ((await cachedTmdbTvIdByTvdb(queryClient, tvdb)) ?? bridgedTmdb) : bridgedTmdb);
+      (tvdb != null
+        ? ((await cachedTmdbTvIdByTvdb(queryClient, tvdb)) ?? bridgedTmdb)
+        : bridgedTmdb);
     // A record's IMDb id names the same work as its TVDB id: a film's only
     // without one, a series' only with one.
     const imdb = (isFilm ? bridged?.tvdb == null : tvdb != null) ? bridged?.imdb : undefined;
@@ -173,7 +184,10 @@ export async function enrichExternalIds(
     if (lookup != null) {
       const mapped = await cachedAniZipIds(queryClient, lookup);
       // A TMDB lookup also answers for a TV anime that has the movie's number.
-      if (mapped?.anilist != null && (item.type !== 'MOVIE' || aniZipTmdbKind(mapped) === 'movie')) {
+      if (
+        mapped?.anilist != null &&
+        (item.type !== 'MOVIE' || aniZipTmdbKind(mapped) === 'movie')
+      ) {
         externalIds = { ...externalIds, anilist: mapped.anilist };
       }
     }

@@ -36,10 +36,7 @@ function movie(id: number): NormalizedMediaItem {
 describe('findInSearchCache', () => {
   test('still finds a Trakt result under the Trakt search key', () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(
-      [...SEARCH_QUERY_ROOTS.trakt, 'motor city', 10],
-      [movie(7)],
-    );
+    queryClient.setQueryData([...SEARCH_QUERY_ROOTS.trakt, 'motor city', 10], [movie(7)]);
 
     expect(findInSearchCache(queryClient, 'trakt-7')?.title).toBe('Motor City');
   });
@@ -53,7 +50,10 @@ describe('findInSearchCache', () => {
       [...SEARCH_QUERY_ROOTS.anilist, 'vinland', 20],
       [manga(30002), { ...first, title: 'Later copy' }],
     );
-    queryClient.setQueryData([...SEARCH_QUERY_ROOTS.tmdb, 'vin', 20], [{ ...first, title: 'TMDB copy' }]);
+    queryClient.setQueryData(
+      [...SEARCH_QUERY_ROOTS.tmdb, 'vin', 20],
+      [{ ...first, title: 'TMDB copy' }],
+    );
 
     expect(findInSearchCache(queryClient, 'anilist-1')).toBe(first);
     expect(findInSearchCache(queryClient, 'anilist-30002')).toBeDefined();

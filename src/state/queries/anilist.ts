@@ -29,11 +29,12 @@ import {
   type SeasonalAnimePage,
 } from '@/lib/providers/anilist/reads';
 import { namesMatch, pickPersonMatch } from '@/lib/providers/tmdb/normalize';
-import { humanizeEnum, type AniListCurrentEntry, type AniListMangaEntry } from '@/lib/providers/anilist/normalize';
-import type {
-  AnimeFormatFilter,
-  AnimeSeasonWindow,
-} from '@/lib/providers/anilist/season';
+import {
+  humanizeEnum,
+  type AniListCurrentEntry,
+  type AniListMangaEntry,
+} from '@/lib/providers/anilist/normalize';
+import type { AnimeFormatFilter, AnimeSeasonWindow } from '@/lib/providers/anilist/season';
 import type { TokenStore } from '@/lib/providers/token-store';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import {
@@ -104,14 +105,12 @@ export const anilistQueryKeys = {
    * the richer shape — one network request feeds both, now including the
    * PLANNING entries used by Calendar and recent premieres in Continue Watching.
    */
-  currentAnimeEntries: () =>
-    [...anilistQueryKeys.all, 'current-anime-entries'] as const,
+  currentAnimeEntries: () => [...anilistQueryKeys.all, 'current-anime-entries'] as const,
   /**
    * The manga twin (plan 0117 M3): reading, rereading and planned manga in one
    * read, which Continue Reading and the reading list each slice by status.
    */
-  currentMangaEntries: () =>
-    [...anilistQueryKeys.all, 'current-manga-entries'] as const,
+  currentMangaEntries: () => [...anilistQueryKeys.all, 'current-manga-entries'] as const,
   reading: () => [...anilistQueryKeys.currentMangaEntries(), 'reading'] as const,
   /**
    * Popular anime of one cour — keyed by season so a boundary crossing
@@ -130,8 +129,7 @@ export const anilistQueryKeys = {
   /** The viewer's recorded state for one media — reconcile reads this (plan 0011). */
   entryState: (mediaId: number) =>
     [...anilistQueryKeys.all, 'entry-state', mediaId, aniListSessionRevision()] as const,
-  relations: (mediaId: number) =>
-    [...anilistQueryKeys.all, 'relations', mediaId] as const,
+  relations: (mediaId: number) => [...anilistQueryKeys.all, 'relations', mediaId] as const,
   /** Prefix over every search entry — details/[id] scans this for cache hits
    *  (the only route a manga result can resolve through). Shared root so the
    *  scan in `search-cache.ts` can't drift from the key built here. */
@@ -139,11 +137,9 @@ export const anilistQueryKeys = {
   search: (query: string, limit: number, type: 'ANIME' | 'MANGA') =>
     [...anilistQueryKeys.searchRoot(), query, limit, type] as const,
   staff: (id: number) => [...anilistQueryKeys.all, 'staff', id] as const,
-  staffSearch: (query: string) =>
-    [...anilistQueryKeys.all, 'staff-search', query] as const,
+  staffSearch: (query: string) => [...anilistQueryKeys.all, 'staff-search', query] as const,
   staffId: (name: string) => [...anilistQueryKeys.all, 'staff-id', name] as const,
-  studioId: (name: string) =>
-    [...anilistQueryKeys.all, 'studio-id', name] as const,
+  studioId: (name: string) => [...anilistQueryKeys.all, 'studio-id', name] as const,
 };
 
 /**
@@ -190,9 +186,7 @@ export function useAniListLibraryQuery(enabled: boolean) {
 }
 
 /** The AniList viewer id is cached for the session. Disconnect purges it. */
-export function fetchCurrentAnimeEntries(
-  queryClient: QueryClient,
-): Promise<AniListCurrentEntry[]> {
+export function fetchCurrentAnimeEntries(queryClient: QueryClient): Promise<AniListCurrentEntry[]> {
   return queryClient.fetchQuery({
     queryKey: anilistQueryKeys.currentAnimeEntries(),
     queryFn: async ({ signal }) => {
@@ -222,9 +216,7 @@ export async function fetchWatchlistAnime(
   queryClient: QueryClient,
 ): Promise<AniListCurrentEntry[]> {
   const entries = await fetchCurrentAnimeEntries(queryClient);
-  return entries.filter(
-    (entry) => entry.status === 'PLANNING' || entry.status === 'CURRENT',
-  );
+  return entries.filter((entry) => entry.status === 'PLANNING' || entry.status === 'CURRENT');
 }
 
 /**
@@ -252,7 +244,11 @@ const NO_MANGA: readonly NormalizedMediaItem[] = [];
  * group against the same list.
  */
 export function cachedMangaList(queryClient: QueryClient): readonly NormalizedMediaItem[] {
-  return queryClient.getQueryData<AniListMangaEntry[]>(anilistQueryKeys.currentMangaEntries())?.map((entry) => entry.item) ?? NO_MANGA;
+  return (
+    queryClient
+      .getQueryData<AniListMangaEntry[]>(anilistQueryKeys.currentMangaEntries())
+      ?.map((entry) => entry.item) ?? NO_MANGA
+  );
 }
 
 /**
@@ -261,7 +257,10 @@ export function cachedMangaList(queryClient: QueryClient): readonly NormalizedMe
  * log, never on focus. `subscribed: false` holds the last answer without
  * re-rendering, for a surface that's mounted while hidden.
  */
-export function useMangaListQuery(options: { fetch: boolean; subscribed?: boolean }): readonly NormalizedMediaItem[] {
+export function useMangaListQuery(options: {
+  fetch: boolean;
+  subscribed?: boolean;
+}): readonly NormalizedMediaItem[] {
   const queryClient = useQueryClient();
   const { data } = useQuery({
     ...currentMangaEntriesOptions(queryClient),
@@ -381,16 +380,16 @@ export function useAnimeByIdQuery(mediaId: number | null, type: MediaType = 'ANI
  * Related, recommended and tag sections share the metadata, progress and
  * episode read. Related cards are not cached as complete detail records.
  */
-export function useSuspenseAniListRelationsQuery(params: {
-  mediaId: number;
-  type: MediaType;
-}) {
+export function useSuspenseAniListRelationsQuery(params: { mediaId: number; type: MediaType }) {
   const queryClient = useQueryClient();
   useAniListSessionRevision();
   return useSuspenseQuery(anilistRelationsQuery(queryClient, params));
 }
 
-export function anilistRelationsQuery(queryClient: QueryClient, params: { mediaId: number; type: MediaType }) {
+export function anilistRelationsQuery(
+  queryClient: QueryClient,
+  params: { mediaId: number; type: MediaType },
+) {
   const { mediaId } = params;
   const withCredits = params.type === 'MANGA';
   const revision = aniListSessionRevision();
@@ -399,16 +398,24 @@ export function anilistRelationsQuery(queryClient: QueryClient, params: { mediaI
     queryKey: [...anilistQueryKeys.relations(mediaId), revision, withCredits],
     queryFn: async ({ signal }: { signal: AbortSignal }) => {
       const result = await Effect.runPromise(
-        getAnimeRelations({ ...anilistDeps(), tokens: {
-          ...tokenStore,
-          get: () => session,
-          clear: () => {
-            if (getProviderSession(Provider.AniList)?.accessToken === session?.accessToken) tokenStore.clear();
+        getAnimeRelations(
+          {
+            ...anilistDeps(),
+            tokens: {
+              ...tokenStore,
+              get: () => session,
+              clear: () => {
+                if (getProviderSession(Provider.AniList)?.accessToken === session?.accessToken)
+                  tokenStore.clear();
+              },
+            },
           },
-        } }, { mediaId, withCredits }),
+          { mediaId, withCredits },
+        ),
         { signal },
       );
-      if (result.item != null) queryClient.setQueryData(anilistQueryKeys.anime(mediaId), result.item);
+      if (result.item != null)
+        queryClient.setQueryData(anilistQueryKeys.anime(mediaId), result.item);
       if (result.entryState != null && revision === aniListSessionRevision()) {
         queryClient.setQueryData(anilistQueryKeys.entryState(mediaId), result.entryState);
       }
@@ -431,18 +438,23 @@ export async function fetchAniListSequel(
   if (!onlineManager.isOnline() || tokenStore.get() == null) return null;
   const revision = aniListSessionRevision();
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), 3000); });
+  const deadline = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), 3000);
+  });
   try {
     const source = anilistRelationsQuery(queryClient, { mediaId, type: 'ANIME' });
     // The final log invalidates progress. Its relation edges are still useful.
     const cached = queryClient.getQueryData<AnimeRelations>(source.queryKey);
-    const entry = cached ?? await Promise.race([queryClient.fetchQuery({ ...source, retry: false }), deadline]);
+    const entry =
+      cached ??
+      (await Promise.race([queryClient.fetchQuery({ ...source, retry: false }), deadline]));
     const sequels = (entry?.relations ?? []).filter(
       ({ relation, item }) =>
         relation === humanizeEnum('SEQUEL') && item.type === 'ANIME' && item.isFilm !== true,
     );
     const sequelId = sequels.length === 1 ? sequels[0].item.externalIds.anilist : undefined;
-    if (sequelId == null || !onlineManager.isOnline() || revision !== aniListSessionRevision()) return null;
+    if (sequelId == null || !onlineManager.isOnline() || revision !== aniListSessionRevision())
+      return null;
     const sequel = await Promise.race([
       queryClient.fetchQuery({
         ...anilistRelationsQuery(queryClient, { mediaId: sequelId, type: 'ANIME' }),
@@ -495,8 +507,7 @@ export function useAniListSearchQuery(params: {
         searchFuzzy(query, (search) => searchMedia(anilistDeps(), { query: search, limit, type })),
         { signal },
       ),
-    enabled:
-      params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
+    enabled: params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     // A new query string keeps the last results up while it loads; a new type
     // doesn't, since Titles' anime under the Reading header reads as ignored.
     placeholderData: (previous, previousQuery) =>
@@ -505,18 +516,12 @@ export function useAniListSearchQuery(params: {
   });
 }
 
-export function useAniListStaffSearchQuery(params: {
-  query: string;
-  enabled: boolean;
-}) {
+export function useAniListStaffSearchQuery(params: { query: string; enabled: boolean }) {
   const query = params.query.trim();
   return useQuery({
     queryKey: anilistQueryKeys.staffSearch(query),
     queryFn: ({ signal }) =>
-      Effect.runPromise(
-        searchAniListStaff(anilistDeps(), { name: query, limit: 20 }),
-        { signal },
-      ),
+      Effect.runPromise(searchAniListStaff(anilistDeps(), { name: query, limit: 20 }), { signal }),
     enabled: params.enabled && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
@@ -539,7 +544,11 @@ export function useAniListEntryStateQuery(params: {
   return useQuery({
     ...anilistRelationsQuery(queryClient, {
       mediaId: mediaId ?? -1,
-      type: params.type ?? queryClient.getQueryData<NormalizedMediaItem>(anilistQueryKeys.anime(mediaId ?? -1))?.type ?? 'ANIME',
+      type:
+        params.type ??
+        queryClient.getQueryData<NormalizedMediaItem>(anilistQueryKeys.anime(mediaId ?? -1))
+          ?.type ??
+        'ANIME',
     }),
     select: (result) => result.entryState,
     enabled: enabled && mediaId != null,
@@ -574,18 +583,12 @@ export function useAniListEpisodesQuery(params: {
  * Resolve an AniList staff id on demand. Require an exact folded name or reversed word order
  * before linking.
  */
-export function useAniListStaffIdQuery(params: {
-  name: string;
-  enabled?: boolean;
-}) {
+export function useAniListStaffIdQuery(params: { name: string; enabled?: boolean }) {
   const name = params.name.trim();
   return useQuery({
     queryKey: anilistQueryKeys.staffId(name),
     queryFn: async ({ signal }): Promise<number | null> => {
-      const hits = await Effect.runPromise(
-        searchAniListStaff(anilistDeps(), { name }),
-        { signal },
-      );
+      const hits = await Effect.runPromise(searchAniListStaff(anilistDeps(), { name }), { signal });
       return exactNameMatchId(hits, name);
     },
     enabled: (params.enabled ?? true) && name !== '',
@@ -594,18 +597,14 @@ export function useAniListStaffIdQuery(params: {
   });
 }
 
-export function useAniListStudioIdQuery(params: {
-  name: string;
-  enabled?: boolean;
-}) {
+export function useAniListStudioIdQuery(params: { name: string; enabled?: boolean }) {
   const name = params.name.trim();
   return useQuery({
     queryKey: anilistQueryKeys.studioId(name),
     queryFn: async ({ signal }): Promise<number | null> => {
-      const hits = await Effect.runPromise(
-        searchAniListStudio(anilistDeps(), { name }),
-        { signal },
-      );
+      const hits = await Effect.runPromise(searchAniListStudio(anilistDeps(), { name }), {
+        signal,
+      });
       return exactNameMatchId(hits, name);
     },
     enabled: (params.enabled ?? true) && name !== '',

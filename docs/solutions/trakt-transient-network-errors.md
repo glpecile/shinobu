@@ -15,17 +15,17 @@ It clears on its own / on refresh, then comes back minutes later. Feels random.
 
 - **It is not CORS.** Trakt sends `access-control-allow-origin: *` on every
   response including errors (`docs/solutions/web-cors-trakt.md`). A CORS failure
-  would be *consistent*, not intermittent.
+  would be _consistent_, not intermittent.
 - **It is a genuine transient fetch rejection.** "NetworkError when attempting to
-  fetch resource" is the browser's message when `fetch` rejects *before any HTTP
-  status* — a dropped/reset connection, DNS blip, or the edge closing the socket.
+  fetch resource" is the browser's message when `fetch` rejects _before any HTTP
+  status_ — a dropped/reset connection, DNS blip, or the edge closing the socket.
   It maps to `ProviderNetworkError` via the `Effect.tryPromise` catch in
   `lib/providers/trakt/http.ts`.
 - **Retries were already happening.** `query-client.ts`'s predicate classifies
   `ProviderNetworkError` as retryable (confirmed by running it through
   `Effect.runPromise`: the FiberFailure label is `(FiberFailure)
-  ProviderNetworkError`, which doesn't match the never-retry regex). So the error
-  only reaches the boundary when *every* attempt in the window fails.
+ProviderNetworkError`, which doesn't match the never-retry regex). So the error
+  only reaches the boundary when _every_ attempt in the window fails.
 - **Why every attempt failed together — the burst.** The home feed mounts ~7
   concurrent Trakt reads (watched-shows + the Up Next progress fan-out at
   concurrency 4 + trending movies/TV), all to `api.trakt.tv` over **one
@@ -45,7 +45,7 @@ It clears on its own / on refresh, then comes back minutes later. Feels random.
   2; rate-limit/auth stay at **0** (unchanged — those need a Retry-After sleep or
   a reconnect, never a replay; see the anilist-rate-limit-retry-storm note).
 
-## What this does *not* do
+## What this does _not_ do
 
 It doesn't stop the connection from ever dropping — it makes the app ride out the
 drop instead of surfacing it. If these errors become frequent rather than

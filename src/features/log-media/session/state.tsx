@@ -48,7 +48,10 @@ export function CatchUpLogProvider({ children }: { children: ReactNode }) {
   const open = session != null && openId === session.id;
   const [busy, setBusy] = useState<ReadonlyMap<string, number>>(new Map());
   const idRef = useRef(0);
-  const [inFlight, addInFlight] = useOptimistic(NONE, (current, watch: LoggedWatch) => [...current, watch]);
+  const [inFlight, addInFlight] = useOptimistic(NONE, (current, watch: LoggedWatch) => [
+    ...current,
+    watch,
+  ]);
   const queued = usePendingLogs().flatMap((record) =>
     Object.values(record.legs).some((leg) => leg.state !== 'failed')
       ? (loggedWatch(record.variables) ?? [])
@@ -71,16 +74,17 @@ export function CatchUpLogProvider({ children }: { children: ReactNode }) {
     setSession({ id, request });
     setOpenId(id);
   };
-  const openCatchUp = (entry: UpNextEpisodeEntry) => openLog({
-    item: entry.item,
-    title: `Log episode ${entry.episode.number}`,
-    description: `“${entry.item.title}”`,
-    ...(entry.episode.season != null
-      ? { episodes: [{ season: entry.episode.season, number: entry.episode.number }] }
-      : { entryEpisodes: [entry.episode.number] }),
-    entry,
-  });
-  const closeCatchUp = () => setOpenId((current) => current === session?.id ? null : current);
+  const openCatchUp = (entry: UpNextEpisodeEntry) =>
+    openLog({
+      item: entry.item,
+      title: `Log episode ${entry.episode.number}`,
+      description: `“${entry.item.title}”`,
+      ...(entry.episode.season != null
+        ? { episodes: [{ season: entry.episode.season, number: entry.episode.number }] }
+        : { entryEpisodes: [entry.episode.number] }),
+      entry,
+    });
+  const closeCatchUp = () => setOpenId((current) => (current === session?.id ? null : current));
   const trackBusy = (itemId: string, work: Promise<unknown>) => {
     bump(itemId, 1);
     void work.then(

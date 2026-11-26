@@ -70,7 +70,9 @@ export function PosterCell({
   const showChrome = process.env.EXPO_OS === 'web' && hovered;
   const label = item.year == null ? item.title : `${item.title} (${item.year})`;
   const providers = sources.map((id) => PROVIDERS[id].label).join(', ');
-  const accessibilityLabel = [label, providers === '' ? null : `On ${providers}`, note].filter(Boolean).join('. ');
+  const accessibilityLabel = [label, providers === '' ? null : `On ${providers}`, note]
+    .filter(Boolean)
+    .join('. ');
 
   const caption = showChrome ? (
     <View className="absolute bottom-0 left-0 right-0">
@@ -92,9 +94,7 @@ export function PosterCell({
           {item.title}
         </Text>
         {item.year != null && (
-          <Text className="text-accent-foreground/70 font-sans text-xs mt-0.5">
-            {item.year}
-          </Text>
+          <Text className="text-accent-foreground/70 font-sans text-xs mt-0.5">{item.year}</Text>
         )}
       </View>
     </View>
@@ -137,7 +137,9 @@ export function PosterCell({
             uri={item.coverImage}
           />
         </PresstableScale>
-        {watched != null && <WatchedMark item={item} poster showProgress={note == null} state={watched} />}
+        {watched != null && (
+          <WatchedMark item={item} poster showProgress={note == null} state={watched} />
+        )}
         {/* Sibling, not child: nested gesture-handler buttons bubble presses into the poster. */}
         {(process.env.EXPO_OS === 'web' || showActions) && (
           <OverlayActionsButton
@@ -189,9 +191,7 @@ export function PosterWall({
       onEndReachedThreshold={0.6}
       // docs/solutions/diary-scroll-jank-is-row-mount-cost.md
       recycleItems
-      refreshControl={
-        <RefreshControl onRefresh={onRefresh} />
-      }
+      refreshControl={<RefreshControl onRefresh={onRefresh} />}
       // No entering animation on virtualized cells (docs/solutions/entering-animation-on-virtualized-cells-replays.md).
       renderItem={({ item: entry }) => (
         <PosterCell

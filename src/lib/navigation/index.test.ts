@@ -2,7 +2,9 @@ import { expect, mock, test } from 'bun:test';
 
 const dispatched: string[] = [];
 const router = {
-  push: (href: string) => { dispatched.push(`push ${href}`); },
+  push: (href: string) => {
+    dispatched.push(`push ${href}`);
+  },
 };
 let focused = true;
 const navigation = { isFocused: () => focused };

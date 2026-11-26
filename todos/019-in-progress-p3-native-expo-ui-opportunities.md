@@ -26,7 +26,7 @@ Paths start at `src/` unless otherwise stated.
 ## 1. Native segmented controls for filmography — implemented
 
 - [x] Use shared native segmented controls for filmography's Format control in
-  `features/credit-timeline/credit-timeline.tsx`.
+      `features/credit-timeline/credit-timeline.tsx`.
 
 Filmography uses `components/native-segmented-control/`: a SwiftUI segmented
 `Picker` on iOS and a themed Compose `SingleChoiceSegmentedButtonRow` on Android.
@@ -109,10 +109,10 @@ those headers carry progress, actions and list-specific behavior.
 ## 5. Native year selection — implemented
 
 - [x] Use an anchored native year menu in
-  `features/anime-seasons/season-picker.tsx`, sharing `NativePickerMenu` with
-  the watchlist filter. Preserve the year grid on web.
+      `features/anime-seasons/season-picker.tsx`, sharing `NativePickerMenu` with
+      the watchlist filter. Preserve the year grid on web.
 - [ ] Compare distant-year selection, larger text and screen-reader interaction
-  on iOS and Android.
+      on iOS and Android.
 
 The chosen implementation uses the same native menus as the tracker filter,
 not a wheel or a native sheet. Years are newest first, retain the existing

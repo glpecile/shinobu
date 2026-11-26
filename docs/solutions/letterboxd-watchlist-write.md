@@ -39,7 +39,7 @@ the target state (`inWatchlist: true|false`), so:
 
 - both verbs are expressible with one endpoint;
 - a repeat add is idempotent — KTD-6's named hazard (a toggle where a wrong
-  guess *removes* a film while reporting success) **does not exist** on this
+  guess _removes_ a film while reporting success) **does not exist** on this
   endpoint;
 - the 204-empty response is unambiguous: the state after the call is the state
   you sent, not "whatever the opposite of before was".

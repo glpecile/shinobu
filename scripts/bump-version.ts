@@ -33,9 +33,7 @@ export function bumpVersion(current: AppVersion, arg: string): AppVersion {
   }
 
   if (compareSemver(nextVersion, current.version) <= 0) {
-    throw new Error(
-      `Refusing to bump ${current.version} -> ${nextVersion}: not an increase`,
-    );
+    throw new Error(`Refusing to bump ${current.version} -> ${nextVersion}: not an increase`);
   }
 
   return { version: nextVersion, versionCode: current.versionCode + 1 };
@@ -54,9 +52,7 @@ function stringifyAppJson(value: Json, indent = ''): string {
       return `[${value.map((item) => JSON.stringify(item)).join(', ')}]`;
     }
     const childIndent = `${indent}  `;
-    const items = value.map(
-      (item) => `${childIndent}${stringifyAppJson(item, childIndent)}`,
-    );
+    const items = value.map((item) => `${childIndent}${stringifyAppJson(item, childIndent)}`);
     return `[\n${items.join(',\n')}\n${indent}]`;
   }
 
@@ -65,8 +61,7 @@ function stringifyAppJson(value: Json, indent = ''): string {
     if (keys.length === 0) return '{}';
     const childIndent = `${indent}  `;
     const entries = keys.map(
-      (key) =>
-        `${childIndent}${JSON.stringify(key)}: ${stringifyAppJson(value[key], childIndent)}`,
+      (key) => `${childIndent}${JSON.stringify(key)}: ${stringifyAppJson(value[key], childIndent)}`,
     );
     return `{\n${entries.join(',\n')}\n${indent}}`;
   }
@@ -102,6 +97,10 @@ if (import.meta.main) {
   appJson.expo.android.versionCode = next.versionCode;
   await Bun.write(appJsonPath, `${stringifyAppJson(appJson)}\n`);
 
-  console.log(`${current.version} (code ${current.versionCode}) -> ${next.version} (code ${next.versionCode})`);
-  console.log(`\nNext: git commit -am "chore: bump version to ${next.version}" && git tag v${next.version} && git push origin v${next.version}`);
+  console.log(
+    `${current.version} (code ${current.versionCode}) -> ${next.version} (code ${next.versionCode})`,
+  );
+  console.log(
+    `\nNext: git commit -am "chore: bump version to ${next.version}" && git tag v${next.version} && git push origin v${next.version}`,
+  );
 }

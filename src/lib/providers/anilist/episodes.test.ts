@@ -22,13 +22,22 @@ describe('getAnimeEpisodes', () => {
     const fetch: HttpFetch = async (_url, init) => {
       calls++;
       const page = JSON.parse(String(init?.body)).variables.page ?? 1;
-      return Response.json({ data: { Media: {
-        episodes: 26, duration: 24, streamingEpisodes: [],
-        airingSchedule: {
-          pageInfo: { hasNextPage: page === 1 },
-          edges: page === 1 ? [{ node: { episode: 1, airingAt: 1_000_000_000 } }] : [{ node: { episode: 26, airingAt: 1_000_086_400 } }],
+      return Response.json({
+        data: {
+          Media: {
+            episodes: 26,
+            duration: 24,
+            streamingEpisodes: [],
+            airingSchedule: {
+              pageInfo: { hasNextPage: page === 1 },
+              edges:
+                page === 1
+                  ? [{ node: { episode: 1, airingAt: 1_000_000_000 } }]
+                  : [{ node: { episode: 26, airingAt: 1_000_086_400 } }],
+            },
+          },
         },
-      } } });
+      });
     };
     const season = await Effect.runPromise(getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }));
     expect(calls).toBe(2);
@@ -56,9 +65,7 @@ describe('getAnimeEpisodes', () => {
       },
     });
 
-    const season = await Effect.runPromise(
-      getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }),
-    );
+    const season = await Effect.runPromise(getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }));
 
     expect(season.number).toBe(1);
     expect(season.title).toBe('Episodes');
@@ -89,9 +96,7 @@ describe('getAnimeEpisodes', () => {
       },
     });
 
-    const season = await Effect.runPromise(
-      getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }),
-    );
+    const season = await Effect.runPromise(getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }));
 
     expect(season.episodes).toHaveLength(1);
     expect(season.episodes[0].title).toBe('Episode 1');
@@ -117,34 +122,40 @@ describe('getAnimeEpisodes', () => {
       },
     });
 
-    const season = await Effect.runPromise(
-      getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }),
-    );
+    const season = await Effect.runPromise(getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }));
 
     expect(season.episodes).toHaveLength(3);
     expect(season.episodes.map((episode) => episode.number)).toEqual([1, 2, 3]);
   });
 
   test('dates every episode of a finished single-day release from its start date', async () => {
-    const fetch = mockFetch({ data: { Media: {
-      episodes: 3, duration: 27, streamingEpisodes: null, status: 'FINISHED',
-      startDate: { year: 2026, month: 1, day: 15 }, endDate: { year: 2026, month: 1, day: 15 },
-      airingSchedule: { edges: [{ node: { episode: 1, airingAt: 1_768_464_000 } }] },
-    } } });
+    const fetch = mockFetch({
+      data: {
+        Media: {
+          episodes: 3,
+          duration: 27,
+          streamingEpisodes: null,
+          status: 'FINISHED',
+          startDate: { year: 2026, month: 1, day: 15 },
+          endDate: { year: 2026, month: 1, day: 15 },
+          airingSchedule: { edges: [{ node: { episode: 1, airingAt: 1_768_464_000 } }] },
+        },
+      },
+    });
 
     const season = await Effect.runPromise(getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }));
 
     expect(season.episodes.map((episode) => episode.firstAired)).toEqual([
-      new Date(1_768_464_000 * 1000).toISOString(), '2026-01-15', '2026-01-15',
+      new Date(1_768_464_000 * 1000).toISOString(),
+      '2026-01-15',
+      '2026-01-15',
     ]);
   });
 
   test('tolerates a null Media response', async () => {
     const fetch = mockFetch({ data: { Media: null } });
 
-    const season = await Effect.runPromise(
-      getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }),
-    );
+    const season = await Effect.runPromise(getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }));
 
     expect(season.episodes).toHaveLength(0);
   });

@@ -4,14 +4,28 @@ import { detailVariants } from './variants';
 
 describe('detailVariants', () => {
   it('links the TV and whole-entry logging variants with their own route types', () => {
-    expect(detailVariants({ id: 'letterboxd-beast-boy-lone-wolf', type: 'MOVIE', tmdbTvVariant: 228880, externalIds: { letterboxd: 'beast-boy-lone-wolf' } }))
-      .toEqual([{ source: 'tmdb', id: 'tmdb-tv-228880', type: 'TV' }]);
-    expect(detailVariants({ id: 'tmdb-tv-228880', type: 'TV', externalIds: { tmdb: 228880 } }, 'beast-boy-lone-wolf'))
-      .toEqual([{ source: 'letterboxd', id: 'letterboxd-beast-boy-lone-wolf', type: 'MOVIE' }]);
+    expect(
+      detailVariants({
+        id: 'letterboxd-beast-boy-lone-wolf',
+        type: 'MOVIE',
+        tmdbTvVariant: 228880,
+        externalIds: { letterboxd: 'beast-boy-lone-wolf' },
+      }),
+    ).toEqual([{ source: 'tmdb', id: 'tmdb-tv-228880', type: 'TV' }]);
+    expect(
+      detailVariants(
+        { id: 'tmdb-tv-228880', type: 'TV', externalIds: { tmdb: 228880 } },
+        'beast-boy-lone-wolf',
+      ),
+    ).toEqual([{ source: 'letterboxd', id: 'letterboxd-beast-boy-lone-wolf', type: 'MOVIE' }]);
   });
   it('lists the TMDB and AniList pages of a Trakt-sourced anime show', () => {
     expect(
-      detailVariants({ id: 'trakt-1', type: 'TV', externalIds: { trakt: 1, tmdb: 209867, anilist: 154587 } }),
+      detailVariants({
+        id: 'trakt-1',
+        type: 'TV',
+        externalIds: { trakt: 1, tmdb: 209867, anilist: 154587 },
+      }),
     ).toEqual([
       { source: 'tmdb', id: 'tmdb-tv-209867' },
       { source: 'anilist', id: 'anilist-154587' },
@@ -20,7 +34,12 @@ describe('detailVariants', () => {
 
   it('leaves out the page being viewed', () => {
     expect(
-      detailVariants({ id: 'anilist-199', type: 'ANIME', isFilm: true, externalIds: { anilist: 199, tmdb: 129 } }),
+      detailVariants({
+        id: 'anilist-199',
+        type: 'ANIME',
+        isFilm: true,
+        externalIds: { anilist: 199, tmdb: 129 },
+      }),
     ).toEqual([{ source: 'tmdb', id: 'tmdb-movie-129' }]);
   });
 
@@ -41,6 +60,12 @@ describe('detailVariants', () => {
   });
 
   it('never mints a TMDB page for manga', () => {
-    expect(detailVariants({ id: 'anilist-30013', type: 'MANGA', externalIds: { anilist: 30013, tmdb: 1 } })).toEqual([]);
+    expect(
+      detailVariants({
+        id: 'anilist-30013',
+        type: 'MANGA',
+        externalIds: { anilist: 30013, tmdb: 1 },
+      }),
+    ).toEqual([]);
   });
 });

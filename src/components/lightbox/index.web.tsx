@@ -1,12 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { Modal, View } from 'react-native';
-import {
-  FadeIn,
-  FadeOut,
-  Keyframe,
-  useReducedMotion,
-} from 'react-native-reanimated';
+import { FadeIn, FadeOut, Keyframe, useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Image } from '@/components/image';
@@ -114,11 +109,7 @@ export function Lightbox() {
                   />
                 ) : (
                   // Raw <img> so width/height can use CSS viewport units.
-                  <img
-                    alt={image.alt ?? ''}
-                    src={image.uri}
-                    style={avatarStyle(image.type)}
-                  />
+                  <img alt={image.alt ?? ''} src={image.uri} style={avatarStyle(image.type)} />
                 )}
               </AnimatedView>
             </View>

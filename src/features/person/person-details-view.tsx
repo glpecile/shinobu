@@ -40,9 +40,7 @@ export function PersonDetailsView({ person, rows, tvCredits }: NormalizedPersonD
     <>
       <Head>
         <title>{`${person.name} — Shinobu`}</title>
-        {person.biography != null && (
-          <meta content={person.biography} name="description" />
-        )}
+        {person.biography != null && <meta content={person.biography} name="description" />}
       </Head>
       <CreditTimeline
         filmography={filmography}
@@ -78,9 +76,7 @@ export function PersonDetailsView({ person, rows, tvCredits }: NormalizedPersonD
                 <ScrolledTitle.Anchor>
                   <CopyTitle title={person.name} tmdbId={person.tmdbId} />
                 </ScrolledTitle.Anchor>
-                {meta !== '' && (
-                  <Text className="text-muted font-sans text-sm mt-1.5">{meta}</Text>
-                )}
+                {meta !== '' && <Text className="text-muted font-sans text-sm mt-1.5">{meta}</Text>}
               </View>
             </AnimatedView>
             {person.biography != null && (

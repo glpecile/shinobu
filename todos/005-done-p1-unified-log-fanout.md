@@ -4,11 +4,12 @@ priority: P1
 ---
 
 > **Done (2026-07-20):** `useLogMedia` (`src/features/log-media/use-log-media.ts`)
-> + the `fanOutLog` fan-out (`fan-out.ts`) ship with per-provider partial-failure
-> results, driven by the explicit, unit-tested routing table
-> (`lib/providers/routing.ts` + `routing.test.ts`, `fan-out.test.ts`). Wired into
-> the log button and the season/anime-season log surfaces. All acceptance criteria
-> below are met.
+>
+> - the `fanOutLog` fan-out (`fan-out.ts`) ship with per-provider partial-failure
+>   results, driven by the explicit, unit-tested routing table
+>   (`lib/providers/routing.ts` + `routing.test.ts`, `fan-out.test.ts`). Wired into
+>   the log button and the season/anime-season log surfaces. All acceptance criteria
+>   below are met.
 
 # Unified Log Fan-Out (`useLogMedia`)
 
@@ -19,7 +20,7 @@ should write it to every connected provider it applies to, not just one.
 
 - `useLogMedia` mutation (naming per `AGENTS.md` Query Hook Conventions) accepts a
   `NormalizedMediaItem` + log intent (watched / read) and fans out in parallel to
-  every *connected* provider *applicable* to that item's type.
+  every _connected_ provider _applicable_ to that item's type.
 - Routing table (`lib/providers/routing.ts`) is explicit and unit-testable: Movie →
   Trakt + Letterboxd; TV → Trakt; Manga → AniList; Anime film → AniList + Trakt +
   Letterboxd (the edge case called out in `plan.md` 1.3 — don't assume a 1:1

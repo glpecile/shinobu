@@ -11,7 +11,11 @@ import {
   type DiaryPage,
 } from './diary-pages';
 
-function diaryEntry(itemId: string, provider: ProviderId = 'trakt', watchedAt = '2026-07-20T18:30:00.000Z'): NormalizedDiaryEntry {
+function diaryEntry(
+  itemId: string,
+  provider: ProviderId = 'trakt',
+  watchedAt = '2026-07-20T18:30:00.000Z',
+): NormalizedDiaryEntry {
   return {
     id: `${provider}-log-${itemId}`,
     provider,
@@ -45,16 +49,21 @@ describe('nextDiaryCursor', () => {
   });
 
   test('is undefined once nobody has more pages', () => {
-    expect(nextDiaryCursor([{ slices: { simkl: { entries: [], next: undefined } } }])).toBeUndefined();
+    expect(
+      nextDiaryCursor([{ slices: { simkl: { entries: [], next: undefined } } }]),
+    ).toBeUndefined();
   });
 });
 
 describe('diaryStates', () => {
   test('a provider whose first fetch failed drops out of the watermark', () => {
-    const [state] = diaryStates([
-      { slices: { anilist: { entries: [], next: 1, error: 'boom' } } },
-    ]);
-    expect(state).toMatchObject({ provider: 'anilist', failed: true, hasMore: false, error: 'boom' });
+    const [state] = diaryStates([{ slices: { anilist: { entries: [], next: 1, error: 'boom' } } }]);
+    expect(state).toMatchObject({
+      provider: 'anilist',
+      failed: true,
+      hasMore: false,
+      error: 'boom',
+    });
   });
 
   test('a failed later page keeps the entries and retries that page', () => {
@@ -75,7 +84,11 @@ describe('diaryStates', () => {
       { slices: { anilist: { entries: [], next: 2, readTo: '2026-07-10T00:00:00.000Z' } } },
       { slices: { anilist: { entries: [], next: 2, error: 'boom' } } },
     ]);
-    expect(state).toMatchObject({ failed: false, hasMore: true, readTo: '2026-07-10T00:00:00.000Z' });
+    expect(state).toMatchObject({
+      failed: false,
+      hasMore: true,
+      readTo: '2026-07-10T00:00:00.000Z',
+    });
   });
 
   test('readTo keeps the oldest across pages', () => {

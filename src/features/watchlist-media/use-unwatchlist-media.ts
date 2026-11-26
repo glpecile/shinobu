@@ -44,8 +44,7 @@ import {
 export const WATCHLIST_REMOVE_ADAPTERS: Partial<
   Record<ProviderId, WriteAdapter<WatchlistRemovePayload>>
 > = {
-  trakt: ({ item }) =>
-    Effect.runPromise(removeFromTraktWatchlist(traktDeps(), item)),
+  trakt: ({ item }) => Effect.runPromise(removeFromTraktWatchlist(traktDeps(), item)),
   letterboxd: ({ item }) =>
     Effect.runPromise(removeFromLetterboxdWatchlist(letterboxdDeps(), item)),
   simkl: ({ item, destructive }) =>
@@ -56,8 +55,7 @@ export const WATCHLIST_REMOVE_ADAPTERS: Partial<
         destructive?.includes(Provider.Simkl) === true ? { allowDestructive: true } : {},
       ),
     ),
-  hardcover: ({ item }) =>
-    Effect.runPromise(removeFromHardcoverReadingList(hardcoverDeps(), item)),
+  hardcover: ({ item }) => Effect.runPromise(removeFromHardcoverReadingList(hardcoverDeps(), item)),
   anilist: ({ item, destructive }) => {
     const mediaId = item.externalIds.anilist;
     if (mediaId == null) {
@@ -88,8 +86,7 @@ export interface WatchlistRemoveDeps {
 
 export const watchlistRemoveDeps = (): WatchlistRemoveDeps => ({
   adapters: WATCHLIST_REMOVE_ADAPTERS,
-  refresh: (queryClient, options) =>
-    refreshNotifications(createRefreshDeps(queryClient), options),
+  refresh: (queryClient, options) => refreshNotifications(createRefreshDeps(queryClient), options),
 });
 
 const WATCHLIST_REMOVE_MUTATION_ROOT = ['watchlist-media-remove'] as const;
@@ -109,9 +106,7 @@ export function useIsUnwatchlistPending(itemId: string): boolean {
   return useMutationState({ filters: watchlistRemovePendingFilter(itemId) }).length > 0;
 }
 
-export function useLatestUnwatchlistResult(
-  itemId: string,
-): UnwatchlistMediaResult | undefined {
+export function useLatestUnwatchlistResult(itemId: string): UnwatchlistMediaResult | undefined {
   const results = useMutationState({
     filters: { mutationKey: watchlistRemoveMutationKey(itemId) },
     select: (mutation) => mutation.state.data as UnwatchlistMediaResult | undefined,
@@ -140,11 +135,7 @@ export async function runWatchlistRemove(
     variables,
     incomplete,
   );
-  if (
-    plan.targets.length === 0 &&
-    plan.manual.length === 0 &&
-    plan.unknown.length === 0
-  ) {
+  if (plan.targets.length === 0 && plan.manual.length === 0 && plan.unknown.length === 0) {
     throw new Error(`No connected provider can remove "${plan.item.title}"`);
   }
 
@@ -155,10 +146,7 @@ export async function runWatchlistRemove(
 
   invalidateAfterWatchlist(queryClient, plan.item, report.succeeded);
 
-  if (
-    report.succeeded.length > 0 &&
-    shouldRefreshNotifications(plan.item, currentPlatform())
-  ) {
+  if (report.succeeded.length > 0 && shouldRefreshNotifications(plan.item, currentPlatform())) {
     await deps.refresh(queryClient, { throttle: false });
   }
 
@@ -180,9 +168,7 @@ export function useUnwatchlistMedia(
 
   return useMutation({
     mutationKey: watchlistRemoveMutationKey(entry.item.id),
-    mutationFn: (
-      variables: UnwatchlistMediaVariables,
-    ): Promise<UnwatchlistMediaResult> =>
+    mutationFn: (variables: UnwatchlistMediaVariables): Promise<UnwatchlistMediaResult> =>
       runWatchlistRemove(
         queryClient,
         entry,

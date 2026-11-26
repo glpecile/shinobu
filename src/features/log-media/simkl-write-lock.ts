@@ -45,8 +45,10 @@ const MAX_ATTEMPTS = 5;
 function isTransient(error: unknown): boolean {
   // A Retry-After delay signals a quota limit, not the transient write lock.
   if (error instanceof ProviderRateLimitError) return error.retryAfterMs == null;
-  return error instanceof ProviderNetworkError &&
-    (error.status === 500 || error.status === 502 || error.status === 503);
+  return (
+    error instanceof ProviderNetworkError &&
+    (error.status === 500 || error.status === 502 || error.status === 503)
+  );
 }
 
 function backoffMs(attempts: number): number {

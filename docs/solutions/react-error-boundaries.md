@@ -12,10 +12,12 @@ The root boundary wraps the entire app in `src/app/_layout.tsx` inside the
 ## What it catches (and does not catch)
 
 Catches:
+
 - Render errors in child components.
 - Errors thrown during React lifecycle methods.
 
 Does **not** catch:
+
 - Event-handler errors (handle those with `try/catch` or `.catch()`).
 - Asynchronous code errors (Promises, `setTimeout`, etc.).
 - SSR errors on the server.
@@ -31,7 +33,7 @@ import { ErrorFallback } from '@/components/ErrorFallback';
 
 <ErrorBoundary FallbackComponent={ErrorFallback}>
   <ProviderWidget />
-</ErrorBoundary>
+</ErrorBoundary>;
 ```
 
 ## Retry

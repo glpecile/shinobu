@@ -111,15 +111,15 @@ path. `MutationCache.build` applies `defaultMutationOptions`, so a hydrated
 keyed mutation picks up its registered `mutationFn`. `mutationFnContext.client`
 also supplies the `QueryClient`, so that half of the closure problem goes away.
 
-| Concern | Dehydrated mutation | Pending-log record |
-| --- | --- | --- |
-| Survives an upgrade | No. It lives in the `query-cache` snapshot, which `BUSTER` bumps and the 24 h `maxAge` discard by design ("safe to nuke at any time"). | Yes. It has its own MMKV file with its own versioning. |
-| Restart window | 24 h (`MAX_AGE_MS`). | Chosen freely (7 days below). |
-| Flushed before a kill | Only when a persisted *query* changes. `PersistQueryClientProvider` subscribes to the query cache only. | Written synchronously at enqueue. |
-| Native offline | Never pauses, because `onlineManager` is always online. Needs a connectivity dependency before anything persists. | Covers both offline-known and failed-in-flight cases. |
-| Hook inputs | `connected` must be read at replay time, as it should be anyway. | Same. The replay calls the hook. |
-| Account, duplicate, and outcome state | None. A resumed mutation has no observer, no identity check, and no per-leg state. | First-class fields. |
-| Diary "pending" badge | Requires scanning the mutation cache. | Reads one MMKV key. |
+| Concern                               | Dehydrated mutation                                                                                                                    | Pending-log record                                     |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Survives an upgrade                   | No. It lives in the `query-cache` snapshot, which `BUSTER` bumps and the 24 h `maxAge` discard by design ("safe to nuke at any time"). | Yes. It has its own MMKV file with its own versioning. |
+| Restart window                        | 24 h (`MAX_AGE_MS`).                                                                                                                   | Chosen freely (7 days below).                          |
+| Flushed before a kill                 | Only when a persisted _query_ changes. `PersistQueryClientProvider` subscribes to the query cache only.                                | Written synchronously at enqueue.                      |
+| Native offline                        | Never pauses, because `onlineManager` is always online. Needs a connectivity dependency before anything persists.                      | Covers both offline-known and failed-in-flight cases.  |
+| Hook inputs                           | `connected` must be read at replay time, as it should be anyway.                                                                       | Same. The replay calls the hook.                       |
+| Account, duplicate, and outcome state | None. A resumed mutation has no observer, no identity check, and no per-leg state.                                                     | First-class fields.                                    |
+| Diary "pending" badge                 | Requires scanning the mutation cache.                                                                                                  | Reads one MMKV key.                                    |
 
 **Recommended: the pending-log record.** The TanStack path saves a few dozen
 lines, but its storage is the one file the app deliberately throws away. It
@@ -134,9 +134,9 @@ like `persist.ts`, never runs during SSR. It stores no tokens.
 
 ```ts
 interface PendingLog {
-  id: string;                 // random, also the replay's busy key
+  id: string; // random, also the replay's busy key
   version: 1;
-  createdAt: number;          // epoch ms
+  createdAt: number; // epoch ms
   /** The caller's input, minus derived fields. Re-planned on replay. */
   variables: Omit<LogMediaVariables, 'rewatch' | 'retryOf'> & { watchedAt: string };
   legs: Partial<Record<ProviderId, PendingLeg>>;
@@ -245,11 +245,11 @@ Replay calls `useLogMedia().mutateAsync` with the record's `variables`,
   cache must never decide whether an uncertain write landed. Plan 014's current
   retry implementation does not yet do this and must be repaired first.
 
-| Leg | A read that proves absence (Trakt, AniList, Serializd TV) | No such read (Simkl, Letterboxd) |
-| --- | --- | --- |
-| unsent | Replay with `retryOf: { rewatch: false }`; skip an existing watch. | Replay as non-rewatch. Nothing was sent. |
-| uncertain, `rewatch: false` | Replay with `retryOf`. Skips if it landed. | Don't replay. Show failed, with the link. |
-| uncertain, `rewatch: true` | Don't replay. Show failed, with the link. | Don't replay. Show failed, with the link. |
+| Leg                         | A read that proves absence (Trakt, AniList, Serializd TV)          | No such read (Simkl, Letterboxd)          |
+| --------------------------- | ------------------------------------------------------------------ | ----------------------------------------- |
+| unsent                      | Replay with `retryOf: { rewatch: false }`; skip an existing watch. | Replay as non-rewatch. Nothing was sent.  |
+| uncertain, `rewatch: false` | Replay with `retryOf`. Skips if it landed.                         | Don't replay. Show failed, with the link. |
+| uncertain, `rewatch: true`  | Don't replay. Show failed, with the link.                          | Don't replay. Show failed, with the link. |
 
 Simkl answers `null` after 005. Letterboxd's watch read is "positive evidence
 or null-for-unknown, never 'unwatched'" (`persist.ts`), so a miss there
@@ -326,7 +326,7 @@ success or a failure, so `isCleanWriteReport` must not count it as either.
   episodes of the same item don't conflict and replay in order.
 - **Web tabs share `localStorage`.** Two tabs would both drain the same
   record. Replay on web only inside `navigator.locks.request('pending-logs',
-  …)` and skip the drain where the Web Locks API is missing (availability
+…)` and skip the drain where the Web Locks API is missing (availability
   **unverified** for the supported browsers).
 - **Letterboxd.** On web, Letterboxd is `unsupportedWritePlatforms` or
   userscript-only, and plan 0042 rules out any automatic retry, so it's never

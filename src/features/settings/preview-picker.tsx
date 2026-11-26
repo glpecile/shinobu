@@ -62,10 +62,18 @@ function Option({ children, value }: { children: ReactNode; value: string }) {
 function Preview({ children, className }: { children: ReactNode; className?: string }) {
   const checked = useContext(CheckedContext);
   return (
-    <View className={cn('w-full rounded-xl border-2 border-transparent p-0.5', checked && 'border-foreground')}>
+    <View
+      className={cn(
+        'w-full rounded-xl border-2 border-transparent p-0.5',
+        checked && 'border-foreground',
+      )}
+    >
       <View className={cn('w-full overflow-hidden rounded-lg', className)}>
         {children}
-        <View className="absolute inset-0 rounded-lg border border-border" style={{ pointerEvents: 'none' }} />
+        <View
+          className="absolute inset-0 rounded-lg border border-border"
+          style={{ pointerEvents: 'none' }}
+        />
       </View>
     </View>
   );
@@ -74,7 +82,10 @@ function Preview({ children, className }: { children: ReactNode; className?: str
 function Label({ children }: { children: ReactNode }) {
   const checked = useContext(CheckedContext);
   return (
-    <Text className={cn('font-sans text-sm text-foreground', checked && 'font-sans-semibold')} numberOfLines={1}>
+    <Text
+      className={cn('font-sans text-sm text-foreground', checked && 'font-sans-semibold')}
+      numberOfLines={1}
+    >
       {children}
     </Text>
   );

@@ -14,7 +14,13 @@ import { pageAt, percentRead } from './reading-share';
 const MARKS = [25, 50, 75];
 const SNAP = 2;
 
-export function ProgressScrubber({ page, total, onChange, onStep, disabled }: {
+export function ProgressScrubber({
+  page,
+  total,
+  onChange,
+  onStep,
+  disabled,
+}: {
   page: number;
   total: number;
   onChange: (page: number) => void;
@@ -35,7 +41,11 @@ export function ProgressScrubber({ page, total, onChange, onStep, disabled }: {
     onChange(pageAt(mark ?? at, total));
   }
 
-  const tap = useTapGesture({ runOnJS: true, enabled: !disabled, onActivate: (event) => seek(event.x) });
+  const tap = useTapGesture({
+    runOnJS: true,
+    enabled: !disabled,
+    onActivate: (event) => seek(event.x),
+  });
   const pan = usePanGesture({
     runOnJS: true,
     enabled: !disabled,
@@ -56,7 +66,12 @@ export function ProgressScrubber({ page, total, onChange, onStep, disabled }: {
         accessibilityLabel="Progress"
         accessibilityRole="adjustable"
         accessibilityState={{ disabled }}
-        accessibilityValue={{ min: 0, max: 100, now: percent, text: `${percent}%, page ${page} of ${total}` }}
+        accessibilityValue={{
+          min: 0,
+          max: 100,
+          now: percent,
+          text: `${percent}%, page ${page} of ${total}`,
+        }}
         // Padded past the track by half the thumb, so the thumb at either end
         // sits inside the hit area. A child outside its parent gets no touches.
         className="-mx-3 h-11 px-3"
@@ -95,12 +110,22 @@ export function ProgressScrubber({ page, total, onChange, onStep, disabled }: {
           }}
         >
           <View className="h-1.5 rounded-full bg-border overflow-hidden">
-            <View className={cn('h-full', page >= total ? 'bg-success' : 'bg-foreground')} style={{ width: `${share}%` }} />
+            <View
+              className={cn('h-full', page >= total ? 'bg-success' : 'bg-foreground')}
+              style={{ width: `${share}%` }}
+            />
           </View>
           {MARKS.map((mark) => (
-            <View key={mark} className="absolute h-2 w-0.5 -ml-px bg-surface" style={{ left: `${mark}%` }} />
+            <View
+              key={mark}
+              className="absolute h-2 w-0.5 -ml-px bg-surface"
+              style={{ left: `${mark}%` }}
+            />
           ))}
-          <View className="absolute size-6 -ml-3 rounded-full bg-foreground shadow-md" style={{ left: `${share}%` }} />
+          <View
+            className="absolute size-6 -ml-3 rounded-full bg-foreground shadow-md"
+            style={{ left: `${share}%` }}
+          />
         </View>
       </View>
     </GestureDetector>

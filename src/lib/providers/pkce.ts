@@ -9,8 +9,7 @@ import {
  * 64 chars of the RFC 7636 "unreserved" set, deliberately sized at exactly 64
  * so `byte & 0x3f` indexes it without modulo bias.
  */
-const VERIFIER_ALPHABET =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+const VERIFIER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 /** RFC 7636 allows 43-128; 64 gives 384 bits of entropy. */
 const VERIFIER_LENGTH = 64;
 

@@ -1,5 +1,5 @@
 steps:
-  - echo: "Home: expand Continue Watching."
+  - echo: 'Home: expand Continue Watching.'
   - tap:
       text: Expand Continue Watching
   - tool: await-ui-element
@@ -7,7 +7,7 @@ steps:
       condition: visible
       selector:
         text: Collapse Continue Watching
-  - echo: "Home: collapse Continue Watching, restoring the start state."
+  - echo: 'Home: collapse Continue Watching, restoring the start state.'
   - tap:
       text: Collapse Continue Watching
   - tool: await-ui-element

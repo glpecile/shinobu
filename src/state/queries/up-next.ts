@@ -27,11 +27,7 @@ import type {
   SimklLibraryEntry,
   SimklNextToWatch,
 } from '@/lib/providers/simkl/normalize';
-import {
-  getAllItems,
-  getCalendar,
-  type SimklCalendarKind,
-} from '@/lib/providers/simkl/reads';
+import { getAllItems, getCalendar, type SimklCalendarKind } from '@/lib/providers/simkl/reads';
 import type { TraktCalendarRelease } from '@/lib/providers/trakt/normalize';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import {
@@ -86,9 +82,7 @@ const PROGRESS_CONCURRENCY = 4;
 const MAPPING_CONCURRENCY = 4;
 
 /** Settle Trakt progress per show. Report a provider error if they all fail. */
-async function traktInputs(
-  queryClient: QueryClient,
-): Promise<ProgressUpNextInput[]> {
+async function traktInputs(queryClient: QueryClient): Promise<ProgressUpNextInput[]> {
   const shows = await queryClient.fetchQuery({
     queryKey: traktQueryKeys.watchedShows(),
     queryFn: ({ signal }) => Effect.runPromise(getWatchedShows(traktDeps()), { signal }),
@@ -108,28 +102,19 @@ async function traktInputs(
             const progress = await queryClient.fetchQuery({
               queryKey: traktQueryKeys.showProgress(traktId),
               queryFn: ({ signal }) =>
-                Effect.runPromise(
-                  getShowWatchedProgress(traktDeps(), { traktId }),
-                  { signal },
-                ),
+                Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId }), { signal }),
               staleTime: SHOW_PROGRESS_STALE_MS,
             });
             // Behind-count from the same response: `aired` minus completed
             // keys — no extra request. Absent `aired` (pre-KTD4 cache) means
             // no count, not zero.
             const behind =
-              progress.aired != null
-                ? progress.aired - progress.watchedKeys.size
-                : null;
+              progress.aired != null ? progress.aired - progress.watchedKeys.size : null;
             return {
               item,
               source: Provider.Trakt,
-              ...(progress.nextEpisode != null
-                ? { nextEpisode: progress.nextEpisode }
-                : {}),
-              ...(behind != null && behind > 0
-                ? { episodesBehind: behind }
-                : {}),
+              ...(progress.nextEpisode != null ? { nextEpisode: progress.nextEpisode } : {}),
+              ...(behind != null && behind > 0 ? { episodesBehind: behind } : {}),
             };
           } catch (error) {
             firstFailure ??= error;
@@ -162,9 +147,7 @@ function calendarRange() {
 }
 
 /** One Trakt calendar read covers watched and watchlisted shows for the displayed window. */
-async function traktCalendarInputs(
-  queryClient: QueryClient,
-): Promise<CalendarUpNextInput[]> {
+async function traktCalendarInputs(queryClient: QueryClient): Promise<CalendarUpNextInput[]> {
   const range = calendarRange();
   const rows = await queryClient.fetchQuery({
     queryKey: traktQueryKeys.myCalendar('shows', range.startDate, range.days),
@@ -206,11 +189,7 @@ async function traktReleaseInputs(
 ): Promise<ReleaseUpNextInput[]> {
   const range = calendarRange();
   const rows = await queryClient.fetchQuery({
-    queryKey: traktQueryKeys.myCalendar(
-      calendar.type,
-      range.startDate,
-      range.days,
-    ),
+    queryKey: traktQueryKeys.myCalendar(calendar.type, range.startDate, range.days),
     queryFn: ({ signal }) => Effect.runPromise(calendar.read(traktDeps(), range), { signal }),
     staleTime: CALENDAR_STALE_MS,
   });
@@ -290,14 +269,10 @@ function calendarPointer(
         // Simkl's own pointer never names a special.
         airing.episode.season !== 0 &&
         // Anime airings are seasonless; the snapshot files them under season 1.
-        !entry.watchedKeys.has(
-          `${airing.episode.season ?? 1}-${airing.episode.number}`,
-        ),
+        !entry.watchedKeys.has(`${airing.episode.season ?? 1}-${airing.episode.number}`),
     )
     .sort(
-      (a, b) =>
-        a.date.localeCompare(b.date) ||
-        (a.episode?.number ?? 0) - (b.episode?.number ?? 0),
+      (a, b) => a.date.localeCompare(b.date) || (a.episode?.number ?? 0) - (b.episode?.number ?? 0),
     );
   if (next?.episode == null) return undefined;
   return {
@@ -326,9 +301,7 @@ function simklProgressInput(
       // none — never a reformatted or guessed date (the has-aired contract).
       firstAired: next.date,
     },
-    ...(next.date == null && simklAiredByCount(entry)
-      ? { nextEpisodeAiredByCount: true }
-      : {}),
+    ...(next.date == null && simklAiredByCount(entry) ? { nextEpisodeAiredByCount: true } : {}),
     ...(behind != null && behind > 0 ? { episodesBehind: behind } : {}),
   };
 }
@@ -353,9 +326,7 @@ function recentlyReleased(entry: SimklLibraryEntry, now: Date): boolean {
 }
 
 /** Simkl supplies next-episode pointers with air times in one library snapshot. */
-async function simklInputs(
-  queryClient: QueryClient,
-): Promise<ProgressUpNextInput[]> {
+async function simklInputs(queryClient: QueryClient): Promise<ProgressUpNextInput[]> {
   const [watching, parked] = await Promise.all([
     simklWatchingLibrary(queryClient),
     // Swallowed, not hidden: the calendar and releases legs read this same
@@ -432,9 +403,7 @@ async function simklTrackedItems(queryClient: QueryClient): Promise<{
  * Air instants are the files' UTC `date` fields **verbatim** — `hasAired`
  * compares instants, so no localization happens here.
  */
-async function simklCalendarInputs(
-  queryClient: QueryClient,
-): Promise<CalendarUpNextInput[]> {
+async function simklCalendarInputs(queryClient: QueryClient): Promise<CalendarUpNextInput[]> {
   // Start the CDN reads with the library reads. Ignore calendar errors when the library has no
   // tracked ids.
   const files = Promise.all([
@@ -453,13 +422,9 @@ async function simklCalendarInputs(
         item,
         source: Provider.Simkl,
         episode: {
-          ...(entry.episode.season != null
-            ? { season: entry.episode.season }
-            : {}),
+          ...(entry.episode.season != null ? { season: entry.episode.season } : {}),
           number: entry.episode.number,
-          ...(entry.episode.title != null
-            ? { title: entry.episode.title }
-            : {}),
+          ...(entry.episode.title != null ? { title: entry.episode.title } : {}),
           firstAired: entry.date,
         },
         ...(entry.finaleType != null ? { finale: entry.finaleType } : {}),
@@ -469,9 +434,7 @@ async function simklCalendarInputs(
 }
 
 /** Intersect Simkl's rolling movie-release file with the member's tracked movies. */
-async function simklReleaseInputs(
-  queryClient: QueryClient,
-): Promise<ReleaseUpNextInput[]> {
+async function simklReleaseInputs(queryClient: QueryClient): Promise<ReleaseUpNextInput[]> {
   const file = simklCalendarFile(queryClient, 'movie_release');
   file.catch(() => {});
   const tracked = await simklTrackedItems(queryClient);
@@ -504,7 +467,8 @@ async function simklReleaseInputs(
  */
 function worthMapping(entry: AniListUpNextInput, now: Date): boolean {
   return (
-    entry.status !== 'PLANNING' || entry.nextAiring != null ||
+    entry.status !== 'PLANNING' ||
+    entry.nextAiring != null ||
     withinPremiereWindow(entry.firstAired, now)
   );
 }
@@ -588,14 +552,10 @@ function streamUpNextInputs(
         ? settle(Provider.Simkl, () => simklReleaseInputs(queryClient))
         : none<ReleaseUpNextInput>(),
       wantsLetterboxd
-        ? settle(Provider.Letterboxd, () =>
-            fetchLetterboxdReleaseInputs(queryClient, new Date()),
-          )
+        ? settle(Provider.Letterboxd, () => fetchLetterboxdReleaseInputs(queryClient, new Date()))
         : none<ReleaseUpNextInput>(),
       wantsAniList
-        ? settle(Provider.AniList, () =>
-            anilistInputs(queryClient, wantsTrakt || wantsSimkl),
-          )
+        ? settle(Provider.AniList, () => anilistInputs(queryClient, wantsTrakt || wantsSimkl))
         : none<AniListUpNextInput>(),
     ],
     (legs) => {
@@ -638,8 +598,11 @@ function streamUpNextInputs(
       };
     },
     (partial) =>
-      partial.progress.length + partial.calendar.length + partial.releases.length +
-        partial.anilist.length > 0,
+      partial.progress.length +
+        partial.calendar.length +
+        partial.releases.length +
+        partial.anilist.length >
+      0,
   );
 }
 

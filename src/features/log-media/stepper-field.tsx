@@ -10,8 +10,19 @@ import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
 export function StepperField({
-  label, backLabel, forwardLabel, value, onChangeText, onStep, onBlur,
-  canStepBack, canStepForward, note, error, pending, className,
+  label,
+  backLabel,
+  forwardLabel,
+  value,
+  onChangeText,
+  onStep,
+  onBlur,
+  canStepBack,
+  canStepForward,
+  note,
+  error,
+  pending,
+  className,
 }: {
   label: string;
   backLabel: string;

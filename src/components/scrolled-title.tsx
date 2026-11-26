@@ -1,10 +1,4 @@
-import {
-  createContext,
-  type ReactNode,
-  type RefObject,
-  useContext,
-  useRef,
-} from 'react';
+import { createContext, type ReactNode, type RefObject, useContext, useRef } from 'react';
 import { Text, View, type ViewInstance } from 'react-native';
 import {
   type SharedValue,
@@ -46,12 +40,7 @@ function useScrolledTitleContext(caller: string): ScrolledTitleContextValue {
   return context;
 }
 
-function covered(
-  scrollY: number,
-  anchor: AnchorFrame,
-  whole: boolean,
-  barHeight: number,
-): boolean {
+function covered(scrollY: number, anchor: AnchorFrame, whole: boolean, barHeight: number): boolean {
   'worklet';
   const edge = whole ? anchor.y + anchor.height : anchor.y;
   return anchor.height > 0 && scrollY > edge - barHeight;
@@ -83,9 +72,7 @@ export function ScrolledTitle({ children }: { children: ReactNode }) {
   );
 
   return (
-    <ScrolledTitleContext.Provider
-      value={{ anchorRef, scrollY, anchor, measure }}
-    >
+    <ScrolledTitleContext.Provider value={{ anchorRef, scrollY, anchor, measure }}>
       <View className="flex-1 bg-background" ref={frameRef}>
         {children}
       </View>
@@ -101,13 +88,7 @@ export function useScrolledTitle() {
   return { scrollY, onScroll, scrollEventThrottle: 16 as const };
 }
 
-function Anchor({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+function Anchor({ children, className }: { children: ReactNode; className?: string }) {
   const { anchorRef, measure } = useScrolledTitleContext('ScrolledTitle.Anchor');
   return (
     <View className={className} onLayout={measure} ref={anchorRef}>
@@ -116,23 +97,21 @@ function Anchor({
   );
 }
 
-function useCovered(
-  whole: boolean,
-  duration: number,
-  barHeight: number,
-): SharedValue<number> {
+function useCovered(whole: boolean, duration: number, barHeight: number): SharedValue<number> {
   const { scrollY, anchor } = useScrolledTitleContext('ScrolledTitle.Bar');
   const progress = useSharedValue(0);
   useAnimatedReaction(
     () => covered(scrollY.get(), anchor.get(), whole, barHeight),
     (isCovered, wasCovered) => {
       if (isCovered === wasCovered) return;
-      progress.set(withTiming(
-        isCovered ? 1 : 0,
-        isCovered
-          ? { duration, easing: KEYFRAME_EASE_OUT }
-          : { duration: DURATION.exit, easing: KEYFRAME_EASE_EXIT },
-      ));
+      progress.set(
+        withTiming(
+          isCovered ? 1 : 0,
+          isCovered
+            ? { duration, easing: KEYFRAME_EASE_OUT }
+            : { duration: DURATION.exit, easing: KEYFRAME_EASE_EXIT },
+        ),
+      );
     },
   );
   return progress;
@@ -153,10 +132,19 @@ function Bar({ title, trailingAction = false }: { title: string; trailingAction?
   return (
     <AnimatedView
       aria-hidden
-      className={cn('absolute top-0 left-0 right-0 justify-end pl-16 pr-6 bg-background border-b border-border overflow-hidden', trailingAction && 'pr-16')}
-      style={[{ pointerEvents: 'none', height: barHeight, paddingBottom: FLOATING_BACK_BUTTON_GAP }, barStyle]}
+      className={cn(
+        'absolute top-0 left-0 right-0 justify-end pl-16 pr-6 bg-background border-b border-border overflow-hidden',
+        trailingAction && 'pr-16',
+      )}
+      style={[
+        { pointerEvents: 'none', height: barHeight, paddingBottom: FLOATING_BACK_BUTTON_GAP },
+        barStyle,
+      ]}
     >
-      <AnimatedView className="justify-center" style={[{ height: FLOATING_BACK_BUTTON_SIZE }, titleStyle]}>
+      <AnimatedView
+        className="justify-center"
+        style={[{ height: FLOATING_BACK_BUTTON_SIZE }, titleStyle]}
+      >
         <Text className="font-display text-lg text-foreground" numberOfLines={1}>
           {title}
         </Text>

@@ -14,7 +14,10 @@ import {
   type NotificationKind,
 } from '@/features/notifications/compute-schedule';
 import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
-import { cancelAllScheduledNotifications, scheduleTestNotification } from '@/features/notifications/scheduler';
+import {
+  cancelAllScheduledNotifications,
+  scheduleTestNotification,
+} from '@/features/notifications/scheduler';
 import type { UpNextInputs } from '@/features/up-next/types';
 import {
   getMutedNotificationKinds,
@@ -38,7 +41,15 @@ const KIND_ICONS = {
   physical: 'disc-outline',
 } as const satisfies Record<NotificationKind, string>;
 
-function KindToggle({ kind, label, alertsOn }: { kind: NotificationKind; label: string; alertsOn: boolean }) {
+function KindToggle({
+  kind,
+  label,
+  alertsOn,
+}: {
+  kind: NotificationKind;
+  label: string;
+  alertsOn: boolean;
+}) {
   const enabled = useNotificationKindEnabled(kind);
   const queryClient = useQueryClient();
   const muted = useThemeColor('--color-muted');

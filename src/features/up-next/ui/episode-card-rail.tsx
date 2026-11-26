@@ -12,7 +12,15 @@ import { episodeCardRailHeight, STACK_OFFSET } from './metrics';
 
 export const STACK_HEADROOM = STACK_OFFSET * 2;
 
-export function EpisodeCardRail({ groups, stacked = false, badges, action, arrival, onPress, onActionsPress }: {
+export function EpisodeCardRail({
+  groups,
+  stacked = false,
+  badges,
+  action,
+  arrival,
+  onPress,
+  onActionsPress,
+}: {
   groups: readonly UpNextGroup[];
   stacked?: boolean;
   badges: (group: UpNextGroup) => CardBadge[];

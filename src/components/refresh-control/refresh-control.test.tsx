@@ -18,16 +18,26 @@ let doubleTap: () => void;
 const offset = shared(0);
 const withTiming = mock((value: number) => value);
 const failGesture = mock((_tag: number) => {});
-function View({ children }: PropsWithChildren) { return <div>{children}</div>; }
+function View({ children }: PropsWithChildren) {
+  return <div>{children}</div>;
+}
 function shared(initial: number) {
   let value = initial;
-  return { get: () => value, set: (next: number) => { value = next; } };
+  return {
+    get: () => value,
+    set: (next: number) => {
+      value = next;
+    },
+  };
 }
 mock.module('react-native', () => ({ View }));
 mock.module('react-native-gesture-handler', () => ({
   GestureDetector: View,
   GestureStateManager: { fail: failGesture },
-  usePanGesture: (config: typeof pan) => { pan = config; return config; },
+  usePanGesture: (config: typeof pan) => {
+    pan = config;
+    return config;
+  },
 }));
 mock.module('react-native-reanimated', () => ({
   useSharedValue: (initial: number) => useState(() => shared(initial))[0],
@@ -42,14 +52,18 @@ mock.module('@/lib/haptics', () => ({ haptics: { selection: () => {} } }));
 mock.module('react-native-worklets', () => ({ scheduleOnRN: (fn: () => void) => fn() }));
 mock.module('@/components/animated-view', () => ({ AnimatedView: View }));
 mock.module('@/lib/navigation/tab-double-tap', () => ({
-  useTabDoubleTap: (_tab: string, callback: () => void) => { doubleTap = callback; },
+  useTabDoubleTap: (_tab: string, callback: () => void) => {
+    doubleTap = callback;
+  },
 }));
 mock.module('@/lib/motion', () => ({ DURATION: { toggle: 200 }, TIMING_EASE_IN_OUT: () => {} }));
 mock.module('./pull-scroll', () => ({ usePullScroll: () => ({ offset, scrollRef: {} }) }));
 mock.module('./refresh-mark', () => ({
   MARK_BOX: 48,
   PULL_TRIGGER: 72,
-  RefreshMark: ({ refreshing }: { refreshing: boolean }) => <span role="status">{refreshing ? 'Refreshing' : 'Idle'}</span>,
+  RefreshMark: ({ refreshing }: { refreshing: boolean }) => (
+    <span role="status">{refreshing ? 'Refreshing' : 'Idle'}</span>
+  ),
 }));
 const { RefreshControl } = await import('./index.android');
 
@@ -97,10 +111,14 @@ test('cancelled and short pulls do not refresh; a released pull refreshes once u
     expect(failGesture).toHaveBeenCalledWith(3);
     act(() => doubleTap());
     expect(onRefresh).toHaveBeenCalledTimes(1);
-    await act(async () => { pending.resolve(); });
+    await act(async () => {
+      pending.resolve();
+    });
     expect(view.getByRole('status').textContent).toBe('Idle');
   } finally {
-    await act(async () => { pending.resolve(); });
+    await act(async () => {
+      pending.resolve();
+    });
     view.unmount();
   }
 });
@@ -116,7 +134,9 @@ test('an active pull cannot start another refresh after a tab double-tap', async
     act(() => pan.onFinalize({ canceled: false }));
     expect(onRefresh).toHaveBeenCalledTimes(1);
   } finally {
-    await act(async () => { pending.resolve(); });
+    await act(async () => {
+      pending.resolve();
+    });
     view.unmount();
   }
 });

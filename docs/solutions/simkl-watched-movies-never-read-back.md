@@ -12,7 +12,7 @@ Trakt hook. AniList is anime-only, Letterboxd exposes no readable watch state,
 Serializd is TV-only — so for a movie, **Trakt was the only source**, and
 post-detachment (plan 0034) most users have no Trakt session at all.
 
-Simkl was already a full movie write target (`registry.ts`: `canRead` *and*
+Simkl was already a full movie write target (`registry.ts`: `canRead` _and_
 `canWrite`), so Shinobu was writing movie plays to Simkl and reading them back
 nowhere. The details screen's one Simkl leg, `useSimklWatchingEntryQuery`, was
 structurally unable to help: it is TV-gated at the call site, its matcher

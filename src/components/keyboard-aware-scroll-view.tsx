@@ -2,6 +2,4 @@ import { KeyboardAwareScrollView as ControllerKeyboardAwareScrollView } from 're
 import { withUniwind } from '@/lib/with-uniwind';
 
 /** Wrapped in `withUniwind` because `className` on raw third-party components is dropped on native (docs/solutions/uniwind-classname-third-party-components.md). */
-export const KeyboardAwareScrollView = withUniwind(
-  ControllerKeyboardAwareScrollView,
-);
+export const KeyboardAwareScrollView = withUniwind(ControllerKeyboardAwareScrollView);

@@ -40,19 +40,15 @@ import {
   type WatchlistWritePayload,
 } from './targets';
 
-export const WATCHLIST_ADAPTERS: Partial<
-  Record<ProviderId, WriteAdapter<WatchlistWritePayload>>
-> = {
-  trakt: ({ item }) => Effect.runPromise(addToTraktWatchlist(traktDeps(), item)),
-  anilist: ({ item }) => Effect.runPromise(planOnAniList(anilistDeps(), item)),
-  letterboxd: ({ item }) =>
-    Effect.runPromise(addToLetterboxdWatchlist(letterboxdDeps(), item)),
-  serializd: ({ item }) =>
-    Effect.runPromise(addToSerializdWatchlist(serializdDeps(), item)),
-  simkl: ({ item }) => Effect.runPromise(addToSimklWatchlist(simklDeps(), item)),
-  hardcover: ({ item }) =>
-    Effect.runPromise(addToHardcoverReadingList(hardcoverDeps(), item)),
-};
+export const WATCHLIST_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<WatchlistWritePayload>>> =
+  {
+    trakt: ({ item }) => Effect.runPromise(addToTraktWatchlist(traktDeps(), item)),
+    anilist: ({ item }) => Effect.runPromise(planOnAniList(anilistDeps(), item)),
+    letterboxd: ({ item }) => Effect.runPromise(addToLetterboxdWatchlist(letterboxdDeps(), item)),
+    serializd: ({ item }) => Effect.runPromise(addToSerializdWatchlist(serializdDeps(), item)),
+    simkl: ({ item }) => Effect.runPromise(addToSimklWatchlist(simklDeps(), item)),
+    hardcover: ({ item }) => Effect.runPromise(addToHardcoverReadingList(hardcoverDeps(), item)),
+  };
 
 export type WatchlistMediaResult = ProviderWriteReport & {
   item: NormalizedMediaItem;
@@ -66,8 +62,7 @@ export interface WatchlistWriteDeps {
 
 export const watchlistWriteDeps = (): WatchlistWriteDeps => ({
   adapters: WATCHLIST_ADAPTERS,
-  refresh: (queryClient, options) =>
-    refreshNotifications(createRefreshDeps(queryClient), options),
+  refresh: (queryClient, options) => refreshNotifications(createRefreshDeps(queryClient), options),
 });
 
 const WATCHLIST_MUTATION_ROOT = ['watchlist-media'] as const;
@@ -84,9 +79,7 @@ export function useIsWatchlistWritePending(itemId: string): boolean {
   return useMutationState({ filters: watchlistPendingFilter(itemId) }).length > 0;
 }
 
-export function useLatestWatchlistResult(
-  itemId: string,
-): WatchlistMediaResult | undefined {
+export function useLatestWatchlistResult(itemId: string): WatchlistMediaResult | undefined {
   const results = useMutationState({
     filters: { mutationKey: watchlistMutationKey(itemId) },
     select: (mutation) => mutation.state.data as WatchlistMediaResult | undefined,
@@ -116,10 +109,7 @@ export async function runWatchlistWrite(
 
   invalidateAfterWatchlist(queryClient, plan.item, report.succeeded);
 
-  if (
-    report.succeeded.length > 0 &&
-    shouldRefreshNotifications(plan.item, currentPlatform())
-  ) {
+  if (report.succeeded.length > 0 && shouldRefreshNotifications(plan.item, currentPlatform())) {
     await deps.refresh(queryClient, { throttle: false });
   }
 

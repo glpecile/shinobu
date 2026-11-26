@@ -75,9 +75,7 @@ mock.module('@/state/queries/reading-bridge', () => ({
 
 const { enrichExternalIds } = await import('./enrich');
 
-function chao(
-  overrides: Partial<NormalizedMediaItem> = {},
-): NormalizedMediaItem {
+function chao(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return {
     id: 'trakt-1',
     title: 'ChaO',
@@ -116,7 +114,11 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
   test('ignores an ani.zip record whose TMDB id is a TV id', async () => {
     anizipBridge = { anilist: 16498, tvdb: 267440, tmdb: 1429 };
 
-    const enriched = await enrichExternalIds(client, chao({ externalIds: { trakt: 1, tmdb: 1429 } }), ALL);
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ externalIds: { trakt: 1, tmdb: 1429 } }),
+      ALL,
+    );
     anizipBridge = null;
 
     expect(enriched.externalIds.anilist).toBeUndefined();
@@ -128,16 +130,17 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
     const enriched = await enrichExternalIds(client, chao({ title: 'Undetectable Box' }), ALL);
 
     expect(enriched.externalIds.anilist).toBe(165933);
-    expect(calls).toEqual(['anizip:{"tmdbId":1234}', 'anilist-film:Undetectable Box:2025', 'anilist-title:Undetectable Box']);
+    expect(calls).toEqual([
+      'anizip:{"tmdbId":1234}',
+      'anilist-film:Undetectable Box:2025',
+      'anilist-title:Undetectable Box',
+    ]);
   });
 
   test('never runs the search when AniList is not connected', async () => {
     anilistFilmId = 5678;
 
-    const enriched = await enrichExternalIds(client, chao(), [
-      'trakt',
-      'letterboxd',
-    ]);
+    const enriched = await enrichExternalIds(client, chao(), ['trakt', 'letterboxd']);
 
     expect(calls.some((call) => call.startsWith('anilist-'))).toBe(false);
     expect(enriched.externalIds.anilist).toBeUndefined();
@@ -210,7 +213,12 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
     tmdbByTvdb = 105248;
     const enriched = await enrichExternalIds(
       client,
-      chao({ id: 'anilist-195539', type: 'ANIME', isFilm: false, externalIds: { anilist: 195539 } }),
+      chao({
+        id: 'anilist-195539',
+        type: 'ANIME',
+        isFilm: false,
+        externalIds: { anilist: 195539 },
+      }),
       ['serializd'],
     );
     anizipBridge = null;
@@ -219,7 +227,10 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
   });
 });
 
-const slugOnly = (): NormalizedMediaItem => ({ ...idlessFilm(), externalIds: { letterboxd: 'hokum' } });
+const slugOnly = (): NormalizedMediaItem => ({
+  ...idlessFilm(),
+  externalIds: { letterboxd: 'hokum' },
+});
 
 describe('enrichExternalIds — a Letterboxd film asks its own page first', () => {
   beforeEach(() => {
@@ -275,7 +286,12 @@ describe('enrichExternalIds — a new release ani.zip has not mapped yet', () =>
     simklIds = { simkl: 2953770, anilist: 203275, tmdb: 328010 };
     const enriched = await enrichExternalIds(
       client,
-      chao({ id: 'anilist-203275', type: 'ANIME', totalEpisodes: 1, externalIds: { anilist: 203275 } }),
+      chao({
+        id: 'anilist-203275',
+        type: 'ANIME',
+        totalEpisodes: 1,
+        externalIds: { anilist: 203275 },
+      }),
       ['letterboxd'],
     );
     expect(enriched.isFilm).toBeUndefined();
@@ -307,10 +323,17 @@ describe('enrichExternalIds — an anime film no bridge maps', () => {
   });
 });
 
-const film = () => chao({ id: 'anilist-405', type: 'ANIME', isFilm: true, externalIds: { anilist: 405 } });
+const film = () =>
+  chao({ id: 'anilist-405', type: 'ANIME', isFilm: true, externalIds: { anilist: 405 } });
 
 const ova = (totalEpisodes: number) =>
-  chao({ id: 'anilist-256', type: 'ANIME', isFilm: false, totalEpisodes, externalIds: { anilist: 256 } });
+  chao({
+    id: 'anilist-256',
+    type: 'ANIME',
+    isFilm: false,
+    totalEpisodes,
+    externalIds: { anilist: 256 },
+  });
 
 describe('enrichExternalIds — a bridge id of the other kind', () => {
   beforeEach(() => {
@@ -364,13 +387,18 @@ describe('enrichExternalIds — a bridge id of the other kind', () => {
     expect(asShow.isFilm).toBe(false);
     expect(asShow.externalIds.tmdb).toBeUndefined();
   });
-
 });
 
 describe('enrichExternalIds — a Hardcover book bridged to AniList', () => {
   const book: NormalizedMediaItem = {
-    id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)', coverImage: '', type: 'BOOK',
-    currentProgress: 0, progressUnit: 'page', lastUpdated: '', externalIds: { hardcover: 61 },
+    id: 'hardcover-61',
+    title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)',
+    coverImage: '',
+    type: 'BOOK',
+    currentProgress: 0,
+    progressUnit: 'page',
+    lastUpdated: '',
+    externalIds: { hardcover: 61 },
   };
 
   beforeEach(() => {

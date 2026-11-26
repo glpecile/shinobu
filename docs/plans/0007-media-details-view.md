@@ -42,7 +42,7 @@ export interface MediaDetails extends NormalizedMediaItem {
 ```
 
 `NormalizedMediaItem` keeps its current shape; `MediaDetails` widens it only for
- the details surface.
+the details surface.
 
 ## UI
 

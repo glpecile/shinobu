@@ -99,7 +99,8 @@ export function ProviderSigninWebView<T>({
         !('value' in message) ||
         typeof message.value !== 'string' ||
         message.value.trim() === ''
-      ) return;
+      )
+        return;
       userAgentRef.current = message.value;
     } catch {
       return;
@@ -128,7 +129,9 @@ export function ProviderSigninWebView<T>({
             <View className="px-4 py-3 border-b border-border">
               <Sheet.Header className="items-center" onClose={onClose}>
                 <View className="flex-row items-center gap-3">
-                  <Text className="flex-1 text-foreground font-sans-semibold text-base">{title}</Text>
+                  <Text className="flex-1 text-foreground font-sans-semibold text-base">
+                    {title}
+                  </Text>
                   <Button
                     className="shrink-0"
                     icon={<Button.Icon name="refresh" />}

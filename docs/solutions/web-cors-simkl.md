@@ -9,13 +9,13 @@ implementation for the token exchange).
 Every surface Shinobu uses answers browsers directly — the first provider where
 web needs neither a Worker proxy nor a native-only restriction:
 
-| Endpoint | Probe | Result |
-| --- | --- | --- |
-| `GET api.simkl.com/search/tv` | foreign `Origin` | 200, `access-control-allow-origin: *`, `access-control-allow-methods: GET,PUT,POST,DELETE,OPTIONS`, `access-control-allow-headers: *` |
-| `OPTIONS api.simkl.com/sync/history` | preflight, `Access-Control-Request-Method: POST`, requested headers incl. `authorization` | 200, same wildcard trio |
-| `OPTIONS api.simkl.com/oauth/token` | preflight, `Access-Control-Request-Method: POST` | 200, wildcard ACAO incl. POST — browser-origin PKCE token exchange works |
-| `GET data.simkl.in/calendar/v2/tv.json` | foreign `Origin` | 200, `access-control-allow-origin: *`; ~1.5 MB payload, `cache-control: max-age=18000` (5 h) |
-| `GET api.simkl.com/ratings?tmdb=27205&type=movie&fields=simkl,ext` | foreign `Origin` (2026-10-25, #318) | 200, `access-control-allow-origin: *`, `cache-control: max-age=172800` (48 h); Simkl's score plus `IMDB` or `MAL` (with `rank`); `200 null` for an unknown id |
+| Endpoint                                                           | Probe                                                                                     | Result                                                                                                                                                        |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET api.simkl.com/search/tv`                                      | foreign `Origin`                                                                          | 200, `access-control-allow-origin: *`, `access-control-allow-methods: GET,PUT,POST,DELETE,OPTIONS`, `access-control-allow-headers: *`                         |
+| `OPTIONS api.simkl.com/sync/history`                               | preflight, `Access-Control-Request-Method: POST`, requested headers incl. `authorization` | 200, same wildcard trio                                                                                                                                       |
+| `OPTIONS api.simkl.com/oauth/token`                                | preflight, `Access-Control-Request-Method: POST`                                          | 200, wildcard ACAO incl. POST — browser-origin PKCE token exchange works                                                                                      |
+| `GET data.simkl.in/calendar/v2/tv.json`                            | foreign `Origin`                                                                          | 200, `access-control-allow-origin: *`; ~1.5 MB payload, `cache-control: max-age=18000` (5 h)                                                                  |
+| `GET api.simkl.com/ratings?tmdb=27205&type=movie&fields=simkl,ext` | foreign `Origin` (2026-10-25, #318)                                                       | 200, `access-control-allow-origin: *`, `cache-control: max-age=172800` (48 h); Simkl's score plus `IMDB` or `MAL` (with `rank`); `200 null` for an unknown id |
 
 Pagination headers (`X-Pagination-*`) rode the search response and are
 browser-readable under the wildcard `access-control-allow-headers`.

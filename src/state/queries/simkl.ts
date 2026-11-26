@@ -77,14 +77,14 @@ export const simklQueryKeys = {
   /** `/sync/activities` — the cheap delta signal that gates `allItems`
    *  refetches (plan 0034 KTD-5). */
   activities: () => [...simklQueryKeys.all, 'activities'] as const,
-  calendar: (kind: SimklCalendarKind) =>
-    [...simklQueryKeys.all, 'calendar', kind] as const,
+  calendar: (kind: SimklCalendarKind) => [...simklQueryKeys.all, 'calendar', kind] as const,
   trending: (kind: SimklTrendingKind, interval?: 'today' | 'week' | 'month') =>
     [...simklQueryKeys.all, 'trending', kind, interval ?? 'week'] as const,
   /** The connected account itself — cached forever; disconnect purges the
    *  whole `['simkl']` root, so a reconnect as another user can't reuse it. */
   userSettings: () => [...simklQueryKeys.all, 'user-settings'] as const,
-  ratings: (lookup: SimklLookupParams | null) => [...simklQueryKeys.all, 'ratings', lookup] as const,
+  ratings: (lookup: SimklLookupParams | null) =>
+    [...simklQueryKeys.all, 'ratings', lookup] as const,
 };
 
 /** Writes invalidate the snapshot. Staleness covers edits made elsewhere. */
@@ -131,7 +131,10 @@ function indexSimklLibrary(library: SimklLibrary): SimklLibraryIndex {
   // not `movies[]` (the same asymmetry `routing.ts` encodes for writes).
   const animeShows = library.anime.filter((entry) => entry.item.isFilm !== true);
   const index = {
-    films: indexLibrary([...library.movies, ...library.anime.filter((entry) => entry.item.isFilm === true)], entryItem),
+    films: indexLibrary(
+      [...library.movies, ...library.anime.filter((entry) => entry.item.isFilm === true)],
+      entryItem,
+    ),
     shows: indexLibrary([...library.shows, ...animeShows], entryItem),
     animeShows: indexLibrary(animeShows, entryItem),
   };
@@ -139,23 +142,30 @@ function indexSimklLibrary(library: SimklLibrary): SimklLibraryIndex {
   return index;
 }
 
-export function findLibraryEntry(library: SimklLibrary, item: NormalizedMediaItem): SimklLibraryEntry | null {
+export function findLibraryEntry(
+  library: SimklLibrary,
+  item: NormalizedMediaItem,
+): SimklLibraryEntry | null {
   return findIndexedEntry(indexSimklLibrary(library), item);
 }
 
-function findIndexedEntry(index: SimklLibraryIndex, item: NormalizedMediaItem): SimklLibraryEntry | null {
-  const filmLike =
-    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+function findIndexedEntry(
+  index: SimklLibraryIndex,
+  item: NormalizedMediaItem,
+): SimklLibraryEntry | null {
+  const filmLike = item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const bucket = filmLike ? index.films : index.shows;
   // Every season of an anime shares the show's TMDB id. Only a Simkl id
   // identifies the same cour; otherwise a sibling's progress leaks through.
   const byTmdb = !(item.type === 'ANIME' && !filmLike);
-  // oxlint-disable-next-line shinobu/no-provider-literals -- externalIds keys, not provider ids.
-  return firstRow(bucket, item, ['simkl'])
+  return (
     // oxlint-disable-next-line shinobu/no-provider-literals -- externalIds keys, not provider ids.
-    ?? (item.type === 'ANIME' ? firstRow(bucket, item, ['anilist', 'mal']) : undefined)
-    ?? (byTmdb ? firstRow(bucket, item, ['tmdb']) : undefined)
-    ?? null;
+    firstRow(bucket, item, ['simkl']) ??
+    // oxlint-disable-next-line shinobu/no-provider-literals -- externalIds keys, not provider ids.
+    (item.type === 'ANIME' ? firstRow(bucket, item, ['anilist', 'mal']) : undefined) ??
+    (byTmdb ? firstRow(bucket, item, ['tmdb']) : undefined) ??
+    null
+  );
 }
 
 /** TV layouts span cours; ANIME items still resolve only their exact entry. */
@@ -163,9 +173,10 @@ function libraryEpisodeEntries(library: SimklLibrary, item: NormalizedMediaItem)
   const index = indexSimklLibrary(library);
   const exact = findIndexedEntry(index, item);
   const tmdbId = item.externalIds.tmdb;
-  const anime = item.type === 'TV' && tmdbId != null
-    ? [...rowsWith(index.animeShows, 'tmdb', tmdbId)].map((row) => index.animeShows.rows[row])
-    : [];
+  const anime =
+    item.type === 'TV' && tmdbId != null
+      ? [...rowsWith(index.animeShows, 'tmdb', tmdbId)].map((row) => index.animeShows.rows[row])
+      : [];
   return [...(exact == null || anime.includes(exact) ? [] : [exact]), ...anime];
 }
 
@@ -175,7 +186,10 @@ export function findLibraryEpisodeState(library: SimklLibrary, item: NormalizedM
 }
 
 /** Count both cours on a TV page, without counting a parallel TV entry twice. */
-export function findLibraryProgress(library: SimklLibrary, item: NormalizedMediaItem): number | null {
+export function findLibraryProgress(
+  library: SimklLibrary,
+  item: NormalizedMediaItem,
+): number | null {
   const entries = libraryEpisodeEntries(library, item);
   if (entries.length === 0) return null;
   const animeProgress = entries
@@ -222,8 +236,7 @@ export function useSimklLibraryEntryQuery(params: {
   return useQuery({
     ...simklLibraryQuery(),
     enabled: enabled && item != null,
-    select: (library: SimklLibrary) =>
-      item == null ? null : findLibraryEntry(library, item),
+    select: (library: SimklLibrary) => (item == null ? null : findLibraryEntry(library, item)),
   });
 }
 
@@ -236,8 +249,7 @@ export function useSimklProgressQuery(params: {
   return useQuery({
     ...simklLibraryQuery(),
     enabled: enabled && item != null,
-    select: (library: SimklLibrary) =>
-      item == null ? null : findLibraryProgress(library, item),
+    select: (library: SimklLibrary) => (item == null ? null : findLibraryProgress(library, item)),
   });
 }
 
@@ -256,8 +268,7 @@ export function useSimklProgressQuery(params: {
 export function useSimklWatchedInfo(
   item: NormalizedMediaItem,
 ): { plays: number; lastWatchedAt: string } | null {
-  const filmLike =
-    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  const filmLike = item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const entry = useSimklLibraryEntryQuery({
     item,
     enabled: useConnectedProviders().includes(Provider.Simkl) && (filmLike || item.type === 'TV'),

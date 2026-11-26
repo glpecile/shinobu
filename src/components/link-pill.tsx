@@ -34,9 +34,15 @@ export function LinkPill({
     >
       {icon}
       {children ?? <Text className="text-foreground font-sans text-sm">{label}</Text>}
-      {external && onPress != null && <View className="size-5 items-center justify-center">
-        {loading ? <Spinner color={muted} /> : <Ionicons color={muted} name="open-outline" size={12} />}
-      </View>}
+      {external && onPress != null && (
+        <View className="size-5 items-center justify-center">
+          {loading ? (
+            <Spinner color={muted} />
+          ) : (
+            <Ionicons color={muted} name="open-outline" size={12} />
+          )}
+        </View>
+      )}
     </View>
   );
 

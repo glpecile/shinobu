@@ -84,55 +84,68 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
           <meta content={view.episode.overview} name="description" />
         )}
       </Head>
-      {view.episode == null && view.isLoading ? <EpisodeScreenSkeleton onBack={onBack} /> : <ScrollView className="flex-1">
-        <BlurEnter className="w-full max-w-4xl self-center px-6 pt-24 pb-44">
-          <View className={cn(wide ? 'flex-row gap-8 items-start' : 'flex-col-reverse gap-5')}>
-            <View className="flex-1">
-              {view.episode == null ? (
-                <Text className="text-muted font-sans">This episode isn’t listed.</Text>
-              ) : (
-                <>
-                  <EpisodeHeading
-                    episode={view.episode}
-                    id={item.id}
-                    number={number}
-                    season={season}
-                    showTitle={item.title}
-                  />
-                  <EpisodeLogs className="mt-3" logs={logs} />
-                  {wide && <EpisodeOverview className="mt-4" episode={view.episode} />}
-                </>
-              )}
-            </View>
-            <ZoomableImage
-              alt={title}
-              className={cn('aspect-video rounded-lg border border-border bg-surface', wide ? 'w-80' : 'w-full')}
-              contentFit="cover"
-              type="image"
-              uri={view.still}
-            />
-          </View>
-          {view.episode != null && (
-            <>
-              <EpisodeLogButton
-                className="mt-6"
-                episode={view.episode}
-                item={item}
-                number={number}
-                season={season}
-                watched={logs.length > 0}
+      {view.episode == null && view.isLoading ? (
+        <EpisodeScreenSkeleton onBack={onBack} />
+      ) : (
+        <ScrollView className="flex-1">
+          <BlurEnter className="w-full max-w-4xl self-center px-6 pt-24 pb-44">
+            <View className={cn(wide ? 'flex-row gap-8 items-start' : 'flex-col-reverse gap-5')}>
+              <View className="flex-1">
+                {view.episode == null ? (
+                  <Text className="text-muted font-sans">This episode isn’t listed.</Text>
+                ) : (
+                  <>
+                    <EpisodeHeading
+                      episode={view.episode}
+                      id={item.id}
+                      number={number}
+                      season={season}
+                      showTitle={item.title}
+                    />
+                    <EpisodeLogs className="mt-3" logs={logs} />
+                    {wide && <EpisodeOverview className="mt-4" episode={view.episode} />}
+                  </>
+                )}
+              </View>
+              <ZoomableImage
+                alt={title}
+                className={cn(
+                  'aspect-video rounded-lg border border-border bg-surface',
+                  wide ? 'w-80' : 'w-full',
+                )}
+                contentFit="cover"
+                type="image"
+                uri={view.still}
               />
-              {!wide && <EpisodeOverview className="mt-6" episode={view.episode} />}
-            </>
-          )}
-          <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
-          <DiscussionSection episode={{ season, number }} item={item} />
-          <RatingsSection episode={{ season, number, ratings: view.ratings }} item={item} />
-        </BlurEnter>
-      </ScrollView>}
+            </View>
+            {view.episode != null && (
+              <>
+                <EpisodeLogButton
+                  className="mt-6"
+                  episode={view.episode}
+                  item={item}
+                  number={number}
+                  season={season}
+                  watched={logs.length > 0}
+                />
+                {!wide && <EpisodeOverview className="mt-6" episode={view.episode} />}
+              </>
+            )}
+            <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
+            <DiscussionSection episode={{ season, number }} item={item} />
+            <RatingsSection episode={{ season, number, ratings: view.ratings }} item={item} />
+          </BlurEnter>
+        </ScrollView>
+      )}
 
       {!(view.episode == null && view.isLoading) && <FloatingBackButton onPress={onBack} />}
-      <EpisodeNavigation id={item.id} next={view.next} number={number} prev={view.prev} season={season} />
+      <EpisodeNavigation
+        id={item.id}
+        next={view.next}
+        number={number}
+        prev={view.prev}
+        season={season}
+      />
     </View>
   );
 }

@@ -10,7 +10,17 @@ import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
-export function WatchedMark({ item, state, poster = false, showProgress = false }: { item: NormalizedMediaItem; state: MediaProgress; poster?: boolean; showProgress?: boolean }) {
+export function WatchedMark({
+  item,
+  state,
+  poster = false,
+  showProgress = false,
+}: {
+  item: NormalizedMediaItem;
+  state: MediaProgress;
+  poster?: boolean;
+  showProgress?: boolean;
+}) {
   const accent = useThemeColor('--color-accent');
   const watched = state.watched;
   const unit = state.unit === 'chapter' ? 'ch' : state.unit === 'season' ? 'seasons' : 'ep';
@@ -25,21 +35,37 @@ export function WatchedMark({ item, state, poster = false, showProgress = false 
   });
   return (
     <>
-    {!inProgress && <AnimatedView
-      // A parent row reads its children's labels even through aria-hidden.
-      accessibilityLabel={!watched ? undefined : item.type === 'TV' ? 'Series watch history' : 'Watched'}
-      aria-hidden={!watched}
-      className={cn('w-4 items-end', poster && 'absolute top-2 left-2 w-7 h-7 items-center justify-center rounded-full bg-surface/95')}
-      style={[style, { pointerEvents: 'none' }]}
-    >
-      <Ionicons color={accent} name="eye" size={14} />
-    </AnimatedView>}
-    {inProgress && (
-      <View className={cn('flex-row items-center gap-1.5', poster && 'absolute bottom-2 left-2 rounded bg-surface/95 p-1.5')} style={{ pointerEvents: 'none' }}>
-        {state.total != null && state.total > 0 && <ProgressRing label={label} max={state.total} value={state.current} />}
-        <Text className="font-sans text-xs text-foreground">{label}</Text>
-      </View>
-    )}
+      {!inProgress && (
+        <AnimatedView
+          // A parent row reads its children's labels even through aria-hidden.
+          accessibilityLabel={
+            !watched ? undefined : item.type === 'TV' ? 'Series watch history' : 'Watched'
+          }
+          aria-hidden={!watched}
+          className={cn(
+            'w-4 items-end',
+            poster &&
+              'absolute top-2 left-2 w-7 h-7 items-center justify-center rounded-full bg-surface/95',
+          )}
+          style={[style, { pointerEvents: 'none' }]}
+        >
+          <Ionicons color={accent} name="eye" size={14} />
+        </AnimatedView>
+      )}
+      {inProgress && (
+        <View
+          className={cn(
+            'flex-row items-center gap-1.5',
+            poster && 'absolute bottom-2 left-2 rounded bg-surface/95 p-1.5',
+          )}
+          style={{ pointerEvents: 'none' }}
+        >
+          {state.total != null && state.total > 0 && (
+            <ProgressRing label={label} max={state.total} value={state.current} />
+          )}
+          <Text className="font-sans text-xs text-foreground">{label}</Text>
+        </View>
+      )}
     </>
   );
 }

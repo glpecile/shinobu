@@ -39,9 +39,15 @@ const readList = (deps: SerializdDeps, list: string) =>
  * no per-show status read, so one show's status needs every page of all three
  * (`docs/solutions/tracking-status-provider-support.md`).
  */
-export function getSerializdTrackingLists(deps: SerializdDeps): Effect.Effect<SerializdTrackingLists, ProviderError> {
+export function getSerializdTrackingLists(
+  deps: SerializdDeps,
+): Effect.Effect<SerializdTrackingLists, ProviderError> {
   return Effect.all(
-    { watching: readList(deps, LISTS.watching), paused: readList(deps, LISTS.paused), dropped: readList(deps, LISTS.dropped) },
+    {
+      watching: readList(deps, LISTS.watching),
+      paused: readList(deps, LISTS.paused),
+      dropped: readList(deps, LISTS.dropped),
+    },
     { concurrency: 3 },
   );
 }
@@ -56,7 +62,9 @@ export function serializdTrackingState(
   if (lists.dropped.includes(tmdbId)) return 'dropped';
   if (lists.watching.includes(tmdbId)) return 'watching';
   if (watched == null) return null;
-  return watched.totalSeasons != null && watched.watchedSeasons >= watched.totalSeasons ? 'completed' : 'watched';
+  return watched.totalSeasons != null && watched.watchedSeasons >= watched.totalSeasons
+    ? 'completed'
+    : 'watched';
 }
 
 /** The response bodies are not captured, so a 2xx with no JSON still counts. */
@@ -71,8 +79,14 @@ function postShow(deps: SerializdDeps, path: string, tmdbId: number) {
  * only move back that serializd.com's own client makes. A show on neither
  * list is left as it is.
  */
-export const resumeOnSerializd = Effect.fn('serializd.resume')(function* (deps: SerializdDeps, tmdbId: number) {
-  const [paused, dropped] = yield* Effect.all([readList(deps, LISTS.paused), readList(deps, LISTS.dropped)], { concurrency: 2 });
+export const resumeOnSerializd = Effect.fn('serializd.resume')(function* (
+  deps: SerializdDeps,
+  tmdbId: number,
+) {
+  const [paused, dropped] = yield* Effect.all(
+    [readList(deps, LISTS.paused), readList(deps, LISTS.dropped)],
+    { concurrency: 2 },
+  );
   const list = paused.includes(tmdbId) ? 'paused' : dropped.includes(tmdbId) ? 'dropped' : null;
   if (list == null) return;
   yield* postShow(deps, '/currently_watching', tmdbId);
@@ -94,9 +108,18 @@ export function setSerializdTrackingStatus(
 ): Effect.Effect<ProviderWriteResult, ProviderError> {
   const tmdbId = item.externalIds.tmdb;
   if (tmdbId == null) {
-    return Effect.succeed({ status: 'skipped', reason: `"${item.title}" has no TMDB id — Serializd needs it as the join key` });
+    return Effect.succeed({
+      status: 'skipped',
+      reason: `"${item.title}" has no TMDB id — Serializd needs it as the join key`,
+    });
   }
-  const reason = trackingStatusSkip<SerializdTrackingState>(Provider.Serializd, current, status, ['watching', 'watched', 'paused', 'dropped'], (name) => name);
+  const reason = trackingStatusSkip<SerializdTrackingState>(
+    Provider.Serializd,
+    current,
+    status,
+    ['watching', 'watched', 'paused', 'dropped'],
+    (name) => name,
+  );
   if (reason != null) return Effect.succeed({ status: 'skipped', reason });
 
   const post = (path: string) => postShow(deps, path, tmdbId);

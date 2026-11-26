@@ -49,7 +49,7 @@ the whole batch would inherit its already-past instant and be dropped, silently
 losing the notification for episodes 2–10.
 
 Filtering first means a half-landed batch collapses only what is still ahead,
-and its count states what the user has *yet to see* rather than what the
+and its count states what the user has _yet to see_ rather than what the
 provider listed. Covered by `a batch already half-landed counts only what is
 still ahead`.
 
@@ -69,7 +69,7 @@ return candidate.count == null ? code : `${code}x${candidate.count}`;
 ```
 
 An unbatched episode's subject is byte-identical to the pre-batch one. It still
-has to be *in* the subject, though — a batch that gains an eleventh episode must
+has to be _in_ the subject, though — a batch that gains an eleventh episode must
 reschedule, and keying on the lead episode alone would leave the tray claiming
 ten.
 
@@ -84,7 +84,7 @@ grouper keys them on their own entry id; the scheduler on
 
 ## Knock-on: the day-strip dots were counting the wrong thing
 
-The week strip drew one dot per *entry*, capped at 5. A ten-episode drop pegged
+The week strip drew one dot per _entry_, capped at 5. A ten-episode drop pegged
 the cap, so a day holding one season drop plus one other show looked identical to
 a day holding five different shows. The dots now count **cards**
 (`day.groups.length`), which is what they always meant.

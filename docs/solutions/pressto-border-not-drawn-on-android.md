@@ -3,7 +3,7 @@
 **Symptom (2026-07-26).** Every outlined button on the Manage Trackers screen —
 four "Disconnect"s, "Send test notification", "Show" — rendered on Android as
 **bare text**: no border, no box. The same components on web drew their borders
-correctly, and the *filled* buttons (`bg-accent`) were fine on both platforms.
+correctly, and the _filled_ buttons (`bg-accent`) were fine on both platforms.
 
 ```tsx
 // Looks right on web, draws no border on Android:
@@ -15,13 +15,13 @@ correctly, and the *filled* buttons (`bg-accent`) were fine on both platforms.
 **This was not a uniwind/className problem.** The usual native suspect — a raw
 third-party component silently dropping `className`
 (`uniwind-classname-third-party-components.md`) — doesn't apply: `PresstableOpacity`
-*is* the withUniwind wrapper, and the same class string's `padding`,
+_is_ the withUniwind wrapper, and the same class string's `padding`,
 `borderRadius` and `backgroundColor` all landed. Only the border vanished.
 
 **Cause.** pressto renders RNGH's `BaseButton`, which on Android is a native
 `RNGestureHandlerButton` that installs its own background drawable (for the
-ripple). React Native draws a view's border *as part of its background
-drawable* — so once the native button supplies one, `borderWidth`/`borderColor`
+ripple). React Native draws a view's border _as part of its background
+drawable_ — so once the native button supplies one, `borderWidth`/`borderColor`
 have nothing to draw into. `backgroundColor` survives because it is applied
 separately, which is exactly why a filled button looked fine and an outlined one
 looked like unstyled text.
@@ -47,7 +47,7 @@ same shape as the box it wraps.
 `View`. The pressto button did not clip poster corners on Android. The inner
 view clips the artwork and gradient; the pressable scales the card.
 
-**Scope.** Anything bordered *and* pressable is suspect on Android. Buttons are
+**Scope.** Anything bordered _and_ pressable is suspect on Android. Buttons are
 handled by the primitive; the remaining hand-rolled cases (e.g. the log sheet's
 provider-picker rows, which use `border border-border` directly on a
 `PresstableOpacity`) have the same bug and should move to the inner-View shape

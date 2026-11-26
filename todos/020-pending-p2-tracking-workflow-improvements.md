@@ -55,19 +55,19 @@ planning/removal, not an explicit PAUSED/DROPPED/resume action. Simkl normalizes
 write workflow is history + watchlist, not a user-facing status editor.
 
 - [ ] Spike status-only edits: AniList PAUSED/DROPPED/CURRENT and Simkl
-  hold/dropped/watching. Confirm the API behavior preserves progress and history.
+      hold/dropped/watching. Confirm the API behavior preserves progress and history.
 - [ ] Offer Pause tracking and Drop in the existing item actions. Show
-  which connected providers support the chosen action and their current status.
+      which connected providers support the chosen action and their current status.
 - [ ] Route by a declared operation capability in the registry/routing boundary;
-  `canWrite` for logging does not establish status-edit support. Keep other
-  providers untouched and explain unsupported actions through provider links.
+      `canWrite` for logging does not establish status-edit support. Keep other
+      providers untouched and explain unsupported actions through provider links.
 - [ ] Reuse the existing per-provider write report and failure/retry machinery.
-  Do not implement pause as hide, watchlist removal or history deletion.
+      Do not implement pause as hide, watchlist removal or history deletion.
 - [ ] Invalidate existing feed/Up Next reads so paused/dropped items stop being
-  offered there. Keep logging available from details/search; reuse the existing
-  log adapters' status transitions where possible. A new episode log resumes
-  paused/dropped tracking without introducing another control or unnecessary
-  status request. Preserve existing catch-up, completion and rewatch semantics.
+      offered there. Keep logging available from details/search; reuse the existing
+      log adapters' status transitions where possible. A new episode log resumes
+      paused/dropped tracking without introducing another control or unnecessary
+      status request. Preserve existing catch-up, completion and rewatch semantics.
 
 **Why this fits:** it closes a tracking lifecycle gap across the two shared
 providers while preserving Shinobu's one-action/multiple-provider purpose.
@@ -82,18 +82,18 @@ save mutation does not send a score. Community and personal ratings must never
 share that field.
 
 - [ ] Verify rating writes and clearing semantics on AniList and Simkl first.
-  Read AniList's account `mediaListOptions.scoreFormat`: 100-point, integer or
-  decimal 10-point, 5-star and 3-face scales are not interchangeable sliders.
+      Read AniList's account `mediaListOptions.scoreFormat`: 100-point, integer or
+      decimal 10-point, 5-star and 3-face scales are not interchangeable sliders.
 - [ ] Design a separate rating intent, showing each target's resulting score
-  before confirmation. Do not silently treat a 3-face score as precise /100 data.
+      before confirmation. Do not silently treat a 3-face score as precise /100 data.
 - [ ] Keep rating-only edits independent from logging. Rating a film already
-  watched everywhere must not enter the current parity-rewatch branch in
-  `src/features/log-media/reconcile.ts`.
+      watched everywhere must not enter the current parity-rewatch branch in
+      `src/features/log-media/reconcile.ts`.
 - [ ] Store personal scores beside provider entry state, not on catalog metadata.
-  Preserve status, progress, repeat counts and other omitted entry fields; verify
-  patch behavior before issuing writes. Clearing is explicit, not “zero”.
+      Preserve status, progress, repeat counts and other omitted entry fields; verify
+      patch behavior before issuing writes. Clearing is explicit, not “zero”.
 - [ ] Add other providers only after verifying their own API/platform support.
-  No new Letterboxd POST proxy and no “Saved everywhere” when a target cannot rate.
+      No new Letterboxd POST proxy and no “Saved everywhere” when a target cannot rate.
 
 **Why this fits:** it extends the actual multi-provider write contract, rather
 than adds another browsing control. Start as an API/interaction spike; no new
@@ -106,14 +106,14 @@ always prefers English. `getViewer()` fetches only id/name, and card fields ask
 for english/romaji/native, not `userPreferred`.
 
 - [ ] Check authenticated AniList `title.userPreferred` and account title-language
-  options, then decide between provider-supplied preferred titles and a small
-  display selector over the alternate names already retained.
+      options, then decide between provider-supplied preferred titles and a small
+      display selector over the alternate names already retained.
 - [ ] Cover English, romaji and native preferences with the existing missing-name
-  fallback; keep every alternate name for search/copy/matching.
+      fallback; keep every alternate name for search/copy/matching.
 - [ ] Keep display choice out of identity matching: selecting native titles must
-  not change a provider ID, break movie matching or duplicate a watchlist entry.
+      not change a provider ID, break movie matching or duplicate a watchlist entry.
 - [ ] Keep public catalog caches account-independent unless the returned title
-  actually varies by viewer. Account-dependent data must refresh on reconnect.
+      actually varies by viewer. Account-dependent data must refresh on reconnect.
 
 **Why this fits:** it fixes a concrete mismatch with an existing provider
 setting, without a new theme system or a local media database.
@@ -126,15 +126,15 @@ entry state can still be more informative than the merged card's one progress
 number, especially for cour-split anime.
 
 - [ ] Evaluate a compact breakdown in the existing write sheet: AniList entry
-  progress, Simkl entry progress and the intended canonical season/episode.
-  Reuse the preflight reads; do not add a background library scan.
+      progress, Simkl entry progress and the intended canonical season/episode.
+      Reuse the preflight reads; do not add a background library scan.
 - [ ] Label unknown/mapping-failed state separately from zero/unwatched. Show
-  the reason a provider will be skipped before the user confirms.
+      the reason a provider will be skipped before the user confirms.
 - [ ] Present raw progress in its own domain: AniList 3/12 and TMDB S02E03 may
-  describe the same watch. Compare only after mapping, never by taking the
-  largest raw number or copying it to every provider.
+      describe the same watch. Compare only after mapping, never by taking the
+      largest raw number or copying it to every provider.
 - [ ] Keep catch-up an explicit action using the existing reconciliation and
-  write reports. No automatic bidirectional repair on app startup.
+      write reports. No automatic bidirectional repair on app startup.
 
 **Why this fits:** it makes the app's cross-provider episode translation visible
 and diagnosable instead of borrowing a generic “sync” button. Identity correction
@@ -183,15 +183,15 @@ debounced queries and URL state. `src/state/queries/search-cache.ts` resolves
 results from the query cache; it is not a user-facing search history.
 
 - [ ] Store at most 10 recent `{ query, scope }` records in preferences. Reuse
-  the bounded-array, stable-snapshot and SSR-safe pattern in
-  `src/state/prefs/recent-tags.ts`, without extracting a storage framework.
+      the bounded-array, stable-snapshot and SSR-safe pattern in
+      `src/state/prefs/recent-tags.ts`, without extracting a storage framework.
 - [ ] Record a search when the user opens a result or explicitly submits it,
-  not for each debounced intermediate string. Trim whitespace, dedupe within
-  the same scope and retain the user's displayed casing.
+      not for each debounced intermediate string. Trim whitespace, dedupe within
+      the same scope and retain the user's displayed casing.
 - [ ] Show recents only when the field is empty. Selecting one restores both
-  its query and scope through the current search path.
+      its query and scope through the current search path.
 - [ ] Offer individual removal and Clear history. Do not include search history
-  in preference exports by default.
+      in preference exports by default.
 
 Keep the scope FAB and sheet: `todos/019-in-progress-p3-native-expo-ui-opportunities.md`
 records the owner's preference for that interaction. No new provider searches,
@@ -212,16 +212,16 @@ but no inspected path here offers an explicit identity correction.
 Start with a small spike, not a new matching engine:
 
 - [ ] Trace how details, watchlist actions and writes consume identity lookups.
-  Identify the shared resolution boundary before adding an override.
+      Identify the shared resolution boundary before adding an override.
 - [ ] Propose “Correct tracker match” only for missing or disputed mappings.
-  Show the current match and let the user choose a provider item using supported
-  search or a validated provider URL/ID. Confirm title, year and format.
+      Show the current match and let the user choose a provider item using supported
+      search or a validated provider URL/ID. Confirm title, year and format.
 - [ ] If the spike supports it, persist only explicit identity overrides as
-  local preferences, keyed by source identity and destination provider. Provide
-  a reset action and invalidate just the affected mapping and dependent queries.
+      local preferences, keyed by source identity and destination provider. Provide
+      a reset action and invalidate just the affected mapping and dependent queries.
 - [ ] Make the override apply consistently to reads and writes. Never replace
-  a whole normalized item with a locally stored copy or infer a match by title
-  alone without confirmation.
+      a whole normalized item with a locally stored copy or infer a match by title
+      alone without confirmation.
 
 **Safety gate:** an entry match is not an episode-number mapping. Do not allow
 this feature to equate anime cours, TV seasons or whole-entry film variants.
@@ -241,18 +241,18 @@ owns is device preference state in `src/state/prefs/`, currently separate from
 tokens and the disposable query cache.
 
 - [ ] Add an explicit, versioned JSON allowlist for useful preferences: hidden
-  items, collapsed sections and watchlist layout/sort. Include identity overrides
-  only if item 3 is implemented and their validation rules are settled.
+      items, collapsed sections and watchlist layout/sort. Include identity overrides
+      only if item 3 is implemented and their validation rules are settled.
 - [ ] Exclude tokens, client secrets, TMDB tokens, WebView cookies, query cache,
-  search history and provider library payloads. Never dump an MMKV store wholesale.
+      search history and provider library payloads. Never dump an MMKV store wholesale.
 - [ ] Validate the entire import using installed Zod before changing storage.
-  Reject unsupported versions and invalid values without partially applying them.
+      Reject unsupported versions and invalid values without partially applying them.
 - [ ] Preview the affected preferences and confirm replacement of only the
-  listed keys. Restore through the existing preference setters so mounted views
-  receive normal change notifications. Do not add merge/conflict modes yet.
+      listed keys. Restore through the existing preference setters so mounted views
+      receive normal change notifications. Do not add merge/conflict modes yet.
 - [ ] Begin with a JSON copy/paste flow using the installed clipboard and shared
-  text-field/button wrappers. Add native file sharing only if that proves useful
-  enough to justify a separately approved dependency.
+      text-field/button wrappers. Add native file sharing only if that proves useful
+      enough to justify a separately approved dependency.
 
 **Done when:** export contains no secrets, invalid imports leave preferences
 unchanged, unlisted preferences remain intact, and import never connects a

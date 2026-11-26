@@ -23,10 +23,7 @@ function capturingUpstream(response: Response): {
   };
 }
 
-function proxyRequest(
-  path: string,
-  init: RequestInit = {},
-): Request {
+function proxyRequest(path: string, init: RequestInit = {}): Request {
   return new Request(`${ORIGIN}${path}`, init);
 }
 
@@ -79,7 +76,10 @@ describe('allowlist', () => {
 
   test('a query key the rule does not allow is 400, never forwarded', async () => {
     const upstream = capturingUpstream(Response.json({}));
-    const res = await handleSerializdProxy(proxyRequest('/api/serializd/show/12?x=1'), upstream.fetch);
+    const res = await handleSerializdProxy(
+      proxyRequest('/api/serializd/show/12?x=1'),
+      upstream.fetch,
+    );
     expect(res.status).toBe(400);
     expect(upstream.captured).toHaveLength(0);
   });
@@ -105,7 +105,10 @@ describe('allowlist', () => {
   test('a POST to a GET-only path is 405', async () => {
     for (const path of ['/api/serializd/user/gian/diary', '/api/serializd/list/42']) {
       const upstream = capturingUpstream(Response.json({}));
-      const res = await handleSerializdProxy(proxyRequest(path, { method: 'POST', body: '{}' }), upstream.fetch);
+      const res = await handleSerializdProxy(
+        proxyRequest(path, { method: 'POST', body: '{}' }),
+        upstream.fetch,
+      );
       expect(res.status).toBe(405);
       expect(upstream.captured).toHaveLength(0);
     }
@@ -171,7 +174,11 @@ describe('request hardening', () => {
   test('rejects a declared oversize body before reading it', async () => {
     const upstream = capturingUpstream(Response.json({}));
     const res = await handleSerializdProxy(
-      proxyRequest('/api/serializd/login', { method: 'POST', body: '{}', headers: { 'Content-Length': '70000' } }),
+      proxyRequest('/api/serializd/login', {
+        method: 'POST',
+        body: '{}',
+        headers: { 'Content-Length': '70000' },
+      }),
       upstream.fetch,
     );
     expect(res.status).toBe(413);
@@ -179,14 +186,34 @@ describe('request hardening', () => {
   });
 
   test('accepts a complete list editor payload while bounding only that endpoint at 1 MiB', async () => {
-    const body = JSON.stringify({ list_id: 42, list_items: Array.from({ length: 499 }, (_, index) => ({ showId: index + 1, showName: 'A show title', description: 'Keep this entry note. '.repeat(20) })) });
+    const body = JSON.stringify({
+      list_id: 42,
+      list_items: Array.from({ length: 499 }, (_, index) => ({
+        showId: index + 1,
+        showName: 'A show title',
+        description: 'Keep this entry note. '.repeat(20),
+      })),
+    });
     const upstream = capturingUpstream(Response.json({}));
-    const response = await handleSerializdProxy(proxyRequest('/api/serializd/list/edit', { method: 'POST', body }), upstream.fetch);
+    const response = await handleSerializdProxy(
+      proxyRequest('/api/serializd/list/edit', { method: 'POST', body }),
+      upstream.fetch,
+    );
     expect(response.status).toBe(200);
     expect(new TextDecoder().decode(upstream.captured[0].init?.body as ArrayBuffer)).toBe(body);
-    for (const [path, oversizedBody] of [['list/add_item', 'x'.repeat(64 * 1024 + 1)], ['list/edit', 'x'.repeat(1024 * 1024 + 1)]]) {
+    for (const [path, oversizedBody] of [
+      ['list/add_item', 'x'.repeat(64 * 1024 + 1)],
+      ['list/edit', 'x'.repeat(1024 * 1024 + 1)],
+    ]) {
       const blocked = capturingUpstream(Response.json({}));
-      expect((await handleSerializdProxy(proxyRequest(`/api/serializd/${path}`, { method: 'POST', body: oversizedBody }), blocked.fetch)).status).toBe(413);
+      expect(
+        (
+          await handleSerializdProxy(
+            proxyRequest(`/api/serializd/${path}`, { method: 'POST', body: oversizedBody }),
+            blocked.fetch,
+          )
+        ).status,
+      ).toBe(413);
       expect(blocked.captured).toHaveLength(0);
     }
   });
@@ -252,10 +279,7 @@ describe('response relay', () => {
         }),
       );
       const res = await handleSerializdProxy(
-        proxyRequest(
-          path,
-          path.endsWith('watchlist_v2') ? { method: 'POST', body: '{}' } : {},
-        ),
+        proxyRequest(path, path.endsWith('watchlist_v2') ? { method: 'POST', body: '{}' } : {}),
         upstream.fetch,
       );
       expect(res.status).toBe(status);

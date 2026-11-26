@@ -42,11 +42,11 @@ All changes hot reload. No `bun ios:clean` / `bun android:clean` needed.
 
 ## Results
 
-- Live read-only checks recovered *Breaking Bad* (`breakng bad`), *Spirited
-  Away* (`spirited awya`), *The Matrix* (`matrx`), *Interstellar*
-  (`interstelar`), *Star Wars* (`star wras`), and *The Lord of the Rings*
+- Live read-only checks recovered _Breaking Bad_ (`breakng bad`), _Spirited
+  Away_ (`spirited awya`), _The Matrix_ (`matrx`), _Interstellar_
+  (`interstelar`), _Star Wars_ (`star wras`), and _The Lord of the Rings_
   (`lord of the rigns`). Literal typo-shaped records remain first.
-- Review fixes: restrict fuzzy spans to complete words to reject *Matrimony*
+- Review fixes: restrict fuzzy spans to complete words to reject _Matrimony_
   for `matrx`; preserve Unicode code points when building fallback prefixes.
   Both regression tests were observed failing before their fixes.
 - All 1,442 tests pass after the review fix, as do typecheck, lint (five

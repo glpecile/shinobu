@@ -83,7 +83,10 @@ function firstPagesOnly(client: PersistedClient): PersistedClient {
         if (!Array.isArray(data?.pages) || !Array.isArray(data.pageParams)) return query;
         return {
           ...query,
-          state: { ...query.state, data: { pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) } },
+          state: {
+            ...query.state,
+            data: { pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) },
+          },
         };
       }),
     },
@@ -153,16 +156,19 @@ export function isPersistedQueryKey(key: readonly unknown[]): boolean {
  * Everything else keeps TanStack's five-minute eviction.
  */
 export function retainPersistedQueries(queryClient: QueryClient): QueryClient {
-  for (const prefix of PERSISTED_PREFIXES) queryClient.setQueryDefaults(prefix, { gcTime: MAX_AGE_MS });
+  for (const prefix of PERSISTED_PREFIXES)
+    queryClient.setQueryDefaults(prefix, { gcTime: MAX_AGE_MS });
   return queryClient;
 }
 
 export function shouldPersistQuery(query: Query): boolean {
   // A cold streamed gather is successful before its last provider has arrived.
   const streaming = query.queryKey[0] === 'up-next' || query.queryKey[0] === 'watchlist';
-  return query.state.status === 'success' &&
+  return (
+    query.state.status === 'success' &&
     (!streaming || query.state.fetchStatus === 'idle') &&
-    isPersistedQueryKey(query.queryKey);
+    isPersistedQueryKey(query.queryKey)
+  );
 }
 
 export function createQueryPersister(): Persister {

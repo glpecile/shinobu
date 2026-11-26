@@ -97,5 +97,4 @@ describe('isCleanWriteReport (plan 0032 KTD-3)', () => {
       ),
     ).toBe(false);
   });
-
 });

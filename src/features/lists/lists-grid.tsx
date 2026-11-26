@@ -24,7 +24,10 @@ function useGrid() {
   const { width, fontScale } = useWindowDimensions();
   const columns = Math.max(1, Math.min(4, Math.floor(width / 264)));
   const cardWidth = (width - PADDING * 2) / columns - GUTTER * 2;
-  return { columns, rowHeight: cardWidth / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale + 24 };
+  return {
+    columns,
+    rowHeight: cardWidth / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale + 24,
+  };
 }
 
 export function ListsGridSkeleton() {
@@ -43,8 +46,15 @@ export function ListsGridSkeleton() {
 type GridItem = ListSummary | { id: 'new' };
 
 export function ListsIndex({
-  provider, kind, lists, hasNextPage, isFetchingNextPage, isFetchNextPageError,
-  refetch, fetchNextPage, emptyBody,
+  provider,
+  kind,
+  lists,
+  hasNextPage,
+  isFetchingNextPage,
+  isFetchNextPageError,
+  refetch,
+  fetchNextPage,
+  emptyBody,
 }: {
   provider: ListSummary['provider'];
   kind: 'created' | 'liked';
@@ -70,22 +80,44 @@ export function ListsIndex({
           <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>No lists yet</CenteredNotice.Title>
           <CenteredNotice.Body>{emptyBody}</CenteredNotice.Body>
-          {kind === 'created' && <CenteredNotice.Action icon={<Button.Icon name="add" />} label="New list" onPress={() => pushRoute(routes.newList(provider))} />}
+          {kind === 'created' && (
+            <CenteredNotice.Action
+              icon={<Button.Icon name="add" />}
+              label="New list"
+              onPress={() => pushRoute(routes.newList(provider))}
+            />
+          )}
         </CenteredNotice>
       ) : items.length === 0 ? (
         <CenteredNotice>
           <CenteredNotice.Icon name="eye-off-outline" />
           <CenteredNotice.Title>Lists hidden</CenteredNotice.Title>
-          <CenteredNotice.Body>Every list loaded so far is hidden. Unhide them in Settings.</CenteredNotice.Body>
-          {hasNextPage
-            ? <CenteredNotice.Action icon={<Button.Icon name="chevron-down" />} label="Load more" loading={isFetchingNextPage} onPress={() => void fetchNextPage()} />
-            : <CenteredNotice.Action icon={<Button.Icon name="open-outline" />} label="Settings" onPress={() => pushRoute(routes.settings)} />}
+          <CenteredNotice.Body>
+            Every list loaded so far is hidden. Unhide them in Settings.
+          </CenteredNotice.Body>
+          {hasNextPage ? (
+            <CenteredNotice.Action
+              icon={<Button.Icon name="chevron-down" />}
+              label="Load more"
+              loading={isFetchingNextPage}
+              onPress={() => void fetchNextPage()}
+            />
+          ) : (
+            <CenteredNotice.Action
+              icon={<Button.Icon name="open-outline" />}
+              label="Settings"
+              onPress={() => pushRoute(routes.settings)}
+            />
+          )}
         </CenteredNotice>
       ) : (
         <List
           key={columns}
           className="flex-1"
-          contentContainerStyle={{ padding: PADDING, paddingBottom: process.env.EXPO_OS === 'android' ? 24 + insets.bottom : PADDING }}
+          contentContainerStyle={{
+            padding: PADDING,
+            paddingBottom: process.env.EXPO_OS === 'android' ? 24 + insets.bottom : PADDING,
+          }}
           data={items}
           // One row, margin included: an estimate the library calls too large
           // starves its container pool (the web "creating one on demand"
@@ -96,7 +128,11 @@ export function ListsIndex({
           keyExtractor={(item) => item.id}
           numColumns={columns}
           recycleItems
-          onEndReached={hasNextPage && !isFetchingNextPage && !isFetchNextPageError ? () => void fetchNextPage() : undefined}
+          onEndReached={
+            hasNextPage && !isFetchingNextPage && !isFetchNextPageError
+              ? () => void fetchNextPage()
+              : undefined
+          }
           // 0.3, deliberately below the poster's 0.6: the end latch only
           // re-arms past 1.3× the band, and one 12-list page is three rows.
           // A wider band never clears on a landed page, so every page costs
@@ -106,15 +142,33 @@ export function ListsIndex({
           refreshControl={<RefreshControl onRefresh={refetch} />}
           renderItem={({ item }) => (
             <View className="px-2 pb-6">
-              {'title' in item
-                ? <ListCard list={item} onActions={openList} onPress={() => pushRoute(item.href)} />
-                : <NewListCard onPress={() => pushRoute(routes.newList(provider))} provider={provider} />}
+              {'title' in item ? (
+                <ListCard list={item} onActions={openList} onPress={() => pushRoute(item.href)} />
+              ) : (
+                <NewListCard
+                  onPress={() => pushRoute(routes.newList(provider))}
+                  provider={provider}
+                />
+              )}
             </View>
           )}
           ListFooterComponent={
             <>
-              {isFetchingNextPage && <View accessibilityLabel="Loading more lists" className="-mx-2.5"><ListsGridSkeleton /></View>}
-              {!isFetchingNextPage && isFetchNextPageError && <View className="items-center pt-5 pb-6"><LoadMoreFooter failed loading={false} noun="lists" onRetry={() => void fetchNextPage()} /></View>}
+              {isFetchingNextPage && (
+                <View accessibilityLabel="Loading more lists" className="-mx-2.5">
+                  <ListsGridSkeleton />
+                </View>
+              )}
+              {!isFetchingNextPage && isFetchNextPageError && (
+                <View className="items-center pt-5 pb-6">
+                  <LoadMoreFooter
+                    failed
+                    loading={false}
+                    noun="lists"
+                    onRetry={() => void fetchNextPage()}
+                  />
+                </View>
+              )}
             </>
           }
         />

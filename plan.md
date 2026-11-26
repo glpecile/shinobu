@@ -2,7 +2,7 @@
 
 Traditional multi-app workflows introduce friction. Every time you switch apps to log an episode, update a movie diary, or tick a manga chapter, you are spending unnecessary "energy keystrokes."
 
-**Shinobu (忍)** is designed on the ultimate premise of **Houtarou-style energy conservation**: *If you don't have to do it, don't. If you have to do it, do it efficiently in one unified system.*
+**Shinobu (忍)** is designed on the ultimate premise of **Houtarou-style energy conservation**: _If you don't have to do it, don't. If you have to do it, do it efficiently in one unified system._
 
 By treating your system as an **API Aggregator and Fan-Out Hub** (rather than maintaining a heavy proprietary media database), your codebase will scale linearly while its intelligence compounds exponentially. A single "I watched this" action fans out to every tracking service you've connected; reads flow the other way, aggregating those same services back into one feed.
 
@@ -10,29 +10,29 @@ By treating your system as an **API Aggregator and Fan-Out Hub** (rather than ma
 
 # Phase 1: Ideate & Brainstorm
 
-*Objective: Solidify scope, define core boundaries, and explicitly align on architectural limits before writing code.*
+_Objective: Solidify scope, define core boundaries, and explicitly align on architectural limits before writing code._
 
 ### 1.1 Product Specification Archetype
 
-* **Target Platforms:** Cross-platform layout deployment using **Expo** targeting Web (Desktop browser responsive canvas), iPadOS (Grid-optimized master hub), and Android/iOS mobile environments.
-* **Core Concept:** Simkl, Trakt, AniList, Letterboxd and Serializd are equal, opt-in tracking providers — not a primary store with satellite imports. Logging a movie, episode, or manga chapter once fans that action out to every connected provider it applies to; the unified feed reads the same providers back in. There is no Shinobu-owned account — each provider's OAuth session *is* the user's session for that provider, and a user can connect any subset of them.
-* **Visual Persona:** Minimalist, geometric layout inspired by *Studio Shaft's Monogatari* styling. High-contrast typography, dark mode-first implementation with **Vampiric Crimson (`#DC2626`)** accents, and the icon **"忍"** representing the silent core underlying the infrastructure.
+- **Target Platforms:** Cross-platform layout deployment using **Expo** targeting Web (Desktop browser responsive canvas), iPadOS (Grid-optimized master hub), and Android/iOS mobile environments.
+- **Core Concept:** Simkl, Trakt, AniList, Letterboxd and Serializd are equal, opt-in tracking providers — not a primary store with satellite imports. Logging a movie, episode, or manga chapter once fans that action out to every connected provider it applies to; the unified feed reads the same providers back in. There is no Shinobu-owned account — each provider's OAuth session _is_ the user's session for that provider, and a user can connect any subset of them.
+- **Visual Persona:** Minimalist, geometric layout inspired by _Studio Shaft's Monogatari_ styling. High-contrast typography, dark mode-first implementation with **Vampiric Crimson (`#DC2626`)** accents, and the icon **"忍"** representing the silent core underlying the infrastructure.
 
 ### 1.2 Provider Boundaries
 
 Symmetric, opt-in providers. A user connects zero or more of them; connecting one makes it a target for both the unified read feed (2.1) and the write fan-out (1.3). Written when there were three; **five today, and no longer of equal standing** — see the amendment below.
 
-* **Trakt.tv (REST v2)** — TV + movies. Read: `/sync/watched`. Write: `/sync/history` (log a watch).
-* **AniList (GraphQL)** — anime + manga, including anime films (AniList's `ANIME` media type covers movie-format entries too, e.g. a Ghibli film). Read: `MediaListCollection` query. Write: `SaveMediaListEntry` mutation.
-* **Letterboxd** — movies, including anime films. There is no public API. Reads use public pages and RSS (through the GET-only Worker proxy on web). Writes go through the user's signed-in session: a native WebView on iOS and Android, and a Tampermonkey userscript on web (`docs/plans/0012-letterboxd-fallback-integration.md`, `docs/solutions/letterboxd-web-userscript-bridge.md`).
+- **Trakt.tv (REST v2)** — TV + movies. Read: `/sync/watched`. Write: `/sync/history` (log a watch).
+- **AniList (GraphQL)** — anime + manga, including anime films (AniList's `ANIME` media type covers movie-format entries too, e.g. a Ghibli film). Read: `MediaListCollection` query. Write: `SaveMediaListEntry` mutation.
+- **Letterboxd** — movies, including anime films. There is no public API. Reads use public pages and RSS (through the GET-only Worker proxy on web). Writes go through the user's signed-in session: a native WebView on iOS and Android, and a Tampermonkey userscript on web (`docs/plans/0012-letterboxd-fallback-integration.md`, `docs/solutions/letterboxd-web-userscript-bridge.md`).
 
 **Amendment (2026-07-31, `docs/plans/0034-simkl-provider-and-trakt-detachment.md`).** Two providers joined and the standing of one changed:
 
-* **Simkl (REST, OAuth PKCE)** — TV + movies + anime natively, the only provider that matches an *unmapped* anime series or film directly. Read: `/sync/all-items`. Write: `/sync/history`, `/sync/add-to-list`, `/sync/history/remove`. **This is now the tracker that "just works":** a bundled client id, one-tap connect, wildcard CORS so web needs no proxy, and a rolling CDN calendar. New users are expected to land here.
-* **Serializd (unofficial JSON API)** — TV only, TMDB-keyed; see `docs/plans/0017-serializd-provider.md`.
-* **Trakt is demoted to bring-your-own-everything.** The app ships **no Trakt credentials whatsoever**; Trakt activates only once a user registers their own API app and enters both client id and secret in the guided setup. This is not an API paywall — it follows Trakt capping free accounts at one connected Community App (owner decision 2026-07-31). Trakt remains fully symmetric for anyone who does that; it is simply no longer the default path, and nothing in the app may assume it is connected.
+- **Simkl (REST, OAuth PKCE)** — TV + movies + anime natively, the only provider that matches an _unmapped_ anime series or film directly. Read: `/sync/all-items`. Write: `/sync/history`, `/sync/add-to-list`, `/sync/history/remove`. **This is now the tracker that "just works":** a bundled client id, one-tap connect, wildcard CORS so web needs no proxy, and a rolling CDN calendar. New users are expected to land here.
+- **Serializd (unofficial JSON API)** — TV only, TMDB-keyed; see `docs/plans/0017-serializd-provider.md`.
+- **Trakt is demoted to bring-your-own-everything.** The app ships **no Trakt credentials whatsoever**; Trakt activates only once a user registers their own API app and enters both client id and secret in the guided setup. This is not an API paywall — it follows Trakt capping free accounts at one connected Community App (owner decision 2026-07-31). Trakt remains fully symmetric for anyone who does that; it is simply no longer the default path, and nothing in the app may assume it is connected.
 
-The five are still *routed* symmetrically — capabilities are declared in `src/lib/providers/registry.ts` and nowhere else (1.4 / `docs/plans/0005-provider-capability-model.md`), and no provider is a primary store. "First-class" and "demoted" describe onboarding and defaults, not the data model.
+The five are still _routed_ symmetrically — capabilities are declared in `src/lib/providers/registry.ts` and nowhere else (1.4 / `docs/plans/0005-provider-capability-model.md`), and no provider is a primary store. "First-class" and "demoted" describe onboarding and defaults, not the data model.
 
 ### 1.3 The Unified Log Action
 
@@ -62,7 +62,7 @@ Partial failure must be surfaced, not swallowed: if Trakt succeeds but Letterbox
 
 # Phase 2: Architectural Plan
 
-*Objective: Design an agent-native environment where code dependencies do not fragment over time, keeping context highly accessible.*
+_Objective: Design an agent-native environment where code dependencies do not fragment over time, keeping context highly accessible._
 
 ### 2.1 The Unified State Aggregator Pattern
 
@@ -96,20 +96,20 @@ the provider registry (`src/lib/providers/registry.ts`), nothing else.
 
 ```typescript
 export type MediaType = 'TV' | 'MOVIE' | 'ANIME' | 'MANGA'; // future: 'GAME' | 'BOOK' | 'ALBUM'
-export type ProgressUnit = 'episode' | 'chapter';           // future: 'page' | 'minute' | 'listen'
+export type ProgressUnit = 'episode' | 'chapter'; // future: 'page' | 'minute' | 'listen'
 
 export interface NormalizedMediaItem {
-  id: string;          // Unique combined identifier: `trakt-${id}` or `anilist-${id}`
+  id: string; // Unique combined identifier: `trakt-${id}` or `anilist-${id}`
   title: string;
   coverImage: string;
   backdropImage?: string; // Wide hero/fanart for detail views
   overview?: string;
   year?: number;
-  runtime?: number;    // Minutes (per episode for TV)
+  runtime?: number; // Minutes (per episode for TV)
   genres?: string[];
-  rating?: number;     // Provider community rating, 0–10
+  rating?: number; // Provider community rating, 0–10
   type: MediaType;
-  isFilm?: boolean;    // Anime films: ANIME here, but a MOVIE to Trakt/Letterboxd (1.3)
+  isFilm?: boolean; // Anime films: ANIME here, but a MOVIE to Trakt/Letterboxd (1.3)
   currentProgress: number;
   progressUnit: ProgressUnit; // What currentProgress counts — never assume "episode"
   totalEpisodes?: number;
@@ -121,14 +121,13 @@ export interface NormalizedMediaItem {
     letterboxd?: string; // Letterboxd film IDs are opaque slugs, not numeric
   };
 }
-
 ```
 
 ---
 
 # Phase 3: The Automated Work Loop
 
-*Objective: Build modularly using isolated context strategies. Write less code manually, automate standard API scaffolding, and pass structural specs to agent workspaces.*
+_Objective: Build modularly using isolated context strategies. Write less code manually, automate standard API scaffolding, and pass structural specs to agent workspaces._
 
 ### 3.1 Establishing Environment Context for Agents
 
@@ -138,16 +137,17 @@ This is now implemented for real: `AGENTS.md` at the repo root (with `CLAUDE.md`
 # Shinobu Project Context & Conventions
 
 ## System Architecture
+
 - Universal Frontend: Expo (React Native Web + Native Bundle)
 - UI Library: Uniwind (Tailwind CSS for React Native, cross-platform including web)
 - Strictly DB-less: State is tied to external authentication tokens, one per connected provider.
 
 ## Code Standards
+
 - All network interactions must conform to the `NormalizedMediaItem` data contract.
 - Logging a media item is a fan-out action across every connected, applicable provider (1.3) — never a single-provider write.
 - Component Design: Leverage asymmetric white space and hard black borders mimicking anime title cards.
 - Platform differences use Uniwind's `ios:`, `android:` and `web:` variants. Platform files are only for differing implementations (AGENTS.md).
-
 ```
 
 ### 3.2 Components
@@ -163,7 +163,7 @@ equivalent of the old blueprint.
 
 # Phase 4: Automated Review & Human Polish
 
-*Objective: Build safety nets instead of gatekeeping manually. Review the systemic output, then insert visual polish.*
+_Objective: Build safety nets instead of gatekeeping manually. Review the systemic output, then insert visual polish._
 
 ### 4.1 Automated Validation Harness
 
@@ -177,14 +177,14 @@ Before manual visual checks, execute automated evaluation workflows to test comp
 
 Once passing core data tests, polish the styling interface to align directly with the aesthetic constraints:
 
-* **The Flash-Frame Transition:** Build a custom screen routing controller that handles page loading states by triggering a flat, full-bleed screen color change (Solid black page with a single word in bold white type like `"LOADING"` or `"SYNCHRONIZING"`) for 150ms before displaying content.
-* **Asymmetric Typography Layout:** Push typography layouts towards left-heavy borders, stark contrasts, and ample breathing room over grid containers.
+- **The Flash-Frame Transition:** Build a custom screen routing controller that handles page loading states by triggering a flat, full-bleed screen color change (Solid black page with a single word in bold white type like `"LOADING"` or `"SYNCHRONIZING"`) for 150ms before displaying content.
+- **Asymmetric Typography Layout:** Push typography layouts towards left-heavy borders, stark contrasts, and ample breathing room over grid containers.
 
 ---
 
 # Phase 5: The Compounding System Loop
 
-*Objective: Ensure that every edge case tracked or bug solved makes future feature additions faster, not slower.*
+_Objective: Ensure that every edge case tracked or bug solved makes future feature additions faster, not slower._
 
 ```
  [ Bug Occurs: Trakt API Rate Limit Hit ]

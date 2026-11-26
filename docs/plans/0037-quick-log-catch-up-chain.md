@@ -59,7 +59,7 @@ whole intent from the first tap.
 - R9. Every outcome is visible somewhere: in the ledger while the sheet is
   open (failures with their manual links), as a toast if it lands after the
   sheet was dismissed.
-- R9a. (2026-09-10) Ledger rows are one line each; the *reasons* render once
+- R9a. (2026-09-10) Ledger rows are one line each; the _reasons_ render once
   for the whole ledger, deduplicated, with their manual links, and a "Retry N
   episodes" button re-fires every failed row at once — only the legs that
   failed, so a landed provider is never logged twice. The Simkl legs coalesce
@@ -74,7 +74,7 @@ whole intent from the first tap.
   season-row single-episode actions now share the catch-up session. Movie
   and season-batch confirmations remain one-shot in the same app-level host.
 - Deferred: routing Simkl
-  *watchlist* writes through the same lock gate; a "Reconnect" shortcut on an
+  _watchlist_ writes through the same lock gate; a "Reconnect" shortcut on an
   auth failure (the outcome carries the message, not the error tag).
 - Out of scope: batching a chain into one Serializd write (would drop its
   per-episode diary entries and tags), a bundled retry inside the lock window.

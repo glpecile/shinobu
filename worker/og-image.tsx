@@ -29,7 +29,10 @@ const SITE_CARD: Card = {
 let ready: Promise<Renderer> | undefined;
 
 /** An image as a data URI, or null when it can't be fetched as PNG or JPEG. */
-async function inline(url: string, load: (url: string) => Promise<Response> = fetch): Promise<string | null> {
+async function inline(
+  url: string,
+  load: (url: string) => Promise<Response> = fetch,
+): Promise<string | null> {
   try {
     const response = await load(url);
     const type = response.headers.get('content-type')?.split(';')[0];
@@ -42,7 +45,14 @@ async function inline(url: string, load: (url: string) => Promise<Response> = fe
 
 function Posters({ sources }: { sources: string[] }) {
   if (sources.length === 1) {
-    return <img src={sources[0]} width={334} height={502} style={{ borderRadius: 24, objectFit: 'cover' }} />;
+    return (
+      <img
+        src={sources[0]}
+        width={334}
+        height={502}
+        style={{ borderRadius: 24, objectFit: 'cover' }}
+      />
+    );
   }
   return (
     <div style={{ display: 'flex', position: 'relative', width: 420, height: 502 }}>
@@ -67,12 +77,36 @@ function Posters({ sources }: { sources: string[] }) {
   );
 }
 
-function CardView({ card, posters, backdrop, brand }: { card: Card; posters: string[]; backdrop: string | null; brand: string | null }) {
+function CardView({
+  card,
+  posters,
+  backdrop,
+  brand,
+}: {
+  card: Card;
+  posters: string[];
+  backdrop: string | null;
+  brand: string | null;
+}) {
   const leadMark = posters.length === 0 && backdrop == null ? brand : null;
   return (
-    <div style={{ display: 'flex', width: WIDTH, height: HEIGHT, backgroundColor: BACKGROUND, color: FOREGROUND, fontFamily: 'Inter' }}>
+    <div
+      style={{
+        display: 'flex',
+        width: WIDTH,
+        height: HEIGHT,
+        backgroundColor: BACKGROUND,
+        color: FOREGROUND,
+        fontFamily: 'Inter',
+      }}
+    >
       {backdrop && (
-        <img src={backdrop} width={WIDTH} height={HEIGHT} style={{ position: 'absolute', objectFit: 'cover', opacity: 0.5 }} />
+        <img
+          src={backdrop}
+          width={WIDTH}
+          height={HEIGHT}
+          style={{ position: 'absolute', objectFit: 'cover', opacity: 0.5 }}
+        />
       )}
       {backdrop && (
         <div
@@ -86,10 +120,20 @@ function CardView({ card, posters, backdrop, brand }: { card: Card; posters: str
       )}
       <div style={{ display: 'flex', position: 'relative', width: '100%', padding: 64, gap: 56 }}>
         {posters.length > 0 && <Posters sources={posters} />}
-        {leadMark && <img src={leadMark} width={300} height={300} style={{ alignSelf: 'center' }} />}
+        {leadMark && (
+          <img src={leadMark} width={300} height={300} style={{ alignSelf: 'center' }} />
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
           {card.eyebrow && (
-            <div style={{ fontFamily: 'Space Grotesk', fontSize: 26, color: ACCENT, textTransform: 'uppercase', letterSpacing: 2 }}>
+            <div
+              style={{
+                fontFamily: 'Space Grotesk',
+                fontSize: 26,
+                color: ACCENT,
+                textTransform: 'uppercase',
+                letterSpacing: 2,
+              }}
+            >
               {card.eyebrow}
             </div>
           )}
@@ -106,11 +150,28 @@ function CardView({ card, posters, backdrop, brand }: { card: Card; posters: str
             {card.title}
           </div>
           {card.description && (
-            <div style={{ display: 'block', marginTop: 24, fontSize: 28, lineHeight: 1.4, color: MUTED, lineClamp: posters.length > 0 ? 4 : 3 }}>
+            <div
+              style={{
+                display: 'block',
+                marginTop: 24,
+                fontSize: 28,
+                lineHeight: 1.4,
+                color: MUTED,
+                lineClamp: posters.length > 0 ? 4 : 3,
+              }}
+            >
               {card.description}
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 'auto', paddingTop: 24 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              marginTop: 'auto',
+              paddingTop: 24,
+            }}
+          >
             {brand && !leadMark && <img src={brand} width={52} height={52} />}
             <div style={{ fontFamily: 'Space Grotesk', fontSize: 32 }}>Shinobu</div>
           </div>
@@ -123,7 +184,10 @@ function CardView({ card, posters, backdrop, brand }: { card: Card; posters: str
 const timed = (url: string) => fetch(url, { signal: AbortSignal.timeout(5_000) });
 
 /** The 1200×630 PNG for a card; an image that fails to load is left out rather than failing the card. */
-async function renderCard(card: Card, loadBrand: () => Promise<string | null>): Promise<Uint8Array> {
+async function renderCard(
+  card: Card,
+  loadBrand: () => Promise<string | null>,
+): Promise<Uint8Array> {
   // The Worker caches finished cards. Avoid retaining decoded posters across requests.
   // A failed init is not kept, so the next request on this isolate tries again.
   ready ??= initWasm({ module_or_path: renderWasm })
@@ -180,8 +244,12 @@ export async function handleOgImage(
   }
   if (card == null) return new Response('Not found', { status: 404 });
   // The splash mark comes from the asset binding: fetching our own hostname would re-enter this Worker.
-  const png = await renderCard(card, () => inline(new URL('/splash-icon.png', url).href, (href) => env.ASSETS.fetch(new Request(href))));
-  const response = new Response(png.slice(), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=604800' } });
+  const png = await renderCard(card, () =>
+    inline(new URL('/splash-icon.png', url).href, (href) => env.ASSETS.fetch(new Request(href))),
+  );
+  const response = new Response(png.slice(), {
+    headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=604800' },
+  });
   ctx.waitUntil(caches.default.put(key, response.clone()));
   return response;
 }

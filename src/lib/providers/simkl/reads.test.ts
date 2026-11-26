@@ -127,11 +127,7 @@ describe('getCalendar', () => {
     expect(url.pathname).toBe('/calendar/v2/tv.json');
     // Exactly the three standard params — never a cache-busting extra (KTD-4
     // — the CDN caches per-URL; a varying param would defeat its 5h cache).
-    expect([...url.searchParams.keys()].sort()).toEqual([
-      'app-name',
-      'app-version',
-      'client_id',
-    ]);
+    expect([...url.searchParams.keys()].sort()).toEqual(['app-name', 'app-version', 'client_id']);
     expect(headersOf(calls[0]!).Authorization).toBeUndefined();
     expect(entries[0]!.date).toBe('2026-08-02T16:00:00Z');
   });

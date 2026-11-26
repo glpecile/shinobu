@@ -47,8 +47,16 @@ export function DiaryFormatFilter({
         />
       </NativePickerMenu>
       {Platform.OS === 'web' && (
-        <PickerSheet onClose={() => setOpen(false)} onSelect={onChange} open={open} title="Format" value={value}>
-          {items.map((item) => <PickerSheet.Option key={item.value} {...item} />)}
+        <PickerSheet
+          onClose={() => setOpen(false)}
+          onSelect={onChange}
+          open={open}
+          title="Format"
+          value={value}
+        >
+          {items.map((item) => (
+            <PickerSheet.Option key={item.value} {...item} />
+          ))}
         </PickerSheet>
       )}
     </>

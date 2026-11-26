@@ -88,7 +88,9 @@ function oauthPost(
       provider,
       status: response.status,
       retryable: false,
-      cause: new Error(`Hardcover responded ${response.status}${error != null ? ` (${error})` : ''}`),
+      cause: new Error(
+        `Hardcover responded ${response.status}${error != null ? ` (${error})` : ''}`,
+      ),
     });
   });
 }
@@ -107,12 +109,14 @@ function tokenGrant(
     });
     const token = yield* Schema.decodeUnknownEffect(tokenResponse)(json).pipe(
       Effect.mapError(
-        (error) => new ProviderDecodeError({ provider, detail: `invalid token response: ${error.message}` }),
+        (error) =>
+          new ProviderDecodeError({ provider, detail: `invalid token response: ${error.message}` }),
       ),
     );
     const now = yield* Clock.currentTimeMillis;
     const granted = Array.isArray(token.scope) ? token.scope.join(' ') : token.scope;
-    const scopes = typeof granted === 'string' ? granted.split(/[\s,]+/).filter(Boolean) : assumedScopes;
+    const scopes =
+      typeof granted === 'string' ? granted.split(/[\s,]+/).filter(Boolean) : assumedScopes;
     const session: ProviderSession = {
       accessToken: token.access_token,
       ...(token.refresh_token != null ? { refreshToken: token.refresh_token } : {}),

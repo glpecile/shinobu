@@ -7,12 +7,10 @@ import { cn } from '@/lib/cn';
 export default function LetterboxdWatchlistSpikeWebScreen() {
   return (
     <View className={cn('flex-1 bg-background px-6', screenHeaderTopPadding)}>
-      <Text className="text-2xl font-display text-foreground">
-        Run this one on a device
-      </Text>
+      <Text className="text-2xl font-display text-foreground">Run this one on a device</Text>
       <Text className="text-muted font-sans mt-3">
-        The capture needs the authenticated WebView, which is native-only — and
-        Letterboxd writes stay web-banned whatever it finds.
+        The capture needs the authenticated WebView, which is native-only — and Letterboxd writes
+        stay web-banned whatever it finds.
       </Text>
     </View>
   );

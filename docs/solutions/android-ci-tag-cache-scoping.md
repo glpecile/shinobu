@@ -25,7 +25,7 @@ branch** — nothing else. GitHub's caching docs say it outright: a cache create
 for tag `release-a` is not accessible to a run triggered for tag `release-b`.
 
 So the release workflow's `actions/cache` step was writing a ~2.2 GB entry
-scoped to `refs/tags/vX.Y.Z` on every release, and every *subsequent* release,
+scoped to `refs/tags/vX.Y.Z` on every release, and every _subsequent_ release,
 running on a different tag, could not see it. Meanwhile nothing on `main`
 (`ci.yml`, `link-health.yml`, `pr-labels.yml`) ever invoked Gradle, so the
 default-branch fallback had nothing in it either. There was no cache in the
@@ -44,14 +44,14 @@ restored from key:" line give it away.
 
 `.github/workflows/android-warm.yml` runs the same universal `assembleRelease`
 on `main` — on Android-affecting pushes, weekly, and on demand — so the caches a
-tag run *is* allowed to restore actually exist. `release.yml` only consumes
+tag run _is_ allowed to restore actually exist. `release.yml` only consumes
 them. Three pieces:
 
 1. **`gradle/actions/setup-gradle`** (SHA-pinned to v6.2.0) replaces the
    hand-rolled `actions/cache` of `~/.gradle`. It caches the wrapper
    distribution, dependencies, transforms and the local build cache as separate
    content-keyed entries, cleans up locks and unused state before saving, and
-   defaults to *write on the default branch, read-only elsewhere* — the exact
+   defaults to _write on the default branch, read-only elsewhere_ — the exact
    scoping this problem needs, as a default rather than something to remember.
    `gradle-home-cache-strict-match` is deliberately left at its default
    (`false`) so `release.yml`'s job correlator (`build[...]`) can still restore
@@ -66,7 +66,7 @@ them. Three pieces:
    toolchain's timestamps.
 3. **Build flags** — `--build-cache`, no `--no-daemon` (the arm64 invocation
    reuses the warm daemon), and `-Dorg.gradle.jvmargs="-Xmx4g
-   -XX:MaxMetaspaceSize=1g"` to replace the generated `-Xmx2048m` default. Flags
+-XX:MaxMetaspaceSize=1g"` to replace the generated `-Xmx2048m` default. Flags
    on the command line, because `android/gradle.properties` is CNG output and
    cannot be edited in the repo.
 
@@ -92,7 +92,7 @@ secretless warm workflow on the default branch is their only writer:
   change the JS bundle, not anything compiled or cached.
 - `release.yml` sets `cache-read-only: true` **explicitly** rather than
   inheriting the write-on-default-branch default. `workflow_dispatch` dry-runs
-  execute on `main` *with* the decoded keystore and signing secrets in the
+  execute on `main` _with_ the decoded keystore and signing secrets in the
   environment; without the explicit flag they would qualify as cache writers.
 
 Granting cache-write to another ref or trigger is a security-reviewed change —
@@ -101,15 +101,15 @@ AGENTS.md.
 
 ## Measured
 
-| Run | universal APK | arm64 APK | total job |
-| --- | --- | --- | --- |
-| Baseline, cold tag `v0.1.1` ([30175163780](https://github.com/glpecile/shinobu/actions/runs/30175163780)) | 35m34s | 1m51s | 38m19s |
-| Warm workflow, cold ([30181017585](https://github.com/glpecile/shinobu/actions/runs/30181017585)) | 37m33s | — | 39m05s |
-| Warm workflow, warm ([30182224405](https://github.com/glpecile/shinobu/actions/runs/30182224405)) | **8m13s** | — | 9m51s |
-| `release.yml` warm dry-run ([30182550322](https://github.com/glpecile/shinobu/actions/runs/30182550322)) | **9m47s** | 1m16s | **12m07s** |
-| Real warm tag `v0.1.2` ([30205881828](https://github.com/glpecile/shinobu/actions/runs/30205881828)) | **10m16s** | 1m19s | **12m44s** |
+| Run                                                                                                       | universal APK | arm64 APK | total job  |
+| --------------------------------------------------------------------------------------------------------- | ------------- | --------- | ---------- |
+| Baseline, cold tag `v0.1.1` ([30175163780](https://github.com/glpecile/shinobu/actions/runs/30175163780)) | 35m34s        | 1m51s     | 38m19s     |
+| Warm workflow, cold ([30181017585](https://github.com/glpecile/shinobu/actions/runs/30181017585))         | 37m33s        | —         | 39m05s     |
+| Warm workflow, warm ([30182224405](https://github.com/glpecile/shinobu/actions/runs/30182224405))         | **8m13s**     | —         | 9m51s      |
+| `release.yml` warm dry-run ([30182550322](https://github.com/glpecile/shinobu/actions/runs/30182550322))  | **9m47s**     | 1m16s     | **12m07s** |
+| Real warm tag `v0.1.2` ([30205881828](https://github.com/glpecile/shinobu/actions/runs/30205881828))      | **10m16s**    | 1m19s     | **12m44s** |
 
-The first warm-workflow run is ~2 minutes *slower* than the cold baseline —
+The first warm-workflow run is ~2 minutes _slower_ than the cold baseline —
 that's ccache storing 820 objects it can't yet hit. It pays for itself once.
 
 The `v0.1.2` row is the one that settles it: a genuine tag push, on a ref that
@@ -132,7 +132,7 @@ What the warm release runs' logs show, against the cold one:
   task and AGP's `externalNativeBuild` tasks are **not** cacheable, which is
   exactly why ccache carries the C++ and JS bundling still runs in full.
 - The second (arm64) invocation: `1216 actionable tasks: 129 executed, 1087
-  up-to-date` in 1m15s — the reused daemon, from dropping `--no-daemon`.
+up-to-date` in 1m15s — the reused daemon, from dropping `--no-daemon`.
 
 Artifacts are unchanged: same names, all four ABI directories in the universal
 APK (`arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`), one in the arm64 APK, sizes
@@ -176,7 +176,7 @@ within 0.02% of the baseline release assets, same signing mode.
   caches — it has to merge first.
 - **`setup-gradle` uses a proprietary caching provider.** The action logs
   `Enhanced Caching: This build is using the proprietary
-  'gradle-actions-caching' provider` (see the action's `DISTRIBUTION.md` for
+'gradle-actions-caching' provider` (see the action's `DISTRIBUTION.md` for
   terms and the opt-out). CI-only — nothing of it reaches the shipped APK.
 
 ## Related

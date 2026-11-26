@@ -29,9 +29,7 @@ export function RefreshableScrollView({
       refreshControl={
         <RefreshControl
           onRefresh={onRefresh}
-          progressViewOffset={
-            spinnerBelowStatusBar === true ? insets.top : undefined
-          }
+          progressViewOffset={spinnerBelowStatusBar === true ? insets.top : undefined}
           tab={tab}
         />
       }

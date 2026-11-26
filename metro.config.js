@@ -1,15 +1,15 @@
-const http = require("node:http");
-const path = require("node:path");
+const http = require('node:http');
+const path = require('node:path');
 
-const { getDefaultConfig } = require("expo/metro-config");
-const { withUniwindConfig } = require("uniwind/metro");
+const { getDefaultConfig } = require('expo/metro-config');
+const { withUniwindConfig } = require('uniwind/metro');
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
 const uniwindConfig = withUniwindConfig(config, {
-  cssEntryFile: "./src/global.css",
-  dtsFile: "./src/uniwind-types.d.ts",
+  cssEntryFile: './src/global.css',
+  dtsFile: './src/uniwind-types.d.ts',
 });
 
 // Uniwind 1.13 swaps `react-native` for a re-export that lacks RN 0.88's
@@ -17,8 +17,8 @@ const uniwindConfig = withUniwindConfig(config, {
 // (docs/solutions/uniwind-rn-088-missing-asset-registry.md)
 const uniwindResolveRequest = uniwindConfig.resolver.resolveRequest;
 uniwindConfig.resolver.resolveRequest = (context, moduleName, platform) =>
-  platform !== "web" &&
-  moduleName === "react-native" &&
+  platform !== 'web' &&
+  moduleName === 'react-native' &&
   context.originModulePath.includes(`${path.sep}node_modules${path.sep}expo-asset${path.sep}`)
     ? context.resolveRequest(context, moduleName, platform)
     : uniwindResolveRequest(context, moduleName, platform);
@@ -31,9 +31,13 @@ uniwindConfig.transformer.getTransformOptions = async (...args) => {
 
 // Metro has no Cloudflare Worker, so /api/* proxy routes 404 in web dev.
 // Forward them to local `wrangler dev` (docs/solutions/local-web-dev-proxy-middleware.md).
-const WORKER_DEV_ORIGIN =
-  process.env.SHINOBU_WORKER_DEV_ORIGIN ?? "http://localhost:8787";
-const WORKER_PROXY_PREFIXES = ["/api/serializd/", "/api/letterboxd/", "/api/fourchan/", "/api/reddit/"];
+const WORKER_DEV_ORIGIN = process.env.SHINOBU_WORKER_DEV_ORIGIN ?? 'http://localhost:8787';
+const WORKER_PROXY_PREFIXES = [
+  '/api/serializd/',
+  '/api/letterboxd/',
+  '/api/fourchan/',
+  '/api/reddit/',
+];
 
 function workerDevProxy(req, res, next) {
   if (!WORKER_PROXY_PREFIXES.some((prefix) => req.url?.startsWith(prefix))) {
@@ -48,12 +52,12 @@ function workerDevProxy(req, res, next) {
       proxyRes.pipe(res);
     },
   );
-  proxyReq.on("error", () => {
-    res.writeHead(502, { "Content-Type": "application/json" });
+  proxyReq.on('error', () => {
+    res.writeHead(502, { 'Content-Type': 'application/json' });
     res.end(
       JSON.stringify({
         error:
-          "Local worker unreachable — start it with `bun run dev:worker` alongside `bun web` for /api/* proxies in web dev.",
+          'Local worker unreachable — start it with `bun run dev:worker` alongside `bun web` for /api/* proxies in web dev.',
       }),
     );
   });
@@ -69,8 +73,7 @@ uniwindConfig.server = {
     const nextMiddleware = previousEnhanceMiddleware
       ? previousEnhanceMiddleware(middleware, server)
       : middleware;
-    return (req, res, next) =>
-      workerDevProxy(req, res, () => nextMiddleware(req, res, next));
+    return (req, res, next) => workerDevProxy(req, res, () => nextMiddleware(req, res, next));
   },
 };
 

@@ -24,7 +24,7 @@
 The TanStack Query cache is persisted to MMKV (on web: `localStorage`, about
 5 MB per origin) as **one** JSON string, so cold starts paint instantly. The
 allowlist comment says unbounded per-item families are excluded because web
-storage is small. But several per-item prefixes *are* persisted and grow with
+storage is small. But several per-item prefixes _are_ persisted and grow with
 browsing: Letterboxd slug, film and film-watch entries (one per film seen on
 any list or filmography), per-show Trakt progress, and ani.zip mappings. All
 are kept for 24 h. If the string ever exceeds the quota, `setItem` throws, the
@@ -51,9 +51,9 @@ key prefix depends on the MMKV instance id. In the browser console,
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---------|---------|----------|
-| Run web | `bun web` + `bun run dev:worker` | app at the printed URL |
+| Purpose                | Command                                                                                                     | Expected               |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Run web                | `bun web` + `bun run dev:worker`                                                                            | app at the printed URL |
 | Size (browser console) | `Object.entries(localStorage).map(([k,v]) => [k, (k.length+v.length)*2]).sort((a,b)=>b[1]-a[1]).slice(0,5)` | bytes per key (UTF-16) |
 
 ## Scope

@@ -3,11 +3,7 @@ import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';
 import { createPkcePair, randomUnreserved } from '@/lib/providers/pkce';
 import { Provider } from '@/lib/providers/types';
 import type { ProviderSession } from '@/types/session';
-import {
-  clearSimklAuthFlow,
-  getSimklAuthFlow,
-  saveSimklAuthFlow,
-} from './auth-flow';
+import { clearSimklAuthFlow, getSimklAuthFlow, saveSimklAuthFlow } from './auth-flow';
 import { SIMKL_AUTHORIZE_URL, simklStandardParams } from './config';
 import type { SimklDeps } from './deps';
 import { simklHttp } from './http';
@@ -88,9 +84,7 @@ function toSession(token: SimklTokenResponse): ProviderSession {
     accessToken: token.access_token,
     // No refreshToken: Simkl has no refresh grant (KTD-2) — a 401 means
     // "reconnect Simkl", exactly like AniList's implicit-grant sessions.
-    ...(token.expires_in != null
-      ? { expiresAt: Date.now() + token.expires_in * 1000 }
-      : {}),
+    ...(token.expires_in != null ? { expiresAt: Date.now() + token.expires_in * 1000 } : {}),
   };
 }
 

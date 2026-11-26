@@ -99,11 +99,11 @@ Card redesign:
 - **Deferred to follow-up work:** applying the owner's chosen variant, deleting
   the other two, and removing the variant switch; any per-provider health/
   validity probing (today "connected" = a stored session exists — unchanged);
-  surfacing Letterboxd's two-tier read-only/write session state is *optional*
+  surfacing Letterboxd's two-tier read-only/write session state is _optional_
   variant material, not required.
 - **Non-goals:** native (iOS/Android) redesign beyond what the shared
   components change automatically; touching the Trakt/AniList credential setup
-  *flows* (forms keep their logic, only their container styling may change);
+  _flows_ (forms keep their logic, only their container styling may change);
   header search bars (`headerSearchBarOptions`) — the custom TextInput stays.
 
 ### Assumptions
@@ -138,18 +138,18 @@ Card redesign:
 - KTD3 — **Diagnose the Android clear bug before fixing; strongest hypothesis
   is the controlled-input echo.** `clearSearch()` (`search.tsx:235-240`) sets
   `input=''`/`query=''`/`?q=undefined` then refocuses; on Android the native
-  EditText can deliver a queued `onChangeText` with the *old* text, which
+  EditText can deliver a queued `onChangeText` with the _old_ text, which
   restores `input`, and the 300 ms debounce effect resurrects `query` and
   `?q=` — cached results reappear instantly via `keepPreviousData`. Confirm by
   logging `setInput` calls after a clear; distinguish from the tap never
-  landing (does the *text* clear?) and from `router.setParams` no-op'ing
+  landing (does the _text_ clear?) and from `router.setParams` no-op'ing
   (does `?q=` survive a tab-switch?). Fix shape: make clear robust to the
   stale echo (e.g. also `inputRef.current?.clear()`, plus a just-cleared guard
   that drops an `onChangeText` echo equal to the pre-clear text). Write the
   root cause to `docs/solutions/` per AGENTS.md.
 - KTD4 — **Trackers layout: adopt the detail screens' centering pattern and a
   single spacing rhythm.** Wrap the scroll content in `w-full max-w-2xl
-  self-center` (settings content reads better narrower than the details'
+self-center` (settings content reads better narrower than the details'
   `max-w-4xl`); replace the asymmetric `mb-6`/missing-top-margin/`mt-6` mix
   with a uniform section gap on the container; normalize card padding
   (connected `px-5 py-4` vs connect `p-5` → one value) and button/input radius
@@ -162,7 +162,7 @@ Card redesign:
 - KTD6 — **Per-provider brand colors become theme tokens** (Trakt `#9F42C6`,
   AniList `#02A9FF`, Letterboxd tri-dot orange/green, Serializd teal — hexes
   currently exist only inside `src/assets/providers/*.svg`). Add
-  `--color-provider-*` tokens to `src/global.css` in *both* light and dark
+  `--color-provider-*` tokens to `src/global.css` in _both_ light and dark
   variants (Uniwind requires identical variable sets). Only the variant(s)
   that use brand tinting need them, but the tokens land with U5 regardless of
   final choice — they are harmless if unused.
@@ -181,7 +181,7 @@ connect.tsx
       └─ disconnected → Connect<Provider>Button   (existing components, unchanged logic)
 ```
 
-The three variants (each covers *both* card states, light+dark):
+The three variants (each covers _both_ card states, light+dark):
 
 - **Variant 1 — Refined rows.** The current visual language, disciplined:
   one padding value, `rounded-card` radius everywhere, icon in a subtle
@@ -225,6 +225,7 @@ needed, keep it a tiny pure function (e.g. under `src/lib/`) so it is
 testable and reusable.
 
 **Test scenarios:**
+
 - Happy path: on a coarse-pointer web browser, tapping the field opens the
   keyboard and it stays open while typing (manual: Firefox Android; approximate
   via Playwright touch emulation for regression).
@@ -259,6 +260,7 @@ unit over leaving it inline if the fix adds a guard. Record the root cause in
 `docs/solutions/` (AGENTS.md requires it for non-obvious fixes).
 
 **Test scenarios:**
+
 - Happy path (Covers R4): type ≥2 chars, wait for results, press X → field
   empty, results gone, `?q=` removed; wait >300 ms → results do not reappear.
 - Resume path: after clearing, switch tabs and return → search stays empty
@@ -320,6 +322,7 @@ Keep `getProviderSession(id)?.username` for the status line. No visual change
 in this unit beyond what U3 already normalized.
 
 **Test scenarios:**
+
 - Unit: the connected/disconnected split helper — all four providers
   disconnected → 0/4; two connected → 2/2 with registry order preserved.
 - Happy path (manual/screenshot): screen renders identically to post-U3 state
@@ -353,12 +356,13 @@ keeps connected/disconnected card heights close (R11, SSR flash). No
 constants.
 
 **Test scenarios:**
+
 - Test expectation: none for the visual shells (styling). The R10 constraint
   is lint/review-enforced (no hex literals in components).
 - Manual per variant: connect flow still works for at least one provider
   (button reachable, form usable — variant 3 especially: Trakt setup form
   inside the sheet scrolls, does not clip).
-- Screenshot matrix: 3 variants × {light, dark} × {~390px, desktop} × 
+- Screenshot matrix: 3 variants × {light, dark} × {~390px, desktop} ×
   {connected state, disconnected state} captured headless.
 
 **Verification:** screenshot matrix produced and presented (PR description);
@@ -386,7 +390,7 @@ cleanly between all three. Then STOP for the owner's choice (Goal Capsule).
 
 - R1–R8, R10, R11 implemented and verified per unit; R9 satisfied when the
   three variants exist behind the switch and the screenshot matrix is
-  presented — the *choice* is explicitly not part of this run.
+  presented — the _choice_ is explicitly not part of this run.
 - All three gates (`bun lint`, `bun run typecheck`, `bun test`) green.
 - A `docs/solutions/` entry exists for the U2 root cause (and for the U1 blur
   mechanism if the List-wrapper finding held — the "keyboard is a native

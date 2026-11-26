@@ -17,11 +17,7 @@ const LABELS: Record<keyof ReleaseCalendar, string> = {
   physical: 'Physical',
 };
 
-const KIND_ORDER: Array<keyof ReleaseCalendar> = [
-  'theatrical',
-  'digital',
-  'physical',
-];
+const KIND_ORDER: Array<keyof ReleaseCalendar> = ['theatrical', 'digital', 'physical'];
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -47,8 +43,6 @@ export function releaseStops(
       },
     ];
   })
-    .sort((a, b) =>
-      a.date === b.date ? a.kindIndex - b.kindIndex : a.date < b.date ? -1 : 1,
-    )
+    .sort((a, b) => (a.date === b.date ? a.kindIndex - b.kindIndex : a.date < b.date ? -1 : 1))
     .map(({ kindIndex: _kindIndex, ...stop }) => stop);
 }

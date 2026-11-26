@@ -82,12 +82,12 @@ That attribute number is a **capability level**, not the script version. Don't c
 
 ## Commands you will need
 
-| Purpose   | Command                                                    | Expected on success |
-|-----------|------------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                            | exit 0              |
-| One file  | `bun test scripts/letterboxd-tampermonkey-spike.test.ts`   | all pass            |
-| All tests | `bun run test`                                             | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                                 | exit 0              |
+| Purpose   | Command                                                  | Expected on success               |
+| --------- | -------------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                          | exit 0                            |
+| One file  | `bun test scripts/letterboxd-tampermonkey-spike.test.ts` | all pass                          |
+| All tests | `bun run test`                                           | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                               | exit 0                            |
 
 ## Scope
 
@@ -111,12 +111,13 @@ the capability attribute value, and the Worker.
 Replace the `appOrigin` computation with:
 
 ```js
-  const devOrigin = /^http:\/\/(localhost|127\.0\.0\.1):(8081|8082|19006)$/.test(origin);
-  // Local dev servers on these ports are not necessarily Shinobu (8081 is
-  // every Expo project's Metro). Developers opt in per install by setting
-  // `shinobu-trust-localhost` to true in Tampermonkey's storage tab.
-  const appOrigin = origin === 'https://shinobu.glpecile.xyz' ||
-    (devOrigin && await GM.getValue('shinobu-trust-localhost', false) === true);
+const devOrigin = /^http:\/\/(localhost|127\.0\.0\.1):(8081|8082|19006)$/.test(origin);
+// Local dev servers on these ports are not necessarily Shinobu (8081 is
+// every Expo project's Metro). Developers opt in per install by setting
+// `shinobu-trust-localhost` to true in Tampermonkey's storage tab.
+const appOrigin =
+  origin === 'https://shinobu.glpecile.xyz' ||
+  (devOrigin && (await GM.getValue('shinobu-trust-localhost', false)) === true);
 ```
 
 Keep the `@match` localhost lines. Without them the opt-in can't work, and

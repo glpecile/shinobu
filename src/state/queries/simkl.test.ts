@@ -25,10 +25,9 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const { findLibraryEntry, findLibraryEpisodeState, findLibraryProgress, simklDeps } = await import('./simkl');
-const { clearProviderClientId, setProviderClientId } = await import(
-  '@/state/session/tokens'
-);
+const { findLibraryEntry, findLibraryEpisodeState, findLibraryProgress, simklDeps } =
+  await import('./simkl');
+const { clearProviderClientId, setProviderClientId } = await import('@/state/session/tokens');
 
 // bun loads .env files — pin the env id per test so precedence is deterministic.
 const ORIGINAL_SIMKL_ENV = process.env.EXPO_PUBLIC_SIMKL_CLIENT_ID;
@@ -86,7 +85,14 @@ describe('findLibraryEntry', () => {
   test('two lookups on one snapshot build one index', () => {
     let reads = 0;
     const movies = [entry('simkl-1', 'MOVIE', { simkl: 1, tmdb: 42 })];
-    const snapshot = { shows: [], anime: [], get movies() { reads++; return movies; } } as never;
+    const snapshot = {
+      shows: [],
+      anime: [],
+      get movies() {
+        reads++;
+        return movies;
+      },
+    } as never;
     findLibraryEntry(snapshot, item('a', 'MOVIE', { tmdb: 42 }));
     findLibraryEntry(snapshot, item('b', 'MOVIE', { tmdb: 43 }));
     expect(reads).toBe(1);
@@ -120,7 +126,9 @@ describe('findLibraryEntry', () => {
       item('subject', 'ANIME', { simkl: 9, tmdb: 42 }, { isFilm: true }),
     );
     expect(found?.item.id).toBe('simkl-9');
-    expect(findLibraryEntry(library({ anime: [film] }), item('film', 'MOVIE', { tmdb: 42 }))).toBe(film);
+    expect(findLibraryEntry(library({ anime: [film] }), item('film', 'MOVIE', { tmdb: 42 }))).toBe(
+      film,
+    );
   });
 
   test('an anime season never matches a sibling season sharing its TMDB id', () => {
@@ -132,7 +140,9 @@ describe('findLibraryEntry', () => {
     });
     expect(findLibraryEntry(seasons, item('s3', 'ANIME', { simkl: 3, tmdb: 42 }))).toBeNull();
     expect(findLibraryEntry(seasons, item('s3', 'ANIME', { tmdb: 42 }))).toBeNull();
-    expect(findLibraryEntry(seasons, item('s2', 'ANIME', { simkl: 2, tmdb: 42 }))?.item.id).toBe('simkl-2');
+    expect(findLibraryEntry(seasons, item('s2', 'ANIME', { simkl: 2, tmdb: 42 }))?.item.id).toBe(
+      'simkl-2',
+    );
   });
 
   test('an anime season matches its AniList or MAL id', () => {
@@ -156,68 +166,133 @@ describe('findLibraryEntry', () => {
 
 describe('canonical Simkl episode state', () => {
   test('TV progress combines completed anime cours while a cour page keeps its own count', () => {
-    const snapshot = normalizeAllItems({
-      anime: [
-        { status: 'completed', watched_episodes_count: 12,
-          show: { title: 'You and I Are Polar Opposites', ids: { simkl: 1, tmdb: 42 } } },
-        { status: 'completed', watched_episodes_count: 12,
-          show: { title: 'You and I Are Polar Opposites Part 2', ids: { simkl: 2, tmdb: 42 } } },
-        { status: 'completed', anime_type: 'movie', watched_episodes_count: 1,
-          show: { title: 'Unrelated film', ids: { simkl: 3, tmdb: 42 } } },
-      ],
-    }, '2026-09-30T00:00:00Z');
+    const snapshot = normalizeAllItems(
+      {
+        anime: [
+          {
+            status: 'completed',
+            watched_episodes_count: 12,
+            show: { title: 'You and I Are Polar Opposites', ids: { simkl: 1, tmdb: 42 } },
+          },
+          {
+            status: 'completed',
+            watched_episodes_count: 12,
+            show: { title: 'You and I Are Polar Opposites Part 2', ids: { simkl: 2, tmdb: 42 } },
+          },
+          {
+            status: 'completed',
+            anime_type: 'movie',
+            watched_episodes_count: 1,
+            show: { title: 'Unrelated film', ids: { simkl: 3, tmdb: 42 } },
+          },
+        ],
+      },
+      '2026-09-30T00:00:00Z',
+    );
     expect(findLibraryProgress(snapshot, item('show', 'TV', { simkl: 1, tmdb: 42 }))).toBe(24);
     expect(findLibraryProgress(snapshot, item('cour', 'ANIME', { simkl: 1, tmdb: 42 }))).toBe(12);
     expect(findLibraryProgress(snapshot, item('unknown', 'TV', { tmdb: 99 }))).toBeNull();
-    const withParallel = { ...snapshot, shows: [...snapshot.shows, normalizeAllItems({ shows: [
-      { status: 'completed', watched_episodes_count: 24,
-        show: { title: 'Parallel TV entry', ids: { simkl: 4, tmdb: 42 } } },
-    ] }, '2026-09-30T00:00:00Z').shows[0]!] };
+    const withParallel = {
+      ...snapshot,
+      shows: [
+        ...snapshot.shows,
+        normalizeAllItems(
+          {
+            shows: [
+              {
+                status: 'completed',
+                watched_episodes_count: 24,
+                show: { title: 'Parallel TV entry', ids: { simkl: 4, tmdb: 42 } },
+              },
+            ],
+          },
+          '2026-09-30T00:00:00Z',
+        ).shows[0]!,
+      ],
+    };
     expect(findLibraryProgress(withParallel, item('show', 'TV', { tmdb: 42 }))).toBe(24);
   });
 
   test('Saga of Tanya the Evil S2E11 stays unwatched when only season 1 is complete', () => {
-    const snapshot = normalizeAllItems({ anime: [
+    const snapshot = normalizeAllItems(
       {
-        status: 'completed', mapped_tvdb_seasons: [1], watched_episodes_count: 12,
-        show: { title: 'Youjo Senki', ids: { simkl: 555226, tmdb: 69346 } },
+        anime: [
+          {
+            status: 'completed',
+            mapped_tvdb_seasons: [1],
+            watched_episodes_count: 12,
+            show: { title: 'Youjo Senki', ids: { simkl: 555226, tmdb: 69346 } },
+          },
+          {
+            status: 'watching',
+            mapped_tvdb_seasons: [2],
+            show: { title: 'Youjo Senki II', ids: { simkl: 1670325, tmdb: 69346 } },
+            seasons: [
+              {
+                number: 1,
+                episodes: [
+                  {
+                    number: 1,
+                    tvdb: { season: 2, episode: 1 },
+                    watched_at: '2026-09-01T00:00:00Z',
+                  },
+                  { number: 11 },
+                ],
+              },
+            ],
+          },
+          {
+            status: 'completed',
+            mapped_tvdb_seasons: [0],
+            show: { title: 'ONA', ids: { simkl: 3, tmdb: 69346 } },
+          },
+          {
+            status: 'completed',
+            anime_type: 'movie',
+            mapped_tvdb_seasons: [2],
+            show: { title: 'Unrelated film ID collision', ids: { simkl: 4, tmdb: 69346 } },
+          },
+        ],
       },
-      {
-        status: 'watching', mapped_tvdb_seasons: [2],
-        show: { title: 'Youjo Senki II', ids: { simkl: 1670325, tmdb: 69346 } },
-        seasons: [{ number: 1, episodes: [
-          { number: 1, tvdb: { season: 2, episode: 1 }, watched_at: '2026-09-01T00:00:00Z' },
-          { number: 11 },
-        ] }],
-      },
-      {
-        status: 'completed', mapped_tvdb_seasons: [0],
-        show: { title: 'ONA', ids: { simkl: 3, tmdb: 69346 } },
-      },
-      {
-        status: 'completed', anime_type: 'movie', mapped_tvdb_seasons: [2],
-        show: { title: 'Unrelated film ID collision', ids: { simkl: 4, tmdb: 69346 } },
-      },
-    ] }, '2026-09-27T00:00:00Z');
+      '2026-09-27T00:00:00Z',
+    );
     for (const ids of [{ tmdb: 69346 }, { tmdb: 69346, simkl: 555226 }]) {
       const state = findLibraryEpisodeState(snapshot, item('tanya', 'TV', ids));
       expect(simklEpisodeIsWatched(state, 1, 11, '2017-01-01')).toBe(true);
       expect(simklEpisodeIsWatched(state, 2, 11, '2026-09-01')).toBe(false);
       expect(simklEpisodeIsWatched(state, 2, 1, '2026-09-01')).toBe(true);
-      expect(state?.watchedEpisodes).toEqual([{ season: 2, number: 1, watchedAt: '2026-09-01T00:00:00Z' }]);
+      expect(state?.watchedEpisodes).toEqual([
+        { season: 2, number: 1, watchedAt: '2026-09-01T00:00:00Z' },
+      ]);
       expect(simklEpisodeIsWatched(state, 1, 13, '2999-01-01')).toBe(false);
     }
-    const cour = findLibraryEpisodeState(snapshot, item('cour', 'ANIME', { simkl: 1670325, tmdb: 69346 }));
+    const cour = findLibraryEpisodeState(
+      snapshot,
+      item('cour', 'ANIME', { simkl: 1670325, tmdb: 69346 }),
+    );
     expect(simklEpisodeIsWatched(cour, 1, 11, '2017-01-01')).toBe(false);
   });
 
   test('unmapped completed anime cannot imply a whole show, and overlapping incomplete cours block season inference', () => {
-    const snapshot = normalizeAllItems({ anime: [
-      { status: 'completed', show: { title: 'Unmapped', ids: { simkl: 1, tmdb: 42 } } },
-      { status: 'completed', mapped_tvdb_seasons: [2], show: { title: 'Part 1', ids: { simkl: 2, tmdb: 42 } } },
-      { status: 'watching', mapped_tvdb_seasons: [2], show: { title: 'Part 2', ids: { simkl: 3, tmdb: 42 } },
-        seasons: [{ number: 1, episodes: [{ number: 1, tvdb: { season: 2, episode: 13 } }] }] },
-    ] }, '2026-09-27T00:00:00Z');
+    const snapshot = normalizeAllItems(
+      {
+        anime: [
+          { status: 'completed', show: { title: 'Unmapped', ids: { simkl: 1, tmdb: 42 } } },
+          {
+            status: 'completed',
+            mapped_tvdb_seasons: [2],
+            show: { title: 'Part 1', ids: { simkl: 2, tmdb: 42 } },
+          },
+          {
+            status: 'watching',
+            mapped_tvdb_seasons: [2],
+            show: { title: 'Part 2', ids: { simkl: 3, tmdb: 42 } },
+            seasons: [{ number: 1, episodes: [{ number: 1, tvdb: { season: 2, episode: 13 } }] }],
+          },
+        ],
+      },
+      '2026-09-27T00:00:00Z',
+    );
     const state = findLibraryEpisodeState(snapshot, item('show', 'TV', { tmdb: 42 }));
     expect(simklEpisodeIsWatched(state, 1, 1, '2020-01-01')).toBe(false);
     expect(simklEpisodeIsWatched(state, 2, 14, '2020-01-01')).toBe(false);

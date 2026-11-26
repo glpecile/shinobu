@@ -22,8 +22,9 @@ export function ConnectSerializdButton() {
     // and these variables carry the password.
     networkMode: 'always',
     mutationFn: (values: CredentialsForm) =>
-      loginSerializd({ email: values.email.trim(), password: values.password })
-        .then((session) => connectSerializd(session)),
+      loginSerializd({ email: values.email.trim(), password: values.password }).then((session) =>
+        connectSerializd(session),
+      ),
   });
 
   const {
@@ -40,8 +41,8 @@ export function ConnectSerializdButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        Sign in with your Serializd email and password. Shinobu exchanges them for
-        an access token and keeps only the token — your password is never stored.
+        Sign in with your Serializd email and password. Shinobu exchanges them for an access token
+        and keeps only the token — your password is never stored.
       </Text>
       <Controller
         control={control}

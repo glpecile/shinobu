@@ -18,7 +18,7 @@ Plan: `docs/plans/0030-unreleased-agenda.md`.
 
 ## Why it can't happen today
 
-Both halves of Up Next are seeded from *watched* lists — Trakt
+Both halves of Up Next are seeded from _watched_ lists — Trakt
 `getWatchedShows()` → 20-show pool → `progress/watched`, and AniList
 `getCurrentAnime()` hardcoded to `status: CURRENT`. A show you have never watched
 an episode of cannot reach Calendar regardless of when it airs. There is no Trakt

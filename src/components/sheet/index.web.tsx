@@ -14,12 +14,7 @@ import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
 import { RailFadeColor } from '@/components/rail';
 import { hasCoarsePointer } from '@/lib/pointer';
-import {
-  DURATION,
-  EASE_OUT,
-  KEYFRAME_EASE_EXIT,
-  KEYFRAME_EASE_OUT,
-} from '@/lib/motion';
+import { DURATION, EASE_OUT, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 
 import { sheetScrollMetrics } from './metrics';
 import { SheetCloseContext } from './context';
@@ -55,9 +50,7 @@ function focusFirstFieldOnReveal(view: ViewInstance | null) {
 const EXIT_MS = DURATION.exit;
 
 /** Presets instead of custom `Keyframe`: Reanimated web pins custom-Keyframe rects, sinking the panel behind mobile keyboards (docs/solutions/reanimated-web-keyframe-pins-position.md). */
-const panelEntering = FadeInDown.duration(DURATION.enter).easing(
-  KEYFRAME_EASE_OUT,
-);
+const panelEntering = FadeInDown.duration(DURATION.enter).easing(KEYFRAME_EASE_OUT);
 const panelExiting = FadeOutDown.duration(EXIT_MS).easing(KEYFRAME_EASE_EXIT);
 
 const backdropEntering = new Keyframe({
@@ -74,16 +67,8 @@ const MAX_SHEET_FRACTION = 0.9;
 
 const PANEL_BORDER = 2;
 
-function SheetPanel({
-  children,
-  reduceMotion,
-}: {
-  children: ReactNode;
-  reduceMotion: boolean;
-}) {
-  const maxHeight = Math.round(
-    useWindowDimensions().height * MAX_SHEET_FRACTION,
-  );
+function SheetPanel({ children, reduceMotion }: { children: ReactNode; reduceMotion: boolean }) {
+  const maxHeight = Math.round(useWindowDimensions().height * MAX_SHEET_FRACTION);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   const { height } = sheetScrollMetrics(
     contentHeight == null ? null : contentHeight + PANEL_BORDER,
@@ -104,9 +89,7 @@ function SheetPanel({
         className="flex-1"
         contentContainerClassName="p-6 pb-12"
         keyboardShouldPersistTaps="handled"
-        onContentSizeChange={(_width, contentSize) =>
-          setContentHeight(Math.ceil(contentSize))
-        }
+        onContentSizeChange={(_width, contentSize) => setContentHeight(Math.ceil(contentSize))}
       >
         <RailFadeColor value="--color-surface">{children}</RailFadeColor>
       </ScrollView>
@@ -143,9 +126,7 @@ export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
             {/* `box-none` doesn't survive Reanimated `AnimatedView` on web, so the scrim close target lives inside this wrapper below the panel. */}
             <AnimatedView
               className="flex-1 justify-end"
-              entering={
-                reduceMotion ? FadeIn.duration(DURATION.enter) : panelEntering
-              }
+              entering={reduceMotion ? FadeIn.duration(DURATION.enter) : panelEntering}
               exiting={reduceMotion ? FadeOut.duration(EXIT_MS) : panelExiting}
             >
               <PresstableOpacity

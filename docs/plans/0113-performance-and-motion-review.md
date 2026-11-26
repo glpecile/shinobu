@@ -32,11 +32,11 @@ Core Web Vitals, or before/after improvement claims.
 
 ## Performance findings
 
-| ID | Priority | Location | Finding and evidence | Smallest next step |
-| --- | --- | --- | --- | --- |
-| PERF-1 | P2 | [media-progress.ts:50](../../src/state/queries/media-progress.ts#L50), [letterboxd-list-detail.tsx:43](../../src/features/lists/letterboxd-list-detail.tsx#L43) | Whole-list progress enables one Letterboxd watch query per loaded film, independently of visible rows. A deferred-transport probe using the actual hook and watch-query/provider path started 100 reads before any response returned. Missing identities can add a second query fan. | Bound Letterboxd public-read concurrency at the shared query/provider boundary, covering both identity and watch reads. |
-| PERF-2 | P2 | [new-list-form.tsx:176](../../src/features/lists/new-list-form.tsx#L176), [new-list-form.tsx:232](../../src/features/lists/new-list-form.tsx#L232), [List/index.web.tsx:61](../../src/components/List/index.web.tsx#L61) | The selected-items list sits inside an outer scrolling form, has no bounded height, and passes `scrollEnabled={false}`. The web wrapper removes flex sizing for this case. Serializd accepts up to 500 selected shows. This is a virtualization risk from the layout configuration; a populated-form mount count was not measured. | Confirm at 500 items, then give the inner list a bounded viewport and scrolling if it expands to its full content height. Reuse the bounded preview pattern in Hidden Items. |
-| PERF-3 | P2 | [poster-wall.tsx:275](../../src/features/feed/poster-wall.tsx#L275), [poster-wall.tsx:328](../../src/features/feed/poster-wall.tsx#L328), [poster-wall.tsx:336](../../src/features/feed/poster-wall.tsx#L336) | Reduced motion disables drift but still mounts the three repeated image strips used for seamless animation. A production Home at 1280 by 813 CSS pixels, with reduced motion verified, contained 234 wall image elements and zero running infinite animations. | Render a viewport-sized static strip with overscan when motion is reduced. Keep enough coverage for the tilt and negative offsets. |
+| ID     | Priority | Location                                                                                                                                                                                                                 | Finding and evidence                                                                                                                                                                                                                                                                                                               | Smallest next step                                                                                                                                                           |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PERF-1 | P2       | [media-progress.ts:50](../../src/state/queries/media-progress.ts#L50), [letterboxd-list-detail.tsx:43](../../src/features/lists/letterboxd-list-detail.tsx#L43)                                                          | Whole-list progress enables one Letterboxd watch query per loaded film, independently of visible rows. A deferred-transport probe using the actual hook and watch-query/provider path started 100 reads before any response returned. Missing identities can add a second query fan.                                               | Bound Letterboxd public-read concurrency at the shared query/provider boundary, covering both identity and watch reads.                                                      |
+| PERF-2 | P2       | [new-list-form.tsx:176](../../src/features/lists/new-list-form.tsx#L176), [new-list-form.tsx:232](../../src/features/lists/new-list-form.tsx#L232), [List/index.web.tsx:61](../../src/components/List/index.web.tsx#L61) | The selected-items list sits inside an outer scrolling form, has no bounded height, and passes `scrollEnabled={false}`. The web wrapper removes flex sizing for this case. Serializd accepts up to 500 selected shows. This is a virtualization risk from the layout configuration; a populated-form mount count was not measured. | Confirm at 500 items, then give the inner list a bounded viewport and scrolling if it expands to its full content height. Reuse the bounded preview pattern in Hidden Items. |
+| PERF-3 | P2       | [poster-wall.tsx:275](../../src/features/feed/poster-wall.tsx#L275), [poster-wall.tsx:328](../../src/features/feed/poster-wall.tsx#L328), [poster-wall.tsx:336](../../src/features/feed/poster-wall.tsx#L336)            | Reduced motion disables drift but still mounts the three repeated image strips used for seamless animation. A production Home at 1280 by 813 CSS pixels, with reduced motion verified, contained 234 wall image elements and zero running infinite animations.                                                                     | Render a viewport-sized static strip with overscan when motion is reduced. Keep enough coverage for the tilt and negative offsets.                                           |
 
 All three are P2 follow-ups; none is a measured production outage.
 
@@ -55,7 +55,7 @@ never resolved. Metadata resolution was bypassed to isolate watch reads. The
 real hook, watch query, and provider implementation produced:
 
 ```json
-{"itemCount":100,"started":100,"peak":100,"pendingQueries":100}
+{ "itemCount": 100, "started": 100, "peak": 100, "pendingQueries": 100 }
 ```
 
 An independent replay returned the same counts. These are fetch invocations
@@ -100,9 +100,9 @@ source-string test.
 The production browser measurements were:
 
 | Preference | CSS viewport | Wall images | Distinct wall URLs | Running infinite animations |
-| --- | --- | ---: | ---: | ---: |
-| Normal | 756 by 469 | 180 | 60 | 10 |
-| Reduced | 1280 by 813 | 234 | 60 | 0 |
+| ---------- | ------------ | ----------: | -----------------: | --------------------------: |
+| Normal     | 756 by 469   |         180 |                 60 |                          10 |
+| Reduced    | 1280 by 813  |         234 |                 60 |                           0 |
 
 These are different viewport sizes, not an A/B performance comparison. The
 source formula explains each image count:
@@ -123,12 +123,12 @@ startup JavaScript files. Local gzip figures use Python `gzip.compress` with
 its default level and a fixed timestamp. They are comparable artifact sizes,
 not measurements of Cloudflare's wire encoding.
 
-| Artifact | Raw bytes | Gzip bytes |
-| --- | ---: | ---: |
-| `__common-b63b6cd236d9ab13afff37f005d0c2aa.js` | 3,878,010 | 921,940 |
-| `entry-9d9878e02aa54d3f5e22bc7f6641f6d2.js` | 1,274,241 | 326,381 |
-| All six startup JS files | 5,205,729 | 1,266,420 |
-| Five preloaded WOFF2 fonts | 349,432 | Not a useful recompression target |
+| Artifact                                       | Raw bytes |                        Gzip bytes |
+| ---------------------------------------------- | --------: | --------------------------------: |
+| `__common-b63b6cd236d9ab13afff37f005d0c2aa.js` | 3,878,010 |                           921,940 |
+| `entry-9d9878e02aa54d3f5e22bc7f6641f6d2.js`    | 1,274,241 |                           326,381 |
+| All six startup JS files                       | 5,205,729 |                         1,266,420 |
+| Five preloaded WOFF2 fonts                     |   349,432 | Not a useful recompression target |
 
 Indexed source-map section spans attribute approximately 734 KB of generated
 common-chunk characters to Effect, 671 KB to Reanimated, and 542 KB to Zod.
@@ -150,11 +150,11 @@ The review follows [Emil Kowalski's purpose, frequency, and speed framework](htt
 and the repo's shared motion tokens. The proposed corrections are separate
 from optional additions.
 
-| Before | After | Why |
-| --- | --- | --- |
-| **M1, P2.** [Home Back to top](../../src/app/(tabs)/index.tsx#L232) hard-codes `animated: true`; [Diary calendar selection](../../src/features/diary/diary-list.tsx#L790) omits `animated`. Installed Legend List defaults `scrollToIndex` to `animated = true` on native and web. | Read reduced motion in each owning component and pass `animated: !reduceMotion` to these intentional jumps. Match [Search's existing implementation](../../src/app/(tabs)/search.tsx#L565). | Source-confirmed viewport movement disregards the preference. This is independent of Reanimated's animation handling. Verify with populated Home and Diary, keyboard calendar selection, and reduced motion enabled. |
-| **M2, P2.** [Letterboxd list cells](../../src/features/lists/letterboxd-list-detail.tsx#L75) and [Serializd list cells](../../src/features/lists/serializd-list-detail.tsx#L70) receive `LinearTransition` on web. | Gate this membership layout transition off web while keeping the reduced-motion guard on native. | A documented web layout hazard is reintroduced. Geometry changes scale text-bearing subtrees; [the existing solution](../solutions/reanimated-web-layout-transition-scales-text.md) explains why. Reproduce with wrapped title/subtitle or late metadata changing row height. A pure reorder of unchanged rectangles only translates; distortion was not observed during this audit. |
-| **M3, P3.** [ViewAllLink](../../src/components/view-all-link.tsx#L24) accepts every pointer enter and nudges its chevron 3px over 160ms with built-in `ease-out`. | Gate hover motion to a hover-capable fine pointer and exclude touch events. Reuse `EASE_OUT`, `cubic-bezier(0.23, 1, 0.32, 1)`, for any retained 160ms nudge. | Source-confirmed missing hover guard can animate a touch tap as hover. [Tooltip](../../src/components/tooltip/index.web.tsx#L42) already rejects touch pointer entry. Reduced motion is correctly handled here. Verify mouse, touch, and keyboard focus without introducing movement on focus. |
+| Before                                                                                                                                                                                                                                                                               | After                                                                                                                                                                                         | Why                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **M1, P2.** [Home Back to top](<../../src/app/(tabs)/index.tsx#L232>) hard-codes `animated: true`; [Diary calendar selection](../../src/features/diary/diary-list.tsx#L790) omits `animated`. Installed Legend List defaults `scrollToIndex` to `animated = true` on native and web. | Read reduced motion in each owning component and pass `animated: !reduceMotion` to these intentional jumps. Match [Search's existing implementation](<../../src/app/(tabs)/search.tsx#L565>). | Source-confirmed viewport movement disregards the preference. This is independent of Reanimated's animation handling. Verify with populated Home and Diary, keyboard calendar selection, and reduced motion enabled.                                                                                                                                                                 |
+| **M2, P2.** [Letterboxd list cells](../../src/features/lists/letterboxd-list-detail.tsx#L75) and [Serializd list cells](../../src/features/lists/serializd-list-detail.tsx#L70) receive `LinearTransition` on web.                                                                   | Gate this membership layout transition off web while keeping the reduced-motion guard on native.                                                                                              | A documented web layout hazard is reintroduced. Geometry changes scale text-bearing subtrees; [the existing solution](../solutions/reanimated-web-layout-transition-scales-text.md) explains why. Reproduce with wrapped title/subtitle or late metadata changing row height. A pure reorder of unchanged rectangles only translates; distortion was not observed during this audit. |
+| **M3, P3.** [ViewAllLink](../../src/components/view-all-link.tsx#L24) accepts every pointer enter and nudges its chevron 3px over 160ms with built-in `ease-out`.                                                                                                                    | Gate hover motion to a hover-capable fine pointer and exclude touch events. Reuse `EASE_OUT`, `cubic-bezier(0.23, 1, 0.32, 1)`, for any retained 160ms nudge.                                 | Source-confirmed missing hover guard can animate a touch tap as hover. [Tooltip](../../src/components/tooltip/index.web.tsx#L42) already rejects touch pointer entry. Reduced motion is correctly handled here. Verify mouse, touch, and keyboard focus without introducing movement on focus.                                                                                       |
 
 Accessibility corrections take precedence. M2 is a source-confirmed use of a
 known hazardous path, with its visible trigger still requiring reproduction.
@@ -169,10 +169,10 @@ claim that unexercised gestures or native timing were approved.
 
 ## Animation opportunities
 
-| # | Location | Today | Purpose | Frequency | Suggested motion |
-| --- | --- | --- | --- | --- | --- |
-| 1 | [PreviewPicker.Preview](../../src/features/settings/preview-picker.tsx#L80) | Selection swaps a border instantly; press feedback already exists. | State indication | Occasional Settings use | One noninteractive selection-border overlay, opacity `0` to `1`, `DURATION.color = 150ms`, `EASE_OUT = cubic-bezier(0.23, 1, 0.32, 1)`. Retarget the transition when selection reverses. Keep opacity-only feedback under reduced motion and make keyboard selection immediate. Apply once for Appearance and App icon. |
-| 2 | [SettingsRail section toggle](../../src/features/settings/settings-rail.tsx#L96), [row visibility](../../src/features/settings/settings-rail.tsx#L310) | Rows mount/unmount immediately under an animated chevron. | Preventing a jarring change | Occasional disclosure | Lower-confidence option: reuse one group-level `SectionEnter` on reopen, opacity `0` to `1`, translateY `6` to `0`, `180ms`, `EASE_OUT = cubic-bezier(0.23, 1, 0.32, 1)`. Reduced motion keeps opacity only. Keyboard toggles remain immediate. Keep reflow immediate and avoid per-row entrances. |
+| #   | Location                                                                                                                                               | Today                                                              | Purpose                     | Frequency               | Suggested motion                                                                                                                                                                                                                                                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | --------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | [PreviewPicker.Preview](../../src/features/settings/preview-picker.tsx#L80)                                                                            | Selection swaps a border instantly; press feedback already exists. | State indication            | Occasional Settings use | One noninteractive selection-border overlay, opacity `0` to `1`, `DURATION.color = 150ms`, `EASE_OUT = cubic-bezier(0.23, 1, 0.32, 1)`. Retarget the transition when selection reverses. Keep opacity-only feedback under reduced motion and make keyboard selection immediate. Apply once for Appearance and App icon. |
+| 2   | [SettingsRail section toggle](../../src/features/settings/settings-rail.tsx#L96), [row visibility](../../src/features/settings/settings-rail.tsx#L310) | Rows mount/unmount immediately under an animated chevron.          | Preventing a jarring change | Occasional disclosure   | Lower-confidence option: reuse one group-level `SectionEnter` on reopen, opacity `0` to `1`, translateY `6` to `0`, `180ms`, `EASE_OUT = cubic-bezier(0.23, 1, 0.32, 1)`. Reduced motion keeps opacity only. Keyboard toggles remain immediate. Keep reflow immediate and avoid per-row entrances.                      |
 
 Both recipes fit the speed budget and leave functional text in place. The
 second survives only if a group wrapper fits the current composition without
@@ -220,8 +220,7 @@ list and library sizes before adding indexes. Preserve the existing identity,
 episode-numbering, and ambiguous-title tests. These operation counts do not
 establish browser or native render cost.
 
-Nested web blur and credit-refocus filtering were already recorded in plan
-0081. They still need an attributable browser recording, rather than another
+Nested web blur and credit-refocus filtering were already recorded in plan 0081. They still need an attributable browser recording, rather than another
 unmeasured recommendation to remove them.
 
 ## Validation and next order

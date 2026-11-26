@@ -20,10 +20,10 @@ These changes hot reload and require no native rebuild.
 
 ## Animation opportunities
 
-| Location | Today | Purpose | Frequency | Motion |
-| --- | --- | --- | --- | --- |
-| Shared Button loading state | Spinner fades over a disappearing label | State indication | Occasional | Content fades and moves up 3px; spinner fades in from scale 0.9 and 3px below, over 180ms with cubic-bezier(0.23, 1, 0.32, 1). Reduced motion keeps opacity only. The button keeps its width and blocks repeat presses. |
-| Filtered Diary empty state | Plain text appears abruptly | Preventing a jarring change | Rare | Reuse SectionEnter's 180ms opacity and 6px rise with the shared ease-out. Reduced motion keeps opacity only. TV and film icons reuse the empty-state tile. |
+| Location                    | Today                                   | Purpose                     | Frequency  | Motion                                                                                                                                                                                                                  |
+| --------------------------- | --------------------------------------- | --------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared Button loading state | Spinner fades over a disappearing label | State indication            | Occasional | Content fades and moves up 3px; spinner fades in from scale 0.9 and 3px below, over 180ms with cubic-bezier(0.23, 1, 0.32, 1). Reduced motion keeps opacity only. The button keeps its width and blocks repeat presses. |
+| Filtered Diary empty state  | Plain text appears abruptly             | Preventing a jarring change | Rare       | Reuse SectionEnter's 180ms opacity and 6px rise with the shared ease-out. Reduced motion keeps opacity only. TV and film icons reuse the empty-state tile.                                                              |
 
 Both fit the under-300ms budget and leave readable data stationary. The shared
 button transition has the highest value because it explains the wait wherever

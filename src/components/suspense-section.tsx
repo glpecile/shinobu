@@ -1,11 +1,4 @@
-import {
-  Component,
-  Suspense,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { Component, Suspense, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { View } from 'react-native';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -40,7 +33,7 @@ class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }>
   }
 
   override render() {
-    return this.state.failed ? this.props.errorFallback ?? null : this.props.children;
+    return this.state.failed ? (this.props.errorFallback ?? null) : this.props.children;
   }
 }
 
@@ -96,7 +89,10 @@ function Reveal({
   const [from] = useState(() => {
     const { since, width } = outgoing.current;
     if (since == null) return null;
-    const shown = Math.min(Math.max((performance.now() - since - SKELETON_HOLD) / DURATION.swap, 0), 1);
+    const shown = Math.min(
+      Math.max((performance.now() - since - SKELETON_HOLD) / DURATION.swap, 0),
+      1,
+    );
     const opacity = 1 - (1 - shown) ** 5;
     return opacity > 0 ? { opacity, width } : null;
   });
@@ -163,14 +159,18 @@ export function SuspenseSection({
             >
               {fallback}
             </SkeletonHold>
-          ) : fallback
+          ) : (
+            fallback
+          )
         }
       >
         {animateFallback ? (
           <Reveal outgoing={outgoing} skeleton={fallback}>
             {children}
           </Reveal>
-        ) : children}
+        ) : (
+          children
+        )}
       </Suspense>
     </SectionErrorBoundary>
   );

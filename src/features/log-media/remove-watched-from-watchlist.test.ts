@@ -91,8 +91,7 @@ function film(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem
 
 function client(gathered?: WatchlistInputs): QueryClient {
   const queryClient = new QueryClient();
-  queryClient.invalidateQueries = (() =>
-    Promise.resolve()) as QueryClient['invalidateQueries'];
+  queryClient.invalidateQueries = (() => Promise.resolve()) as QueryClient['invalidateQueries'];
   if (gathered != null) {
     queryClient.setQueryData(watchlistQueryKeys.inputs(), gathered);
   }
@@ -171,12 +170,7 @@ describe('removeWatchedFromWatchlist (plan 0033 U7)', () => {
       incomplete: [],
     });
 
-    await removeWatchedFromWatchlist(
-      queryClient,
-      film(),
-      [...CONNECTED, 'simkl'],
-      fakeDeps(),
-    );
+    await removeWatchedFromWatchlist(queryClient, film(), [...CONNECTED, 'simkl'], fakeDeps());
     expect(adapterCalls).toEqual(['trakt']);
   });
 

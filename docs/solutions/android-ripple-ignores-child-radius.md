@@ -22,7 +22,7 @@ if (hasBorderRadii && selectable is RippleDrawable) {
 ```
 
 `hasBorderRadii` reads `borderRadius` and the four per-corner props, which RN
-fills in from the button's *style*. Every rounded surface in this app draws its
+fills in from the button's _style_. Every rounded surface in this app draws its
 shape on a `View` **inside** the pressable, so no button ever had a radius and
 every mask stayed rectangular.
 
@@ -44,10 +44,10 @@ the spread comes after it.
 
 Press feedback is then pressto's own opacity dim (measured ~21% darker) and
 scale, which are the shape of the content by construction and identical on iOS
-and web. The one ripple the app *does* ask for is the tab bar's
+and web. The one ripple the app _does_ ask for is the tab bar's
 (`app/(tabs)/_layout.tsx`), which is NativeTabs, not pressto.
 
-**Generalise.** Any Android pressable whose visible shape is drawn by a *child*
+**Generalise.** Any Android pressable whose visible shape is drawn by a _child_
 shows this. Repeating the radius on the pressable also fixes one instance —
 but if the ripple isn't part of the design, deleting it beats reshaping it.
 

@@ -35,20 +35,20 @@ Pinning the clock makes it deterministic.
 `src/state/queries/up-next.test.ts` (~line 368):
 
 ```ts
-  test('the calendar key carries the local start date and the 7-day window', async () => {
-    const { client, calendarKeys } = fakeClient({});
+test('the calendar key carries the local start date and the 7-day window', async () => {
+  const { client, calendarKeys } = fakeClient({});
 
-    await fetchUpNextInputs(client, ['trakt']);
+  await fetchUpNextInputs(client, ['trakt']);
 
-    // Keyed by the local day so the cached week rolls over at local midnight
-    // rather than serving yesterday's window to an app left open overnight.
-    const now = new Date();
-    const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    for (const key of calendarKeys) {
-      expect(key[3]).toBe(expected);
-      expect(key[4]).toBe(7);
-    }
-  });
+  // Keyed by the local day so the cached week rolls over at local midnight
+  // rather than serving yesterday's window to an app left open overnight.
+  const now = new Date();
+  const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  for (const key of calendarKeys) {
+    expect(key[3]).toBe(expected);
+    expect(key[4]).toBe(7);
+  }
+});
 ```
 
 The code under test calls `new Date()` (`src/state/queries/up-next.ts:~174`,
@@ -59,7 +59,7 @@ The code under test calls `new Date()` (`src/state/queries/up-next.ts:~174`,
 ## Commands you will need
 
 | Purpose  | Command                                      | Expected on success |
-|----------|----------------------------------------------|---------------------|
+| -------- | -------------------------------------------- | ------------------- |
 | Install  | `bun install --frozen-lockfile`              | exit 0              |
 | One file | `bun test src/state/queries/up-next.test.ts` | all pass            |
 | Lint     | `bun lint`                                   | exit 0              |
@@ -70,7 +70,7 @@ The code under test calls `new Date()` (`src/state/queries/up-next.ts:~174`,
 
 **Out of scope**: the `localDate(days)` helpers in
 `src/features/watchlist-media/invalidate.test.ts` and `use-watchlist-media.test.ts`.
-They build fixtures *relative* to now rather than comparing against a value the
+They build fixtures _relative_ to now rather than comparing against a value the
 code computed, so they don't race the same way. Leave them.
 
 ## Git workflow

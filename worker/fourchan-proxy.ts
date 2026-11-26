@@ -9,10 +9,13 @@ export function isFourchanProxyRequest(url: URL): boolean {
 }
 
 function jsonError(status: number, error: string): Response {
-  return Response.json({ error }, {
-    status,
-    headers: { 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' },
-  });
+  return Response.json(
+    { error },
+    {
+      status,
+      headers: { 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' },
+    },
+  );
 }
 
 export async function handleFourchanProxy(
@@ -36,7 +39,10 @@ export async function handleFourchanProxy(
   } catch {
     return jsonError(504, 'upstream unavailable');
   }
-  if (!upstream.ok || upstream.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') {
+  if (
+    !upstream.ok ||
+    upstream.headers.get('content-type')?.split(';')[0].trim() !== 'application/json'
+  ) {
     return jsonError(502, 'upstream error');
   }
   try {

@@ -10,8 +10,11 @@ mock.module('expo-router', () => ({ useIsFocused: () => focused }));
 mock.module('@/lib/navigation', () => ({ usePushRoute: () => () => accepted }));
 mock.module('@/components/button', () => ({
   Button: Object.assign(
-    ({ label, loading, onPress }: { label: string; loading: boolean; onPress: () => void }) =>
-      <button aria-busy={loading} disabled={loading} onClick={onPress}>{label}</button>,
+    ({ label, loading, onPress }: { label: string; loading: boolean; onPress: () => void }) => (
+      <button aria-busy={loading} disabled={loading} onClick={onPress}>
+        {label}
+      </button>
+    ),
     { Icon: () => null },
   ),
 }));

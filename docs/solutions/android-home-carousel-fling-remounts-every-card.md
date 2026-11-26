@@ -32,7 +32,7 @@ Two things that looked like the cause and measured as nothing:
 - **Legend List remounting cards** (`recycleItems` off, 250px `drawDistance`).
   Recycling plus `drawDistance = 4 cards` changed neither the UI-thread frame
   counts (`Slow UI thread` 209 → 210 of ~240 frames) nor the memory curve, and
-  under the `disk` policy it *doubled* disk decodes (35 → 71) because a
+  under the `disk` policy it _doubled_ disk decodes (35 → 71) because a
   recycled cell swaps sources as often as an unmounted one remounts. Reverted.
 - **A leak.** `Views:` in `dumpsys meminfo` sat at 950 before and 949 after the
   script; native heap moved −6 to +30 MB run to run with no trend.

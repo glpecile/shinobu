@@ -13,7 +13,17 @@ import { toast } from '@/lib/toast';
 import { useDeleteHardcoverList } from '@/state/queries/list-membership';
 import { ToolbarIcon } from './list-header';
 
-function DeleteConfirm({ id, title, url, onCancel }: { id: string; title: string; url: string; onCancel: () => void }) {
+function DeleteConfirm({
+  id,
+  title,
+  url,
+  onCancel,
+}: {
+  id: string;
+  title: string;
+  url: string;
+  onCancel: () => void;
+}) {
   const router = useRouter();
   const mutation = useDeleteHardcoverList(id);
   function confirm() {
@@ -30,13 +40,34 @@ function DeleteConfirm({ id, title, url, onCancel }: { id: string; title: string
   }
   return (
     <WriteSheet.Step>
-      <WriteSheet.Header><WriteSheet.Title>Delete list?</WriteSheet.Title></WriteSheet.Header>
+      <WriteSheet.Header>
+        <WriteSheet.Title>Delete list?</WriteSheet.Title>
+      </WriteSheet.Header>
       <WriteSheet.Description>{`This deletes "${title}" on Hardcover for good. Its books stay in your library.`}</WriteSheet.Description>
       {mutation.isError && <WriteSheet.Error>{mutation.error.message}</WriteSheet.Error>}
       <WriteSheet.Actions>
-        <Button icon={<Button.Icon name="trash-outline" />} label={mutation.isError ? 'Try again' : 'Delete list'} loading={mutation.isPending} loadingLabel="Deleting…" onPress={confirm} />
-        {mutation.isError && <Button icon={<Button.Icon name="open-outline" />} label="Open on Hardcover" onPress={() => void openExternalUrl(url)} variant="quiet" />}
-        <Button disabled={mutation.isPending} icon={<Button.Icon name="close" />} label="Cancel" onPress={onCancel} variant="quiet" />
+        <Button
+          icon={<Button.Icon name="trash-outline" />}
+          label={mutation.isError ? 'Try again' : 'Delete list'}
+          loading={mutation.isPending}
+          loadingLabel="Deleting…"
+          onPress={confirm}
+        />
+        {mutation.isError && (
+          <Button
+            icon={<Button.Icon name="open-outline" />}
+            label="Open on Hardcover"
+            onPress={() => void openExternalUrl(url)}
+            variant="quiet"
+          />
+        )}
+        <Button
+          disabled={mutation.isPending}
+          icon={<Button.Icon name="close" />}
+          label="Cancel"
+          onPress={onCancel}
+          variant="quiet"
+        />
       </WriteSheet.Actions>
     </WriteSheet.Step>
   );
@@ -47,9 +78,28 @@ export function DeleteList({ id, title, url }: { id: string; title: string; url:
   const compact = useWindowDimensions().width < 640;
   return (
     <>
-      {compact
-        ? <ToolbarIcon><Tooltip label="Delete list"><Button icon={<Button.Icon name="trash-outline" />} iconOnly label="Delete list" onPress={() => setOpen(true)} size="sm" variant="quiet" /></Tooltip></ToolbarIcon>
-        : <Button icon={<Button.Icon name="trash-outline" />} label="Delete" onPress={() => setOpen(true)} size="sm" variant="quiet" />}
+      {compact ? (
+        <ToolbarIcon>
+          <Tooltip label="Delete list">
+            <Button
+              icon={<Button.Icon name="trash-outline" />}
+              iconOnly
+              label="Delete list"
+              onPress={() => setOpen(true)}
+              size="sm"
+              variant="quiet"
+            />
+          </Tooltip>
+        </ToolbarIcon>
+      ) : (
+        <Button
+          icon={<Button.Icon name="trash-outline" />}
+          label="Delete"
+          onPress={() => setOpen(true)}
+          size="sm"
+          variant="quiet"
+        />
+      )}
       <Sheet onClose={() => setOpen(false)} open={open}>
         {open && <DeleteConfirm id={id} onCancel={() => setOpen(false)} title={title} url={url} />}
       </Sheet>

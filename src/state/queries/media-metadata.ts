@@ -13,7 +13,8 @@ export function useMediaMetadata(items: readonly NormalizedMediaItem[], resolveL
   const needsIdentity = new Map<string, boolean>();
   for (const item of items) {
     const slug = item.externalIds.letterboxd;
-    if (slug != null) needsIdentity.set(slug, needsIdentity.get(slug) === true || item.externalIds.tmdb == null);
+    if (slug != null)
+      needsIdentity.set(slug, needsIdentity.get(slug) === true || item.externalIds.tmdb == null);
   }
   const slugs = [...needsIdentity.keys()];
   const films = useQueries({
@@ -43,8 +44,12 @@ export function useMediaMetadata(items: readonly NormalizedMediaItem[], resolveL
   // Structurally shared, so an item keeps its object until its own metadata
   // changes and a list redraws only that cell.
   const resolved = useQueries({
-    queries: identified.map((item) => ({ ...mediaDetailsQuery(queryClient, item), enabled: false })),
-    combine: (results) => identified.map((item, index) => applyPrimaryMetadata(item, results[index].data?.catalogue)),
+    queries: identified.map((item) => ({
+      ...mediaDetailsQuery(queryClient, item),
+      enabled: false,
+    })),
+    combine: (results) =>
+      identified.map((item, index) => applyPrimaryMetadata(item, results[index].data?.catalogue)),
   });
   return {
     items: resolved,

@@ -1,4 +1,9 @@
-import { isCancelledError, useQuery, type FetchQueryOptions, type QueryClient } from '@tanstack/react-query';
+import {
+  isCancelledError,
+  useQuery,
+  type FetchQueryOptions,
+  type QueryClient,
+} from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 import { useSyncExternalStore } from 'react';
 
@@ -12,7 +17,11 @@ import {
   type AniZipIds,
   type AniZipLookup,
 } from '@/lib/providers/mapping/anizip';
-import { getSeriesNeighbours, searchAnimeFilms, searchMedia as searchAniList } from '@/lib/providers/anilist/reads';
+import {
+  getSeriesNeighbours,
+  searchAnimeFilms,
+  searchMedia as searchAniList,
+} from '@/lib/providers/anilist/reads';
 import {
   pickAniListMatch,
   pickAnimeFilmMatch,
@@ -32,11 +41,7 @@ import {
   searchMovie,
   searchTitles,
 } from '@/lib/providers/tmdb/reads';
-import {
-  getShowSeasonLayout,
-  lookupByExternalId,
-  searchMedia,
-} from '@/lib/providers/trakt/reads';
+import { getShowSeasonLayout, lookupByExternalId, searchMedia } from '@/lib/providers/trakt/reads';
 import { Provider } from '@/lib/providers/types';
 import { getClientIdForProvider } from '@/state/session/provider-config';
 import { hasBuilderTmdbToken, tmdbToken } from '@/state/session/tmdb-token';
@@ -121,23 +126,14 @@ function useMovieSearchVia(): MovieSearchVia {
 
 export const mappingQueryKeys = {
   anizip: (lookup: AniZipLookup) => ['mapping', 'anizip', lookup] as const,
-  anizipEpisodes: (anilistId: number) =>
-    ['mapping', 'anizip-episodes', anilistId] as const,
-  seasonLayout: (
-    tmdbId: number | null,
-    traktId: number | null,
-    via: SeasonLayoutVia,
-  ) => ['mapping', 'season-layout', tmdbId, traktId, via] as const,
-  traktLookup: (
-    source: string,
-    id: number | string,
-    kind: string,
-    via: IdentityLookupVia,
-  ) => ['mapping', 'trakt-lookup', source, id, kind, via] as const,
+  anizipEpisodes: (anilistId: number) => ['mapping', 'anizip-episodes', anilistId] as const,
+  seasonLayout: (tmdbId: number | null, traktId: number | null, via: SeasonLayoutVia) =>
+    ['mapping', 'season-layout', tmdbId, traktId, via] as const,
+  traktLookup: (source: string, id: number | string, kind: string, via: IdentityLookupVia) =>
+    ['mapping', 'trakt-lookup', source, id, kind, via] as const,
   traktSearch: (title: string, year: number | undefined, via: MovieSearchVia) =>
     ['mapping', 'trakt-search', title, year ?? 'any', via] as const,
-  tmdbFind: (tvdbId: number, via: TmdbVia) =>
-    ['mapping', 'tmdb-find', tvdbId, via] as const,
+  tmdbFind: (tvdbId: number, via: TmdbVia) => ['mapping', 'tmdb-find', tvdbId, via] as const,
   tmdbMovieSearch: (title: string, year: number | undefined, via: TmdbVia) =>
     ['mapping', 'tmdb-movie-search', title, year ?? 'any', via] as const,
   tmdbAnimeSearch: (anilistId: number, via: TmdbVia) =>
@@ -166,16 +162,20 @@ const UNMAPPED_STALE_MS = 24 * 60 * 60_000;
  * has not mapped yet, so it goes stale; every other answer never churns.
  */
 export function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) {
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.anizip(lookup),
-    queryFn: () => fetchAniZipIds(httpFetch, lookup),
-    ...FOREVER,
-    staleTime: ({ state }) =>
-      'anilistId' in lookup && state.data?.tvdb == null && state.data?.tmdb == null
-        ? UNMAPPED_STALE_MS
-        : Number.POSITIVE_INFINITY,
-    retry: false,
-  }).catch(() => queryClient.getQueryData<AniZipIds | null>(mappingQueryKeys.anizip(lookup)) ?? null);
+  return queryClient
+    .fetchQuery({
+      queryKey: mappingQueryKeys.anizip(lookup),
+      queryFn: () => fetchAniZipIds(httpFetch, lookup),
+      ...FOREVER,
+      staleTime: ({ state }) =>
+        'anilistId' in lookup && state.data?.tvdb == null && state.data?.tmdb == null
+          ? UNMAPPED_STALE_MS
+          : Number.POSITIVE_INFINITY,
+      retry: false,
+    })
+    .catch(
+      () => queryClient.getQueryData<AniZipIds | null>(mappingQueryKeys.anizip(lookup)) ?? null,
+    );
 }
 
 /** Whether a TMDB-keyed title is animated, the gate on every AniList lookup for one. */
@@ -227,7 +227,10 @@ export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
     queryFn: () => fetchAniZipIds(httpFetch, lookup),
     ...FOREVER,
     enabled,
-    select: (ids) => (ids?.anilist != null && aniZipTmdbKind(ids) === (isMovie ? 'movie' : 'tv') ? ids.anilist : null),
+    select: (ids) =>
+      ids?.anilist != null && aniZipTmdbKind(ids) === (isMovie ? 'movie' : 'tv')
+        ? ids.anilist
+        : null,
   });
   // `null` only once ani.zip has answered without a usable id.
   const byTitle = useQuery({
@@ -377,10 +380,9 @@ function seasonLayoutQueryOptions(tmdbId: number | undefined, traktId: number | 
         return null;
       };
       if (tmdbId != null) {
-        const layout = await Effect.runPromise(
-          getTvSeasonLayout(tmdbDeps(), { tmdbId }),
-          { signal },
-        ).catch(miss);
+        const layout = await Effect.runPromise(getTvSeasonLayout(tmdbDeps(), { tmdbId }), {
+          signal,
+        }).catch(miss);
         // An empty array means TMDB answered but knows no seasons — fall
         // through to Trakt rather than treating "no data" as an answer.
         if (layout != null && layout.length > 0) return layout;
@@ -388,10 +390,9 @@ function seasonLayoutQueryOptions(tmdbId: number | undefined, traktId: number | 
       // Trakt season layout needs a BYO client id. TMDB can supply the layout with a
       // configured read token.
       if (traktId != null && (via === 'tmdb+trakt' || via === Provider.Trakt)) {
-        const layout = await Effect.runPromise(
-          getShowSeasonLayout(traktDeps(), { traktId }),
-          { signal },
-        ).catch(miss);
+        const layout = await Effect.runPromise(getShowSeasonLayout(traktDeps(), { traktId }), {
+          signal,
+        }).catch(miss);
         if (layout != null && layout.length > 0) return layout;
       }
       if (transientFailure != null) throw transientFailure;
@@ -409,7 +410,9 @@ export function cachedSeasonLayout(
   const tmdbId = ids.tmdb;
   const traktId = ids.trakt;
   if (tmdbId == null && traktId == null) return Promise.resolve(null);
-  return queryClient.fetchQuery(seasonLayoutQueryOptions(tmdbId, traktId)).catch(nullUnlessCancelled);
+  return queryClient
+    .fetchQuery(seasonLayoutQueryOptions(tmdbId, traktId))
+    .catch(nullUnlessCancelled);
 }
 
 /**
@@ -418,7 +421,10 @@ export function cachedSeasonLayout(
  * screen and sheet open on the season/episode TMDB actually has. Shares the
  * cache entry with the fan-out's `cachedSeasonLayout`.
  */
-export function useSeasonLayoutQuery(ids: { tmdb?: number | undefined; trakt?: number | undefined }) {
+export function useSeasonLayoutQuery(ids: {
+  tmdb?: number | undefined;
+  trakt?: number | undefined;
+}) {
   return useQuery({
     ...seasonLayoutQueryOptions(ids.tmdb, ids.trakt),
     enabled: ids.tmdb != null || ids.trakt != null,
@@ -437,7 +443,8 @@ export function useAniListEpisodeWatchedQuery(params: {
   const layout = useSeasonLayoutQuery(mediaId == null ? {} : item.externalIds);
   // Only an ANIME item carries entry-relative progress. TV's count covers
   // the whole show and cannot stand in for a single AniList cour.
-  const progress = entry.data?.entry?.progress ?? (item.type === 'ANIME' ? item.currentProgress : 0);
+  const progress =
+    entry.data?.entry?.progress ?? (item.type === 'ANIME' ? item.currentProgress : 0);
   return {
     ...entry,
     isLoading: entry.isLoading || episodes.isLoading || layout.isLoading,
@@ -471,8 +478,9 @@ function identityLookupQuery(
     return {
       queryKey: mappingQueryKeys.traktLookup(params.source, params.id, params.kind, via),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        Effect.runPromise(lookupByExternalId(traktDeps(), params), { signal })
-          .catch((error) => mappingMiss(error, signal)),
+        Effect.runPromise(lookupByExternalId(traktDeps(), params), { signal }).catch((error) =>
+          mappingMiss(error, signal),
+        ),
       ...FOREVER,
     };
   }
@@ -492,7 +500,9 @@ export function cachedTraktLookup(
     kind: 'movie' | 'show';
   },
 ) {
-  return queryClient.fetchQuery(identityLookupQuery(identityLookupVia(), params)).catch(nullUnlessCancelled);
+  return queryClient
+    .fetchQuery(identityLookupQuery(identityLookupVia(), params))
+    .catch(nullUnlessCancelled);
 }
 
 /**
@@ -507,11 +517,7 @@ export function cachedTraktLookup(
  * (docs/solutions/trakt-text-search-wrong-movie-match.md). A miss, or no
  * usable source at all, resolves to `null`.
  */
-function movieSearchQuery(
-  title: string,
-  year: number | undefined,
-  via: MovieSearchVia,
-) {
+function movieSearchQuery(title: string, year: number | undefined, via: MovieSearchVia) {
   return {
     queryKey: mappingQueryKeys.traktSearch(title, year, via),
     queryFn: ({ signal }: { signal: AbortSignal }): Promise<NormalizedMediaItem | null> => {
@@ -540,13 +546,16 @@ export function cachedTmdbTvIdByTvdb(
   queryClient: QueryClient,
   tvdbId: number,
 ): Promise<number | null> {
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.tmdbFind(tvdbId, tmdbVia()),
-    queryFn: ({ signal }): Promise<number | null> =>
-      Effect.runPromise(findByTvdbId(tmdbDeps(), { tvdbId }), { signal })
-        .catch((error) => mappingMiss(error, signal)),
-    ...FOREVER,
-  }).catch(nullUnlessCancelled);
+  return queryClient
+    .fetchQuery({
+      queryKey: mappingQueryKeys.tmdbFind(tvdbId, tmdbVia()),
+      queryFn: ({ signal }): Promise<number | null> =>
+        Effect.runPromise(findByTvdbId(tmdbDeps(), { tvdbId }), { signal }).catch((error) =>
+          mappingMiss(error, signal),
+        ),
+      ...FOREVER,
+    })
+    .catch(nullUnlessCancelled);
 }
 
 export function cachedTraktTextSearch(
@@ -554,7 +563,9 @@ export function cachedTraktTextSearch(
   title: string,
   year: number | undefined,
 ) {
-  return queryClient.fetchQuery(movieSearchQuery(title, year, movieSearchVia())).catch(nullUnlessCancelled);
+  return queryClient
+    .fetchQuery(movieSearchQuery(title, year, movieSearchVia()))
+    .catch(nullUnlessCancelled);
 }
 
 /**
@@ -568,13 +579,14 @@ export function cachedTmdbMovieIdByTitle(
   queryClient: QueryClient,
   params: { title: string; year: number | undefined },
 ): Promise<number | null> {
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.tmdbMovieSearch(params.title, params.year, tmdbVia()),
-    queryFn: ({ signal }): Promise<number | null> =>
-      searchTmdbMovieId(params, signal)
-        .catch((error) => mappingMiss(error, signal)),
-    ...FOREVER,
-  }).catch(nullUnlessCancelled);
+  return queryClient
+    .fetchQuery({
+      queryKey: mappingQueryKeys.tmdbMovieSearch(params.title, params.year, tmdbVia()),
+      queryFn: ({ signal }): Promise<number | null> =>
+        searchTmdbMovieId(params, signal).catch((error) => mappingMiss(error, signal)),
+      ...FOREVER,
+    })
+    .catch(nullUnlessCancelled);
 }
 
 /**
@@ -589,18 +601,20 @@ export function cachedTmdbAnimeMatch(
   const anilistId = item.externalIds.anilist;
   if (anilistId == null || tmdbToken() === '') return Promise.resolve(null);
   const query = (item.titles?.english ?? item.title).replace(/\s*\(\d{4}\)$/, '');
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.tmdbAnimeSearch(anilistId, tmdbVia()),
-    queryFn: ({ signal }) =>
-      Effect.runPromise(searchTitles(tmdbDeps(), { query }), { signal })
-        .then((results) => {
-          const match = pickAnimeTmdbMatch(results, item);
-          const tmdbId = match?.externalIds.tmdb;
-          return tmdbId == null ? null : { tmdbId, isFilm: match?.type === 'MOVIE' };
-        })
-        .catch((error) => mappingMiss(error, signal)),
-    ...FOREVER,
-  }).catch(nullUnlessCancelled);
+  return queryClient
+    .fetchQuery({
+      queryKey: mappingQueryKeys.tmdbAnimeSearch(anilistId, tmdbVia()),
+      queryFn: ({ signal }) =>
+        Effect.runPromise(searchTitles(tmdbDeps(), { query }), { signal })
+          .then((results) => {
+            const match = pickAnimeTmdbMatch(results, item);
+            const tmdbId = match?.externalIds.tmdb;
+            return tmdbId == null ? null : { tmdbId, isFilm: match?.type === 'MOVIE' };
+          })
+          .catch((error) => mappingMiss(error, signal)),
+      ...FOREVER,
+    })
+    .catch(nullUnlessCancelled);
 }
 
 /**
@@ -622,13 +636,8 @@ async function searchTmdbMovieId(
   if (gated != null || params.year == null) {
     return gated?.externalIds.tmdb ?? null;
   }
-  return Effect.runPromise(
-    searchMovie(tmdbDeps(), { query: params.title }),
-    { signal },
-  ).then(
-    (results) =>
-      pickMovieMatch(results, params.year, params.title)?.externalIds.tmdb ??
-      null,
+  return Effect.runPromise(searchMovie(tmdbDeps(), { query: params.title }), { signal }).then(
+    (results) => pickMovieMatch(results, params.year, params.title)?.externalIds.tmdb ?? null,
   );
 }
 
@@ -648,29 +657,28 @@ export function cachedAniListFilmId(
   queryClient: QueryClient,
   params: { title: string; year: number | undefined },
 ): Promise<number | null> {
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.anilistFilmSearch(params.title, params.year),
-    queryFn: ({ signal }): Promise<number | null> =>
-      Effect.runPromise(
-        searchAnimeFilms(anilistDeps(), { query: params.title }),
-        { signal },
-      )
-        .then(
-          (results) =>
-            pickAnimeFilmMatch(results, params.year, params.title)?.externalIds
-              .anilist ?? null,
-        )
-        .catch((error) => mappingMiss(error, signal)),
-    ...FOREVER,
-  }).catch(nullUnlessCancelled);
+  return queryClient
+    .fetchQuery({
+      queryKey: mappingQueryKeys.anilistFilmSearch(params.title, params.year),
+      queryFn: ({ signal }): Promise<number | null> =>
+        Effect.runPromise(searchAnimeFilms(anilistDeps(), { query: params.title }), { signal })
+          .then(
+            (results) =>
+              pickAnimeFilmMatch(results, params.year, params.title)?.externalIds.anilist ?? null,
+          )
+          .catch((error) => mappingMiss(error, signal)),
+      ...FOREVER,
+    })
+    .catch(nullUnlessCancelled);
 }
 
 function cachedAniListNeighbours(queryClient: QueryClient, anilistId: number) {
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.anilistNeighbours(anilistId),
     queryFn: ({ signal }) =>
-      Effect.runPromise(getSeriesNeighbours(anilistDeps(), { mediaId: anilistId }), { signal })
-        .catch((error) => mappingMiss(error, signal)),
+      Effect.runPromise(getSeriesNeighbours(anilistDeps(), { mediaId: anilistId }), {
+        signal,
+      }).catch((error) => mappingMiss(error, signal)),
     // Not forever: a miss can be AniList's rate limit, not an answer.
     staleTime: EPISODE_MAP_STALE_MS,
     gcTime: EPISODE_MAP_STALE_MS,
@@ -724,7 +732,9 @@ export async function cachedAniListPrequel(
   queryClient: QueryClient,
   anilistId: number,
 ): Promise<{ id: number; episodes: number } | 'none' | null> {
-  const neighbours = await cachedAniListNeighbours(queryClient, anilistId).catch(nullUnlessCancelled);
+  const neighbours = await cachedAniListNeighbours(queryClient, anilistId).catch(
+    nullUnlessCancelled,
+  );
   return neighbours?.prequel ?? null;
 }
 
@@ -732,7 +742,9 @@ export async function cachedAniListLaterCours(
   queryClient: QueryClient,
   anilistId: number,
 ): Promise<number[]> {
-  const neighbours = await cachedAniListNeighbours(queryClient, anilistId).catch(nullUnlessCancelled);
+  const neighbours = await cachedAniListNeighbours(queryClient, anilistId).catch(
+    nullUnlessCancelled,
+  );
   return neighbours?.later ?? [];
 }
 

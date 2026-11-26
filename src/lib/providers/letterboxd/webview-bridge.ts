@@ -116,10 +116,7 @@ function buildSubmitScript(id: string, request: LetterboxdWebRequest): string {
  * Watchlist writes use a fresh CSRF token from the metadata endpoint and set the target state
  * by film LID.
  */
-function buildWatchlistScript(
-  id: string,
-  request: LetterboxdWatchlistWebRequest,
-): string {
+function buildWatchlistScript(id: string, request: LetterboxdWatchlistWebRequest): string {
   return `(function(){
     var id = ${JSON.stringify(id)};
     function post(o){ o.id = id; try { window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch(e){} }
@@ -197,7 +194,10 @@ function runInPage(
       // can fire from both triggers. Consume the request in tab-local storage
       // before writing so it can never log twice. A Cloudflare challenge page
       // reloads into the real page once it passes, so it must not consume it.
-      ref.loadPage(id, path, `(function(){
+      ref.loadPage(
+        id,
+        path,
+        `(function(){
         if (window.location.origin !== 'https://letterboxd.com') return;
         var key = ${JSON.stringify(id)};
         function start() {
@@ -208,11 +208,16 @@ function runInPage(
         }
         if (document.readyState !== 'loading') return start();
         document.addEventListener('DOMContentLoaded', start);
-        ${ready != null ? `var observer = new MutationObserver(function(){
+        ${
+          ready != null
+            ? `var observer = new MutationObserver(function(){
           if (${ready}) { observer.disconnect(); start(); }
         });
-        observer.observe(document, { childList: true, subtree: true });` : ''}
-      })();`);
+        observer.observe(document, { childList: true, subtree: true });`
+            : ''
+        }
+      })();`,
+      );
     } catch (error) {
       fail(error);
     }
@@ -223,9 +228,7 @@ function runInPage(
 /**
  * Load the authenticated film page and POST the diary entry once its head is parsed.
  */
-export function letterboxdWebFetch(
-  request: LetterboxdWebRequest,
-): Promise<LetterboxdWebResponse> {
+export function letterboxdWebFetch(request: LetterboxdWebRequest): Promise<LetterboxdWebResponse> {
   return runInPage(request.filmPath, (id) => buildSubmitScript(id, request), FILM_HEAD_PARSED);
 }
 
@@ -240,8 +243,12 @@ export function letterboxdWatchlistWebFetch(
 }
 
 /** Uses the site's declarative like form; captcha-required likes stay on Letterboxd. */
-export function letterboxdListLikeWebFetch(request: LetterboxdListLikeWebRequest): Promise<LetterboxdWebResponse> {
-  return runInPage(request.listPath, (id) => `(function(){
+export function letterboxdListLikeWebFetch(
+  request: LetterboxdListLikeWebRequest,
+): Promise<LetterboxdWebResponse> {
+  return runInPage(
+    request.listPath,
+    (id) => `(function(){
     function post(status, body){ window.ReactNativeWebView.postMessage(JSON.stringify({ id: ${JSON.stringify(id)}, status: status, body: body })); }
     try {
       if (!window.person || !window.person.loggedIn || window.person.username.toLowerCase() !== ${JSON.stringify(request.username.toLowerCase())}) throw new Error('Reconnect Letterboxd. Nothing was sent.');
@@ -257,7 +264,8 @@ export function letterboxdListLikeWebFetch(request: LetterboxdListLikeWebRequest
         .then(function(r){ return r.text().then(function(t){ post(r.status, t); }); })
         .catch(function(e){ post(0, String(e)); });
     } catch(e) { post(0, e.message); }
-  })();`);
+  })();`,
+  );
 }
 
 export function getLetterboxdListLikeWebFetch(): typeof letterboxdListLikeWebFetch | undefined {
@@ -271,9 +279,7 @@ export function getLetterboxdWebFetch(): typeof letterboxdWebFetch | undefined {
 }
 
 /** The watchlist transport, under the same availability rule as `getLetterboxdWebFetch`. */
-export function getLetterboxdWatchlistWebFetch():
-  | typeof letterboxdWatchlistWebFetch
-  | undefined {
+export function getLetterboxdWatchlistWebFetch(): typeof letterboxdWatchlistWebFetch | undefined {
   return webView != null ? letterboxdWatchlistWebFetch : undefined;
 }
 
@@ -285,33 +291,49 @@ export function resetLetterboxdWebViewBridge(): void {
   pending.clear();
 }
 
-export function letterboxdListMembershipFetch(request: LetterboxdListMembershipRequest): Promise<LetterboxdWebResponse> {
-  return runInPage(request.listPath + 'edit/', (id) => `
+export function letterboxdListMembershipFetch(
+  request: LetterboxdListMembershipRequest,
+): Promise<LetterboxdWebResponse> {
+  return runInPage(
+    request.listPath + 'edit/',
+    (id) => `
     function finish(status, body) { window.ReactNativeWebView.postMessage(JSON.stringify({ id: ${JSON.stringify(id)}, status: status, body: body })); }
     ${listMembershipScript(request)}.then(function(receipt){ finish(200, JSON.stringify(receipt)); }, function(error){ finish(0, error.message); });
-  `);
+  `,
+  );
 }
 
-export function getLetterboxdListMembershipFetch(): typeof letterboxdListMembershipFetch | undefined {
+export function getLetterboxdListMembershipFetch():
+  typeof letterboxdListMembershipFetch | undefined {
   return webView != null ? letterboxdListMembershipFetch : undefined;
 }
 
-export function letterboxdListCreateFetch(request: LetterboxdListCreateRequest): Promise<LetterboxdWebResponse> {
-  return runInPage('/list/new/', (id) => `
+export function letterboxdListCreateFetch(
+  request: LetterboxdListCreateRequest,
+): Promise<LetterboxdWebResponse> {
+  return runInPage(
+    '/list/new/',
+    (id) => `
     function finish(status, body) { window.ReactNativeWebView.postMessage(JSON.stringify({ id: ${JSON.stringify(id)}, status: status, body: body })); }
     ${listCreateScript(request)}.then(function(receipt){ finish(200, JSON.stringify(receipt)); }, function(error){ finish(0, error.message); });
-  `);
+  `,
+  );
 }
 
 export function getLetterboxdListCreateFetch(): typeof letterboxdListCreateFetch | undefined {
   return webView != null ? letterboxdListCreateFetch : undefined;
 }
 
-export function letterboxdListRenameFetch(request: LetterboxdListRenameRequest): Promise<LetterboxdWebResponse> {
-  return runInPage(request.listPath + 'edit/', (id) => `
+export function letterboxdListRenameFetch(
+  request: LetterboxdListRenameRequest,
+): Promise<LetterboxdWebResponse> {
+  return runInPage(
+    request.listPath + 'edit/',
+    (id) => `
     function finish(status, body) { window.ReactNativeWebView.postMessage(JSON.stringify({ id: ${JSON.stringify(id)}, status: status, body: body })); }
     ${listRenameScript(request)}.then(function(receipt){ finish(200, JSON.stringify(receipt)); }, function(error){ finish(0, error.message); });
-  `);
+  `,
+  );
 }
 
 export function getLetterboxdListRenameFetch(): typeof letterboxdListRenameFetch | undefined {

@@ -38,7 +38,15 @@ export function MoreActions({
       return <AddToListPicker item={item} onBack={toMenu} onClose={onClose} />;
     case 'paused':
     case 'dropped':
-      return <TrackingStatusPicker item={item} key={step} onCancel={toMenu} onCleanClose={onClose} status={step} />;
+      return (
+        <TrackingStatusPicker
+          item={item}
+          key={step}
+          onCancel={toMenu}
+          onCleanClose={onClose}
+          status={step}
+        />
+      );
     case 'menu':
       return (
         <WriteSheet.Step key="menu">
@@ -47,13 +55,28 @@ export function MoreActions({
           </WriteSheet.Header>
           <View className="mt-4 gap-2">
             {list && (
-              <Button icon={<Button.Icon name="add" />} label="Add to list" onPress={() => setStep('list')} variant="quiet" />
+              <Button
+                icon={<Button.Icon name="add" />}
+                label="Add to list"
+                onPress={() => setStep('list')}
+                variant="quiet"
+              />
             )}
             {movable.paused.length > 0 && (
-              <Button icon={<Button.Icon name="pause" />} label="Pause tracking" onPress={() => setStep('paused')} variant="quiet" />
+              <Button
+                icon={<Button.Icon name="pause" />}
+                label="Pause tracking"
+                onPress={() => setStep('paused')}
+                variant="quiet"
+              />
             )}
             {movable.dropped.length > 0 && (
-              <Button icon={<Button.Icon name="close-circle-outline" />} label="Drop" onPress={() => setStep('dropped')} variant="quiet" />
+              <Button
+                icon={<Button.Icon name="close-circle-outline" />}
+                label="Drop"
+                onPress={() => setStep('dropped')}
+                variant="quiet"
+              />
             )}
           </View>
         </WriteSheet.Step>
@@ -75,7 +98,8 @@ export function MoreActionsCapsule({
   const { list, tracking } = useMoreActions(item);
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState<{ session: number; mode: 'more' | 'list-add' } | null>(null);
-  if (!list && !tracking && !open) return children == null ? null : <View className={className}>{children}</View>;
+  if (!list && !tracking && !open)
+    return children == null ? null : <View className={className}>{children}</View>;
   const label = tracking ? 'More actions' : 'Add to list';
   const icon = <Button.Icon name={tracking ? 'ellipsis-horizontal' : 'add'} />;
   function openSheet() {

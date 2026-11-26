@@ -77,11 +77,11 @@ Copy that import line exactly.
 
 ## Commands you will need
 
-| Purpose   | Command                         | Expected on success |
-|-----------|---------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile` | exit 0              |
-| Typecheck | `bun typecheck`                 | exit 0              |
-| Lint      | `bun lint`                      | exit 0              |
+| Purpose   | Command                         | Expected on success               |
+| --------- | ------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile` | exit 0                            |
+| Typecheck | `bun typecheck`                 | exit 0                            |
+| Lint      | `bun lint`                      | exit 0                            |
 | All tests | `bun run test`                  | all pass (never plain `bun test`) |
 
 ## Scope

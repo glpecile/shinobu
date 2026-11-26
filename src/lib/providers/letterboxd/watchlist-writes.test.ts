@@ -8,10 +8,7 @@ import type {
   LetterboxdWatchlistWebRequest,
   LetterboxdWebResponse,
 } from './deps';
-import {
-  addToLetterboxdWatchlist,
-  removeFromLetterboxdWatchlist,
-} from './watchlist-writes';
+import { addToLetterboxdWatchlist, removeFromLetterboxdWatchlist } from './watchlist-writes';
 
 const SESSION: LetterboxdSession = {
   cookie: 'letterboxd.signed.in.as=gian; com.xk72.webparts.csrf=csrf-token-123',
@@ -41,7 +38,9 @@ function fakeDeps(options: {
   return {
     username: 'gian',
     session: SESSION,
-    fetch: async () => { throw new Error('Native writes must not fetch the film page'); },
+    fetch: async () => {
+      throw new Error('Native writes must not fetch the film page');
+    },
     watchlistWebFetch: withTransport
       ? async (request) => {
           options.onWrite?.(request);
@@ -56,24 +55,28 @@ describe('setLetterboxdWatchlist (plan 0033 R3/R4)', () => {
     let captured: LetterboxdWatchlistWebRequest | undefined;
     const deps: LetterboxdDeps = {
       username: 'gian',
-      fetch: async () => { throw new Error('Web film fetch must not run'); },
+      fetch: async () => {
+        throw new Error('Web film fetch must not run');
+      },
       userscriptWatchlistFetch: async (request) => {
         captured = request;
         return { status: 204, body: '' };
       },
     };
-    expect(await Effect.runPromise(addToLetterboxdWatchlist(deps, movie({ tmdb: 348 })))).toEqual({ status: 'ok' });
+    expect(await Effect.runPromise(addToLetterboxdWatchlist(deps, movie({ tmdb: 348 })))).toEqual({
+      status: 'ok',
+    });
     expect(captured).toEqual({ filmPath: '/tmdb/348/', inWatchlist: true });
-    expect(await Effect.runPromise(removeFromLetterboxdWatchlist(deps, movie({ tmdb: 348 })))).toEqual({ status: 'ok' });
+    expect(
+      await Effect.runPromise(removeFromLetterboxdWatchlist(deps, movie({ tmdb: 348 }))),
+    ).toEqual({ status: 'ok' });
     expect(captured).toEqual({ filmPath: '/tmdb/348/', inWatchlist: false });
   });
   test('the add navigates to the film page and PATCHes inWatchlist: true', async () => {
     let captured: LetterboxdWatchlistWebRequest | undefined;
     const deps = fakeDeps({ onWrite: (r) => (captured = r) });
 
-    await Effect.runPromise(
-      addToLetterboxdWatchlist(deps, movie({ letterboxd: 'the-thing' })),
-    );
+    await Effect.runPromise(addToLetterboxdWatchlist(deps, movie({ letterboxd: 'the-thing' })));
 
     expect(captured?.filmPath).toBe('/film/the-thing/');
     expect(captured?.inWatchlist).toBe(true);
@@ -109,9 +112,7 @@ describe('setLetterboxdWatchlist (plan 0033 R3/R4)', () => {
   test('rejects a non-movie item routing.ts should have filtered', async () => {
     const deps = fakeDeps({});
     const show = { ...movie({ letterboxd: 'the-thing' }), type: 'TV' as const };
-    const outcome = await Effect.runPromise(
-      Effect.flip(addToLetterboxdWatchlist(deps, show)),
-    );
+    const outcome = await Effect.runPromise(Effect.flip(addToLetterboxdWatchlist(deps, show)));
     expect(outcome._tag).toBe('ProviderDecodeError');
   });
 

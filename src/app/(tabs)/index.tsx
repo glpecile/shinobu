@@ -2,12 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import Head from '@/components/head';
-import {
-  Platform,
-  type ScrollViewInstance,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, type ScrollViewInstance, Text, View } from 'react-native';
 
 import {
   FeedRowSkeleton,
@@ -18,10 +13,7 @@ import {
 } from '@/components/feed-skeleton';
 import { useBootRevealed } from '@/components/boot-splash/revealed';
 import { CollapsibleSection } from '@/components/collapsible-section';
-import {
-  homeHeaderClassName,
-  homeHeaderTitleSize,
-} from '@/components/screen-header-spacing';
+import { homeHeaderClassName, homeHeaderTitleSize } from '@/components/screen-header-spacing';
 import { GestureScrollView } from '@/components/animated-view';
 import { ConnectTrackerButton } from '@/components/connect-tracker-button';
 import { COPY_STAGGER, HeroEnter, HeroProviders } from '@/components/hero-enter';
@@ -37,17 +29,20 @@ import {
 import { PosterWall } from '@/features/feed/poster-wall';
 import { UpNextSection } from '@/features/up-next/up-next-section';
 import { ComingSoonRow } from '@/features/up-next/coming-soon-row';
-import { HardcoverListsReconnectRow, HardcoverListsRow, LetterboxdListsRow, SerializdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
+import {
+  HardcoverListsReconnectRow,
+  HardcoverListsRow,
+  LetterboxdListsRow,
+  SerializdListsRow,
+  ListsRowSkeleton,
+} from '@/features/lists/lists-row';
 import { cn } from '@/lib/cn';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
 import { providersForFeed } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
-import {
-  hasUpNextSources,
-  useRefetchUnifiedFeed,
-} from '@/state/queries/use-unified-feed';
+import { hasUpNextSources, useRefetchUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { continueReadingProviders } from '@/state/queries/continue-reading';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
@@ -66,7 +61,10 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
       <PosterWall />
       <GestureScrollView
         className={cn('flex-1', WALL_HOVER && 'pointer-events-none')}
-        contentContainerClassName={cn('grow justify-end md:justify-center pt-4', WALL_HOVER && 'pointer-events-none')}
+        contentContainerClassName={cn(
+          'grow justify-end md:justify-center pt-4',
+          WALL_HOVER && 'pointer-events-none',
+        )}
       >
         {revealed && (
           <View
@@ -121,7 +119,9 @@ function FeedScreen() {
   const letterboxdUsername = feedProviders.includes(Provider.Letterboxd)
     ? getLetterboxdUsername()
     : null;
-  const serializdUsername = feedProviders.includes(Provider.Serializd) ? getSerializdUsername() : null;
+  const serializdUsername = feedProviders.includes(Provider.Serializd)
+    ? getSerializdUsername()
+    : null;
   const hardcoverListsGranted = useHardcoverListsGranted();
   const upNextConnected = hasUpNextSources(connected);
   const refetchFeed = useRefetchUnifiedFeed();
@@ -156,24 +156,13 @@ function FeedScreen() {
         tab="index"
       >
         {upNextConnected && (
-          <SuspenseSection
-            fallback={<UpNextSectionSkeleton />}
-            resetKey={refreshCount}
-          >
-            <UpNextSection
-              onItemActions={openActions}
-              onItemPress={openDetails}
-            />
+          <SuspenseSection fallback={<UpNextSectionSkeleton />} resetKey={refreshCount}>
+            <UpNextSection onItemActions={openActions} onItemPress={openDetails} />
           </SuspenseSection>
         )}
         {watchlistConnected && (
-          <SuspenseSection
-            fallback={<FeedRowSkeleton hasAction />}
-            resetKey={refreshCount}
-          >
-            <YourWatchlistRow
-              onItemActions={openActions}
-            />
+          <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
+            <YourWatchlistRow onItemActions={openActions} />
           </SuspenseSection>
         )}
         {continueReadingProviders(connected).length > 0 && (
@@ -191,14 +180,8 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {letterboxdUsername != null && (
-          <SuspenseSection
-            fallback={<FeedRowSkeleton hasAction />}
-            resetKey={refreshCount}
-          >
-            <LetterboxdWatchlistRow
-              onItemActions={openActions}
-              username={letterboxdUsername}
-            />
+          <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
+            <LetterboxdWatchlistRow onItemActions={openActions} username={letterboxdUsername} />
           </SuspenseSection>
         )}
         {letterboxdUsername != null && (
@@ -221,19 +204,20 @@ function FeedScreen() {
             </SuspenseSection>
           </>
         )}
-        {connected.includes(Provider.Hardcover) && (hardcoverListsGranted ? (
-          <>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
-              <HardcoverListsRow kind="created" />
-            </SuspenseSection>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
-              <HardcoverListsRow kind="liked" />
-            </SuspenseSection>
-          </>
-        ) : <HardcoverListsReconnectRow />)}
-        <FeedEnd
-          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: !reduceMotion })}
-        />
+        {connected.includes(Provider.Hardcover) &&
+          (hardcoverListsGranted ? (
+            <>
+              <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+                <HardcoverListsRow kind="created" />
+              </SuspenseSection>
+              <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+                <HardcoverListsRow kind="liked" />
+              </SuspenseSection>
+            </>
+          ) : (
+            <HardcoverListsReconnectRow />
+          ))}
+        <FeedEnd onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: !reduceMotion })} />
       </CollapsibleSection.Scroll>
       {revealed && <CardActionsSheet {...sheetProps} />}
     </View>
@@ -253,18 +237,8 @@ export default function App() {
           name="description"
         />
       </Head>
-      <View
-        className={cn(
-          homeHeaderClassName,
-          process.env.EXPO_OS === 'web' && 'md:hidden',
-        )}
-      >
-        <Text
-          className={cn(
-            homeHeaderTitleSize,
-            'font-display text-foreground tracking-tight',
-          )}
-        >
+      <View className={cn(homeHeaderClassName, process.env.EXPO_OS === 'web' && 'md:hidden')}>
+        <Text className={cn(homeHeaderTitleSize, 'font-display text-foreground tracking-tight')}>
           忍 Shinobu
         </Text>
       </View>

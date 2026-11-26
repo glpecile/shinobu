@@ -55,8 +55,7 @@ function splitNameAndYear(name: string): { title: string; year?: number } {
  * (docs/solutions/letterboxd-no-api-fallback.md). Pure for fixture testing.
  */
 export function parseWatchlistPage(html: string): LetterboxdWatchlistFilm[] {
-  const components =
-    html.match(/<div\b[^>]*data-component-class="LazyPoster"[^>]*>/g) ?? [];
+  const components = html.match(/<div\b[^>]*data-component-class="LazyPoster"[^>]*>/g) ?? [];
 
   const films: LetterboxdWatchlistFilm[] = [];
   for (const component of components) {
@@ -64,12 +63,8 @@ export function parseWatchlistPage(html: string): LetterboxdWatchlistFilm[] {
     const name = attribute(component, 'data-item-name');
     if (slug == null || name == null) continue;
 
-    const identifier = decodeEntities(
-      attribute(component, 'data-postered-identifier') ?? '',
-    );
-    const posterPath = decodeEntities(
-      attribute(component, 'data-resolvable-poster-path') ?? '',
-    );
+    const identifier = decodeEntities(attribute(component, 'data-postered-identifier') ?? '');
+    const posterPath = decodeEntities(attribute(component, 'data-resolvable-poster-path') ?? '');
     const filmId = /film:(\d+)/.exec(identifier)?.[1];
     const cacheBustingKey = /"cacheBustingKey":"([^"]+)"/.exec(posterPath)?.[1];
 
@@ -92,9 +87,7 @@ export const WATCHLIST_PAGE_SIZE = 28;
 
 /** Page 1 is the bare path; deeper pages take the `/page/N/` suffix. */
 function watchlistPath(username: string, page: number): string {
-  return page <= 1
-    ? `/${username}/watchlist/`
-    : `/${username}/watchlist/page/${page}/`;
+  return page <= 1 ? `/${username}/watchlist/` : `/${username}/watchlist/page/${page}/`;
 }
 
 /**
@@ -150,9 +143,7 @@ export function getWatchlistPage(
     });
 
     const fetchedAt = new Date().toISOString();
-    return parseWatchlistPage(html).map((film) =>
-      normalizeWatchlistFilm(film, fetchedAt),
-    );
+    return parseWatchlistPage(html).map((film) => normalizeWatchlistFilm(film, fetchedAt));
   });
 }
 

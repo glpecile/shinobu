@@ -13,5 +13,7 @@ test('provider ids are Provider.* values and types, while tests may spell them',
       return ['simkl'];
     };
   `;
-  expect(lint('no-provider-literals', { 'feed.tsx': source, 'feed.test.tsx': source })).toHaveLength(4);
+  expect(
+    lint('no-provider-literals', { 'feed.tsx': source, 'feed.test.tsx': source }),
+  ).toHaveLength(4);
 });

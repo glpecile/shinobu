@@ -62,7 +62,6 @@ describe('watchlistCtaCopy (plan 0031 R14)', () => {
     expect(copy.idle).toBe('Add to reading list');
     expect(copy.settled).toBe('On your reading list');
   });
-
 });
 
 describe('watchlistResultView report families (plan 0031 R14)', () => {
@@ -90,10 +89,7 @@ describe('watchlistResultView report families (plan 0031 R14)', () => {
   });
 
   test('a reason-less skip contributes no line at all', () => {
-    const view = watchlistResultView(
-      report([{ provider: 'trakt', status: 'skipped' }]),
-      FILM,
-    );
+    const view = watchlistResultView(report([{ provider: 'trakt', status: 'skipped' }]), FILM);
     expect(view.reasonedSkips).toEqual([]);
     expect(view.allSkip).toBe(false);
   });
@@ -122,7 +118,6 @@ describe('isWatchlistCtaSettled (plan 0031 U15, R14, KTD-14)', () => {
   test('on one watchlist but missing from another is not settled', () => {
     expect(isWatchlistCtaSettled(true, null, true)).toBe(false);
   });
-
 });
 
 describe('the three result families (plan 0031 KTD-8/R17)', () => {
@@ -134,17 +129,13 @@ describe('the three result families (plan 0031 KTD-8/R17)', () => {
       ]),
       FILM,
     );
-    expect(view.reasonedSkips.map((skip) => skip.provider)).toEqual([
-      'trakt',
-      'anilist',
-    ]);
+    expect(view.reasonedSkips.map((skip) => skip.provider)).toEqual(['trakt', 'anilist']);
     expect(view.reasonedSkips.map((skip) => skip.reason)).toEqual([
       'already on your watchlist',
       'already watching',
     ]);
     expect(view.allSkip).toBe(true);
   });
-
 });
 
 describe('isUnwatchlistCtaSettled (plan 0031 U16, R35)', () => {
@@ -217,15 +208,23 @@ describe('picker confirm labels and toast titles (plan 0032 R3)', () => {
 describe('removalLine (the remove sheet’s confirm step)', () => {
   test('a Planning entry only leaves the list; an entry in progress is deleted whole', () => {
     const book = { item: { bridgedAniList: { id: 143703, title: 'Nisemonogatari' } } };
-    expect(removalLine('hardcover', book)).toEqual({ text: 'Leaves Want to Read.', destructive: false });
-    expect(removalLine('anilist', { ...book, anilistStatus: 'PLANNING' }))
-      .toEqual({ text: 'Deletes the Planning entry “Nisemonogatari”.', destructive: false });
+    expect(removalLine('hardcover', book)).toEqual({
+      text: 'Leaves Want to Read.',
+      destructive: false,
+    });
+    expect(removalLine('anilist', { ...book, anilistStatus: 'PLANNING' })).toEqual({
+      text: 'Deletes the Planning entry “Nisemonogatari”.',
+      destructive: false,
+    });
     expect(removalLine('anilist', { ...book, anilistStatus: 'CURRENT' }).destructive).toBe(true);
   });
 
   test('a Simkl row that still holds watch history is deleted whole', () => {
     const show = { item: {} };
-    expect(removalLine('simkl', { ...show, simklWatchedCount: 0 })).toEqual({ text: 'Leaves Plan to Watch.', destructive: false });
+    expect(removalLine('simkl', { ...show, simklWatchedCount: 0 })).toEqual({
+      text: 'Leaves Plan to Watch.',
+      destructive: false,
+    });
     expect(removalLine('simkl', { ...show, simklWatchedCount: 12 }).destructive).toBe(true);
   });
 });

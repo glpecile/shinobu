@@ -14,7 +14,7 @@ Uniwind resolves `className` natively only for React Native core components
 `className="w-full h-full"` produced an unstyled image with no intrinsic
 size, i.e. 0×0.
 
-It *appears* to work on web, which is what makes this a trap: react-native-web
+It _appears_ to work on web, which is what makes this a trap: react-native-web
 renders the component to a DOM element, the unknown `className` prop passes
 through to the DOM, and uniwind's generated CSS (real CSS on web) matches it.
 The web build masks the native bug entirely.

@@ -35,7 +35,7 @@ hides future updates behind an exact pin.
 
 Status of the other pin, for the record: `nitro-webview` must stay on its git
 commit. Upstream PR #53 (the React Native 0.88 fix the app needs) merged
-*after* the last published release (0.2.2 on 2026-10-18), and no later
+_after_ the last published release (0.2.2 on 2026-10-18), and no later
 version exists. Nothing to do there yet.
 
 ## Current state
@@ -75,15 +75,15 @@ A `pod install` version mismatch means clean-prebuild, never `pod update`.
 
 ## Commands you will need
 
-| Purpose         | Command                 | Expected on success |
-|-----------------|-------------------------|---------------------|
-| Install         | `bun install`           | exit 0; `bun.lock` updated |
-| Typecheck       | `bun typecheck`         | exit 0              |
-| Lint            | `bun lint`              | exit 0              |
-| Tests           | `bun run test`          | all pass            |
-| Expo deps check | `bunx expo install --check` | no complaint about this package |
-| iOS rebuild     | `bun ios:clean`         | app builds and launches (owner machine) |
-| Android rebuild | `bun android:clean`     | app builds and launches (owner machine) |
+| Purpose         | Command                     | Expected on success                     |
+| --------------- | --------------------------- | --------------------------------------- |
+| Install         | `bun install`               | exit 0; `bun.lock` updated              |
+| Typecheck       | `bun typecheck`             | exit 0                                  |
+| Lint            | `bun lint`                  | exit 0                                  |
+| Tests           | `bun run test`              | all pass                                |
+| Expo deps check | `bunx expo install --check` | no complaint about this package         |
+| iOS rebuild     | `bun ios:clean`             | app builds and launches (owner machine) |
+| Android rebuild | `bun android:clean`         | app builds and launches (owner machine) |
 
 ## Scope
 

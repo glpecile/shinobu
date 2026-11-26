@@ -21,12 +21,16 @@ function dayLabel(airDate: string, now: Date): string {
   if (offset === 0) return 'Today';
   if (offset === 1) return 'Tomorrow';
   const thisYear = airDate.startsWith(String(now.getFullYear()));
-  return formatCalendarDate(airDate, { weekday: 'short', ...(thisYear ? { year: undefined } : {}) });
+  return formatCalendarDate(airDate, {
+    weekday: 'short',
+    ...(thisYear ? { year: undefined } : {}),
+  });
 }
 
 function marker(episode: SerializdUpcomingEpisode | undefined): string | null {
   if (episode == null) return null;
-  if (episode.isPremiere) return episode.number === 1 && episode.season === 1 ? 'Series premiere' : 'Premiere';
+  if (episode.isPremiere)
+    return episode.number === 1 && episode.season === 1 ? 'Series premiere' : 'Premiere';
   return episode.isFinale ? 'Finale' : null;
 }
 
@@ -51,7 +55,11 @@ function newDate(): Date {
   return new Date();
 }
 
-export function ComingSoonRow({ username, onItemActions, onItemPress }: {
+export function ComingSoonRow({
+  username,
+  onItemActions,
+  onItemPress,
+}: {
   username: string;
   onItemActions: (item: NormalizedMediaItem) => void;
   onItemPress: (item: NormalizedMediaItem) => void;

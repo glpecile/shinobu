@@ -13,13 +13,7 @@ import {
  * the suite asserts *calendar-day* behavior in whatever timezone it runs in —
  * the same property Up Next depends on (todos/006).
  */
-function localInstant(
-  year: number,
-  month: number,
-  day: number,
-  hours = 0,
-  minutes = 0,
-): string {
+function localInstant(year: number, month: number, day: number, hours = 0, minutes = 0): string {
   return new Date(year, month - 1, day, hours, minutes).toISOString();
 }
 
@@ -60,24 +54,16 @@ describe('formatRelativeDay', () => {
   });
 
   test('an instant crossing local midnight → Tomorrow (not "In 1 day")', () => {
-    expect(formatRelativeDay(localInstant(2026, 7, 24, 0, 30), NOW)).toBe(
-      'Tomorrow',
-    );
+    expect(formatRelativeDay(localInstant(2026, 7, 24, 0, 30), NOW)).toBe('Tomorrow');
   });
 
   test('six days out → In 6 days (the window maximum)', () => {
-    expect(formatRelativeDay(localInstant(2026, 7, 29, 12, 0), NOW)).toBe(
-      'In 6 days',
-    );
+    expect(formatRelativeDay(localInstant(2026, 7, 29, 12, 0), NOW)).toBe('In 6 days');
   });
 
   test('past instants read as past, never as a future countdown', () => {
-    expect(formatRelativeDay(localInstant(2026, 7, 22, 12, 0), NOW)).toBe(
-      'Yesterday',
-    );
-    expect(formatRelativeDay(localInstant(2026, 7, 20, 12, 0), NOW)).toBe(
-      '3 days ago',
-    );
+    expect(formatRelativeDay(localInstant(2026, 7, 22, 12, 0), NOW)).toBe('Yesterday');
+    expect(formatRelativeDay(localInstant(2026, 7, 20, 12, 0), NOW)).toBe('3 days ago');
   });
 
   test('unparseable input renders no label', () => {

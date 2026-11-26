@@ -42,9 +42,7 @@ describe('manualLinkForOutcome', () => {
   });
 
   it('returns null for a reconcile skip (no reason)', () => {
-    expect(
-      manualLinkForOutcome({ provider: 'letterboxd', status: 'skipped' }, item),
-    ).toBeNull();
+    expect(manualLinkForOutcome({ provider: 'letterboxd', status: 'skipped' }, item)).toBeNull();
   });
 });
 
@@ -77,9 +75,7 @@ describe('splitSkippedOutcomes', () => {
       ]),
     ).toEqual({
       reconcileSkipped: ['trakt'],
-      reasonedSkips: [
-        { provider: 'serializd', status: 'skipped', reason: 'season unresolved' },
-      ],
+      reasonedSkips: [{ provider: 'serializd', status: 'skipped', reason: 'season unresolved' }],
     });
   });
 });

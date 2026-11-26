@@ -17,50 +17,137 @@ export function fitsProvider(provider: ListProvider, item: NormalizedMediaItem) 
 }
 
 /** Hardcover's `privacy_setting_id` values. */
-const HARDCOVER_PRIVACY = { Public: 1, Friends: 2, You: 3 } as const satisfies Record<string, HardcoverListDraft['privacy']>;
+const HARDCOVER_PRIVACY = { Public: 1, Friends: 2, You: 3 } as const satisfies Record<
+  string,
+  HardcoverListDraft['privacy']
+>;
 
-export const newListSchema = z.object({
-  provider: z.enum([Provider.Letterboxd, Provider.Serializd, Provider.Hardcover]),
-  name: z.string().trim(),
-  description: z.string().trim(),
-  tags: z.string().transform((input) => [...new Set(parseTags(input).map((tag) => tag.toLowerCase()))]),
-  sharing: z.enum(['Public', 'Anyone', 'Friends', 'You']),
-  isPrivate: z.boolean(),
-  ranked: z.boolean(),
-  allowsComments: z.boolean(),
-  items: z.array(z.custom<NormalizedMediaItem>()),
-// Every rule lives in one refinement: a failing field would skip an
-// object-level one, hiding the list's other problems until the next submit.
-}).superRefine((form, ctx) => {
-  if (form.name === '') ctx.addIssue({ code: 'custom', path: ['name'], message: 'Give the list a name.' });
-  if (form.name.length > 500) ctx.addIssue({ code: 'custom', path: ['name'], message: 'Keep the name under 500 characters.' });
-  if (form.description.length > 10_000) ctx.addIssue({ code: 'custom', path: ['description'], message: 'Keep the description under 10,000 characters.' });
-  const items = form.items.filter((item) => fitsProvider(form.provider, item));
-  switch (form.provider) {
-    case Provider.Letterboxd:
-      if (form.tags.length > 100) ctx.addIssue({ code: 'custom', path: ['tags'], message: 'Use up to 100 tags.' });
-      if (form.tags.some((tag) => tag.length > 200)) ctx.addIssue({ code: 'custom', path: ['tags'], message: 'Keep each tag under 200 characters.' });
-      if (form.sharing === 'Public' && items.length === 0) ctx.addIssue({ code: 'custom', path: ['items'], message: 'Public Letterboxd lists start with at least one film.' });
-      if (items.length > MAX_NEW_LIST_FILMS) ctx.addIssue({ code: 'custom', path: ['items'], message: `Start with up to ${MAX_NEW_LIST_FILMS} films, then add the rest from the list.` });
-      return;
-    case Provider.Serializd:
-      if (items.length === 0) ctx.addIssue({ code: 'custom', path: ['items'], message: 'Serializd lists start with at least one show.' });
-      if (items.length > MAX_SERIALIZD_LIST_ITEMS) ctx.addIssue({ code: 'custom', path: ['items'], message: `Serializd lists hold up to ${MAX_SERIALIZD_LIST_ITEMS} shows.` });
-      return;
-    case Provider.Hardcover:
-      if (form.sharing === 'Anyone') ctx.addIssue({ code: 'custom', path: ['sharing'], message: 'Hardcover has no link-only lists. Pick another.' });
-      if (items.length > MAX_NEW_HARDCOVER_LIST_BOOKS) ctx.addIssue({ code: 'custom', path: ['items'], message: `Start with up to ${MAX_NEW_HARDCOVER_LIST_BOOKS} books, then add the rest from the list.` });
-  }
-}).transform((form): NewList => {
-  const items = form.items.filter((item) => fitsProvider(form.provider, item));
-  switch (form.provider) {
-    case Provider.Letterboxd:
-      return { provider: Provider.Letterboxd, draft: { name: form.name, description: form.description, tags: form.tags, sharing: form.sharing, ranked: form.ranked, items } };
-    case Provider.Serializd:
-      return { provider: Provider.Serializd, draft: { name: form.name, description: form.description, isPrivate: form.isPrivate, isRanked: form.ranked, allowsComments: form.allowsComments, items } };
-    case Provider.Hardcover:
-      return { provider: Provider.Hardcover, draft: { name: form.name, description: form.description, privacy: form.sharing === 'Anyone' ? HARDCOVER_PRIVACY.Public : HARDCOVER_PRIVACY[form.sharing], ranked: form.ranked, items } };
-  }
-});
+export const newListSchema = z
+  .object({
+    provider: z.enum([Provider.Letterboxd, Provider.Serializd, Provider.Hardcover]),
+    name: z.string().trim(),
+    description: z.string().trim(),
+    tags: z
+      .string()
+      .transform((input) => [...new Set(parseTags(input).map((tag) => tag.toLowerCase()))]),
+    sharing: z.enum(['Public', 'Anyone', 'Friends', 'You']),
+    isPrivate: z.boolean(),
+    ranked: z.boolean(),
+    allowsComments: z.boolean(),
+    items: z.array(z.custom<NormalizedMediaItem>()),
+    // Every rule lives in one refinement: a failing field would skip an
+    // object-level one, hiding the list's other problems until the next submit.
+  })
+  .superRefine((form, ctx) => {
+    if (form.name === '')
+      ctx.addIssue({ code: 'custom', path: ['name'], message: 'Give the list a name.' });
+    if (form.name.length > 500)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['name'],
+        message: 'Keep the name under 500 characters.',
+      });
+    if (form.description.length > 10_000)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['description'],
+        message: 'Keep the description under 10,000 characters.',
+      });
+    const items = form.items.filter((item) => fitsProvider(form.provider, item));
+    switch (form.provider) {
+      case Provider.Letterboxd:
+        if (form.tags.length > 100)
+          ctx.addIssue({ code: 'custom', path: ['tags'], message: 'Use up to 100 tags.' });
+        if (form.tags.some((tag) => tag.length > 200))
+          ctx.addIssue({
+            code: 'custom',
+            path: ['tags'],
+            message: 'Keep each tag under 200 characters.',
+          });
+        if (form.sharing === 'Public' && items.length === 0)
+          ctx.addIssue({
+            code: 'custom',
+            path: ['items'],
+            message: 'Public Letterboxd lists start with at least one film.',
+          });
+        if (items.length > MAX_NEW_LIST_FILMS)
+          ctx.addIssue({
+            code: 'custom',
+            path: ['items'],
+            message: `Start with up to ${MAX_NEW_LIST_FILMS} films, then add the rest from the list.`,
+          });
+        return;
+      case Provider.Serializd:
+        if (items.length === 0)
+          ctx.addIssue({
+            code: 'custom',
+            path: ['items'],
+            message: 'Serializd lists start with at least one show.',
+          });
+        if (items.length > MAX_SERIALIZD_LIST_ITEMS)
+          ctx.addIssue({
+            code: 'custom',
+            path: ['items'],
+            message: `Serializd lists hold up to ${MAX_SERIALIZD_LIST_ITEMS} shows.`,
+          });
+        return;
+      case Provider.Hardcover:
+        if (form.sharing === 'Anyone')
+          ctx.addIssue({
+            code: 'custom',
+            path: ['sharing'],
+            message: 'Hardcover has no link-only lists. Pick another.',
+          });
+        if (items.length > MAX_NEW_HARDCOVER_LIST_BOOKS)
+          ctx.addIssue({
+            code: 'custom',
+            path: ['items'],
+            message: `Start with up to ${MAX_NEW_HARDCOVER_LIST_BOOKS} books, then add the rest from the list.`,
+          });
+    }
+  })
+  .transform((form): NewList => {
+    const items = form.items.filter((item) => fitsProvider(form.provider, item));
+    switch (form.provider) {
+      case Provider.Letterboxd:
+        return {
+          provider: Provider.Letterboxd,
+          draft: {
+            name: form.name,
+            description: form.description,
+            tags: form.tags,
+            sharing: form.sharing,
+            ranked: form.ranked,
+            items,
+          },
+        };
+      case Provider.Serializd:
+        return {
+          provider: Provider.Serializd,
+          draft: {
+            name: form.name,
+            description: form.description,
+            isPrivate: form.isPrivate,
+            isRanked: form.ranked,
+            allowsComments: form.allowsComments,
+            items,
+          },
+        };
+      case Provider.Hardcover:
+        return {
+          provider: Provider.Hardcover,
+          draft: {
+            name: form.name,
+            description: form.description,
+            privacy:
+              form.sharing === 'Anyone'
+                ? HARDCOVER_PRIVACY.Public
+                : HARDCOVER_PRIVACY[form.sharing],
+            ranked: form.ranked,
+            items,
+          },
+        };
+    }
+  });
 
 export type NewListForm = z.input<typeof newListSchema>;

@@ -4,9 +4,7 @@ import type { ComponentProps } from 'react';
 import { RoundIconButton } from '@/components/round-icon-button';
 import { useThemeColor } from '@/lib/theme-color';
 
-export function BackButton(
-  props: Omit<ComponentProps<typeof RoundIconButton>, 'icon' | 'label'>,
-) {
+export function BackButton(props: Omit<ComponentProps<typeof RoundIconButton>, 'icon' | 'label'>) {
   const foreground = useThemeColor('--color-foreground');
   return (
     <RoundIconButton

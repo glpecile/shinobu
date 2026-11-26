@@ -23,7 +23,7 @@ the sheet's gesture negotiation had nothing to hand the drag to and treated
 every vertical drag as a dismissal.
 
 **First fix (2026-07-26), and why it was wrong.** Put a scroller in the sheet and
-let it *shrink*:
+let it _shrink_:
 
 ```tsx
 <ScrollView className="shrink" contentContainerClassName="p-6 pb-12" />
@@ -35,27 +35,31 @@ inside a `flex: 1` wrapper — so a shrinkable scroller would size to its conten
 while it fits and clamp to the cap when it doesn't.
 
 **It doesn't, and it silently broke every short sheet.** From the moment that
-shipped, *all* sheets opened full-screen regardless of content: a two-line
+shipped, _all_ sheets opened full-screen regardless of content: a two-line
 provider sheet filled the display. The `'content'` detent is measured from this
 subtree, and **a `ScrollView` has no intrinsic height to report — it always
 answers "as much as you have"**. Measured on an Android emulator, none of these
 changed the sheet by a pixel:
 
-| attempt | result |
-| --- | --- |
-| `className="shrink"` (`flexShrink: 1`) | full screen |
-| `+ grow-0` / `style={{ flexGrow: 0 }}` — RN's ScrollView ships `flexGrow: 1` in `styles.baseVertical`, so this looked promising | full screen |
-| `+ style={{ maxHeight }}` | full screen |
-| plain `<View>`, no scroller (control) | **hugs content** |
+| attempt                                                                                                                         | result           |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `className="shrink"` (`flexShrink: 1`)                                                                                          | full screen      |
+| `+ grow-0` / `style={{ flexGrow: 0 }}` — RN's ScrollView ships `flexGrow: 1` in `styles.baseVertical`, so this looked promising | full screen      |
+| `+ style={{ maxHeight }}`                                                                                                       | full screen      |
+| plain `<View>`, no scroller (control)                                                                                           | **hugs content** |
 
 **Actual fix.** Keep the scroller out of the tree until it is needed. Render the
 children in a plain `View`, watch its laid-out height, and only wrap in a
 scroller once that exceeds the cap:
 
 ```tsx
-const body = <View className={CONTENT_PADDING} onLayout={measure}>{children}</View>;
-if (!overflows) return body;                       // hugs content
-return <ScrollView style={{ maxHeight }}>{body}</ScrollView>;   // caps + scrolls
+const body = (
+  <View className={CONTENT_PADDING} onLayout={measure}>
+    {children}
+  </View>
+);
+if (!overflows) return body; // hugs content
+return <ScrollView style={{ maxHeight }}>{body}</ScrollView>; // caps + scrolls
 ```
 
 The measurement stays live inside the scroller (children still lay out unbounded
@@ -91,7 +95,7 @@ enabled and lets the fixed-height wrapper shrink, so content remains reachable
 when the keyboard leaves less room than the content cap. iOS gates scrolling on
 overflow as before.
 
-This resizes the *host*, never the measured content, which is what segfaulted
+This resizes the _host_, never the measured content, which is what segfaulted
 Fabric below. One trap it exposed: a Reanimated `entering` (`FadeIn`) that is
 still running when the host resizes freezes at opacity 0, so an autofocused
 sheet opened blank. `WriteSheet.Step` fades with a CSS animation instead.
@@ -107,7 +111,7 @@ plan 0024 U11/R8 stands, only with scrollers:
   at the cap, its bottom padding is what gives the focused field somewhere to
   scroll to. **The Android scroller is always `scrollEnabled`** (2026-09-08),
   regardless of whether the content overflows the cap. keyboard-controller
-  resolves the focused input's parent scroll view *natively, at focus time*
+  resolves the focused input's parent scroll view _natively, at focus time_
   (`EditText.parentScrollViewTarget`) and only accepts a `ReactScrollView`
   whose `scrollEnabled` is already true; with any JS-side gate the lookup runs
   before React can flip the prop, returns -1, and `maybeScroll` bails on the
@@ -119,7 +123,7 @@ plan 0024 U11/R8 stands, only with scrollers:
   draggable-to-dismiss (verified on the Pixel AVD). iOS keeps the metrics gate:
   its plain `ScrollView` has no such native lookup and does swallow the drag.
 
-  **`bottomOffset` must clear what renders *under* the input, not just the
+  **`bottomOffset` must clear what renders _under_ the input, not just the
   input** (2026-08-28). With `bottomOffset={24}` the auto-scroll parked the
   focused tags field flush against the keyboard, which is exactly where its
   suggestion chips and "Show more" toggle live — so the keyboard buried them
@@ -136,7 +140,7 @@ plan 0024 U11/R8 stands, only with scrollers:
   (`SIGSEGV in facebook::react::ShadowNode::getTag`, reached from
   `UIManager::findShadowNodeByTag_DEPRECATED` — keyboard-controller's
   focused-input measurement racing the shadow tree). Resizing the subtree the
-  native `'content'` detent measures *while the keyboard event is in flight*
+  native `'content'` detent measures _while the keyboard event is in flight_
   makes the sheet re-measure and re-snap mid-transaction; combined with
   react-native-keyboard-controller's concurrent shadow-node lookups this
   crashed the app within seconds of focusing the tags field, on two separate
@@ -144,7 +148,8 @@ plan 0024 U11/R8 stands, only with scrollers:
   build while the IME process was force-restarted under a focused input, so
   the underlying race is not ours — but resizing the sheet on keyboard
   show/hide is a reliable trigger for it. The sheet's height must depend only
-  on its content; the keyboard may only ever move the *scroll offset*.
+  on its content; the keyboard may only ever move the _scroll offset_.
+
 - **iOS** keeps the plain `ScrollView`: its sheet host already moves with the
   keyboard, and a second compensation over-shoots.
 

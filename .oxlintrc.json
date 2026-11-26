@@ -25,10 +25,7 @@
     "no-underscore-dangle": [
       "warn",
       {
-        "allow": [
-          "_tag",
-          "__DEV__"
-        ]
+        "allow": ["_tag", "__DEV__"]
       }
     ],
     "unicorn/no-array-sort": "off",
@@ -41,24 +38,15 @@
             "message": "Import Effect modules by subpath (`import * as Effect from 'effect/Effect'`); the barrel evaluates all of Effect at launch."
           },
           {
-            "group": [
-              "../*",
-              "../**"
-            ],
+            "group": ["../*", "../**"],
             "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
           },
           {
-            "group": [
-              "@legendapp/list",
-              "@legendapp/list/*"
-            ],
+            "group": ["@legendapp/list", "@legendapp/list/*"],
             "message": "Never import @legendapp/list directly - go through the components/List wrapper (AGENTS.md: Long Lists)."
           },
           {
-            "group": [
-              "pressto",
-              "pressto/*"
-            ],
+            "group": ["pressto", "pressto/*"],
             "message": "Never import pressto directly - go through @/components/presstable (adds press debouncing + the withUniwind className wrapper)."
           },
           {
@@ -69,17 +57,11 @@
             "message": "Import Sheet/SheetProvider from @/components/sheet \u2014 the native lib has no web build; the wrapper provides the Modal fallback via index.web.tsx."
           },
           {
-            "group": [
-              "react-native-pulsar",
-              "react-native-pulsar/*"
-            ],
+            "group": ["react-native-pulsar", "react-native-pulsar/*"],
             "message": "Import { haptics } from @/lib/haptics \u2014 pulsar has no web implementation; the wrapper no-ops on web via index.web.ts."
           },
           {
-            "group": [
-              "react-native-enriched-markdown",
-              "react-native-enriched-markdown/*"
-            ],
+            "group": ["react-native-enriched-markdown", "react-native-enriched-markdown/*"],
             "message": "Import MarkdownText from @/components/markdown-text — the wrapper owns provider text styling and HTTP(S)-only link handling."
           },
           {
@@ -90,47 +72,27 @@
             "message": "Use @expo/ui/community/datetime-picker instead \u2014 drop-in replacement powered by SwiftUI/Jetpack Compose, no config plugin needed."
           },
           {
-            "group": [
-              "@expo/vector-icons",
-              "@expo/vector-icons/*"
-            ],
+            "group": ["@expo/vector-icons", "@expo/vector-icons/*"],
             "message": "@expo/vector-icons is deprecated by Expo \u2014 import from @react-native-vector-icons/<set>/static instead (e.g. @react-native-vector-icons/ionicons/static)."
           },
           {
-            "group": [
-              "@nandorojo/galeria",
-              "@nandorojo/galeria/*"
-            ],
+            "group": ["@nandorojo/galeria", "@nandorojo/galeria/*"],
             "message": "Import ZoomableImage from @/components/zoomable-image \u2014 the wrapper pairs galeria with the withUniwind Image and handles the empty-uri fallback."
           },
           {
-            "group": [
-              "@glpecile/norph",
-              "@glpecile/norph/*"
-            ],
+            "group": ["@glpecile/norph", "@glpecile/norph/*"],
             "message": "Import MorphText from @/components/morph-text \u2014 the one seam for the morph library."
           },
           {
-            "group": [
-              "sonner",
-              "sonner/*",
-              "sonner-native",
-              "sonner-native/*"
-            ],
+            "group": ["sonner", "sonner/*", "sonner-native", "sonner-native/*"],
             "message": "Import { toast } from @/lib/toast \u2014 one wrapper owns copy/duration/haptics so feedback stays consistent (plan 0032 R8); the Toaster host lives in @/components/toast-host."
           },
           {
-            "group": [
-              "effect-rx",
-              "effect-rx/*",
-              "@effect-rx/*"
-            ],
+            "group": ["effect-rx", "effect-rx/*", "@effect-rx/*"],
             "message": "Do not adopt effect-rx. TanStack Query owns caching/invalidation/React state; Effect stays contained in lib/providers + lib/http and runs at the boundary via Effect.runPromise (AGENTS.md: Tech Stack \u2192 Effect)."
           },
           {
-            "group": [
-              "react-native-reanimated"
-            ],
+            "group": ["react-native-reanimated"],
             "importNamePattern": "InUp$",
             "message": "Reanimated's In presets are named for the side they start from: FadeInUp starts 25pt above and travels down. For content that rises into place use FadeInDown. Dropping from above on purpose? Disable this line with the reason."
           }
@@ -152,26 +114,17 @@
           },
           {
             "name": "react-native",
-            "importNames": [
-              "FlatList",
-              "VirtualizedList",
-              "SectionList"
-            ],
+            "importNames": ["FlatList", "VirtualizedList", "SectionList"],
             "message": "Use the components/List wrapper (Legend List), never raw FlatList (AGENTS.md: Long Lists)."
           },
           {
             "name": "expo-image",
-            "importNames": [
-              "Image"
-            ],
+            "importNames": ["Image"],
             "message": "Import Image from @/components/image \u2014 className on raw expo-image is silently dropped on native (uniwind needs the withUniwind wrapper)."
           },
           {
             "name": "react-native",
-            "importNames": [
-              "KeyboardAvoidingView",
-              "InputAccessoryView"
-            ],
+            "importNames": ["KeyboardAvoidingView", "InputAccessoryView"],
             "message": "Use @/components/keyboard-avoiding-view (react-native-keyboard-controller) \u2014 core RN keyboard handling is inconsistent across platforms."
           },
           {
@@ -186,25 +139,17 @@
           },
           {
             "name": "react-native-keyboard-controller",
-            "importNames": [
-              "KeyboardAvoidingView",
-              "KeyboardAwareScrollView"
-            ],
+            "importNames": ["KeyboardAvoidingView", "KeyboardAwareScrollView"],
             "message": "Import KeyboardAvoidingView from @/components/keyboard-avoiding-view (or KeyboardAwareScrollView from @/components/keyboard-aware-scroll-view) \u2014 the raw components drop className on native (they need the withUniwind wrapper)."
           },
           {
             "name": "react",
-            "importNames": [
-              "useMemo",
-              "useCallback"
-            ],
+            "importNames": ["useMemo", "useCallback"],
             "message": "React Compiler handles memoization automatically \u2014 use plain values/functions instead. Opt out with 'use no memo' if absolutely necessary."
           },
           {
             "name": "react-native-reanimated",
-            "importNames": [
-              "default"
-            ],
+            "importNames": ["default"],
             "message": "Import AnimatedView from @/components/animated-view \u2014 className on raw Animated.* components is silently dropped on native (needs the withUniwind wrapper). Named imports (FadeOut, withTiming, \u2026) are fine."
           },
           {
@@ -213,37 +158,27 @@
           },
           {
             "name": "expo-web-browser",
-            "importNames": [
-              "openBrowserAsync"
-            ],
+            "importNames": ["openBrowserAsync"],
             "message": "Import openExternalUrl from @/lib/open-external-url \u2014 the wrapper picks in-app browser (native) vs new tab (web) so components never touch expo-web-browser/window directly."
           },
           {
             "name": "uniwind",
-            "importNames": [
-              "withUniwind"
-            ],
+            "importNames": ["withUniwind"],
             "message": "Import { withUniwind } from @/lib/with-uniwind \u2014 uniwind's own passes an omitted className to styleq as undefined and crashes the web build (docs/solutions/uniwind-classname-undefined-throws.md)."
           },
           {
             "name": "uniwind",
-            "importNames": [
-              "useCSSVariable"
-            ],
+            "importNames": ["useCSSVariable"],
             "message": "Import { useThemeColor } from @/lib/theme-color \u2014 the web build is a static export and reading a CSS variable in JS there resolves to nothing at prerender time, which React then never repaints (AGENTS.md: Theming). A colour that gets composed rather than painted is the one exception; say so in a comment and disable this rule on the line."
           },
           {
             "name": "react-native",
-            "importNames": [
-              "RefreshControl"
-            ],
+            "importNames": ["RefreshControl"],
             "message": "Use RefreshControl from @/components/refresh-control: it owns the pending state, so a pull doesn't re-render the list."
           },
           {
             "name": "react-native-gesture-handler",
-            "importNames": [
-              "RefreshControl"
-            ],
+            "importNames": ["RefreshControl"],
             "message": "Use RefreshControl from @/components/refresh-control: it owns the pending state, so a pull doesn't re-render the list."
           }
         ]
@@ -261,35 +196,19 @@
     "shadcn/no-restyle": [
       "error",
       {
-        "allow": [
-          "layout"
-        ],
+        "allow": ["layout"],
         "contracts": [
           {
             "pattern": "^(Animated\\w+|GestureScrollView|Presstable\\w+|Image|ZoomableImage|KeyboardAvoidingView|KeyboardAwareScrollView|RefreshableScrollView|CollapsibleSectionScroll|List|Skeleton|PosterPlaceholder|MorphText|BlurEnter|SectionEnter)$",
-            "allow": [
-              "layout",
-              "spacing",
-              "color",
-              "typography",
-              "shape",
-              "effects",
-              "motion"
-            ]
+            "allow": ["layout", "spacing", "color", "typography", "shape", "effects", "motion"]
           },
           {
             "pattern": "^(ActionableRow|Rail)$",
-            "allow": [
-              "layout",
-              "spacing"
-            ]
+            "allow": ["layout", "spacing"]
           },
           {
             "pattern": "^PressableCard$",
-            "allow": [
-              "layout",
-              "shape"
-            ]
+            "allow": ["layout", "shape"]
           }
         ]
       }
@@ -298,9 +217,7 @@
     "shadcn/no-arbitrary-values": [
       "error",
       {
-        "allow": [
-          "font-size"
-        ]
+        "allow": ["font-size"]
       }
     ],
     "shadcn/no-unknown-classes": "error",
@@ -358,10 +275,7 @@
           {
             "patterns": [
               {
-                "group": [
-                  "../*",
-                  "../**"
-                ],
+                "group": ["../*", "../**"],
                 "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
               }
             ]
@@ -382,10 +296,7 @@
           {
             "patterns": [
               {
-                "group": [
-                  "../*",
-                  "../**"
-                ],
+                "group": ["../*", "../**"],
                 "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
               }
             ]
@@ -394,19 +305,14 @@
       }
     },
     {
-      "files": [
-        "src/components/List/**"
-      ],
+      "files": ["src/components/List/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "../*",
-                  "../**"
-                ],
+                "group": ["../*", "../**"],
                 "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
               }
             ]
@@ -415,35 +321,25 @@
       }
     },
     {
-      "files": [
-        "src/**/*.ts",
-        "src/**/*.tsx"
-      ],
+      "files": ["src/**/*.ts", "src/**/*.tsx"],
       "rules": {
         "unicorn/filename-case": [
           "error",
           {
             "case": "kebabCase",
-            "ignore": [
-              "^index\\.tsx?$"
-            ]
+            "ignore": ["^index\\.tsx?$"]
           }
         ]
       }
     },
     {
-      "files": [
-        "oxlint-plugin-shinobu/**"
-      ],
+      "files": ["oxlint-plugin-shinobu/**"],
       "rules": {
         "no-restricted-imports": "off"
       }
     },
     {
-      "files": [
-        "src/**/*.ts",
-        "src/**/*.tsx"
-      ],
+      "files": ["src/**/*.ts", "src/**/*.tsx"],
       "rules": {
         "shinobu/no-template-classnames": "error",
         "shinobu/no-unguarded-push": "error",
@@ -462,9 +358,7 @@
   ],
   "settings": {
     "shadcn": {
-      "componentImports": [
-        "^@/components/"
-      ]
+      "componentImports": ["^@/components/"]
     }
   }
 }

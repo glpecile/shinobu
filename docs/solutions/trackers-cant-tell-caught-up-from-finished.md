@@ -2,9 +2,9 @@
 
 ## Symptom
 
-(owner, 2026-09-12.) *Lanterns*, 4 of 8 episodes watched, every aired episode
+(owner, 2026-09-12.) _Lanterns_, 4 of 8 episodes watched, every aired episode
 logged: the details CTA read **Rewatch** under "🎉 You've watched every aired
-episode" — the copy for a show that has *ended*. The anime path, same shape
+episode" — the copy for a show that has _ended_. The anime path, same shape
 (10 of 13 watched), correctly read "Episode 11 not yet aired".
 
 ## Cause
@@ -18,7 +18,7 @@ different states arrive as the same empty pointer:
   Trakt-sourced item, so counting can't separate the cases either.
 - **Simkl**'s `watching` snapshot simply omits `next_to_watch`.
 
-Plan 0035 R17 split the *zero-aired* case out of that pointer (an announced
+Plan 0035 R17 split the _zero-aired_ case out of that pointer (an announced
 show was being celebrated as finished). The other half — caught up, more
 scheduled — stayed on the rewatch branch.
 
@@ -37,7 +37,7 @@ which episode is waiting and when ("S1E5 airs in 3 days",
 the details screen it costs no request — the seasons accordion below has
 already filled that cache entry.
 
-An episode with no air date counts as unaired here, which is the *opposite* of
+An episode with no air date counts as unaired here, which is the _opposite_ of
 the permissive rule on a named next episode (`firstAired == null → aired`, so a
 catalogue gap never blocks a log). The two are consistent: a caller already
 told there is nothing left to log has no log to protect.
@@ -45,6 +45,6 @@ told there is nothing left to log has no log to protect.
 ## Rule
 
 A provider's "nothing next" is never a statement about the future — it is a
-statement about what has aired. Anything that wants to distinguish *finished*
-from *caught up*, or to count down to the next episode, has to read a
+statement about what has aired. Anything that wants to distinguish _finished_
+from _caught up_, or to count down to the next episode, has to read a
 catalogue that carries unaired episodes.

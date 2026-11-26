@@ -155,12 +155,18 @@ therefore come only from `data`, never from the fallback.
 `src/features/log-media/log-confirm-sheet.tsx`, inside `LogFormFields`:
 
 ```tsx
-        {/* On web, Letterboxd is manual only while the script can't log. */}
-        <ManualWriteRows
-          item={item}
-          manual={manualTargets}
-          reasons={process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : undefined}
-        />
+{
+  /* On web, Letterboxd is manual only while the script can't log. */
+}
+<ManualWriteRows
+  item={item}
+  manual={manualTargets}
+  reasons={
+    process.env.EXPO_OS === 'web'
+      ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') }
+      : undefined
+  }
+/>;
 ```
 
 `LogFormFields` receives `manualTargets = []` as a prop
@@ -189,17 +195,18 @@ always has a link. It renders nothing for an empty list.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Install | `bun install --frozen-lockfile` | exit 0 |
-| Typecheck | `bun typecheck` | exit 0, no errors |
-| Lint | `bun lint` | exit 0 |
-| Focused tests | `bun test --isolate src/lib/providers/routing.test.ts` | all pass |
-| Full tests | `bun run test` | all pass |
+| Purpose       | Command                                                | Expected on success |
+| ------------- | ------------------------------------------------------ | ------------------- |
+| Install       | `bun install --frozen-lockfile`                        | exit 0              |
+| Typecheck     | `bun typecheck`                                        | exit 0, no errors   |
+| Lint          | `bun lint`                                             | exit 0              |
+| Focused tests | `bun test --isolate src/lib/providers/routing.test.ts` | all pass            |
+| Full tests    | `bun run test`                                         | all pass            |
 
 ## Scope
 
 **In scope** (the only files you should modify):
+
 - `src/lib/providers/routing.ts` (add one exported function)
 - `src/lib/providers/routing.test.ts`
 - `src/features/log-media/use-log-targets.ts`
@@ -208,6 +215,7 @@ always has a link. It renders nothing for an empty list.
 - `plans/README.md` (status row)
 
 **Out of scope** (do NOT touch, even though they look related):
+
 - `providersForWrite`, `splitWriteTargets`, `resolveWriteTargets`. Unmatched
   providers are **not** write targets and must never reach the fan-out.
 - `use-log-media.ts`. The mutation and its outcomes do not change.
@@ -268,18 +276,26 @@ describe('unmatchedWriteTargets', () => {
   const all = ['trakt', 'anilist', 'letterboxd', 'serializd', 'simkl'] as const;
 
   it('lists the movie trackers for an anime film no id reaches', () => {
-    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1 }) }, all, 'log'))
-      .toEqual(['trakt', 'letterboxd']);
+    expect(
+      unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1 }) }, all, 'log'),
+    ).toEqual(['trakt', 'letterboxd']);
   });
 
   it('lists the TV trackers for an anime series no id reaches', () => {
-    expect(unmatchedWriteTargets({ type: 'ANIME', ...ids({ anilist: 1 }) }, all, 'log'))
-      .toEqual(['trakt', 'serializd']);
+    expect(unmatchedWriteTargets({ type: 'ANIME', ...ids({ anilist: 1 }) }, all, 'log')).toEqual([
+      'trakt',
+      'serializd',
+    ]);
   });
 
   it('is empty once a movie or TV id is known', () => {
-    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) }, all, 'log'))
-      .toEqual([]);
+    expect(
+      unmatchedWriteTargets(
+        { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
+        all,
+        'log',
+      ),
+    ).toEqual([]);
   });
 });
 ```
@@ -312,7 +328,12 @@ In `src/features/log-media/use-log-targets.ts`:
 4. Change the return to keep the fallback free of unmatched rows:
 
    ```ts
-     return data ?? { ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript), unmatched: [] };
+   return (
+     data ?? {
+       ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript),
+       unmatched: [],
+     }
+   );
    ```
 
 5. In the hook's docblock, add one sentence: unmatched providers come only
@@ -336,11 +357,13 @@ In `src/features/log-media/log-confirm-sheet.tsx`:
    after the existing `<ManualWriteRows … manual={manualTargets} … />`:
 
    ```tsx
-           <ManualWriteRows
-             item={item}
-             manual={unmatchedTargets}
-             reasons={Object.fromEntries(unmatchedTargets.map((id) => [id, 'No match found for this title']))}
-           />
+   <ManualWriteRows
+     item={item}
+     manual={unmatchedTargets}
+     reasons={Object.fromEntries(
+       unmatchedTargets.map((id) => [id, 'No match found for this title']),
+     )}
+   />
    ```
 
 3. In `LogConfirmForm`, read the new field and pass it:

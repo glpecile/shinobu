@@ -11,10 +11,7 @@ import { DURATION, EASE_OUT } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 
-import {
-  WriteResultReport,
-  type WriteResultReportProps,
-} from './write-result-report';
+import { WriteResultReport, type WriteResultReportProps } from './write-result-report';
 
 // CSS animation, not an `entering` layout animation: Android's keyboard resizes
 // the sheet host and can leave a `FadeIn` stuck at opacity 0. No `exiting` either:
@@ -43,11 +40,7 @@ function Title({ children }: { children: ReactNode }) {
 }
 
 function Description({ children }: { children: ReactNode }) {
-  return (
-    <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
-      {children}
-    </Text>
-  );
+  return <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">{children}</Text>;
 }
 
 function Report({
@@ -56,8 +49,7 @@ function Report({
   ...report
 }: Omit<WriteResultReportProps, 'outcomes'> & {
   result:
-    | { outcomes: readonly ProviderWriteOutcome[]; succeeded: readonly ProviderId[] }
-    | undefined;
+    { outcomes: readonly ProviderWriteOutcome[]; succeeded: readonly ProviderId[] } | undefined;
   succeededLine: (succeeded: readonly ProviderId[]) => string;
 }) {
   const success = useThemeColor('--color-success');
@@ -95,9 +87,7 @@ function WriteError({ children }: { children: ReactNode }) {
           name="alert-circle"
           size={20}
         />
-        <Text className="text-accent-on-tonal font-sans text-sm flex-1">
-          {children}
-        </Text>
+        <Text className="text-accent-on-tonal font-sans text-sm flex-1">{children}</Text>
       </View>
     </SectionEnter>
   );
@@ -107,4 +97,12 @@ function Actions({ children }: { children: ReactNode }) {
   return <View className="mt-6 gap-2">{children}</View>;
 }
 
-export const WriteSheet = { Step, Header: Sheet.Header, Title, Description, Report, Error: WriteError, Actions };
+export const WriteSheet = {
+  Step,
+  Header: Sheet.Header,
+  Title,
+  Description,
+  Report,
+  Error: WriteError,
+  Actions,
+};

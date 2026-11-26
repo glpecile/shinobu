@@ -11,7 +11,13 @@ import type { NormalizedMediaItem } from '@/types/media';
 import type { LogRequest } from './log-request';
 import { useLogTargetsSplit } from './use-log-targets';
 
-export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaItem; onOpenRequest?: (request: LogRequest) => void }) {
+export function LogBookButton({
+  item,
+  onOpenRequest,
+}: {
+  item: NormalizedMediaItem;
+  onOpenRequest?: (request: LogRequest) => void;
+}) {
   const connected = useConnectedProviders();
   const { openLog } = useCatchUpControls();
   const busy = useQuickLogBusy(item.id);
@@ -35,11 +41,15 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
   const action = openRead != null ? 'Log progress' : reread ? 'Reread' : 'Mark as read';
   const bridgeKnown = enriched !== undefined;
   const hardcoverKnown = !connected.includes(Provider.Hardcover) || entry.data !== undefined;
-  const known = hardcoverKnown && bridgeKnown && (volume == null || anilist.data !== undefined || anilist.isError);
+  const known =
+    hardcoverKnown &&
+    bridgeKnown &&
+    (volume == null || anilist.data !== undefined || anilist.isError);
   const failed = entry.data === undefined && entry.isError;
   const waiting = !known && !failed;
   const anilistEntry = anilist.data?.entry ?? null;
-  const anilistHasVolume = volume != null && anilistEntry != null && anilistEntry.progressVolumes >= volume;
+  const anilistHasVolume =
+    volume != null && anilistEntry != null && anilistEntry.progressVolumes >= volume;
   const anilistTotal = anilist.data?.total;
   const anilistNote =
     volume != null && !anilistHasVolume && anilistEntry != null && anilistEntry.progress > 0
@@ -66,7 +76,10 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
               ? `You’ve read “${item.title}” — this logs another read.`
               : `“${item.title}”${anilistNote}`,
             reading: {
-              finished: openRead == null || anilistHasVolume || (total != null && openRead.progressPages >= total),
+              finished:
+                openRead == null ||
+                anilistHasVolume ||
+                (total != null && openRead.progressPages >= total),
               page: openRead?.progressPages ?? 0,
               ...(total != null ? { total } : {}),
               ...(reread ? { reread: true } : {}),

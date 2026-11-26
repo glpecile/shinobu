@@ -7,17 +7,17 @@ fine. The rows had carried `contentContainerStyle={{ paddingHorizontal: 16 }}`
 since the ScrollView → Legend List swap in plan 0024 (`MediaCarousel`); the
 `ScrollView` they replaced used `className="px-4"` and never showed this.
 
-**Cause.** A virtualized list positions its items *absolutely* inside the
+**Cause.** A virtualized list positions its items _absolutely_ inside the
 content container, and the two layout engines disagree about what a parent's
 padding means for an absolutely positioned child:
 
-- **Yoga (native)** lays an absolute child out against the parent's *content*
+- **Yoga (native)** lays an absolute child out against the parent's _content_
   box, so `paddingLeft` shifts it.
-- **CSS (web)** makes the containing block the parent's *padding* box, so
+- **CSS (web)** makes the containing block the parent's _padding_ box, so
   `left: 0` lands at the inner border edge and `padding-left` shifts nothing.
 
 So the same prop that insets a native row is a no-op on web. It survives
-unnoticed on *vertical* lists because there the horizontal padding narrows the
+unnoticed on _vertical_ lists because there the horizontal padding narrows the
 content box, and item widths are computed from that width rather than from an
 absolute x offset — which is why the watchlist grid keeps its gutters on web
 while the carousels lost theirs.
@@ -36,7 +36,7 @@ The trailing spacer is short by one gutter because each card already carries its
 own `mr-3`; without that subtraction the row ends 28px from the edge and starts
 16px from it.
 
-**Rule of thumb.** For a *horizontal* `components/List`, express edge insets as
+**Rule of thumb.** For a _horizontal_ `components/List`, express edge insets as
 spacer components. `contentContainerStyle` padding is only trustworthy on the
 cross axis, and `className` isn't an option either — uniwind drops it on
 third-party components on native

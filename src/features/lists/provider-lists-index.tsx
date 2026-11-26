@@ -9,12 +9,32 @@ import { ListsIndex } from './lists-grid';
 import { ListsLoadError } from './lists-page';
 import { hardcoverListSummary, letterboxdListSummary, serializdListSummary } from './list-summary';
 
-export function LetterboxdListsIndex({ username, kind, url }: { username: string; kind: LetterboxdListKind; url: string }) {
+export function LetterboxdListsIndex({
+  username,
+  kind,
+  url,
+}: {
+  username: string;
+  kind: LetterboxdListKind;
+  url: string;
+}) {
   const pages = useSuspenseLetterboxdListsQuery(username, kind);
-  if (pages.data == null) return <ListsLoadError index onRetry={() => pages.refetch()} provider={Provider.Letterboxd} url={url} />;
+  if (pages.data == null)
+    return (
+      <ListsLoadError
+        index
+        onRetry={() => pages.refetch()}
+        provider={Provider.Letterboxd}
+        url={url}
+      />
+    );
   return (
     <ListsIndex
-      emptyBody={kind === 'liked' ? 'Like a list on Letterboxd to see it here.' : 'Start one here, or on Letterboxd. Private lists aren’t available in Shinobu.'}
+      emptyBody={
+        kind === 'liked'
+          ? 'Like a list on Letterboxd to see it here.'
+          : 'Start one here, or on Letterboxd. Private lists aren’t available in Shinobu.'
+      }
       fetchNextPage={() => void pages.fetchNextPage()}
       hasNextPage={pages.hasNextPage}
       isFetchNextPageError={pages.isFetchNextPageError}
@@ -27,11 +47,21 @@ export function LetterboxdListsIndex({ username, kind, url }: { username: string
   );
 }
 
-export function SerializdListsIndex({ username, kind }: { username: string; kind: SerializdListKind }) {
+export function SerializdListsIndex({
+  username,
+  kind,
+}: {
+  username: string;
+  kind: SerializdListKind;
+}) {
   const pages = useSuspenseSerializdListsQuery(username, kind);
   return (
     <ListsIndex
-      emptyBody={kind === 'liked' ? 'Like a list on Serializd to see it here.' : 'Start one here, or on Serializd.'}
+      emptyBody={
+        kind === 'liked'
+          ? 'Like a list on Serializd to see it here.'
+          : 'Start one here, or on Serializd.'
+      }
       fetchNextPage={() => void pages.fetchNextPage()}
       hasNextPage={pages.hasNextPage}
       isFetchNextPageError={pages.isFetchNextPageError}
@@ -48,7 +78,11 @@ export function HardcoverListsIndex({ kind }: { kind: HardcoverListKind }) {
   const lists = useSuspenseHardcoverListsQuery(kind);
   return (
     <ListsIndex
-      emptyBody={kind === 'liked' ? 'Like a list on Hardcover to see it here.' : 'Start one on Hardcover to see it here.'}
+      emptyBody={
+        kind === 'liked'
+          ? 'Like a list on Hardcover to see it here.'
+          : 'Start one on Hardcover to see it here.'
+      }
       fetchNextPage={() => {}}
       hasNextPage={false}
       isFetchNextPageError={false}

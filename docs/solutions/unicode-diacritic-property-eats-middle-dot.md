@@ -6,19 +6,19 @@ The Letterboxd person-URL slugifier (`letterboxdPersonSlug` in
 `lib/providers/external-urls.ts`) turned `"WALL·E"` into `walle`, not
 `wall-e` — so the generated link 404'd. Every accented Latin name slugified
 correctly, which is exactly why it wasn't obvious: the bug only fires on the
-handful of titles/names that use a middle dot as a *separator*.
+handful of titles/names that use a middle dot as a _separator_.
 
 ## Root cause
 
 The usual NFD-then-strip idiom is:
 
 ```ts
-name.normalize('NFD').replace(/\p{Diacritic}/gu, '')
+name.normalize('NFD').replace(/\p{Diacritic}/gu, '');
 ```
 
 `\p{Diacritic}` is **not** "combining marks left over by NFD". It is a
-Unicode *binary property* whose set includes standalone, spacing characters
-that are merely diacritic-*ish* — among them **U+00B7 MIDDLE DOT**, U+00B4
+Unicode _binary property_ whose set includes standalone, spacing characters
+that are merely diacritic-_ish_ — among them **U+00B7 MIDDLE DOT**, U+00B4
 ACUTE ACCENT, and the modifier letters. NFD never produces those; they're
 already there in the source string as real, meaningful characters.
 
@@ -32,7 +32,7 @@ Strip `\p{Mn}` (Nonspacing_Mark) instead. That is precisely the category NFD
 decomposition emits, and nothing else:
 
 ```ts
-name.normalize('NFD').replace(/\p{Mn}/gu, '')
+name.normalize('NFD').replace(/\p{Mn}/gu, '');
 ```
 
 `WALL·E` → `WALL·E` (dot survives the strip) → `wall-e` (dot becomes a hyphen
@@ -42,7 +42,7 @@ in the separator pass). Accent folding is unchanged: `Joaquín` → `joaquin`.
 
 `lib/providers/mapping/pick-movie-match.ts` uses the same
 `\p{Diacritic}` strip. It is **not** broken there — that code normalizes both
-sides of a *fuzzy title comparison*, so deleting the dot on both sides still
+sides of a _fuzzy title comparison_, so deleting the dot on both sides still
 matches. The bug only bites when the output is a **URL path segment**, where
 a dropped separator changes the identity of the thing being addressed.
 

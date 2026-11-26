@@ -3,7 +3,7 @@
 `ExpandableText` collapsed to a fixed-height box (`height: lines * LINE_HEIGHT`,
 `overflow-hidden`) and measured the text inside it with `onLayout`. On web that
 works: the browser lays the paragraph out in full and lets it overflow. On iOS
-the text is laid out to *fit* the constrained box, so a 64-line biography
+the text is laid out to _fit_ the constrained box, so a 64-line biography
 reported four lines — `fullHeight` never exceeded the clamp, the Read more
 toggle never rendered, and the last visible line was cut mid-sentence with no
 ellipsis.

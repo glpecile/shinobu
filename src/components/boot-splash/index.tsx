@@ -1,6 +1,12 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
-import { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import {
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -28,13 +34,19 @@ export function BootSplash({ ready, onPainted }: { ready: boolean; onPainted: ()
   }
 
   function reveal() {
-    opacity.set(withTiming(0, {
-      duration: reduced ? 120 : 300,
-      easing: KEYFRAME_EASE_OUT,
-      reduceMotion: ReduceMotion.Never,
-    }, () => {
-      scheduleOnRN(finish);
-    }));
+    opacity.set(
+      withTiming(
+        0,
+        {
+          duration: reduced ? 120 : 300,
+          easing: KEYFRAME_EASE_OUT,
+          reduceMotion: ReduceMotion.Never,
+        },
+        () => {
+          scheduleOnRN(finish);
+        },
+      ),
+    );
   }
 
   function painted() {

@@ -31,23 +31,23 @@ re-checked rather than carried forward.
 
 ## Verdict
 
-| Service | Domain | Auth | Read | Write | Web | Verdict |
-| --- | --- | --- | --- | --- | --- | --- |
-| **Hardcover** | books; comics (issues, trades) and manga/light-novel volumes as books | OAuth 2.0 code + PKCE, public client | library by status, reads with page progress, journal | status, progress, dates, lists | docs: "CORS is open"; probe pending | **Book provider** |
-| Goodreads | books | none; no new keys since Dec 2020 | public shelf RSS, last 100 per shelf | none | RSS CORS unknown | Not a provider |
-| StoryGraph | books | none (API on roadmap since 2021) | scraping only | none | — | Not viable |
-| Open Library | books + reading log | cookie session only | public reading log JSON | undocumented cookie posts | GET likely open | Metadata at most |
-| Google Books "My Library" | books | Google OAuth (`auth/books`) | shelves (2 to read, 3 reading now, 4 have read) | add/remove volume | **probed: preflight echoes origin, allows POST** | Viable, low value |
-| Literal.club | books | email/password → token | reading states | reading states | unknown | 2026 status unknown |
-| **Metron** | comics (issues) | Knox bearer token from the account page (Basic auth deprecated) | collection with read dates, pull list | `POST /api/collection/scrobble/` | no CORS in server config | **Comics candidate**, native-only on web |
-| League of Comic Geeks | comics | session cookie (unofficial scrapers) | scrape | scrape | — | Not viable |
-| Comic Vine | comics metadata | API key | metadata only | none | no CORS (JSONP) | Not a tracker |
-| CLZ Comics | comics collection | none | none | none | — | Not viable |
-| **AniList** (connected) | anime + manga (+ light novels as `NOVEL` format) | implicit grant (web), code (native) | lists, activity | `SaveMediaListEntry` | open (`web-cors-anilist.md`) | **Manga provider** |
-| MyAnimeList | anime + manga | OAuth2 PKCE (plain) | lists | `my_list_status` (chapters, volumes) | community reports no CORS | Optional later, native-only on web |
-| MangaUpdates | manga | username/password → session JWT | lists | `/v1/lists/series` | CORS error reported | Not recommended (single session) |
-| MangaDex | manga reader | personal clients only | follows, reading status | status | — | Not viable for a distributed app |
-| Kitsu | anime + manga | OAuth password grant | library entries | library entries | — | Availability doubtful in 2026 |
+| Service                   | Domain                                                                | Auth                                                            | Read                                                 | Write                                | Web                                              | Verdict                                  |
+| ------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------ | ------------------------------------------------ | ---------------------------------------- |
+| **Hardcover**             | books; comics (issues, trades) and manga/light-novel volumes as books | OAuth 2.0 code + PKCE, public client                            | library by status, reads with page progress, journal | status, progress, dates, lists       | docs: "CORS is open"; probe pending              | **Book provider**                        |
+| Goodreads                 | books                                                                 | none; no new keys since Dec 2020                                | public shelf RSS, last 100 per shelf                 | none                                 | RSS CORS unknown                                 | Not a provider                           |
+| StoryGraph                | books                                                                 | none (API on roadmap since 2021)                                | scraping only                                        | none                                 | —                                                | Not viable                               |
+| Open Library              | books + reading log                                                   | cookie session only                                             | public reading log JSON                              | undocumented cookie posts            | GET likely open                                  | Metadata at most                         |
+| Google Books "My Library" | books                                                                 | Google OAuth (`auth/books`)                                     | shelves (2 to read, 3 reading now, 4 have read)      | add/remove volume                    | **probed: preflight echoes origin, allows POST** | Viable, low value                        |
+| Literal.club              | books                                                                 | email/password → token                                          | reading states                                       | reading states                       | unknown                                          | 2026 status unknown                      |
+| **Metron**                | comics (issues)                                                       | Knox bearer token from the account page (Basic auth deprecated) | collection with read dates, pull list                | `POST /api/collection/scrobble/`     | no CORS in server config                         | **Comics candidate**, native-only on web |
+| League of Comic Geeks     | comics                                                                | session cookie (unofficial scrapers)                            | scrape                                               | scrape                               | —                                                | Not viable                               |
+| Comic Vine                | comics metadata                                                       | API key                                                         | metadata only                                        | none                                 | no CORS (JSONP)                                  | Not a tracker                            |
+| CLZ Comics                | comics collection                                                     | none                                                            | none                                                 | none                                 | —                                                | Not viable                               |
+| **AniList** (connected)   | anime + manga (+ light novels as `NOVEL` format)                      | implicit grant (web), code (native)                             | lists, activity                                      | `SaveMediaListEntry`                 | open (`web-cors-anilist.md`)                     | **Manga provider**                       |
+| MyAnimeList               | anime + manga                                                         | OAuth2 PKCE (plain)                                             | lists                                                | `my_list_status` (chapters, volumes) | community reports no CORS                        | Optional later, native-only on web       |
+| MangaUpdates              | manga                                                                 | username/password → session JWT                                 | lists                                                | `/v1/lists/series`                   | CORS error reported                              | Not recommended (single session)         |
+| MangaDex                  | manga reader                                                          | personal clients only                                           | follows, reading status                              | status                               | —                                                | Not viable for a distributed app         |
+| Kitsu                     | anime + manga                                                         | OAuth password grant                                            | library entries                                      | library entries                      | —                                                | Availability doubtful in 2026            |
 
 ## Hardcover
 
@@ -167,12 +167,12 @@ AniList stays the manga provider. Gaps in the current integration:
 
 ## Progress units
 
-| Domain | Provider | Item | Unit | "Done" |
-| --- | --- | --- | --- | --- |
-| Manga | AniList | series entry | chapter (`progress`); volumes separate (`progressVolumes`) | `COMPLETED` at `chapters` when known |
-| Book | Hardcover | book; edition supplies `pages` | page (`progress_pages`), or seconds for audio | status 3, or progress reaching the edition's pages |
-| Comic issue | Metron or Hardcover | issue | none: read or unread | scrobbled / status 3 |
-| Comic or manga volume | Hardcover | book | page | status 3 |
+| Domain                | Provider            | Item                           | Unit                                                       | "Done"                                             |
+| --------------------- | ------------------- | ------------------------------ | ---------------------------------------------------------- | -------------------------------------------------- |
+| Manga                 | AniList             | series entry                   | chapter (`progress`); volumes separate (`progressVolumes`) | `COMPLETED` at `chapters` when known               |
+| Book                  | Hardcover           | book; edition supplies `pages` | page (`progress_pages`), or seconds for audio              | status 3, or progress reaching the edition's pages |
+| Comic issue           | Metron or Hardcover | issue                          | none: read or unread                                       | scrobbled / status 3                               |
+| Comic or manga volume | Hardcover           | book                           | page                                                       | status 3                                           |
 
 A chapter, a page and a volume are never converted into one another. A
 Hardcover manga volume and an AniList manga series are different items and

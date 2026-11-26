@@ -1,12 +1,7 @@
 import { useReducer, useRef, useState } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import {
-  Text,
-  View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-} from 'react-native';
+import { Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { ActionableRow } from '@/components/actionable-row';
@@ -15,10 +10,7 @@ import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { List, type LegendListRef } from '@/components/List';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
-import {
-  SCROLL_TO_TOP_THRESHOLD,
-  ScrollToTopFab,
-} from '@/components/scroll-to-top-fab';
+import { SCROLL_TO_TOP_THRESHOLD, ScrollToTopFab } from '@/components/scroll-to-top-fab';
 import { RefreshControl } from '@/components/refresh-control';
 import { SectionEnter } from '@/components/section-enter';
 import { SmallPoster } from '@/components/small-poster';
@@ -33,10 +25,7 @@ import { useWakeAt } from '@/lib/time/use-wake-at';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
-import {
-  setDiaryDayCollapsed,
-  useCollapsedDiaryDays,
-} from '@/state/prefs/collapsed-diary-days';
+import { setDiaryDayCollapsed, useCollapsedDiaryDays } from '@/state/prefs/collapsed-diary-days';
 import { useHiddenItems, type HiddenItem } from '@/state/prefs/hidden-items';
 import { useReadingInPages } from '@/state/prefs/reading-unit';
 import { useMediaDetailsQuery } from '@/state/queries/media-details';
@@ -74,7 +63,9 @@ function DiaryStickyDate({
 }) {
   const summary = day == null ? undefined : activity.get(day);
   if (day == null || summary == null) return null;
-  return <RailHead.Pinned count={summary.label} title={formatDayDate(day, today)} visible={visible} />;
+  return (
+    <RailHead.Pinned count={summary.label} title={formatDayDate(day, today)} visible={visible} />
+  );
 }
 
 const ROW_BODY = 'flex-1 py-1.5 pr-6';
@@ -228,7 +219,11 @@ function DiaryDayHead({
   onToggle: () => void;
 }) {
   return (
-    <RailHead label={`${parts.label} ${parts.day}, ${summary}`} onToggle={onToggle} open={!collapsed}>
+    <RailHead
+      label={`${parts.label} ${parts.day}, ${summary}`}
+      onToggle={onToggle}
+      open={!collapsed}
+    >
       <RailHead.Date day={parts.day} label={parts.label} today={parts.isToday} />
       <RailHead.Count>{summary}</RailHead.Count>
     </RailHead>
@@ -295,9 +290,7 @@ function RowTrailing({
         </Text>
       ) : (
         time != null &&
-        time !== '' && (
-          <Text className="text-muted/70 font-sans text-[11px]">{time}</Text>
-        )
+        time !== '' && <Text className="text-muted/70 font-sans text-[11px]">{time}</Text>
       )}
       <ProviderMarks providers={providers} />
     </View>
@@ -342,10 +335,7 @@ function DiaryRow({
           <>
             <DiaryPoster item={entry.item} />
             <View className="shrink ml-3">
-              <Text
-                className="text-foreground font-sans-semibold text-[15px]"
-                numberOfLines={1}
-              >
+              <Text className="text-foreground font-sans-semibold text-[15px]" numberOfLines={1}>
                 {entry.item.title}
               </Text>
               {detail !== '' && (
@@ -400,15 +390,10 @@ function DiaryClusterRow({
           <>
             <PosterFan item={view.item} />
             <View className="shrink ml-3">
-              <Text
-                className="text-foreground font-sans-semibold text-[15px]"
-                numberOfLines={1}
-              >
+              <Text className="text-foreground font-sans-semibold text-[15px]" numberOfLines={1}>
                 {view.item.title}
               </Text>
-              <Text className="text-muted font-sans text-xs mt-0.5">
-                {view.detail}
-              </Text>
+              <Text className="text-muted font-sans text-xs mt-0.5">{view.detail}</Text>
             </View>
           </>
         }
@@ -495,7 +480,10 @@ function DiaryFailureBanner({
 
 function DiaryFooter({ loading }: { loading: boolean }) {
   return (
-    <View accessibilityLabel={loading ? 'Loading more entries' : undefined} className="h-24 items-center justify-center">
+    <View
+      accessibilityLabel={loading ? 'Loading more entries' : undefined}
+      className="h-24 items-center justify-center"
+    >
       {loading && <Spinner />}
     </View>
   );
@@ -620,7 +608,11 @@ export function DiaryList({
   // State, not an ambient `new Date()`, which React Compiler would cache until
   // `timeZone` changes. It rolls over at local midnight and on foreground.
   const [now, refreshNow] = useReducer(newDate, undefined, newDate);
-  useWakeAt(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime(), now, refreshNow);
+  useWakeAt(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime(),
+    now,
+    refreshNow,
+  );
 
   // No hook below this point, and only plain values into `flattenDays`: React
   // Compiler drops the memo when an input was made before a hook call or is a
@@ -664,7 +656,8 @@ export function DiaryList({
     for (const token of viewableItems) if (token.index < top.index) top = token;
     const item = top?.item;
     if (item != null) setVisibleMonth(item.kind === 'month' ? item.month : item.dayKey.slice(0, 7));
-    const day = item == null || item.kind === 'month' || item.kind === 'header' ? null : item.dayKey;
+    const day =
+      item == null || item.kind === 'month' || item.kind === 'header' ? null : item.dayKey;
     setSticky((previous) => {
       if (day == null) return previous.visible ? { ...previous, visible: false } : previous;
       return previous.visible && previous.day === day ? previous : { day, visible: true };
@@ -691,13 +684,22 @@ export function DiaryList({
             switch (item.kind) {
               case 'month':
                 // Keyed so a recycled slot remounts instead of animating from the previous month's state.
-                return <DiaryMonth className={cn(index > 0 && 'pt-6')} key={item.month} month={item.month} {...activityProps} />;
+                return (
+                  <DiaryMonth
+                    className={cn(index > 0 && 'pt-6')}
+                    key={item.month}
+                    month={item.month}
+                    {...activityProps}
+                  />
+                );
               case 'header':
                 return (
                   <DiaryDayHead
                     collapsed={item.collapsed}
                     summary={item.summary}
-                    onToggle={() => setDiaryDayCollapsed(item.dayKey, !collapsedDays.has(item.dayKey))}
+                    onToggle={() =>
+                      setDiaryDayCollapsed(item.dayKey, !collapsedDays.has(item.dayKey))
+                    }
                     parts={item.parts}
                   />
                 );
@@ -758,30 +760,37 @@ export function DiaryList({
               </CenteredNotice>
             </SectionEnter>
           }
-          ListFooterComponent={
-            <DiaryFooter loading={hasNextPage && isFetchingNextPage} />
-          }
+          ListFooterComponent={<DiaryFooter loading={hasNextPage && isFetchingNextPage} />}
           estimatedItemSize={36}
           getItemType={(item) => item.kind}
           onEndReached={hasNextPage ? onEndReached : undefined}
           onEndReachedThreshold={0.6}
           onViewableItemsChanged={handleViewableItemsChanged}
           recycleItems
-          refreshControl={
-            <RefreshControl onRefresh={onRefresh} tab="diary" />
-          }
+          refreshControl={<RefreshControl onRefresh={onRefresh} tab="diary" />}
         />
-        <DiaryStickyDate activity={activity} day={sticky.day} today={today} visible={sticky.visible} />
+        <DiaryStickyDate
+          activity={activity}
+          day={sticky.day}
+          today={today}
+          visible={sticky.visible}
+        />
         <ScrollToTopFab
           className="ios:bottom-24"
-          onPress={() => void listRef.current?.scrollToOffset({ offset: 0, animated: !reduceMotion })}
+          onPress={() =>
+            void listRef.current?.scrollToOffset({ offset: 0, animated: !reduceMotion })
+          }
           visible={showScrollTop}
         />
       </View>
       {wide && (
         <View className={SIDE_CALENDAR}>
           {failedProviders.length > 0 && (
-            <DiaryFailureBanner className="items-start px-6" onRetry={onRetry} providers={failedProviders} />
+            <DiaryFailureBanner
+              className="items-start px-6"
+              onRetry={onRetry}
+              providers={failedProviders}
+            />
           )}
           <SectionEnter key={sideMonth}>
             <DiaryMonth month={sideMonth} stacked {...activityProps} />

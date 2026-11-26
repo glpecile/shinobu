@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import type {
-  MergedDiaryEntry,
-  NormalizedDiaryEntry,
-  NormalizedMediaItem,
-} from '@/types/media';
+import type { MergedDiaryEntry, NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 import type { ProviderId } from '@/lib/providers/types';
 import {
   clusterDayEntries,
@@ -25,9 +21,7 @@ import {
 // UTC−05:00 year-round (no DST).
 const TZ_MINUS_5 = 'Etc/GMT+5';
 
-function item(
-  overrides: Partial<NormalizedMediaItem> & { id: string },
-): NormalizedMediaItem {
+function item(overrides: Partial<NormalizedMediaItem> & { id: string }): NormalizedMediaItem {
   return {
     title: 'Untitled',
     coverImage: '',
@@ -96,7 +90,6 @@ describe('mergeDiaryEntries — watermark', () => {
     expect(merged[0].id).toBe('anilist-2');
     expect(merged[3].id).toBe('trakt-1');
   });
-
 });
 
 describe('mergeDiaryEntries — failure & dedup', () => {
@@ -113,15 +106,9 @@ describe('mergeDiaryEntries — failure & dedup', () => {
   test('an entry re-returned on an overlapping page is not duplicated', () => {
     const shared = entry('trakt', '5', '2026-07-10T12:00:00.000Z');
     const merged = mergeDiaryEntries([
-      state(
-        'trakt',
-        [
-          entry('trakt', '6', '2026-07-11T12:00:00.000Z'),
-          shared,
-          shared,
-        ],
-        { hasMore: false },
-      ),
+      state('trakt', [entry('trakt', '6', '2026-07-11T12:00:00.000Z'), shared, shared], {
+        hasMore: false,
+      }),
     ]);
     expect(merged.filter((e) => e.id === 'trakt-5')).toHaveLength(1);
   });
@@ -145,10 +132,14 @@ describe('watermarkProviders', () => {
 
   test('a page that filtered to nothing still holds and advances by how far it read', () => {
     const states = [
-      state('trakt', [
-        entry('trakt', '1', '2026-07-12T00:00:00.000Z'),
-        entry('trakt', '2', '2026-07-01T00:00:00.000Z'),
-      ], { hasMore: true }),
+      state(
+        'trakt',
+        [
+          entry('trakt', '1', '2026-07-12T00:00:00.000Z'),
+          entry('trakt', '2', '2026-07-01T00:00:00.000Z'),
+        ],
+        { hasMore: true },
+      ),
       state('anilist', [], { hasMore: true, readTo: '2026-07-10T00:00:00.000Z' }),
     ];
     expect(mergeDiaryEntries(states).map((e) => e.id)).toEqual(['trakt-1']);
@@ -181,14 +172,22 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     const merged = mergeDiaryEntries([
       state('trakt', [
         entry('trakt', '100', '2026-07-20T18:30:00.000Z', {
-          item: item({ id: 'trakt-603', title: 'Fight Club', externalIds: { tmdb: 603, trakt: 550 } }),
+          item: item({
+            id: 'trakt-603',
+            title: 'Fight Club',
+            externalIds: { tmdb: 603, trakt: 550 },
+          }),
         }),
       ]),
       state('letterboxd', [
         entry('letterboxd', 'g1', '2026-07-20', {
           dateOnly: true,
           liked: true,
-          item: item({ id: 'letterboxd-fight-club', title: 'Fight Club', externalIds: { tmdb: 603, letterboxd: 'fight-club' } }),
+          item: item({
+            id: 'letterboxd-fight-club',
+            title: 'Fight Club',
+            externalIds: { tmdb: 603, letterboxd: 'fight-club' },
+          }),
         }),
       ]),
     ]);
@@ -241,13 +240,23 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     const merged = mergeDiaryEntries([
       state('trakt', [
         entry('trakt', 'e', '2026-07-20T20:00:00.000Z', {
-          item: item({ id: 'trakt-1', title: 'Frieren', type: 'ANIME', externalIds: { tmdb: 209867 } }),
+          item: item({
+            id: 'trakt-1',
+            title: 'Frieren',
+            type: 'ANIME',
+            externalIds: { tmdb: 209867 },
+          }),
           episodes: [3],
         }),
       ]),
       state('anilist', [
         entry('anilist', 'e', '2026-07-20T20:00:00.000Z', {
-          item: item({ id: 'anilist-1', title: 'Frieren', type: 'ANIME', externalIds: { tmdb: 209867 } }),
+          item: item({
+            id: 'anilist-1',
+            title: 'Frieren',
+            type: 'ANIME',
+            externalIds: { tmdb: 209867 },
+          }),
           episodes: [3, 4, 5],
         }),
       ]),
@@ -262,7 +271,12 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     });
     const letterboxdSame = entry('letterboxd', 'h', '2026-07-20', {
       dateOnly: true,
-      item: item({ id: 'letterboxd-heat', title: 'Heat', year: 1995, externalIds: { letterboxd: 'heat' } }),
+      item: item({
+        id: 'letterboxd-heat',
+        title: 'Heat',
+        year: 1995,
+        externalIds: { letterboxd: 'heat' },
+      }),
     });
     const mergedSame = groupDiaryEntries(
       mergeDiaryEntries([state('trakt', [traktEntry]), state('letterboxd', [letterboxdSame])]),
@@ -272,7 +286,12 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
 
     const letterboxdDiffYear = entry('letterboxd', 'h2', '2026-07-20', {
       dateOnly: true,
-      item: item({ id: 'letterboxd-heat-96', title: 'Heat', year: 1996, externalIds: { letterboxd: 'heat-96' } }),
+      item: item({
+        id: 'letterboxd-heat-96',
+        title: 'Heat',
+        year: 1996,
+        externalIds: { letterboxd: 'heat-96' },
+      }),
     });
     const mergedDiff = groupDiaryEntries(
       mergeDiaryEntries([state('trakt', [traktEntry]), state('letterboxd', [letterboxdDiffYear])]),
@@ -280,7 +299,6 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     );
     expect(mergedDiff[0].entries).toHaveLength(2);
   });
-
 });
 
 describe('groupDiaryEntries — timezone & ordering', () => {
@@ -294,8 +312,17 @@ describe('groupDiaryEntries — timezone & ordering', () => {
 
   test('a date-only entry sorts after instant entries within the same day', () => {
     const merged = mergeDiaryEntries([
-      state('letterboxd', [entry('letterboxd', 'g', '2026-07-20', { dateOnly: true, item: item({ id: 'letterboxd-a', externalIds: { tmdb: 1 } }) })]),
-      state('trakt', [entry('trakt', '1', '2026-07-20T09:00:00.000Z', { item: item({ id: 'trakt-b', externalIds: { tmdb: 2 } }) })]),
+      state('letterboxd', [
+        entry('letterboxd', 'g', '2026-07-20', {
+          dateOnly: true,
+          item: item({ id: 'letterboxd-a', externalIds: { tmdb: 1 } }),
+        }),
+      ]),
+      state('trakt', [
+        entry('trakt', '1', '2026-07-20T09:00:00.000Z', {
+          item: item({ id: 'trakt-b', externalIds: { tmdb: 2 } }),
+        }),
+      ]),
     ]);
     const days = groupDiaryEntries(merged, TZ_MINUS_5);
     expect(days[0].entries.map((e) => e.providers[0])).toEqual(['trakt', 'letterboxd']);
@@ -303,7 +330,9 @@ describe('groupDiaryEntries — timezone & ordering', () => {
 
   test('a date-only watermark never cuts same-day instant entries', () => {
     const merged = mergeDiaryEntries([
-      state('letterboxd', [entry('letterboxd', 'g', '2026-07-20', { dateOnly: true })], { hasMore: true }),
+      state('letterboxd', [entry('letterboxd', 'g', '2026-07-20', { dateOnly: true })], {
+        hasMore: true,
+      }),
       state('trakt', [entry('trakt', '1', '2026-07-20T20:00:00.000Z')], { hasMore: false }),
     ]);
     expect(merged.some((e) => e.id === 'trakt-1')).toBe(true);
@@ -326,16 +355,36 @@ describe('formatEpisodeDetail', () => {
     expect(formatEpisodeDetail({ type: 'MOVIE', episodes: [] })).toBe('');
   });
   test('a book names its reading event', () => {
-    expect(formatEpisodeDetail({ type: 'BOOK', episodes: [], readingEvent: 'finished' })).toBe('Finished');
+    expect(formatEpisodeDetail({ type: 'BOOK', episodes: [], readingEvent: 'finished' })).toBe(
+      'Finished',
+    );
   });
   test('a book progress update speaks the reader unit, else the one it has', () => {
     const progressed = { type: 'BOOK', readingEvent: 'progressed' } as const;
     const pages = { from: 27, to: 51 };
     const percent = { from: 12, to: 25 };
-    expect(formatEpisodeDetail({ ...progressed, episodes: [], pages, percent, inPages: true })).toBe('Pages 27–51');
-    expect(formatEpisodeDetail({ ...progressed, episodes: [], pages, percent, inPages: false })).toBe('+13% (12→25)');
-    expect(formatEpisodeDetail({ ...progressed, episodes: [], pages: { from: 52, to: 40 }, inPages: false })).toBe('Page 40');
-    expect(formatEpisodeDetail({ ...progressed, episodes: [], percent: { from: 30, to: 12 }, inPages: true })).toBe('12%');
+    expect(
+      formatEpisodeDetail({ ...progressed, episodes: [], pages, percent, inPages: true }),
+    ).toBe('Pages 27–51');
+    expect(
+      formatEpisodeDetail({ ...progressed, episodes: [], pages, percent, inPages: false }),
+    ).toBe('+13% (12→25)');
+    expect(
+      formatEpisodeDetail({
+        ...progressed,
+        episodes: [],
+        pages: { from: 52, to: 40 },
+        inPages: false,
+      }),
+    ).toBe('Page 40');
+    expect(
+      formatEpisodeDetail({
+        ...progressed,
+        episodes: [],
+        percent: { from: 30, to: 12 },
+        inPages: true,
+      }),
+    ).toBe('12%');
   });
 });
 
@@ -390,9 +439,7 @@ describe('shortClusterCount', () => {
   });
 });
 
-function mergedEntry(
-  overrides: Partial<MergedDiaryEntry> & { id: string },
-): MergedDiaryEntry {
+function mergedEntry(overrides: Partial<MergedDiaryEntry> & { id: string }): MergedDiaryEntry {
   return {
     providers: ['trakt'],
     item: item({ id: `${overrides.id}-item`, type: 'TV' }),
@@ -415,39 +462,68 @@ function ep(id: string, season: number, episode: number): MergedDiaryEntry {
 
 describe('matchesDiaryFormat', () => {
   test('Reading holds manga and books', () => {
-    const items = [item({ id: 'film' }), item({ id: 'manga', type: 'MANGA' }), item({ id: 'book', type: 'BOOK' })];
-    expect(items.filter((candidate) => matchesDiaryFormat(candidate, 'READING')).map((candidate) => candidate.id))
-      .toEqual(['manga', 'book']);
+    const items = [
+      item({ id: 'film' }),
+      item({ id: 'manga', type: 'MANGA' }),
+      item({ id: 'book', type: 'BOOK' }),
+    ];
+    expect(
+      items
+        .filter((candidate) => matchesDiaryFormat(candidate, 'READING'))
+        .map((candidate) => candidate.id),
+    ).toEqual(['manga', 'book']);
   });
 });
 
 describe('groupDiaryEntries — a bridged Hardcover volume (plan 0117 B6)', () => {
   test('shares its AniList entry’s row, and the volume is the card', () => {
-    const days = groupDiaryEntries([
-      entry('anilist', 'set', '2026-11-17T12:00:00Z', {
-        item: item({ id: 'anilist-143703', type: 'MANGA', externalIds: { anilist: 143703 } }),
-      }),
-      entry('hardcover', 'read', '2026-11-17T12:05:00Z', {
-        item: item({ id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61 }, bridgedAniList: { id: 143703, title: 'Nisemonogatari' } }),
-        readingEvent: 'finished',
-      }),
-    ], 'UTC');
+    const days = groupDiaryEntries(
+      [
+        entry('anilist', 'set', '2026-11-17T12:00:00Z', {
+          item: item({ id: 'anilist-143703', type: 'MANGA', externalIds: { anilist: 143703 } }),
+        }),
+        entry('hardcover', 'read', '2026-11-17T12:05:00Z', {
+          item: item({
+            id: 'hardcover-61',
+            type: 'BOOK',
+            externalIds: { hardcover: 61 },
+            bridgedAniList: { id: 143703, title: 'Nisemonogatari' },
+          }),
+          readingEvent: 'finished',
+        }),
+      ],
+      'UTC',
+    );
     expect(days[0].entries).toHaveLength(1);
-    expect(days[0].entries[0]).toMatchObject({ providers: ['hardcover', 'anilist'], item: { id: 'hardcover-61', type: 'BOOK' } });
+    expect(days[0].entries[0]).toMatchObject({
+      providers: ['hardcover', 'anilist'],
+      item: { id: 'hardcover-61', type: 'BOOK' },
+    });
   });
 });
 
 describe('summarizeDay', () => {
   test('counts films, anime films, ranges, chapters and books in their own units', () => {
     const book = item({ id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61 } });
-    expect(summarizeDay([
-      mergedEntry({ id: 'film', item: item({ id: 'movie' }) }),
-      mergedEntry({ id: 'anime-film', item: item({ id: 'anime-film', type: 'ANIME', isFilm: true }), episodes: [1] }),
-      ep('s1', 1, 1), ep('s2', 2, 1),
-      mergedEntry({ id: 'manga', item: item({ id: 'manga', type: 'MANGA' }), episodes: [1, 2, 3] }),
-      mergedEntry({ id: 'started', item: book, readingEvent: 'started' }),
-      mergedEntry({ id: 'finished', item: book, readingEvent: 'finished' }),
-    ])).toEqual({
+    expect(
+      summarizeDay([
+        mergedEntry({ id: 'film', item: item({ id: 'movie' }) }),
+        mergedEntry({
+          id: 'anime-film',
+          item: item({ id: 'anime-film', type: 'ANIME', isFilm: true }),
+          episodes: [1],
+        }),
+        ep('s1', 1, 1),
+        ep('s2', 2, 1),
+        mergedEntry({
+          id: 'manga',
+          item: item({ id: 'manga', type: 'MANGA' }),
+          episodes: [1, 2, 3],
+        }),
+        mergedEntry({ id: 'started', item: book, readingEvent: 'started' }),
+        mergedEntry({ id: 'finished', item: book, readingEvent: 'finished' }),
+      ]),
+    ).toEqual({
       label: '2 films · 2 episodes of 1 show · 3 chapters of 1 manga · 1 book',
       units: 8,
       chapters: 3,
@@ -456,58 +532,102 @@ describe('summarizeDay', () => {
   });
 
   test('a shared-ID bridge joins translated shows and overlapping provider ranges', () => {
-    expect(summarizeDay([
-      mergedEntry({ id: 'tv', item: item({ id: 'tv', type: 'TV', externalIds: { tmdb: 1 } }), season: 1, episodes: [2, 3] }),
-      mergedEntry({ id: 'anime', item: item({ id: 'anime', title: '別の名前', type: 'ANIME', externalIds: { anilist: 2 } }), season: 1, episodes: [1, 2, 3] }),
-      mergedEntry({ id: 'bridge', item: item({ id: 'bridge', type: 'ANIME', externalIds: { tmdb: 1, anilist: 2 } }), season: 1, episodes: [3, 4] }),
-    ]).label).toBe('4 episodes of 1 show');
-    const days = groupDiaryEntries([
-      entry('simkl', 'single', '2026-07-20T12:00:00Z', {
-        item: item({ id: 'simkl-anime', type: 'ANIME', externalIds: { mal: 813, tmdb: 12971 } }),
-        episodes: [40],
-      }),
-      entry('anilist', 'range', '2026-07-20T12:00:00Z', {
-        item: item({ id: 'anilist-anime', type: 'ANIME', externalIds: { anilist: 813, mal: 813 } }),
-        episodes: [40, 41],
-      }),
-    ], 'UTC');
+    expect(
+      summarizeDay([
+        mergedEntry({
+          id: 'tv',
+          item: item({ id: 'tv', type: 'TV', externalIds: { tmdb: 1 } }),
+          season: 1,
+          episodes: [2, 3],
+        }),
+        mergedEntry({
+          id: 'anime',
+          item: item({
+            id: 'anime',
+            title: '別の名前',
+            type: 'ANIME',
+            externalIds: { anilist: 2 },
+          }),
+          season: 1,
+          episodes: [1, 2, 3],
+        }),
+        mergedEntry({
+          id: 'bridge',
+          item: item({ id: 'bridge', type: 'ANIME', externalIds: { tmdb: 1, anilist: 2 } }),
+          season: 1,
+          episodes: [3, 4],
+        }),
+      ]).label,
+    ).toBe('4 episodes of 1 show');
+    const days = groupDiaryEntries(
+      [
+        entry('simkl', 'single', '2026-07-20T12:00:00Z', {
+          item: item({ id: 'simkl-anime', type: 'ANIME', externalIds: { mal: 813, tmdb: 12971 } }),
+          episodes: [40],
+        }),
+        entry('anilist', 'range', '2026-07-20T12:00:00Z', {
+          item: item({
+            id: 'anilist-anime',
+            type: 'ANIME',
+            externalIds: { anilist: 813, mal: 813 },
+          }),
+          episodes: [40, 41],
+        }),
+      ],
+      'UTC',
+    );
     expect(summarizeDay(days[0].entries).label).toBe('2 episodes of 1 show');
   });
 
   test('episode 1 in two anime cours counts twice within the same show', () => {
-    expect(summarizeDay([1, 2].map((id) => mergedEntry({
-      id: `cour-${id}`,
-      item: item({ id: `anime-${id}`, type: 'ANIME', externalIds: { anilist: id, tmdb: 555 } }),
-      episodes: [1],
-    }))).label).toBe('2 episodes of 1 show');
+    expect(
+      summarizeDay(
+        [1, 2].map((id) =>
+          mergedEntry({
+            id: `cour-${id}`,
+            item: item({
+              id: `anime-${id}`,
+              type: 'ANIME',
+              externalIds: { anilist: id, tmdb: 555 },
+            }),
+            episodes: [1],
+          }),
+        ),
+      ).label,
+    ).toBe('2 episodes of 1 show');
   });
 
   test('one fan-out log numbered by season and by anime entry counts once', () => {
-    const days = groupDiaryEntries([
-      entry('serializd', 'tv', '2026-07-20T12:00:00Z', {
-        item: item({ id: 'tv', type: 'TV', externalIds: { tmdb: 7 } }), season: 4, episodes: [6],
-      }),
-      entry('anilist', 'anime', '2026-07-20T12:00:00Z', {
-        item: item({ id: 'anime', type: 'ANIME', externalIds: { anilist: 9, tmdb: 7 } }), episodes: [18],
-      }),
-    ], 'UTC');
+    const days = groupDiaryEntries(
+      [
+        entry('serializd', 'tv', '2026-07-20T12:00:00Z', {
+          item: item({ id: 'tv', type: 'TV', externalIds: { tmdb: 7 } }),
+          season: 4,
+          episodes: [6],
+        }),
+        entry('anilist', 'anime', '2026-07-20T12:00:00Z', {
+          item: item({ id: 'anime', type: 'ANIME', externalIds: { anilist: 9, tmdb: 7 } }),
+          episodes: [18],
+        }),
+      ],
+      'UTC',
+    );
     expect(days[0].entries).toHaveLength(2);
     expect(summarizeDay(days[0].entries)).toMatchObject({ label: '1 episode of 1 show', units: 1 });
   });
 
   test('does not invent episode counts for title-only activity or empty days', () => {
-    expect(summarizeDay([mergedEntry({ id: 'unknown' })])).toMatchObject({ label: '1 show', units: 1 });
+    expect(summarizeDay([mergedEntry({ id: 'unknown' })])).toMatchObject({
+      label: '1 show',
+      units: 1,
+    });
     expect(summarizeDay([])).toEqual({ label: '', units: 0, chapters: 0, bookIds: [] });
   });
 });
 
 describe('clusterDayEntries', () => {
   test('a run of same-show episode logs folds into one cluster', () => {
-    const clusters = clusterDayEntries([
-      ep('e10', 6, 10),
-      ep('e9', 6, 9),
-      ep('e8', 6, 8),
-    ]);
+    const clusters = clusterDayEntries([ep('e10', 6, 10), ep('e9', 6, 9), ep('e8', 6, 8)]);
     expect(clusters).toHaveLength(1);
     expect(clusters[0].entries).toHaveLength(3);
     expect(clusters[0].key).toBe('e10');
@@ -610,7 +730,6 @@ describe('Serializd diary in the unified merge', () => {
     expect(rows[0].episodes).toEqual([5]);
     expect(rows[0].season).toBe(1);
   });
-
 });
 
 describe('Simkl diary in the unified merge', () => {
@@ -697,20 +816,39 @@ describe('Simkl diary in the unified merge', () => {
     // under the show's, and ani.zip gives the AniList cour the show's.
     const simkl = entry('simkl', '2830474-s1e3', '2026-11-14T04:05:02.000Z', {
       episodes: [3],
-      item: item({ id: 'simkl-2830474', title: 'Cyberpunk: Edgerunners II', type: 'ANIME', externalIds: { simkl: 2830474, tmdb: 326788, anilist: 195539 } }),
+      item: item({
+        id: 'simkl-2830474',
+        title: 'Cyberpunk: Edgerunners II',
+        type: 'ANIME',
+        externalIds: { simkl: 2830474, tmdb: 326788, anilist: 195539 },
+      }),
     });
     const serializd = entry('serializd', 's3', '2026-11-14T04:05:01.000Z', {
       episodes: [3],
       season: 2,
-      item: item({ id: 'serializd-105248', title: 'Cyberpunk: Edgerunners', type: 'TV', externalIds: { tmdb: 105248 } }),
+      item: item({
+        id: 'serializd-105248',
+        title: 'Cyberpunk: Edgerunners',
+        type: 'TV',
+        externalIds: { tmdb: 105248 },
+      }),
     });
     const anilist = entry('anilist', 'a3', '2026-11-14T04:05:00.000Z', {
       episodes: [3],
-      item: item({ id: 'anilist-195539', title: 'Cyberpunk: Edgerunners 2', type: 'ANIME', externalIds: { anilist: 195539, tmdb: 105248 } }),
+      item: item({
+        id: 'anilist-195539',
+        title: 'Cyberpunk: Edgerunners 2',
+        type: 'ANIME',
+        externalIds: { anilist: 195539, tmdb: 105248 },
+      }),
     });
 
     const [day] = groupDiaryEntries(
-      mergeDiaryEntries([state('simkl', [simkl]), state('serializd', [serializd]), state('anilist', [anilist])]),
+      mergeDiaryEntries([
+        state('simkl', [simkl]),
+        state('serializd', [serializd]),
+        state('anilist', [anilist]),
+      ]),
       TZ_MINUS_5,
     );
 
@@ -723,21 +861,47 @@ describe('Simkl diary in the unified merge', () => {
   test('an anime film joins a Letterboxd log of it through its English title', () => {
     // Live data: neither Simkl, AniList, nor ani.zip has a TMDB id for Housenka.
     const simkl = entry('simkl', 'm2', '2026-11-11T22:04:00.000Z', {
-      item: item({ id: 'simkl-2473992', title: 'Housenka', year: 2025, type: 'ANIME', isFilm: true, externalIds: { simkl: 2473992, mal: 58915, anilist: 177686 } }),
+      item: item({
+        id: 'simkl-2473992',
+        title: 'Housenka',
+        year: 2025,
+        type: 'ANIME',
+        isFilm: true,
+        externalIds: { simkl: 2473992, mal: 58915, anilist: 177686 },
+      }),
     });
     const anilist = entry('anilist', 'a2', '2026-11-11T22:04:00.000Z', {
-      item: item({ id: 'anilist-177686', title: 'Housenka', titles: { romaji: 'Housenka', english: 'The Last Blossom' }, year: 2025, type: 'ANIME', isFilm: true, externalIds: { anilist: 177686, mal: 58915 } }),
+      item: item({
+        id: 'anilist-177686',
+        title: 'Housenka',
+        titles: { romaji: 'Housenka', english: 'The Last Blossom' },
+        year: 2025,
+        type: 'ANIME',
+        isFilm: true,
+        externalIds: { anilist: 177686, mal: 58915 },
+      }),
     });
     const letterboxd = entry('letterboxd', 'l2', '2026-11-11', {
       dateOnly: true,
-      item: item({ id: 'letterboxd-the-last-blossom-2025', title: 'The Last Blossom', year: 2025, externalIds: { letterboxd: 'the-last-blossom-2025', tmdb: 1294972 } }),
+      item: item({
+        id: 'letterboxd-the-last-blossom-2025',
+        title: 'The Last Blossom',
+        year: 2025,
+        externalIds: { letterboxd: 'the-last-blossom-2025', tmdb: 1294972 },
+      }),
     });
 
     const days = groupDiaryEntries(
-      mergeDiaryEntries([state('simkl', [simkl]), state('anilist', [anilist]), state('letterboxd', [letterboxd])]),
+      mergeDiaryEntries([
+        state('simkl', [simkl]),
+        state('anilist', [anilist]),
+        state('letterboxd', [letterboxd]),
+      ]),
       'UTC',
     );
-    expect(days[0].entries.map((row) => row.providers)).toEqual([['simkl', 'anilist', 'letterboxd']]);
+    expect(days[0].entries.map((row) => row.providers)).toEqual([
+      ['simkl', 'anilist', 'letterboxd'],
+    ]);
   });
 
   test('a title match never joins items whose ids disagree', () => {

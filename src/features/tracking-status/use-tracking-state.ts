@@ -30,14 +30,34 @@ const SIMKL_LABELS: Record<string, string> = {
   plantowatch: 'Plan to watch',
 };
 
-const SERIALIZD_LABELS = { watching: 'Watching', watched: 'Watched', completed: 'Completed', paused: 'Paused', dropped: 'Dropped' } as const;
+const SERIALIZD_LABELS = {
+  watching: 'Watching',
+  watched: 'Watched',
+  completed: 'Completed',
+  paused: 'Paused',
+  dropped: 'Dropped',
+} as const;
 
 const NOT_TRACKED = 'Not tracked';
 
 type MovableState = 'active' | TrackingStatus;
-const ANILIST_STATE: Record<string, MovableState | undefined> = { CURRENT: 'active', PAUSED: 'paused', DROPPED: 'dropped' };
-const SIMKL_STATE: Record<string, MovableState | undefined> = { watching: 'active', hold: 'paused', dropped: 'dropped' };
-const SERIALIZD_STATE = { watching: 'active', watched: 'active', completed: undefined, paused: 'paused', dropped: 'dropped' } as const;
+const ANILIST_STATE: Record<string, MovableState | undefined> = {
+  CURRENT: 'active',
+  PAUSED: 'paused',
+  DROPPED: 'dropped',
+};
+const SIMKL_STATE: Record<string, MovableState | undefined> = {
+  watching: 'active',
+  hold: 'paused',
+  dropped: 'dropped',
+};
+const SERIALIZD_STATE = {
+  watching: 'active',
+  watched: 'active',
+  completed: undefined,
+  paused: 'paused',
+  dropped: 'dropped',
+} as const;
 const HARDCOVER_STATE: Record<number, MovableState | undefined> = {
   [HardcoverStatus.Reading]: 'active',
   [HardcoverStatus.Paused]: 'paused',
@@ -83,9 +103,12 @@ export function useTrackingState(
   const movable = { paused: moves('paused'), dropped: moves('dropped') };
   if (anilist != null) {
     const status = anilist.entry?.status;
-    labels[Provider.AniList] = status == null
-      ? NOT_TRACKED
-      : (reading ? ANILIST_READING_LABELS[status] : undefined) ?? ANILIST_LABELS[status] ?? status;
+    labels[Provider.AniList] =
+      status == null
+        ? NOT_TRACKED
+        : ((reading ? ANILIST_READING_LABELS[status] : undefined) ??
+          ANILIST_LABELS[status] ??
+          status);
   }
   if (simkl !== undefined) {
     labels[Provider.Simkl] = simkl == null ? NOT_TRACKED : SIMKL_LABELS[simkl.status];

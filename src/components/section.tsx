@@ -3,20 +3,12 @@ import { Text, View } from 'react-native';
 
 import { cn } from '@/lib/cn';
 
-export function Section({
-  className,
-  children,
-}: {
-  className?: string;
-  children: ReactNode;
-}) {
+export function Section({ className, children }: { className?: string; children: ReactNode }) {
   return <View className={cn('mt-8', className)}>{children}</View>;
 }
 
 function SectionHeader({ children }: { children: ReactNode }) {
-  return (
-    <View className="flex-row flex-wrap items-baseline gap-x-2 mb-4">{children}</View>
-  );
+  return <View className="flex-row flex-wrap items-baseline gap-x-2 mb-4">{children}</View>;
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
@@ -28,9 +20,7 @@ function SectionCount({ children }: { children: ReactNode }) {
 }
 
 function SectionSubtitle({ children }: { children: ReactNode }) {
-  return (
-    <Text className="text-muted font-sans text-sm mt-1 basis-full">{children}</Text>
-  );
+  return <Text className="text-muted font-sans text-sm mt-1 basis-full">{children}</Text>;
 }
 
 Section.Header = SectionHeader;

@@ -38,24 +38,15 @@ export default function TabsLayout() {
       tintColor={accent}
       {...android}
     >
-      <NativeTabs.Trigger
-        listeners={{ tabPress: () => emitTabPress('index') }}
-        name="index"
-      >
+      <NativeTabs.Trigger listeners={{ tabPress: () => emitTabPress('index') }} name="index">
         <NativeTabs.Trigger.Icon md="home" sf="house.fill" />
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger
-        listeners={{ tabPress: () => emitTabPress('diary') }}
-        name="diary"
-      >
+      <NativeTabs.Trigger listeners={{ tabPress: () => emitTabPress('diary') }} name="diary">
         <NativeTabs.Trigger.Icon md="book" sf="book.fill" />
         <NativeTabs.Trigger.Label>Diary</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger
-        listeners={{ tabPress: () => emitTabPress('settings') }}
-        name="settings"
-      >
+      <NativeTabs.Trigger listeners={{ tabPress: () => emitTabPress('settings') }} name="settings">
         <NativeTabs.Trigger.Icon md="settings" sf="gearshape.fill" />
         <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>

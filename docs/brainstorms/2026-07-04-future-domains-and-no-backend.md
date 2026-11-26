@@ -16,7 +16,7 @@ Reality check as of mid-2026:
   no public API (CSV export only). Open Library is metadata, not tracking.
 - **Music**: RYM/Sonemic's API has been "coming" for the better part of a decade;
   treat it as nonexistent. Realistic: **Last.fm** or **ListenBrainz** (both open).
-  Note the semantic mismatch: their write is a *scrobble* (listened-at instant),
+  Note the semantic mismatch: their write is a _scrobble_ (listened-at instant),
   not a progress update — a different log intent than watched/read.
 - **Games**: Backloggd has no public API. **Steam** has a read-only Web API
   (owned library + playtime) — a provider that could appear in the feed but never
@@ -25,7 +25,7 @@ Reality check as of mid-2026:
 The pattern: **future providers are routinely read-only, write-only, or CSV-only.**
 We already live this today — Letterboxd (`todos/004`) may never grant API access.
 So the extensibility work isn't "add GAME to a union someday"; it's that the provider
-registry must *declare capabilities* (`mediaTypes`, `canRead`, `canWrite`) and the
+registry must _declare capabilities_ (`mediaTypes`, `canRead`, `canWrite`) and the
 routing/feed logic must filter on them. That landed as
 `src/lib/providers/{types,registry,routing}.ts`.
 
@@ -55,7 +55,7 @@ gift: **release/air dates are known ahead of time.** So v1 needs no push infra a
   gets the in-app Up Next feed only.
 
 Ruling: **local-only now, door open** — if staleness proves painful, the only
-acceptable exception to no-backend is a tiny *stateless* push relay (no DB, no
+acceptable exception to no-backend is a tiny _stateless_ push relay (no DB, no
 accounts), and that's a future decision, not a design input today.
 
 ## "No backend" pressure points are web-specific
@@ -70,7 +70,7 @@ accounts), and that's a future decision, not a design input today.
   (Trakt tolerates this; device-code flow is the alternative). AniList's implicit
   grant is fully client-side with ~1-year tokens, no refresh. "No backend" therefore
   means client credentials live in the bundle — fine for this threat model (the
-  tokens only unlock the *user's own* accounts).
+  tokens only unlock the _user's own_ accounts).
 
 ## Onboarding end-state
 

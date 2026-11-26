@@ -1,16 +1,10 @@
 import * as Effect from 'effect/Effect';
 
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
-import {
-  getAniListStaff,
-  searchAniListStaff,
-} from '@/lib/providers/anilist/reads';
+import { getAniListStaff, searchAniListStaff } from '@/lib/providers/anilist/reads';
 import type { ProviderError } from '@/lib/providers/errors';
 import type { TmdbDeps } from '@/lib/providers/tmdb/deps';
-import {
-  pickPersonMatch,
-  type NormalizedPersonDetails,
-} from '@/lib/providers/tmdb/normalize';
+import { pickPersonMatch, type NormalizedPersonDetails } from '@/lib/providers/tmdb/normalize';
 import { getPerson, searchPerson } from '@/lib/providers/tmdb/reads';
 
 export interface PersonDetailsDeps {
@@ -43,9 +37,7 @@ export function getPersonByName(
       : searchPerson(tmdb, { query: params.name }).pipe(
           Effect.flatMap((hits) => {
             const match = pickPersonMatch(hits, params.name);
-            return match == null
-              ? Effect.succeed(null)
-              : getPerson(tmdb, { tmdbId: match.tmdbId });
+            return match == null ? Effect.succeed(null) : getPerson(tmdb, { tmdbId: match.tmdbId });
           }),
           Effect.orElseSucceed(() => null),
         );

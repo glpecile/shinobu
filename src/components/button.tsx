@@ -19,14 +19,21 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
-export type ButtonVariant = 'log' | 'primary' | 'outline' | 'quiet' | 'quiet-accent' | 'ghost' | 'accent-ghost';
+export type ButtonVariant =
+  'log' | 'primary' | 'outline' | 'quiet' | 'quiet-accent' | 'ghost' | 'accent-ghost';
 export type ButtonSize = 'sm' | 'md';
 
 const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
   log: { on: 'bg-log', off: 'bg-log/40' },
-  primary: { on: 'border border-foreground bg-foreground', off: 'border border-transparent bg-foreground/40' },
+  primary: {
+    on: 'border border-foreground bg-foreground',
+    off: 'border border-transparent bg-foreground/40',
+  },
   outline: { on: 'border border-accent', off: 'border border-accent/40' },
-  quiet: { on: 'border border-border web:hover:bg-border/40', off: 'border border-border opacity-60' },
+  quiet: {
+    on: 'border border-border web:hover:bg-border/40',
+    off: 'border border-border opacity-60',
+  },
   'quiet-accent': { on: 'border border-border', off: 'border border-border opacity-60' },
   ghost: { on: 'web:hover:bg-border/40', off: 'opacity-60' },
   'accent-ghost': { on: '', off: 'opacity-60' },
@@ -52,16 +59,14 @@ const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
   'accent-ghost': '--color-accent',
 };
 
-const BOX_LAYOUT =
-  Platform.OS === 'web' ? undefined : LinearTransition.duration(DURATION.swap);
+const BOX_LAYOUT = Platform.OS === 'web' ? undefined : LinearTransition.duration(DURATION.swap);
 const SLOT_ENTER = FadeIn.duration(DURATION.swap);
 // No exit fade on web: Reanimated implements an exiting element there by
 // re-parenting it into an absolutely positioned clone, which takes the icon
 // out of the flex flow and recenters the label flush against it for the frames
 // the sheet around it is closing. The slot simply drops out on web instead.
 // docs/solutions/reanimated-web-exiting-pulls-child-out-of-flow.md
-const SLOT_EXIT =
-  Platform.OS === 'web' ? undefined : FadeOut.duration(DURATION.exit);
+const SLOT_EXIT = Platform.OS === 'web' ? undefined : FadeOut.duration(DURATION.exit);
 const COLOR_TRANSITION: CSSTransitionProperties = {
   transitionProperty: ['backgroundColor', 'borderColor', 'opacity'],
   transitionDuration: DURATION.color,
@@ -80,9 +85,7 @@ const SIZE: Record<ButtonSize, { container: string; label: string; icon: number 
 
 const TRAILING_ICON: Record<ButtonSize, number> = { sm: 12, md: 16 };
 
-const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number } | null>(
-  null,
-);
+const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number } | null>(null);
 
 /**
  * Icon inside a `Button`, coloured and sized from the parent's variant and size.
@@ -121,25 +124,33 @@ function ButtonIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['nam
   if (context == null) return null;
   let path: string | undefined;
   switch (name) {
-    case 'chevron-back': path = 'm15 6-6 6 6 6'; break;
-    case 'chevron-forward': path = 'm9 6 6 6-6 6'; break;
-    case 'tv-outline': path = 'M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z M8 20h8'; break;
-    default: break;
+    case 'chevron-back':
+      path = 'm15 6-6 6 6 6';
+      break;
+    case 'chevron-forward':
+      path = 'm9 6 6 6-6 6';
+      break;
+    case 'tv-outline':
+      path = 'M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z M8 20h8';
+      break;
+    default:
+      break;
   }
   if (path != null) {
     return (
       <Svg height={context.size} viewBox="0 0 24 24" width={context.size}>
-        <Path d={path} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} />
+        <Path
+          d={path}
+          fill="none"
+          stroke={color}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.75}
+        />
       </Svg>
     );
   }
-  return (
-    <Ionicons
-      color={color}
-      name={name}
-      size={context.size}
-    />
-  );
+  return <Ionicons color={color} name={name} size={context.size} />;
 }
 
 const SHAPE: Record<ButtonShape, string> = {
@@ -192,8 +203,7 @@ export function Button({
 }: ButtonProps) {
   const reduceMotion = useReducedMotion();
   const spinnerToken = useThemeColor(SPINNER_TOKEN[variant]);
-  const spinnerColor =
-    spinnerToken;
+  const spinnerColor = spinnerToken;
   const unavailable = disabled || loading;
   const LabelText = morphLabel ? MorphText : Text;
   const shownLabel = loading ? (loadingLabel ?? label) : label;
@@ -234,7 +244,9 @@ export function Button({
             'flex-row items-center',
             align === 'start' ? 'justify-start' : 'justify-center',
             SHAPE[shape],
-            iconOnly ? cn(size === 'sm' ? 'size-9.5' : 'size-11', 'shrink-0') : SIZE[size].container,
+            iconOnly
+              ? cn(size === 'sm' ? 'size-9.5' : 'size-11', 'shrink-0')
+              : SIZE[size].container,
             unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
           )}
           layout={BOX_LAYOUT}
@@ -244,22 +256,23 @@ export function Button({
             // Wrapped so the spinner keeps its own box on native, where an
             // ActivityIndicator dropped straight into a flex row can stretch.
             <AnimatedView
-              className={cn(
-                'items-center justify-center',
-                overlay && 'absolute inset-0',
-              )}
+              className={cn('items-center justify-center', overlay && 'absolute inset-0')}
               entering={SLOT_ENTER}
               exiting={SLOT_EXIT}
               layout={BOX_LAYOUT}
             >
               <AnimatedView
-                style={reduceMotion ? undefined : {
-                  transform: LOADING_ENTER.from.transform,
-                  animationName: LOADING_ENTER,
-                  animationDuration: DURATION.swap,
-                  animationTimingFunction: EASE_OUT,
-                  animationFillMode: 'both',
-                }}
+                style={
+                  reduceMotion
+                    ? undefined
+                    : {
+                        transform: LOADING_ENTER.from.transform,
+                        animationName: LOADING_ENTER,
+                        animationDuration: DURATION.swap,
+                        animationTimingFunction: EASE_OUT,
+                        animationFillMode: 'both',
+                      }
+                }
               >
                 <Spinner color={spinnerColor} />
               </AnimatedView>
@@ -291,11 +304,7 @@ export function Button({
               // Grow from the label's intrinsic width: flex-1's zero basis hides
               // it in content-sized native buttons. Stretch rows still push the
               // trailing glyph to the far edge.
-               className={cn(
-                'min-w-0 shrink',
-                overlay && 'opacity-0',
-                align === 'start' && 'grow',
-              )}
+              className={cn('min-w-0 shrink', overlay && 'opacity-0', align === 'start' && 'grow')}
               layout={BOX_LAYOUT}
               style={contentTransition}
             >
@@ -331,13 +340,23 @@ export function Button({
   );
 }
 
-function ButtonCapsule({ floating = false, className, children }: {
+function ButtonCapsule({
+  floating = false,
+  className,
+  children,
+}: {
   floating?: boolean;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <View className={cn('flex-row items-center rounded-full border border-border', floating ? 'p-1.25 bg-surface shadow-md' : 'p-0.5', className)}>
+    <View
+      className={cn(
+        'flex-row items-center rounded-full border border-border',
+        floating ? 'p-1.25 bg-surface shadow-md' : 'p-0.5',
+        className,
+      )}
+    >
       {children}
     </View>
   );

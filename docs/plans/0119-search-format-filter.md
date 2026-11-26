@@ -28,10 +28,10 @@ wants this instead of, or before, the diary's Reading filter (plan 0117 M4).
   Reading as sections, never as scopes of their own.
 - **KTD-4. The request narrows, not the page.**
 
-  | Scope | TMDB | Trakt (fallback) | AniList `media(...)` |
-  | --- | --- | --- | --- |
-  | Movies & TV | `/search/multi` | `/search/movie,show` | `type: ANIME` |
-  | Reading | none | none | `type: MANGA` (light novels and one-shots included) |
+  | Scope       | TMDB            | Trakt (fallback)     | AniList `media(...)`                                |
+  | ----------- | --------------- | -------------------- | --------------------------------------------------- |
+  | Movies & TV | `/search/multi` | `/search/movie,show` | `type: ANIME`                                       |
+  | Reading     | none            | none                 | `type: MANGA` (light novels and one-shots included) |
 
 - **KTD-5. Movies & TV and Reading are separate AniList entries, never stale.**
   The type is the last element of `anilistQueryKeys.search`, and the AniList
@@ -45,13 +45,14 @@ wants this instead of, or before, the diary's Reading filter (plan 0117 M4).
   does.
 - **KTD-6. Labels name what a section holds.**
 
-  | Scope | Movies & TV section | AniList section |
-  | --- | --- | --- |
-  | Movies & TV | Movies & TV | Anime |
-  | Reading | — | Manga & light novels |
+  | Scope       | Movies & TV section | AniList section      |
+  | ----------- | ------------------- | -------------------- |
+  | Movies & TV | Movies & TV         | Anime                |
+  | Reading     | —                   | Manga & light novels |
 
   "Manga & light novels" still reads right beside a future "Books" section.
   Movies & TV asks AniList for anime alone, since manga belongs to Reading.
+
 - **KTD-7. Empty and failed states keep the screen's rows.** A section with
   nothing disappears and a failed one shows its row. A Reading search with no
   results says so and offers "Search movies & TV". The total-failure notice is

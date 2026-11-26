@@ -20,7 +20,7 @@ behavior seems to have changed; three active open-source clients
 - **No fingerprint/Cloudflare wall (contrast Letterboxd).** Server-side forwarding
   with the three app headers works from a plain HTTP client with a replayed bearer
   token — no `cf_clearance`, no bound User-Agent, no in-session WebView write
-  bridge (see `letterboxd-web-proxy.md` for the failure mode that does *not* apply
+  bridge (see `letterboxd-web-proxy.md` for the failure mode that does _not_ apply
   here). This is what makes a stateless proxy viable where Letterboxd's isn't.
 - **App headers are mandatory even for public data.** Every non-proxied request
   needs `Origin: https://www.serializd.com`, `Referer: https://www.serializd.com`,
@@ -35,7 +35,7 @@ behavior seems to have changed; three active open-source clients
 ## Why a Worker `main` handler (not an Expo API route)
 
 The web build stays `web.output: "static"`. Rather than flip to server output
-(which forces a hand-written Worker adapter *plus* a Workers Builds pipeline
+(which forces a hand-written Worker adapter _plus_ a Workers Builds pipeline
 rework for one forwarding endpoint), the proxy is a hand-written Worker `main`
 entrypoint added to the **existing** static-assets Worker — exactly the
 `assets` + `main` shape `cloudflare-workers-static-web-deploy.md` pre-plotted.

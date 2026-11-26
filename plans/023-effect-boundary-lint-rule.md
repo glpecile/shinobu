@@ -31,6 +31,7 @@ already run Effects directly (the Serializd connect forms), and the next one
 will pass CI too.
 
 After this plan:
+
 1. The Serializd connect components call plain promise functions in
    `state/queries/serializd.ts`, following the `exchangeTraktCode` pattern.
 2. A custom rule, `shinobu/effect-boundary`, rejects any `effect` or `effect/*`
@@ -98,7 +99,10 @@ import * as Effect from 'effect/Effect';
 The pattern to follow, `src/state/queries/trakt.ts`:
 
 ```ts
-export function exchangeTraktCode(params: { code: string; redirectUri: string }): Promise<ProviderSession> {
+export function exchangeTraktCode(params: {
+  code: string;
+  redirectUri: string;
+}): Promise<ProviderSession> {
   return Effect.runPromise(exchangeCodeForSession(traktDeps(), params));
 }
 ```
@@ -125,22 +129,23 @@ Rules are registered in `oxlint-plugin-shinobu/index.ts` and enabled in the
 `src/**/*.ts`, `src/**/*.tsx` override at the bottom of `.oxlintrc.json`.
 
 Before writing Effect code, AGENTS.md requires reading
-`node_modules/effect/AGENTS.md`. This plan only *calls* existing Effects, but
+`node_modules/effect/AGENTS.md`. This plan only _calls_ existing Effects, but
 skim it anyway.
 
 ## Commands you will need
 
-| Purpose   | Command                                                              | Expected on success |
-|-----------|----------------------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                                      | exit 0              |
-| Typecheck | `bun typecheck`                                                      | exit 0              |
-| Rule test | `bun test oxlint-plugin-shinobu/rules/effect-boundary.test.ts`       | all pass            |
-| Lint      | `bun lint`                                                           | exit 0              |
-| All tests | `bun run test`                                                       | all pass (never plain `bun test`) |
+| Purpose   | Command                                                        | Expected on success               |
+| --------- | -------------------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                                | exit 0                            |
+| Typecheck | `bun typecheck`                                                | exit 0                            |
+| Rule test | `bun test oxlint-plugin-shinobu/rules/effect-boundary.test.ts` | all pass                          |
+| Lint      | `bun lint`                                                     | exit 0                            |
+| All tests | `bun run test`                                                 | all pass (never plain `bun test`) |
 
 ## Scope
 
 **In scope**:
+
 - `src/state/queries/serializd.ts` (add two functions)
 - `src/components/connect-serializd-button/index.tsx`, `index.native.tsx`
 - `oxlint-plugin-shinobu/rules/effect-boundary.ts` (create), `effect-boundary.test.ts` (create), `oxlint-plugin-shinobu/index.ts`
@@ -163,22 +168,31 @@ In `src/state/queries/serializd.ts` add:
 
 ```ts
 /** Web connect: email/password → bearer token, recovering a missing username. */
-export async function loginSerializd(credentials: { email: string; password: string }): Promise<{ accessToken: string; username: string }> {
+export async function loginSerializd(credentials: {
+  email: string;
+  password: string;
+}): Promise<{ accessToken: string; username: string }> {
   const deps = serializdDeps();
   const login = await Effect.runPromise(loginToSerializd(deps, credentials));
   let username = login.username;
   if (username === '') {
     // Some login responses omit the username; the token's validation returns it.
-    username = await Effect.runPromise(validateAuthToken(deps, login.token))
-      .then((validated) => validated.username, () => '');
+    username = await Effect.runPromise(validateAuthToken(deps, login.token)).then(
+      (validated) => validated.username,
+      () => '',
+    );
   }
   return { accessToken: login.token, username };
 }
 
 /** Native connect: a captured token → a validated session. */
-export function validateSerializdToken(token: string): Promise<{ accessToken: string; username: string }> {
-  return Effect.runPromise(validateAuthToken(serializdDeps(), token))
-    .then((result) => ({ accessToken: result.token, username: result.username }));
+export function validateSerializdToken(
+  token: string,
+): Promise<{ accessToken: string; username: string }> {
+  return Effect.runPromise(validateAuthToken(serializdDeps(), token)).then((result) => ({
+    accessToken: result.token,
+    username: result.username,
+  }));
 }
 ```
 
@@ -227,11 +241,13 @@ Create `oxlint-plugin-shinobu/rules/effect-boundary.test.ts`, modelled on
 expects exactly one diagnostic, for the component:
 
 ```ts
-expect(lint('effect-boundary', {
-  'src/components/a.tsx': `import * as Effect from 'effect/Effect';`,
-  'src/state/queries/b.ts': `import * as Effect from 'effect/Effect';`,
-  'src/features/log-media/use-log-media.ts': `import * as Effect from 'effect/Effect';`,
-})).toHaveLength(1);
+expect(
+  lint('effect-boundary', {
+    'src/components/a.tsx': `import * as Effect from 'effect/Effect';`,
+    'src/state/queries/b.ts': `import * as Effect from 'effect/Effect';`,
+    'src/features/log-media/use-log-media.ts': `import * as Effect from 'effect/Effect';`,
+  }),
+).toHaveLength(1);
 ```
 
 **Verify**: `bun test oxlint-plugin-shinobu/rules/effect-boundary.test.ts` → pass.

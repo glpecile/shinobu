@@ -23,7 +23,9 @@ const RawEpisode = Schema.Struct({
   runtime: Schema.optional(Schema.NullOr(Count)),
   isPremiere: Schema.optional(Schema.Boolean),
   isFinale: Schema.optional(Schema.Boolean),
-  season: Schema.optional(Schema.NullOr(Schema.Struct({ posterPath: Schema.optional(Schema.NullOr(Schema.String)) }))),
+  season: Schema.optional(
+    Schema.NullOr(Schema.Struct({ posterPath: Schema.optional(Schema.NullOr(Schema.String)) })),
+  ),
   backdrops: Schema.optional(Schema.Array(Schema.Struct({ file_path: Schema.String }))),
 });
 const RawPage = Schema.Struct({ items: Schema.Array(RawEpisode) });
@@ -40,7 +42,8 @@ export interface SerializdUpcomingEpisode {
   isFinale: boolean;
 }
 
-const tmdbImage = (size: string, path: string | null | undefined) => (path ? `https://image.tmdb.org/t/p/${size}${path}` : '');
+const tmdbImage = (size: string, path: string | null | undefined) =>
+  path ? `https://image.tmdb.org/t/p/${size}${path}` : '';
 
 /**
  * The next airing episode of each show the account follows, soonest first —
@@ -49,12 +52,20 @@ const tmdbImage = (size: string, path: string | null | undefined) => (path ? `ht
  * a session rather than silently showing someone else's shows.
  * First page only: the row is a browse slice, and `nextCursor` is ignored.
  */
-export const getSerializdUpcoming = Effect.fn('serializd.getUpcoming')(function* (deps: SerializdDeps) {
+export const getSerializdUpcoming = Effect.fn('serializd.getUpcoming')(function* (
+  deps: SerializdDeps,
+) {
   // This endpoint returns editorial shows with 200 even for a revoked bearer.
   yield* validateAuthToken(deps, deps.session?.accessToken ?? '');
   const raw = yield* serializdHttp<unknown>(deps, '/search/upcoming_episodes_v3', { auth: true });
   const page = yield* Schema.decodeUnknownEffect(RawPage)(raw).pipe(
-    Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'unrecognized upcoming episodes' })),
+    Effect.mapError(
+      () =>
+        new ProviderDecodeError({
+          provider: Provider.Serializd,
+          detail: 'unrecognized upcoming episodes',
+        }),
+    ),
   );
   const fetchedAt = new Date().toISOString();
   return page.items.map((entry): SerializdUpcomingEpisode => ({
@@ -72,7 +83,9 @@ export const getSerializdUpcoming = Effect.fn('serializd.getUpcoming')(function*
     season: entry.seasonNumber,
     number: entry.episodeNumber,
     // TMDB's placeholder name ("Episode 3") only repeats the episode code.
-    ...(entry.episodeName && entry.episodeName !== `Episode ${entry.episodeNumber}` ? { title: entry.episodeName } : {}),
+    ...(entry.episodeName && entry.episodeName !== `Episode ${entry.episodeNumber}`
+      ? { title: entry.episodeName }
+      : {}),
     airDate: entry.airDate,
     ...(entry.runtime ? { runtime: entry.runtime } : {}),
     ...(entry.stillPath ? { still: tmdbImage('w780', entry.stillPath) } : {}),

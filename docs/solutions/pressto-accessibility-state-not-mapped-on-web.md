@@ -9,16 +9,16 @@ right — dimmed fill, spinner, "Connecting…" — but the rendered `<button>` 
 carried no `aria-busy`, no `aria-disabled` and no `disabled` attribute:
 
 ```html
-<button role="button" class="… bg-accent/40" type="button" style="opacity: 1; …">
+<button role="button" class="… bg-accent/40" type="button" style="opacity: 1; …"></button>
 ```
 
 …even though the component passed both `disabled={unavailable}` and
 `accessibilityState={{ busy: loading, disabled: unavailable }}`.
 
-**What is and isn't broken.** The press *is* blocked. pressto forwards `disabled`
+**What is and isn't broken.** The press _is_ blocked. pressto forwards `disabled`
 to RNGH's `BaseButton` as `enabled` (`pressto/lib/module/pressables/base.js`), and
 its web implementation honours it — three forced taps on a button in its loading
-state produced exactly one request. What's missing is only the *announcement*:
+state produced exactly one request. What's missing is only the _announcement_:
 neither `disabled` nor `accessibilityState` is mapped onto the DOM node, so
 assistive tech hears an ordinary, idle button while a fan-out is in flight.
 
@@ -27,10 +27,10 @@ through pressto to the DOM, and native ignores them:
 
 ```tsx
 <PresstableOpacity
-  accessibilityState={{ busy: loading, disabled: unavailable }}  // native
-  aria-busy={loading}                                            // web
+  accessibilityState={{ busy: loading, disabled: unavailable }} // native
+  aria-busy={loading} // web
   aria-disabled={unavailable}
-  disabled={unavailable}                                         // the actual gate
+  disabled={unavailable} // the actual gate
 />
 ```
 

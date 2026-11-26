@@ -35,7 +35,9 @@ function watchedShow(traktId: number) {
     last_watched_at: '2026-07-13T00:00:00.000Z',
     last_updated_at: '2026-07-13T00:00:00.000Z',
     show: { title: `Show ${traktId}`, ids: { trakt: traktId } },
-    seasons: [{ number: 1, episodes: [{ number: 1, last_watched_at: '2026-07-13T00:00:00.000Z' }] }],
+    seasons: [
+      { number: 1, episodes: [{ number: 1, last_watched_at: '2026-07-13T00:00:00.000Z' }] },
+    ],
   };
 }
 
@@ -64,13 +66,8 @@ function pagedDeps(pages: unknown[][], requested: string[]) {
 describe('getWatchedShows pagination (2026 Trakt API change)', () => {
   test('requests extended=progress and stops after a short page', async () => {
     const requested: string[] = [];
-    const pages = [
-      Array.from({ length: 100 }, (_, i) => watchedShow(i + 1)),
-      [watchedShow(101)],
-    ];
-    const items = await Effect.runPromise(
-      getWatchedShows(pagedDeps(pages, requested)),
-    );
+    const pages = [Array.from({ length: 100 }, (_, i) => watchedShow(i + 1)), [watchedShow(101)]];
+    const items = await Effect.runPromise(getWatchedShows(pagedDeps(pages, requested)));
 
     expect(requested).toEqual([
       '/sync/watched/shows?extended=progress&page=1&limit=100',
@@ -82,10 +79,7 @@ describe('getWatchedShows pagination (2026 Trakt API change)', () => {
   });
 });
 
-function historyDeps(
-  handler: (page: number) => Response,
-  requested: string[],
-): TraktDeps {
+function historyDeps(handler: (page: number) => Response, requested: string[]): TraktDeps {
   return {
     tokens: TOKENS,
     clientId: 'id',
@@ -110,21 +104,41 @@ describe('searchMedia response decoding', () => {
     { shape: 'non-array', body: {} },
     { shape: 'null row', body: [null] },
     { shape: 'missing IDs', body: [{ type: 'movie', movie: { title: 'Missing IDs' } }] },
-  ])(
-    'rejects $shape as ProviderDecodeError',
-    async ({ body }) => {
-      const deps = historyDeps(() => json(body), []);
-      const error = await Effect.runPromise(Effect.flip(searchMedia(deps, { query: 'test' })));
-      expect(error._tag).toBe('ProviderDecodeError');
-    },
-  );
+  ])('rejects $shape as ProviderDecodeError', async ({ body }) => {
+    const deps = historyDeps(() => json(body), []);
+    const error = await Effect.runPromise(Effect.flip(searchMedia(deps, { query: 'test' })));
+    expect(error._tag).toBe('ProviderDecodeError');
+  });
 
   test('normalizes movie and show results and ignores unsupported types', async () => {
-    const deps = historyDeps(() => json([
-      { type: 'movie', movie: { title: 'Film', ids: { trakt: 1 }, images: { poster: ['example.com/poster'] }, genres: ['drama'] } },
-      { type: 'show', show: { title: 'Show', ids: { trakt: 2, tmdb: null }, year: null, overview: null, genres: null, images: { poster: null, fanart: null }, aired_episodes: 4 } },
-      { type: 'episode', episode: { title: 'Ignored' } },
-    ]), []);
+    const deps = historyDeps(
+      () =>
+        json([
+          {
+            type: 'movie',
+            movie: {
+              title: 'Film',
+              ids: { trakt: 1 },
+              images: { poster: ['example.com/poster'] },
+              genres: ['drama'],
+            },
+          },
+          {
+            type: 'show',
+            show: {
+              title: 'Show',
+              ids: { trakt: 2, tmdb: null },
+              year: null,
+              overview: null,
+              genres: null,
+              images: { poster: null, fanart: null },
+              aired_episodes: 4,
+            },
+          },
+          { type: 'episode', episode: { title: 'Ignored' } },
+        ]),
+      [],
+    );
     const items = await Effect.runPromise(searchMedia(deps, { query: 'test' }));
     expect(items.map((item) => item.title)).toEqual(['Film', 'Show']);
     expect(items[0]?.coverImage).toBe('https://example.com/poster');
@@ -137,10 +151,13 @@ describe('searchMedia response decoding', () => {
 
 test('cold Trakt IDs look up the specified media type instead of guessing an ID namespace', async () => {
   const requested: string[] = [];
-  const deps = historyDeps(() => json([
-    { type: 'show', show: { title: 'Show', ids: { trakt: 1, tmdb: 1396 } } },
-  ]), requested);
-  const item = await Effect.runPromise(lookupByExternalId(deps, { source: 'trakt', id: 1, kind: 'show' }));
+  const deps = historyDeps(
+    () => json([{ type: 'show', show: { title: 'Show', ids: { trakt: 1, tmdb: 1396 } } }]),
+    requested,
+  );
+  const item = await Effect.runPromise(
+    lookupByExternalId(deps, { source: 'trakt', id: 1, kind: 'show' }),
+  );
   expect(requested).toEqual(['/search/trakt/1?type=show&extended=full,images']);
   expect(item?.type).toBe('TV');
   expect(item?.externalIds).toMatchObject({ trakt: 1, tmdb: 1396 });
@@ -183,7 +200,7 @@ describe('getHistory (diary source, plan 0016)', () => {
     const error = await Effect.runPromise(Effect.flip(getHistory(deps, { page: 1 })));
     expect(error._tag).toBe('ProviderDecodeError');
   });
-})
+});
 
 function calendarDeps(body: unknown, requested: string[]): TraktDeps {
   return {
@@ -211,9 +228,7 @@ describe('traktCalendarRange', () => {
   });
 
   test('pads single-digit months and days', () => {
-    expect(traktCalendarRange({}, new Date(2026, 0, 5, 9, 0)).startDate).toBe(
-      '2026-01-05',
-    );
+    expect(traktCalendarRange({}, new Date(2026, 0, 5, 9, 0)).startDate).toBe('2026-01-05');
   });
 
   test('clamps to the 33-day range Trakt accepts', () => {
@@ -231,16 +246,12 @@ describe('traktCalendarRange', () => {
   });
 
   test('honors an explicit bare date and falls back on anything else', () => {
-    expect(traktCalendarRange({ startDate: '2026-12-01' }, NOW).startDate).toBe(
-      '2026-12-01',
-    );
+    expect(traktCalendarRange({ startDate: '2026-12-01' }, NOW).startDate).toBe('2026-12-01');
     // An instant (or junk) would 4xx the request — degrade to today instead.
-    expect(
-      traktCalendarRange({ startDate: '2026-12-01T00:00:00.000Z' }, NOW).startDate,
-    ).toBe('2026-07-27');
-    expect(traktCalendarRange({ startDate: 'tomorrow' }, NOW).startDate).toBe(
+    expect(traktCalendarRange({ startDate: '2026-12-01T00:00:00.000Z' }, NOW).startDate).toBe(
       '2026-07-27',
     );
+    expect(traktCalendarRange({ startDate: 'tomorrow' }, NOW).startDate).toBe('2026-07-27');
   });
 });
 
@@ -266,9 +277,7 @@ describe('getMyShowsCalendar', () => {
       getMyShowsCalendar(deps, { startDate: '2026-07-27', days: 7 }),
     );
 
-    expect(requested).toEqual([
-      '/calendars/my/shows/2026-07-27/7?extended=full,images',
-    ]);
+    expect(requested).toEqual(['/calendars/my/shows/2026-07-27/7?extended=full,images']);
     expect(entries).toHaveLength(1);
     expect(entries[0]?.item.id).toBe('trakt-300');
     expect(entries[0]?.episode.number).toBe(4);
@@ -277,20 +286,24 @@ describe('getMyShowsCalendar', () => {
 
 describe('the movie calendars', () => {
   test('each hits its own path and tags its own release kind', async () => {
-    const row = [{ released: '2026-07-31', movie: { title: 'Dune: Part Three', ids: { trakt: 400 } } }];
+    const row = [
+      { released: '2026-07-31', movie: { title: 'Dune: Part Three', ids: { trakt: 400 } } },
+    ];
     const params = { startDate: '2026-07-27', days: 7 };
 
     for (const [read, path, kind] of [
       [getMyMoviesCalendar, '/calendars/my/movies/2026-07-27/7?extended=full,images', 'theatrical'],
       // `streaming`, not `digital` — the type name is confirmed live in
       // docs/solutions/trakt-streaming-calendar-path.md.
-      [getMyStreamingCalendar, '/calendars/my/streaming/2026-07-27/7?extended=full,images', 'digital'],
+      [
+        getMyStreamingCalendar,
+        '/calendars/my/streaming/2026-07-27/7?extended=full,images',
+        'digital',
+      ],
       [getMyDvdCalendar, '/calendars/my/dvd/2026-07-27/7?extended=full,images', 'physical'],
     ] as const) {
       const requested: string[] = [];
-      const releases = await Effect.runPromise(
-        read(calendarDeps(row, requested), params),
-      );
+      const releases = await Effect.runPromise(read(calendarDeps(row, requested), params));
       expect(requested).toEqual([path]);
       expect(releases).toHaveLength(1);
       expect(releases[0]?.kind).toBe(kind);
@@ -315,12 +328,8 @@ describe('getWatchlist (plan 0031 U11, discussion #681)', () => {
     const requested: string[] = [];
     // A full page (the 250 max, cut from 1,000 on 2026-06-15) then a short one.
     const pages = [
-      Array.from({ length: 250 }, (_, i) =>
-        watchlistMovie(i + 1, '2026-07-01T00:00:00.000Z'),
-      ),
-      Array.from({ length: 40 }, (_, i) =>
-        watchlistMovie(i + 251, '2026-07-01T00:00:00.000Z'),
-      ),
+      Array.from({ length: 250 }, (_, i) => watchlistMovie(i + 1, '2026-07-01T00:00:00.000Z')),
+      Array.from({ length: 40 }, (_, i) => watchlistMovie(i + 251, '2026-07-01T00:00:00.000Z')),
     ];
 
     const items = await Effect.runPromise(getWatchlist(pagedDeps(pages, requested)));

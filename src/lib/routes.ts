@@ -1,7 +1,4 @@
-import type {
-  AnimeFormatFilter,
-  AnimeSeasonWindow,
-} from '@/lib/providers/anilist/season';
+import type { AnimeFormatFilter, AnimeSeasonWindow } from '@/lib/providers/anilist/season';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { MediaType } from '@/types/media';
@@ -15,8 +12,14 @@ function mediaPath(id: string): string {
 
 /** Restore cache identity at the route boundary, not throughout the data layer. */
 export function mediaItemId(provider: unknown, id: unknown): string | null {
-  if (typeof provider !== 'string' || typeof id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return null;
-  if (!Object.hasOwn(PROVIDERS, provider) && provider !== 'tmdb' && provider !== 'imdb') return null;
+  if (
+    typeof provider !== 'string' ||
+    typeof id !== 'string' ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)
+  )
+    return null;
+  if (!Object.hasOwn(PROVIDERS, provider) && provider !== 'tmdb' && provider !== 'imdb')
+    return null;
   return `${provider}-${id}`;
 }
 
@@ -34,7 +37,8 @@ export const routes = {
     let suffix = '';
     switch (id.slice(0, id.indexOf('-'))) {
       case Provider.Trakt:
-        if (mediaType === 'MOVIE' || mediaType === 'TV') suffix = `/${mediaType === 'MOVIE' ? 'movie' : 'tv'}`;
+        if (mediaType === 'MOVIE' || mediaType === 'TV')
+          suffix = `/${mediaType === 'MOVIE' ? 'movie' : 'tv'}`;
         break;
       case Provider.AniList:
         if (mediaType === 'MANGA') suffix = '/manga';
@@ -54,8 +58,7 @@ export const routes = {
    * carry no tracker season, so the route places the number on the trackers'
    * layout itself (ani.zip + TMDB) instead of every list row doing it.
    */
-  animeEpisode: (id: string, number: number) =>
-    `/episode/${mediaPath(id)}/${number}` as const,
+  animeEpisode: (id: string, number: number) => `/episode/${mediaPath(id)}/${number}` as const,
   /**
    * The cross-provider watchlist — the only watchlist surface. No provider
    * suffix: it merges every connected provider's watchlist (plan 0031 R24).
@@ -68,11 +71,16 @@ export const routes = {
   watchlist: (provider?: ProviderId) =>
     provider == null ? '/watchlist' : (`/watchlist?provider=${provider}` as const),
   /** The list editor; `provider` preselects where it saves, and `item` starts the list. */
-  newList: (provider?: typeof Provider.Letterboxd | typeof Provider.Serializd | typeof Provider.Hardcover, item?: { id: string; type: MediaType }) => {
+  newList: (
+    provider?: typeof Provider.Letterboxd | typeof Provider.Serializd | typeof Provider.Hardcover,
+    item?: { id: string; type: MediaType },
+  ) => {
     const query = [
       provider == null ? null : `provider=${provider}`,
       item == null ? null : `item=${encodeURIComponent(item.id)}&type=${item.type}`,
-    ].filter((part) => part != null).join('&');
+    ]
+      .filter((part) => part != null)
+      .join('&');
     return query === '' ? '/lists/new' : (`/lists/new?${query}` as const);
   },
   letterboxdLists: (kind: 'created' | 'liked') => `/lists/letterboxd?kind=${kind}` as const,
@@ -106,11 +114,9 @@ export const routes = {
   /** A person by IMDb `nm` id, from an `imdb.com/name/` link; TMDB resolves it. */
   imdbPerson: (imdbId: string) => `/person/imdb/${imdbId}` as const,
   /** For credits without a TMDB or AniList person id: resolve by name. */
-  personLookup: (name: string) =>
-    `/person/lookup/${encodeURIComponent(name)}` as const,
+  personLookup: (name: string) => `/person/lookup/${encodeURIComponent(name)}` as const,
   /** Keyed by TMDB company id — same single-source rule as /person. */
   studio: (tmdbId: number) => `/studio/tmdb/${tmdbId}` as const,
   /** For studios without a TMDB id (AniList's): resolve by name. */
-  studioLookup: (name: string) =>
-    `/studio/lookup/${encodeURIComponent(name)}` as const,
+  studioLookup: (name: string) => `/studio/lookup/${encodeURIComponent(name)}` as const,
 } as const;

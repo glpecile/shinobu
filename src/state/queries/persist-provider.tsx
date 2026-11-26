@@ -1,4 +1,9 @@
-import { hydrate, IsRestoringProvider, QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import {
+  hydrate,
+  IsRestoringProvider,
+  QueryClientProvider,
+  type QueryClient,
+} from '@tanstack/react-query';
 import {
   persistQueryClientRestore,
   persistQueryClientSave,
@@ -30,7 +35,10 @@ function restoreNow(client: QueryClient, persister: Persister) {
   try {
     const persisted = persister.restoreClient() as PersistedClient | undefined;
     if (persisted == null) return;
-    if (Date.now() - persisted.timestamp > persistOptions.maxAge || persisted.buster !== persistOptions.buster) {
+    if (
+      Date.now() - persisted.timestamp > persistOptions.maxAge ||
+      persisted.buster !== persistOptions.buster
+    ) {
       void persister.removeClient();
       return;
     }
@@ -73,7 +81,9 @@ export function PersistQueryClientProvider({
       void persistQueryClientSave(options);
     };
     // Restore already discards a corrupt snapshot; recovery must also consume its rejection.
-    const restored = RESTORES_SYNC ? Promise.resolve() : persistQueryClientRestore(options).catch(() => {});
+    const restored = RESTORES_SYNC
+      ? Promise.resolve()
+      : persistQueryClientRestore(options).catch(() => {});
     void restored.finally(() => {
       if (!active) return;
       setIsRestoring(false);

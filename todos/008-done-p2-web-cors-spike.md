@@ -18,7 +18,7 @@ browser. That only works if each provider sends CORS headers. Policy (decided,
 `docs/plans/0005` + AGENTS.md "Web & CORS"): **a provider that blocks browser
 origins is native-only on web** ("connect on mobile") — never proxied.
 
-This spike de-risks that *before* any web read path is built, instead of
+This spike de-risks that _before_ any web read path is built, instead of
 discovering it mid-integration.
 
 ## Acceptance Criteria
@@ -30,7 +30,7 @@ discovering it mid-integration.
     request with the `trakt-api-key`/`trakt-api-version` headers (custom headers
     trigger `OPTIONS` preflight, which is where CORS usually breaks).
   - Letterboxd — only if/when `todos/004` unblocks.
-- Also confirm each provider's *OAuth* story works from the browser (redirect URIs
+- Also confirm each provider's _OAuth_ story works from the browser (redirect URIs
   for a web origin, token exchange callable browser-side).
 - Findings written to `docs/solutions/web-cors-<provider>.md` per provider —
   including the passing cases, so the next agent doesn't re-run the spike.

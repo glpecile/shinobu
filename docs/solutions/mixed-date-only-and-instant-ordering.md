@@ -17,7 +17,7 @@ That is not a comparison of times once the two shapes are mixed:
   so every release files ahead of every episode sharing its date string — even
   one airing at 00:05.
 - Worse, the two strings don't name the same clock. An episode airing Friday
-  23:30 in a UTC-5 timezone is `2026-07-25T04:30:00.000Z`, so it sorts *after* a
+  23:30 in a UTC-5 timezone is `2026-07-25T04:30:00.000Z`, so it sorts _after_ a
   release the user reads as Saturday's. The user sees Saturday's film above
   Friday's episode.
 
@@ -41,7 +41,7 @@ function entryOrder(entry: UpNextEntry): number {
 `src/features/up-next/compute.ts`. Entries with no instant sort last rather than
 first — a missing time is not "the beginning of the week."
 
-Deliberately *not* fixed by normalizing releases to an instant at the source:
+Deliberately _not_ fixed by normalizing releases to an instant at the source:
 `entryInstant` hands back the raw string so `isDateOnly` can still suppress the
 00:00 time badge a flattened release would grow (plan 0030 KTD-1).
 

@@ -5,8 +5,11 @@
 confirmed in the web bundle:
 
 ```js
-j=function(A){let e=arguments.length>1&&void 0!==arguments[1]&&arguments[1],t="/api/search/upcoming_episodes_v3";
-return c.get(t,{params:{cursor:A,should_get_progress:e}})}
+j = function (A) {
+  let e = arguments.length > 1 && void 0 !== arguments[1] && arguments[1],
+    t = '/api/search/upcoming_episodes_v3';
+  return c.get(t, { params: { cursor: A, should_get_progress: e } });
+};
 ```
 
 - `GET search/upcoming_episodes_v3?cursor=&should_get_progress=` returns

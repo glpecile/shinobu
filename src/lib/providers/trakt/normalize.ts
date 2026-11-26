@@ -93,9 +93,7 @@ export interface NormalizedMediaImages {
  * removed images from `/sync/watched/*`, so watched items recover art through
  * a per-item catalogue lookup normalized here (`getMediaImages`).
  */
-export function normalizeMediaImages(raw: {
-  images?: TraktImages;
-}): NormalizedMediaImages {
+export function normalizeMediaImages(raw: { images?: TraktImages }): NormalizedMediaImages {
   return {
     coverImage: imageUrl(raw.images?.poster),
     ...(raw.images?.fanart != null && raw.images.fanart.length > 0
@@ -109,9 +107,7 @@ export function normalizeMediaImages(raw: {
  * into the item so absent raw fields stay absent (no `undefined` keys under
  * exactOptionalPropertyTypes-style expectations).
  */
-function detailFields(
-  raw: TraktMovie | TraktShow,
-): Partial<NormalizedMediaItem> {
+function detailFields(raw: TraktMovie | TraktShow): Partial<NormalizedMediaItem> {
   return {
     ...(raw.images?.fanart != null && raw.images.fanart.length > 0
       ? { backdropImage: imageUrl(raw.images.fanart) }
@@ -141,18 +137,13 @@ function externalIdsFrom(ids: TraktIds): NormalizedMediaItem['externalIds'] {
  * timestamp of their own, and the read effect supplies the instant from
  * Effect's Clock.
  */
-export function normalizeMovie(
-  raw: TraktMovie,
-  nowIso: string,
-): NormalizedMediaItem {
+export function normalizeMovie(raw: TraktMovie, nowIso: string): NormalizedMediaItem {
   return {
     id: `trakt-${raw.ids.trakt}`,
     title: raw.title,
     coverImage: imageUrl(raw.images?.poster),
     ...detailFields(raw),
-    ...(raw.released != null && raw.released !== ''
-      ? { releaseDate: raw.released }
-      : {}),
+    ...(raw.released != null && raw.released !== '' ? { releaseDate: raw.released } : {}),
     type: 'MOVIE',
     currentProgress: 0,
     progressUnit: 'episode',
@@ -161,10 +152,7 @@ export function normalizeMovie(
   };
 }
 
-export function normalizeShow(
-  raw: TraktShow,
-  nowIso: string,
-): NormalizedMediaItem {
+export function normalizeShow(raw: TraktShow, nowIso: string): NormalizedMediaItem {
   return {
     id: `trakt-${raw.ids.trakt}`,
     title: raw.title,
@@ -173,9 +161,7 @@ export function normalizeShow(
     type: 'TV',
     currentProgress: 0,
     progressUnit: 'episode',
-    ...(raw.aired_episodes != null
-      ? { totalEpisodes: raw.aired_episodes }
-      : {}),
+    ...(raw.aired_episodes != null ? { totalEpisodes: raw.aired_episodes } : {}),
     lastUpdated: nowIso,
     externalIds: externalIdsFrom(raw.ids),
   };
@@ -330,9 +316,7 @@ export function normalizeCrew(
   const byPerson = new Map<string, { member: NormalizedCrewMember; jobs: string[] }>();
   const departments = [
     ...order.filter((department) => department in raw),
-    ...Object.keys(raw).filter(
-      (department) => !order.includes(department),
-    ),
+    ...Object.keys(raw).filter((department) => !order.includes(department)),
   ];
 
   for (const department of departments) {
@@ -349,9 +333,7 @@ export function normalizeCrew(
             name: entry.person.name,
             job: '',
             headshot: imageUrl(entry.person.images?.headshot),
-            ...(entry.person.ids.tmdb != null
-              ? { tmdbId: entry.person.ids.tmdb }
-              : {}),
+            ...(entry.person.ids.tmdb != null ? { tmdbId: entry.person.ids.tmdb } : {}),
           },
           jobs: [...jobs],
         });
@@ -402,18 +384,12 @@ export interface TraktShowSeason {
  * Sort seasons ascending but move "Specials" (number 0) to the end — the way
  * TV apps present them, instead of Trakt's specials-first payload order.
  */
-export function orderSeasons<T extends { readonly number: number }>(
-  seasons: readonly T[],
-): T[] {
+export function orderSeasons<T extends { readonly number: number }>(seasons: readonly T[]): T[] {
   // .sort() on the .filter() copies, not .toSorted() — Hermes (iOS/Android JS
   // engine) doesn't implement the ES2023 change-by-copy array methods.
   return [
-    ...seasons
-      .filter((season) => season.number !== 0)
-      .sort((a, b) => a.number - b.number),
-    ...seasons
-      .filter((season) => season.number === 0)
-      .sort((a, b) => a.number - b.number),
+    ...seasons.filter((season) => season.number !== 0).sort((a, b) => a.number - b.number),
+    ...seasons.filter((season) => season.number === 0).sort((a, b) => a.number - b.number),
   ];
 }
 
@@ -538,9 +514,7 @@ export interface TraktShowProgressResult {
   aired?: number;
 }
 
-export function normalizeWatchedProgress(
-  raw: TraktShowProgress,
-): TraktShowProgressResult {
+export function normalizeWatchedProgress(raw: TraktShowProgress): TraktShowProgressResult {
   const watchedKeys = new Set<string>();
   const lastWatchedAt: Record<string, string> = {};
   const airedEpisodes: Array<{ season: number; number: number }> = [];
@@ -575,10 +549,7 @@ export function normalizeWatchedProgress(
       season: next.season,
       number: next.number,
       ...(next.title != null && next.title !== '' ? { title: next.title } : {}),
-      firstAired:
-        next.first_aired != null && next.first_aired !== ''
-          ? next.first_aired
-          : null,
+      firstAired: next.first_aired != null && next.first_aired !== '' ? next.first_aired : null,
       ...(next.runtime != null ? { runtime: next.runtime } : {}),
     },
   };
@@ -629,9 +600,7 @@ export interface TraktHistoryItem {
  * (never a bare date) so day grouping stays timezone-correct (plan 0016 R4).
  * Rows of a type we don't model (unlikely) normalize to `null` and drop out.
  */
-export function normalizeHistoryItem(
-  raw: TraktHistoryItem,
-): NormalizedDiaryEntry | null {
+export function normalizeHistoryItem(raw: TraktHistoryItem): NormalizedDiaryEntry | null {
   if (raw.type === 'movie' && raw.movie != null) {
     return {
       id: `trakt-${raw.id}`,
@@ -788,8 +757,7 @@ export function normalizeWatchedShow(raw: TraktWatchedShow): NormalizedMediaItem
   // denominator on the card) excludes them, so counting them here overshoots.
   const watchedEpisodes =
     raw.seasons?.reduce(
-      (count, season) =>
-        season.number === 0 ? count : count + season.episodes.length,
+      (count, season) => (season.number === 0 ? count : count + season.episodes.length),
       0,
     ) ?? 0;
 
@@ -801,9 +769,7 @@ export function normalizeWatchedShow(raw: TraktWatchedShow): NormalizedMediaItem
     type: 'TV',
     currentProgress: watchedEpisodes,
     progressUnit: 'episode',
-    ...(raw.show.aired_episodes != null
-      ? { totalEpisodes: raw.show.aired_episodes }
-      : {}),
+    ...(raw.show.aired_episodes != null ? { totalEpisodes: raw.show.aired_episodes } : {}),
     lastUpdated: raw.last_watched_at,
     externalIds: externalIdsFrom(raw.show.ids),
   };

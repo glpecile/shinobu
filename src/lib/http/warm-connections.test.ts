@@ -7,11 +7,18 @@ const stored = new Map<string, string>();
 mock.module('react-native-nitro-modules', () => ({
   NitroModules: {
     createHybridObject: (name: string) => {
-      if (name === 'NativeStorage') return {
-        getSecureString: (key: string) => stored.get(key),
-        setSecureString: (key: string, value: string) => stored.set(key, value),
+      if (name === 'NativeStorage')
+        return {
+          getSecureString: (key: string) => stored.get(key),
+          setSecureString: (key: string, value: string) => stored.set(key, value),
+        };
+      return {
+        createClient: () => ({
+          prefetch: async (request: unknown) => {
+            requests.push(request);
+          },
+        }),
       };
-      return { createClient: () => ({ prefetch: async (request: unknown) => { requests.push(request); } }) };
     },
     box: (value: unknown) => value,
   },

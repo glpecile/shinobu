@@ -12,10 +12,13 @@ export function isRedditProxyRequest(url: URL): boolean {
 }
 
 function jsonError(status: number, error: string): Response {
-  return Response.json({ error }, {
-    status,
-    headers: { 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' },
-  });
+  return Response.json(
+    { error },
+    {
+      status,
+      headers: { 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' },
+    },
+  );
 }
 
 export async function handleRedditProxy(
@@ -23,9 +26,17 @@ export async function handleRedditProxy(
   upstreamFetch: (input: string, init?: RequestInit) => Promise<Response> = globalThis.fetch,
 ): Promise<Response> {
   const url = new URL(request.url);
-  const subreddit = /^\/api\/reddit\/(anime|movies|television)\/search\.rss$/.exec(url.pathname)?.[1];
+  const subreddit = /^\/api\/reddit\/(anime|movies|television)\/search\.rss$/.exec(
+    url.pathname,
+  )?.[1];
   const q = url.searchParams.get('q');
-  if (subreddit == null || [...url.searchParams.keys()].join() !== 'q' || q == null || q.trim() === '' || q.length > 200) {
+  if (
+    subreddit == null ||
+    [...url.searchParams.keys()].join() !== 'q' ||
+    q == null ||
+    q.trim() === '' ||
+    q.length > 200
+  ) {
     return jsonError(404, 'not found');
   }
   if (request.method !== 'GET') return jsonError(405, 'method not allowed');
@@ -47,7 +58,10 @@ export async function handleRedditProxy(
   } catch {
     return jsonError(504, 'upstream unavailable');
   }
-  if (!upstream.ok || upstream.headers.get('content-type')?.split(';')[0].trim() !== 'application/atom+xml') {
+  if (
+    !upstream.ok ||
+    upstream.headers.get('content-type')?.split(';')[0].trim() !== 'application/atom+xml'
+  ) {
     return jsonError(502, 'upstream error');
   }
   const feed = await upstream.text().catch(() => '');

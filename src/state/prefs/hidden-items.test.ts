@@ -31,7 +31,16 @@ mock.module('react-native-mmkv', () => ({
 const { setDiaryDayCollapsed, useCollapsedDiaryDays } = await import('./collapsed-diary-days');
 const { setSectionCollapsed } = await import('./collapsed-sections');
 const { prefsStorage } = await import('./storage');
-const { hideItem, hideList, unhideItem, unhideList, useHiddenItems, useHiddenLists, visibleByIds, visibleItems } = await import('./hidden-items');
+const {
+  hideItem,
+  hideList,
+  unhideItem,
+  unhideList,
+  useHiddenItems,
+  useHiddenLists,
+  visibleByIds,
+  visibleItems,
+} = await import('./hidden-items');
 
 const items = [{ id: 'trakt-1' }, { id: 'trakt-2' }, { id: 'trakt-3' }];
 
@@ -78,16 +87,19 @@ test('preference snapshots change only when their own keys change', () => {
 test.each([
   { saved: 'Old film', title: 'Old film' },
   { saved: '{"title":"Old film","type":"UNKNOWN","id":"wrong-item"}', title: 'Old film' },
-])('hidden item storage keeps its key identity and tolerates legacy or unknown types: $saved', ({ saved, title }) => {
-  const read = renderHook(() => useHiddenItems());
-  try {
-    act(() => prefsStorage.set('hiddenItem.trakt-9', saved));
-    expect(read.result.current).toEqual([{ id: 'trakt-9', title }]);
-  } finally {
-    read.unmount();
-    store.clear();
-  }
-});
+])(
+  'hidden item storage keeps its key identity and tolerates legacy or unknown types: $saved',
+  ({ saved, title }) => {
+    const read = renderHook(() => useHiddenItems());
+    try {
+      act(() => prefsStorage.set('hiddenItem.trakt-9', saved));
+      expect(read.result.current).toEqual([{ id: 'trakt-9', title }]);
+    } finally {
+      read.unmount();
+      store.clear();
+    }
+  },
+);
 
 describe('visibleItems', () => {
   // The perf contract behind plan 0024 U7: a fresh array every render broke
@@ -122,9 +134,7 @@ describe('visibleByIds (plan 0031 KTD-13)', () => {
     // The bug this exists to prevent: hiding a film from the Letterboxd row and
     // then watching it reappear in the merged grid as its Trakt twin.
     expect(
-      visibleByIds(rows, [{ id: 'letterboxd-heat', title: 'Heat' }], idsOf).map(
-        (row) => row.key,
-      ),
+      visibleByIds(rows, [{ id: 'letterboxd-heat', title: 'Heat' }], idsOf).map((row) => row.key),
     ).toEqual(['b', 'c']);
   });
 
@@ -133,8 +143,6 @@ describe('visibleByIds (plan 0031 KTD-13)', () => {
   // would hand Up Next a fresh array on every render and re-break the plan 0024
   // KTD4 memoization on Continue Watching and Calendar.
   test('returns the same array when the hidden set matches none of the rows', () => {
-    expect(
-      visibleByIds(rows, [{ id: 'trakt-999', title: 'Elsewhere' }], idsOf),
-    ).toBe(rows);
+    expect(visibleByIds(rows, [{ id: 'trakt-999', title: 'Elsewhere' }], idsOf)).toBe(rows);
   });
 });

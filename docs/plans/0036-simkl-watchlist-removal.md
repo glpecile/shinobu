@@ -53,7 +53,7 @@ edit make a show the user is actually watching disappear from both.
   entries already take (plan 0035 R3); no second confirm mechanism is invented.
 - R4. What actually gets destroyed is judged by a fresh in-effect read immediately
   before the write, never by the 15-minute-stale watchlist gather (R36 applied to
-  a second provider). The cached value drives the *warning* only.
+  a second provider). The cached value drives the _warning_ only.
 - R5. The derived post-log removal (a watched film leaves every watchlist, plan
   0033 U7) must not fire a Simkl write.
 - R6. Docs stating Simkl's removal is gated, or that the providers are three and
@@ -79,8 +79,8 @@ edit make a show the user is actually watching disappear from both.
   docs answer that outright: it does, always, and there is no status-only variant
   (`docs/solutions/simkl-watchlist-remove-deletes-history.md`). So the gate can
   never clear on its own terms. What makes the flip safe instead is that the
-  hazard is *narrow* — under one-status-per-item a `plantowatch` row normally
-  holds nothing — and *detectable*: one live read separates the harmless case from
+  hazard is _narrow_ — under one-status-per-item a `plantowatch` row normally
+  holds nothing — and _detectable_: one live read separates the harmless case from
   the destructive one. Rejected alternative: keep it manual forever, which fails
   R1 for a first-class provider over an edge case.
 - **KTD2 — The fresh read is `GET /sync/all-items/all/plantowatch`, and it earns
@@ -90,7 +90,7 @@ edit make a show the user is actually watching disappear from both.
   10 GET/s budget, per explicit user press.
 - **KTD3 — `deleted: 0` stops being a skip.** The old adapter read `deleted: 0` as
   "wasn't in your library". With membership proven by the guard read, a
-  plan-to-watch row simply has no history rows to delete, so zero is the *normal*
+  plan-to-watch row simply has no history rows to delete, so zero is the _normal_
   answer for a clean removal. `not_found` remains the failure signal.
 - **KTD4 — The warning hint rides the gather as `simklWatchedCount`, exactly like
   `anilistStatus`.** Stamped on every Simkl row including zero, carried through
@@ -127,16 +127,16 @@ One landable commit. Gates: `bun test --isolate`, `bun typecheck`, `bun lint`,
 `bun check:classnames`, `bun check:router-push`, `bun check:links`, plus a device
 run of the removal on a real Simkl account.
 
-| # | Change |
-| --- | --- |
-| 1 | `simkl/writes.ts` — fresh-read guard, `allowDestructive`, `deleted: 0` is ok |
-| 2 | `registry.ts` — `simkl.watchlistRemove: 'write'` |
-| 3 | `use-unwatchlist-media.ts` — the adapter, threading `allowDestructive` |
-| 4 | `watchlist/types.ts` + `compute.ts` + `state/queries/watchlist.ts` — the `simklWatchedCount` hint |
-| 5 | `watchlist-media/copy.ts` + `watchlist-picker-sheet.tsx` — the Simkl warning branch |
-| 6 | `remove-watched-from-watchlist.ts` — Simkl excluded (KTD5) |
-| 7 | Docs — new solution doc, rate-limit doc's open item resolved, `plan.md` 1.2 amendment |
-| 8 | Follow-up found during the device pass (below) |
+| #   | Change                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------- |
+| 1   | `simkl/writes.ts` — fresh-read guard, `allowDestructive`, `deleted: 0` is ok                      |
+| 2   | `registry.ts` — `simkl.watchlistRemove: 'write'`                                                  |
+| 3   | `use-unwatchlist-media.ts` — the adapter, threading `allowDestructive`                            |
+| 4   | `watchlist/types.ts` + `compute.ts` + `state/queries/watchlist.ts` — the `simklWatchedCount` hint |
+| 5   | `watchlist-media/copy.ts` + `watchlist-picker-sheet.tsx` — the Simkl warning branch               |
+| 6   | `remove-watched-from-watchlist.ts` — Simkl excluded (KTD5)                                        |
+| 7   | Docs — new solution doc, rate-limit doc's open item resolved, `plan.md` 1.2 amendment             |
+| 8   | Follow-up found during the device pass (below)                                                    |
 
 ### U8 — Parked shows go dark on their own details screen
 
@@ -150,7 +150,7 @@ R2's hazard, opposite surface.
   other surfaces already cache; the fallback query is `enabled` only when the
   first answered `null`).
 - `nextEpisodeFromSimklEntry`'s pointer-less branch stops claiming "rewatch"
-  when a *known* aired count exceeds `currentProgress` — without which the
+  when a _known_ aired count exceeds `currentProgress` — without which the
   fallback would have offered a rewatch of S1E1 for a 10-of-20 show.
 
 Evidence, and the general rule it generalizes to:

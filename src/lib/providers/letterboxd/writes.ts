@@ -40,11 +40,7 @@ function localDateStr(iso?: string): string {
 export function filmPathFor(item: NormalizedMediaItem): string | null {
   const slug = item.externalIds.letterboxd;
   const tmdb = item.externalIds.tmdb;
-  return slug != null && slug !== ''
-    ? `/film/${slug}/`
-    : tmdb != null
-      ? `/tmdb/${tmdb}/`
-      : null;
+  return slug != null && slug !== '' ? `/film/${slug}/` : tmdb != null ? `/tmdb/${tmdb}/` : null;
 }
 
 /**
@@ -72,7 +68,9 @@ export function scriptFailure(
         provider,
         status: 403,
         retryable: false,
-        cause: new Error('Letterboxd needs verification. Check the film on Letterboxd before retrying.'),
+        cause: new Error(
+          'Letterboxd needs verification. Check the film on Letterboxd before retrying.',
+        ),
       });
     default:
       return new ProviderNetworkError({
@@ -85,9 +83,7 @@ export function scriptFailure(
 /** Trimmed, non-empty diary tags (the app's Letterboxd-only log field). The
  * `/api/v0` write takes a JSON string array. */
 function tagList(options: LetterboxdLogOptions): string[] {
-  return (options.tags ?? [])
-    .map((tag) => tag.trim())
-    .filter((tag) => tag !== '');
+  return (options.tags ?? []).map((tag) => tag.trim()).filter((tag) => tag !== '');
 }
 
 /** A `messages` entry in the `/api/v0` response — the site treats any
@@ -145,8 +141,7 @@ function interpretDiaryResponse(
         const detail =
           errors.length > 0
             ? errors.map(messageText).join('; ')
-            : (parsed.message ??
-              `Letterboxd responded ${response.status} saving the diary entry`);
+            : (parsed.message ?? `Letterboxd responded ${response.status} saving the diary entry`);
         return yield* new ProviderDecodeError({ provider, detail });
       }
       // A non-JSON body on a non-2xx = the session isn't logged in (Letterboxd
@@ -178,12 +173,14 @@ export function logToLetterboxd(
 ): Effect.Effect<void, ProviderError> {
   const session = deps.session;
   const webFetch = deps.userscriptFetch ?? deps.webFetch;
-  if (webFetch == null || (deps.userscriptFetch == null && (session == null || session.cookie === ''))) {
+  if (
+    webFetch == null ||
+    (deps.userscriptFetch == null && (session == null || session.cookie === ''))
+  ) {
     return Effect.fail(new ProviderAuthError({ provider, refreshFailed: true }));
   }
 
-  const isMovie =
-    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  const isMovie = item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   if (!isMovie) {
     return Effect.fail(
       new ProviderDecodeError({

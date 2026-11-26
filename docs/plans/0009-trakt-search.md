@@ -31,7 +31,7 @@ handle — so search is a thin new read, not a new integration.
    between keystrokes; `staleTime` 60s — search results don't churn.
 4. **Debounce via `useDeferredValue`**, not a hand-rolled timer: the input
    stays fully responsive and React schedules the query-key change at lower
-   priority. (No `useMemo`/`useCallback` — React Compiler.) Each *settled*
+   priority. (No `useMemo`/`useCallback` — React Compiler.) Each _settled_
    query string becomes its own cache entry, which TanStack dedupes.
 5. **Screen**: `src/app/search.tsx` (route in `lib/routes.ts`, entry point: a
    search icon in the home header). Results render as full-width rows (poster

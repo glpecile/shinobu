@@ -4,10 +4,7 @@ import { RailHead } from '@/components/rail-head';
 import { SectionEnter } from '@/components/section-enter';
 import { SettingsRail } from '@/features/settings/settings-rail';
 import { ProviderCard } from '@/features/trackers/provider-card';
-import {
-  shouldAutoCloseSheet,
-  splitProviders,
-} from '@/features/trackers/provider-connections';
+import { shouldAutoCloseSheet, splitProviders } from '@/features/trackers/provider-connections';
 import { ProviderSheet } from '@/features/trackers/provider-sheet';
 import { haptics } from '@/lib/haptics';
 import { Provider, type ProviderId } from '@/lib/providers/types';
@@ -98,12 +95,6 @@ export function ProviderCardsSection() {
   );
 }
 
-function MovedCard({
-  moved,
-  children,
-}: {
-  moved: boolean;
-  children: ReactNode;
-}) {
+function MovedCard({ moved, children }: { moved: boolean; children: ReactNode }) {
   return moved ? <SectionEnter>{children}</SectionEnter> : children;
 }

@@ -26,13 +26,13 @@
 Shinobu writes one log to every connected provider that handles the item. Before
 writing, `planLogWrite` asks each provider "do you already have this watch?" and
 applies the sync rule in `reconcile.ts`. If **any** provider says no, the
-providers that said yes are *skipped* (catch-up). If **all** say yes, the log is
+providers that said yes are _skipped_ (catch-up). If **all** say yes, the log is
 a rewatch and every provider gets a new play.
 
 Simkl has no branch in `providerHasWatch`, so it always answers "no". Simkl
 handles movies, TV and anime, so it is a target in almost every log. With Simkl
 connected, a real rewatch can never happen: Trakt, AniList, Letterboxd and
-Serializd are all *skipped* ("already had this logged"), and only Simkl gets a
+Serializd are all _skipped_ ("already had this logged"), and only Simkl gets a
 write. The UI explicitly offers "Log rewatch". After this plan, a provider whose
 state can't be read is left out of the parity decision (like a mapping-skipped
 provider already is) and is still always written.
@@ -76,20 +76,20 @@ async function providerHasWatch(
 `planLogWrite` today (abridged):
 
 ```ts
-  const reconcileTargets = targets.filter((provider) => !mappingSkips.has(provider));
-  const records: ProviderWatchRecord[] = await Promise.all(
-    reconcileTargets.map(async (provider) => ({
-      provider,
-      hasIt: await providerHasWatch(queryClient, provider, item, domains),
-    })),
-  );
-  const decisions = reconcileLogTargets(records);
-  const skipped = decisions
-    .filter((decision) => decision.action === 'skip')
-    .map((decision) => decision.provider);
-  const writeTargets = targets.filter((provider) => !skipped.includes(provider));
-  const rewatch =
-    decisions.length > 0 && decisions.every((decision) => decision.action === 'rewatch');
+const reconcileTargets = targets.filter((provider) => !mappingSkips.has(provider));
+const records: ProviderWatchRecord[] = await Promise.all(
+  reconcileTargets.map(async (provider) => ({
+    provider,
+    hasIt: await providerHasWatch(queryClient, provider, item, domains),
+  })),
+);
+const decisions = reconcileLogTargets(records);
+const skipped = decisions
+  .filter((decision) => decision.action === 'skip')
+  .map((decision) => decision.provider);
+const writeTargets = targets.filter((provider) => !skipped.includes(provider));
+const rewatch =
+  decisions.length > 0 && decisions.every((decision) => decision.action === 'rewatch');
 ```
 
 `reconcile.ts`:
@@ -121,21 +121,23 @@ Never branch on a provider id outside it.
 
 ## Commands you will need
 
-| Purpose   | Command                                                   | Expected on success |
-|-----------|-----------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                           | exit 0              |
-| Typecheck | `bun typecheck`                                           | exit 0              |
-| One file  | `bun test src/features/log-media/use-log-media.test.ts`   | all pass            |
-| All tests | `bun run test`                                            | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                                | exit 0              |
+| Purpose   | Command                                                 | Expected on success               |
+| --------- | ------------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                         | exit 0                            |
+| Typecheck | `bun typecheck`                                         | exit 0                            |
+| One file  | `bun test src/features/log-media/use-log-media.test.ts` | all pass                          |
+| All tests | `bun run test`                                          | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                              | exit 0                            |
 
 ## Scope
 
 **In scope**:
+
 - `src/features/log-media/use-log-media.ts` — `providerHasWatch` and `planLogWrite` only
 - `src/features/log-media/use-log-media.test.ts`
 
 **Out of scope** (do NOT touch):
+
 - `src/features/log-media/reconcile.ts` and its tests — the rule is correct.
 - Adding a real Simkl reconcile read. The fall-through comment explains why it
   is deferred (heavy read, numbering domains). This plan only stops the
@@ -168,17 +170,17 @@ In `planLogWrite`, build the records, then drop the `null` answers before
 calling `reconcileLogTargets`:
 
 ```ts
-  const answers = await Promise.all(
-    reconcileTargets.map(async (provider) => ({
-      provider,
-      hasIt: await providerHasWatch(queryClient, provider, item, domains),
-    })),
-  );
-  // A provider that can't report its state (null) is written but has no say
-  // in catch-up vs. rewatch, like a mapping-skipped provider above.
-  const records: ProviderWatchRecord[] = answers.flatMap(({ provider, hasIt }) =>
-    hasIt == null ? [] : [{ provider, hasIt }],
-  );
+const answers = await Promise.all(
+  reconcileTargets.map(async (provider) => ({
+    provider,
+    hasIt: await providerHasWatch(queryClient, provider, item, domains),
+  })),
+);
+// A provider that can't report its state (null) is written but has no say
+// in catch-up vs. rewatch, like a mapping-skipped provider above.
+const records: ProviderWatchRecord[] = answers.flatMap(({ provider, hasIt }) =>
+  hasIt == null ? [] : [{ provider, hasIt }],
+);
 ```
 
 Everything after (`decisions`, `skipped`, `writeTargets`, `rewatch`) stays the

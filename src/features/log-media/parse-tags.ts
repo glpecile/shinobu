@@ -11,9 +11,7 @@ export function committedTags(input: string): string[] {
 
 export function isTagSelected(input: string, tag: string): boolean {
   const needle = tag.toLowerCase();
-  return committedTags(input).some(
-    (existing) => existing.toLowerCase() === needle,
-  );
+  return committedTags(input).some((existing) => existing.toLowerCase() === needle);
 }
 
 export function toggleTag(input: string, tag: string): string {
@@ -26,10 +24,7 @@ export function toggleTag(input: string, tag: string): string {
   return `${next.join(', ')}, `;
 }
 
-export function pinSelectedTags(
-  suggestions: readonly string[],
-  input: string,
-): string[] {
+export function pinSelectedTags(suggestions: readonly string[], input: string): string[] {
   const canonical = new Map<string, string>();
   for (const tag of suggestions) {
     const key = tag.toLowerCase();
@@ -55,10 +50,7 @@ export function activeTagFragment(input: string): string {
   return input.slice(input.lastIndexOf(',') + 1).trim();
 }
 
-export function filterTagSuggestions(
-  suggestions: readonly string[],
-  fragment: string,
-): string[] {
+export function filterTagSuggestions(suggestions: readonly string[], fragment: string): string[] {
   const needle = fragment.trim().toLowerCase();
   if (needle === '') return [...suggestions];
 

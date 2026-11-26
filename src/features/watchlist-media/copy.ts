@@ -20,9 +20,7 @@ export interface WatchlistCtaCopy {
   pending: string;
 }
 
-export function watchlistCtaCopy(
-  item: Pick<NormalizedMediaItem, 'type'>,
-): WatchlistCtaCopy {
+export function watchlistCtaCopy(item: Pick<NormalizedMediaItem, 'type'>): WatchlistCtaCopy {
   return isReadIntent(item)
     ? {
         idle: 'Add to reading list',
@@ -36,9 +34,7 @@ export function watchlistCtaCopy(
       };
 }
 
-export function unwatchlistCtaCopy(
-  item: Pick<NormalizedMediaItem, 'type'>,
-): WatchlistCtaCopy {
+export function unwatchlistCtaCopy(item: Pick<NormalizedMediaItem, 'type'>): WatchlistCtaCopy {
   return isReadIntent(item)
     ? {
         idle: 'Remove from reading list',
@@ -70,21 +66,32 @@ export function unwatchlistConfirmLabel(
 
 export function removalLine(
   provider: ProviderId,
-  entry: { item: Pick<NormalizedMediaItem, 'bridgedAniList'>; anilistStatus?: 'CURRENT' | 'PLANNING'; simklWatchedCount?: number },
+  entry: {
+    item: Pick<NormalizedMediaItem, 'bridgedAniList'>;
+    anilistStatus?: 'CURRENT' | 'PLANNING';
+    simklWatchedCount?: number;
+  },
 ): { text: string; destructive: boolean } {
   switch (provider) {
     case Provider.AniList:
       return entry.anilistStatus === 'CURRENT'
-        ? { text: 'Can’t un-plan something you’re watching, so this deletes the whole entry — progress, score, notes and dates included.', destructive: true }
+        ? {
+            text: 'Can’t un-plan something you’re watching, so this deletes the whole entry — progress, score, notes and dates included.',
+            destructive: true,
+          }
         : {
-            text: entry.item.bridgedAniList != null
-              ? `Deletes the Planning entry “${entry.item.bridgedAniList.title}”.`
-              : 'Deletes the Planning entry.',
+            text:
+              entry.item.bridgedAniList != null
+                ? `Deletes the Planning entry “${entry.item.bridgedAniList.title}”.`
+                : 'Deletes the Planning entry.',
             destructive: false,
           };
     case Provider.Simkl:
       return (entry.simklWatchedCount ?? 0) > 0
-        ? { text: 'Can’t drop just the plan-to-watch status, so this deletes the whole entry — watch history and rating included, and the show leaves Continue Watching and This week.', destructive: true }
+        ? {
+            text: 'Can’t drop just the plan-to-watch status, so this deletes the whole entry — watch history and rating included, and the show leaves Continue Watching and This week.',
+            destructive: true,
+          }
         : { text: 'Leaves Plan to Watch.', destructive: false };
     case Provider.Hardcover:
       return { text: 'Leaves Want to Read.', destructive: false };
@@ -109,9 +116,7 @@ export function addedToastTitle(item: Pick<NormalizedMediaItem, 'type'>): string
 }
 
 export function removedToastTitle(item: Pick<NormalizedMediaItem, 'type'>): string {
-  return isReadIntent(item)
-    ? 'Removed from reading list'
-    : 'Removed from watchlist';
+  return isReadIntent(item) ? 'Removed from reading list' : 'Removed from watchlist';
 }
 
 export function providerLabelList(ids: readonly ProviderId[]): string {
@@ -143,9 +148,7 @@ export function watchlistResultView(
     errorLinks: errorOutcomeLinks(result.outcomes, item),
     reasonedSkips,
     allSkip:
-      result.failed.length === 0 &&
-      result.succeeded.length === 0 &&
-      reasonedSkips.length > 0,
+      result.failed.length === 0 && result.succeeded.length === 0 && reasonedSkips.length > 0,
   };
 }
 
@@ -154,9 +157,7 @@ export function isWatchlistCtaSettled(
   view: Pick<WatchlistResultView, 'failed'> | null,
   stillOffered = false,
 ): boolean {
-  return (
-    onList === true && !stillOffered && (view?.failed.length ?? 0) === 0
-  );
+  return onList === true && !stillOffered && (view?.failed.length ?? 0) === 0;
 }
 
 export function addedToSentence(succeeded: readonly ProviderId[]): string {
@@ -173,10 +174,7 @@ export function isUnwatchlistCtaSettled(
   membershipUnknown: readonly ProviderId[],
 ): boolean {
   return (
-    view != null &&
-    view.failed.length === 0 &&
-    membershipUnknown.length === 0 &&
-    onList === false
+    view != null && view.failed.length === 0 && membershipUnknown.length === 0 && onList === false
   );
 }
 

@@ -10,10 +10,7 @@ export function GroupedList({ children }: { children: ReactNode }) {
   return (
     <View className={cn(CARD_SHELL, 'px-4 py-0')}>
       {Children.toArray(children).map((child, index) => (
-        <DividerContext.Provider
-          key={isValidElement(child) ? child.key : index}
-          value={index > 0}
-        >
+        <DividerContext.Provider key={isValidElement(child) ? child.key : index} value={index > 0}>
           {child}
         </DividerContext.Provider>
       ))}
@@ -25,9 +22,7 @@ function GroupedListItem({ children, className }: { children: ReactNode; classNa
   const divider = useContext(DividerContext);
 
   return (
-    <View className={cn('py-4', divider && 'border-t border-border', className)}>
-      {children}
-    </View>
+    <View className={cn('py-4', divider && 'border-t border-border', className)}>{children}</View>
   );
 }
 

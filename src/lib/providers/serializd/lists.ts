@@ -22,18 +22,26 @@ const RawItem = Schema.Struct({
   showName: Schema.String,
   bannerImage: Schema.optional(Schema.NullOr(Schema.String)),
   seasonId: Schema.optional(Schema.NullOr(Id)),
-  season: Schema.optional(Schema.NullOr(Schema.Struct({
-    seasonNumber: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
-    name: Schema.optional(Schema.String),
-    posterPath: Schema.optional(Schema.NullOr(Schema.String)),
-  }))),
-  episode: Schema.optional(Schema.NullOr(Schema.Struct({
-    // Episode 0 is real (specials, pilots, anime specials); rejecting it would
-    // fail the whole list decode. The episode route redirects episode 0 to the
-    // show's details, so it degrades instead of breaking the list.
-    episode_number: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
-    name: Schema.optional(Schema.String),
-  }))),
+  season: Schema.optional(
+    Schema.NullOr(
+      Schema.Struct({
+        seasonNumber: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
+        name: Schema.optional(Schema.String),
+        posterPath: Schema.optional(Schema.NullOr(Schema.String)),
+      }),
+    ),
+  ),
+  episode: Schema.optional(
+    Schema.NullOr(
+      Schema.Struct({
+        // Episode 0 is real (specials, pilots, anime specials); rejecting it would
+        // fail the whole list decode. The episode route redirects episode 0 to the
+        // show's details, so it degrades instead of breaking the list.
+        episode_number: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+        name: Schema.optional(Schema.String),
+      }),
+    ),
+  ),
 });
 const RawList = Schema.Struct({
   listId: Id,
@@ -85,7 +93,10 @@ function normalizeEntry(raw: typeof RawItem.Type, fetchedAt: string): SerializdL
   const seasonKey = raw.seasonId ?? raw.season?.seasonNumber ?? '';
   return {
     id: `${raw.showId}/${seasonKey}/${episode ?? ''}`,
-    subtitle: [raw.season?.name, episode != null ? `Episode ${episode}` : null, raw.episode?.name].filter(Boolean).join(' · ') || 'Series',
+    subtitle:
+      [raw.season?.name, episode != null ? `Episode ${episode}` : null, raw.episode?.name]
+        .filter(Boolean)
+        .join(' · ') || 'Series',
     ...(season != null ? { season } : {}),
     ...(episode != null ? { episode } : {}),
     item: {
@@ -103,7 +114,9 @@ function normalizeEntry(raw: typeof RawItem.Type, fetchedAt: string): SerializdL
 
 function normalizeList(raw: typeof RawList.Type, fetchedAt: string): SerializdList {
   return {
-    id: String(raw.listId), title: raw.listName, owner: raw.owner.username,
+    id: String(raw.listId),
+    title: raw.listName,
+    owner: raw.owner.username,
     itemCount: raw.numberOfItems,
     previews: raw.listItems.slice(0, 5).map((entry) => normalizeEntry(entry, fetchedAt).item),
   };
@@ -114,15 +127,27 @@ export const getSerializdListsPage = Effect.fn('serializd.getListsPage')(functio
   params: { username: string; kind: SerializdListKind; page: number },
 ) {
   if (serializdListsUrl(params.username) == null || !Schema.is(Page)(params.page)) {
-    return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'invalid lists address' });
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'invalid lists address',
+    });
   }
   const path = `/user/${encodeURIComponent(params.username)}/${params.kind === 'liked' ? 'liked_lists?sort_by=liked_on_desc' : 'lists?sort_by=date_created_desc'}&page=${params.page}`;
   const raw = yield* serializdHttp<unknown>(deps, path, { auth: deps.session != null });
   const page = yield* Schema.decodeUnknownEffect(RawIndex)(raw).pipe(
-    Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'unrecognized lists page' })),
+    Effect.mapError(
+      () =>
+        new ProviderDecodeError({
+          provider: Provider.Serializd,
+          detail: 'unrecognized lists page',
+        }),
+    ),
   );
   const fetchedAt = DateTime.formatIso(yield* DateTime.now);
-  return { lists: page.lists.map((list) => normalizeList(list, fetchedAt)), hasNextPage: params.page < page.totalPages };
+  return {
+    lists: page.lists.map((list) => normalizeList(list, fetchedAt)),
+    hasNextPage: params.page < page.totalPages,
+  };
 });
 
 /** The API may return only a preview for large lists; never call that complete. */
@@ -130,10 +155,17 @@ export const getSerializdList = Effect.fn('serializd.getList')(function* (
   deps: SerializdDeps,
   id: string,
 ) {
-  if (serializdListUrl(id) == null) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'invalid list address' });
+  if (serializdListUrl(id) == null)
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'invalid list address',
+    });
   const raw = yield* serializdHttp<unknown>(deps, `/list/${id}`, { auth: deps.session != null });
   const list = yield* Schema.decodeUnknownEffect(RawList)(raw).pipe(
-    Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'unrecognized list page' })),
+    Effect.mapError(
+      () =>
+        new ProviderDecodeError({ provider: Provider.Serializd, detail: 'unrecognized list page' }),
+    ),
   );
   const fetchedAt = DateTime.formatIso(yield* DateTime.now);
   return {
@@ -150,9 +182,14 @@ const EditorItem = Schema.Struct({
   description: Schema.optional(Schema.NullOr(Schema.String)),
 });
 const Editor = Schema.Struct({
-  listName: Schema.String, listDescription: Schema.String,
-  listItems: Schema.Array(EditorItem), listCollaborators: Schema.Array(Schema.Struct({ username: Schema.String })),
-  isPrivate: Schema.Boolean, isRanked: Schema.Boolean, allowsComments: Schema.Boolean, bannerImagePath: Schema.NullOr(Schema.String),
+  listName: Schema.String,
+  listDescription: Schema.String,
+  listItems: Schema.Array(EditorItem),
+  listCollaborators: Schema.Array(Schema.Struct({ username: Schema.String })),
+  isPrivate: Schema.Boolean,
+  isRanked: Schema.Boolean,
+  allowsComments: Schema.Boolean,
+  bannerImagePath: Schema.NullOr(Schema.String),
 });
 
 /**
@@ -167,18 +204,37 @@ const saveSerializdEditor = Effect.fn('serializd.saveEditor')(function* (
   raw: unknown,
   edit: (editor: typeof Editor.Type) => Partial<Pick<typeof Editor.Type, 'listName' | 'listItems'>>,
 ) {
-  const current = yield* Schema.decodeUnknownEffect(Editor)(raw).pipe(Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Serializd did not return the full editor settings. Open the list on Serializd.' })));
+  const current = yield* Schema.decodeUnknownEffect(Editor)(raw).pipe(
+    Effect.mapError(
+      () =>
+        new ProviderDecodeError({
+          provider: Provider.Serializd,
+          detail: 'Serializd did not return the full editor settings. Open the list on Serializd.',
+        }),
+    ),
+  );
   const editor = { ...current, ...edit(current) };
-  yield* serializdHttp(deps, '/list/edit', { method: 'POST', auth: true, body: {
-    list_id: listId, list_name: editor.listName, list_description: editor.listDescription,
-    list_items: editor.listItems.map((item, position) => ({
-      show_id: item.showId, season_id: item.seasonId ?? null, position,
-      ...(item.episode == null ? {} : { episode_number: item.episode.episode_number }),
-      description: item.description ?? '',
-    })),
-    list_collaborators: editor.listCollaborators.map((collaborator) => collaborator.username), is_private: editor.isPrivate,
-    is_ranked: editor.isRanked, allows_comments: editor.allowsComments, banner_image_path: editor.bannerImagePath,
-  } });
+  yield* serializdHttp(deps, '/list/edit', {
+    method: 'POST',
+    auth: true,
+    body: {
+      list_id: listId,
+      list_name: editor.listName,
+      list_description: editor.listDescription,
+      list_items: editor.listItems.map((item, position) => ({
+        show_id: item.showId,
+        season_id: item.seasonId ?? null,
+        position,
+        ...(item.episode == null ? {} : { episode_number: item.episode.episode_number }),
+        description: item.description ?? '',
+      })),
+      list_collaborators: editor.listCollaborators.map((collaborator) => collaborator.username),
+      is_private: editor.isPrivate,
+      is_ranked: editor.isRanked,
+      allows_comments: editor.allowsComments,
+      banner_image_path: editor.bannerImagePath,
+    },
+  });
 });
 
 /** Renames through the full editor, so it refuses a list Serializd returned only part of. */
@@ -186,16 +242,45 @@ export const renameSerializdList = Effect.fn('serializd.renameList')(function* (
   deps: SerializdDeps,
   params: { id: string; username: string; name: string },
 ) {
-  if (!deps.session || deps.session.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderAuthError({ provider: Provider.Serializd, refreshFailed: true });
+  if (!deps.session || deps.session.username.toLowerCase() !== params.username.toLowerCase())
+    return yield* new ProviderAuthError({ provider: Provider.Serializd, refreshFailed: true });
   const name = params.name.trim();
-  if (serializdListUrl(params.id) == null || name === '') return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Give the list a name.' });
+  if (serializdListUrl(params.id) == null || name === '')
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'Give the list a name.',
+    });
   const raw = yield* serializdHttp<unknown>(deps, `/list/${params.id}`, { auth: true });
-  const list = yield* Schema.decodeUnknownEffect(RawList)(raw).pipe(Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Could not read the list before editing.' })));
-  if (String(list.listId) !== params.id || list.owner.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'You can only edit your own lists.' });
-  if (list.listItems.length !== list.numberOfItems) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Serializd returned only part of this list. Rename it on Serializd to keep the other entries safe.' });
+  const list = yield* Schema.decodeUnknownEffect(RawList)(raw).pipe(
+    Effect.mapError(
+      () =>
+        new ProviderDecodeError({
+          provider: Provider.Serializd,
+          detail: 'Could not read the list before editing.',
+        }),
+    ),
+  );
+  if (
+    String(list.listId) !== params.id ||
+    list.owner.username.toLowerCase() !== params.username.toLowerCase()
+  )
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'You can only edit your own lists.',
+    });
+  if (list.listItems.length !== list.numberOfItems)
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail:
+        'Serializd returned only part of this list. Rename it on Serializd to keep the other entries safe.',
+    });
   yield* saveSerializdEditor(deps, list.listId, raw, () => ({ listName: name }));
   const confirmed = yield* getSerializdList(deps, params.id);
-  if (confirmed.title !== name || !confirmed.complete) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Could not confirm the new name. Open Serializd before retrying.' });
+  if (confirmed.title !== name || !confirmed.complete)
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'Could not confirm the new name. Open Serializd before retrying.',
+    });
   return confirmed;
 });
 
@@ -221,50 +306,140 @@ export const createSerializdList = Effect.fn('serializd.createList')(function* (
   deps: SerializdDeps,
   params: SerializdListDraft & { username: string },
 ) {
-  if (!deps.session || deps.session.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderAuthError({ provider: Provider.Serializd, refreshFailed: true });
+  if (!deps.session || deps.session.username.toLowerCase() !== params.username.toLowerCase())
+    return yield* new ProviderAuthError({ provider: Provider.Serializd, refreshFailed: true });
   const name = params.name.trim();
-  if (name === '') return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Give the list a name.' });
-  if (params.items.length === 0 || params.items.length > MAX_SERIALIZD_LIST_ITEMS) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Serializd lists need between 1 and 500 shows.' });
-  const showIds = params.items.map((item) => isShow(item) ? item.externalIds.tmdb : undefined);
-  if (!showIds.every((id) => Schema.is(Id)(id))) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Only shows can be added to a Serializd list.' });
-  const raw = yield* serializdHttp<unknown>(deps, '/list/create', { method: 'POST', auth: true, body: {
-    list_name: name, list_description: params.description.trim(),
-    list_items: showIds.map((show_id, position) => ({ show_id, season_id: null, position, description: '' })),
-    list_collaborators: [], is_private: params.isPrivate, is_ranked: params.isRanked,
-    allows_comments: params.allowsComments, banner_image_path: '',
-  } });
+  if (name === '')
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'Give the list a name.',
+    });
+  if (params.items.length === 0 || params.items.length > MAX_SERIALIZD_LIST_ITEMS)
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'Serializd lists need between 1 and 500 shows.',
+    });
+  const showIds = params.items.map((item) => (isShow(item) ? item.externalIds.tmdb : undefined));
+  if (!showIds.every((id) => Schema.is(Id)(id)))
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'Only shows can be added to a Serializd list.',
+    });
+  const raw = yield* serializdHttp<unknown>(deps, '/list/create', {
+    method: 'POST',
+    auth: true,
+    body: {
+      list_name: name,
+      list_description: params.description.trim(),
+      list_items: showIds.map((show_id, position) => ({
+        show_id,
+        season_id: null,
+        position,
+        description: '',
+      })),
+      list_collaborators: [],
+      is_private: params.isPrivate,
+      is_ranked: params.isRanked,
+      allows_comments: params.allowsComments,
+      banner_image_path: '',
+    },
+  });
   const receipt = yield* Schema.decodeUnknownEffect(Schema.Struct({ listId: Id }))(raw).pipe(
-    Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Serializd did not confirm the new list. Check your lists before retrying.' })),
+    Effect.mapError(
+      () =>
+        new ProviderDecodeError({
+          provider: Provider.Serializd,
+          detail: 'Serializd did not confirm the new list. Check your lists before retrying.',
+        }),
+    ),
   );
   const created = yield* getSerializdList(deps, String(receipt.listId));
-  if (created.owner.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Serializd returned a different list. Check your lists before retrying.' });
+  if (created.owner.toLowerCase() !== params.username.toLowerCase())
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'Serializd returned a different list. Check your lists before retrying.',
+    });
   return created;
 });
 
 /** A removal uses Serializd's full editor, so no settings or unseen entries may be dropped. */
 export const setSerializdListMembership = Effect.fn('serializd.setListMembership')(function* (
   deps: SerializdDeps,
-  params: { id: string; username: string; item: NormalizedMediaItem; present: boolean; entryId?: string },
+  params: {
+    id: string;
+    username: string;
+    item: NormalizedMediaItem;
+    present: boolean;
+    entryId?: string;
+  },
 ) {
-  if (!deps.session || deps.session.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderAuthError({ provider: Provider.Serializd, refreshFailed: true });
-  if (serializdListUrl(params.id) == null || !isShow(params.item) || !Schema.is(Id)(params.item.externalIds.tmdb)) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Choose a show to edit this list.' });
+  if (!deps.session || deps.session.username.toLowerCase() !== params.username.toLowerCase())
+    return yield* new ProviderAuthError({ provider: Provider.Serializd, refreshFailed: true });
+  if (
+    serializdListUrl(params.id) == null ||
+    !isShow(params.item) ||
+    !Schema.is(Id)(params.item.externalIds.tmdb)
+  )
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'Choose a show to edit this list.',
+    });
   const raw = yield* serializdHttp<unknown>(deps, `/list/${params.id}`, { auth: true });
-  const list = yield* Schema.decodeUnknownEffect(RawList)(raw).pipe(Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Could not read the list before editing.' })));
-  if (String(list.listId) !== params.id || list.owner.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'You can only edit your own lists.' });
+  const list = yield* Schema.decodeUnknownEffect(RawList)(raw).pipe(
+    Effect.mapError(
+      () =>
+        new ProviderDecodeError({
+          provider: Provider.Serializd,
+          detail: 'Could not read the list before editing.',
+        }),
+    ),
+  );
+  if (
+    String(list.listId) !== params.id ||
+    list.owner.username.toLowerCase() !== params.username.toLowerCase()
+  )
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'You can only edit your own lists.',
+    });
   const entries = list.listItems.map((entry) => normalizeEntry(entry, ''));
   const entryId = params.entryId ?? `${params.item.externalIds.tmdb}//`;
   const index = entries.findIndex((entry) => entry.id === entryId);
   if (params.present) {
-    if (index < 0 && list.listItems.length !== list.numberOfItems) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Could not check membership in the incomplete list. Add this show on Serializd to avoid a duplicate.' });
-    if (index < 0) yield* serializdHttp(deps, '/list/add_item', { method: 'POST', auth: true, body: { list_id: list.listId, show_id: params.item.externalIds.tmdb } });
+    if (index < 0 && list.listItems.length !== list.numberOfItems)
+      return yield* new ProviderDecodeError({
+        provider: Provider.Serializd,
+        detail:
+          'Could not check membership in the incomplete list. Add this show on Serializd to avoid a duplicate.',
+      });
+    if (index < 0)
+      yield* serializdHttp(deps, '/list/add_item', {
+        method: 'POST',
+        auth: true,
+        body: { list_id: list.listId, show_id: params.item.externalIds.tmdb },
+      });
   } else if (index >= 0) {
-    if (list.listItems.length !== list.numberOfItems) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Serializd returned only part of this list. Remove this item on Serializd to keep the other entries safe.' });
-    yield* saveSerializdEditor(deps, list.listId, raw, (editor) => ({ listItems: editor.listItems.filter((_, position) => position !== index) }));
+    if (list.listItems.length !== list.numberOfItems)
+      return yield* new ProviderDecodeError({
+        provider: Provider.Serializd,
+        detail:
+          'Serializd returned only part of this list. Remove this item on Serializd to keep the other entries safe.',
+      });
+    yield* saveSerializdEditor(deps, list.listId, raw, (editor) => ({
+      listItems: editor.listItems.filter((_, position) => position !== index),
+    }));
   } else if (list.listItems.length < list.numberOfItems) {
-    return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Could not locate this entry in the incomplete list. Open Serializd before retrying.' });
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'Could not locate this entry in the incomplete list. Open Serializd before retrying.',
+    });
   }
   const confirmed = yield* getSerializdList(deps, params.id);
   const present = confirmed.entries.some((entry) => entry.id === entryId);
-  if (present !== params.present || (!params.present && !confirmed.complete)) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Could not confirm the change. Open Serializd before retrying.' });
+  if (present !== params.present || (!params.present && !confirmed.complete))
+    return yield* new ProviderDecodeError({
+      provider: Provider.Serializd,
+      detail: 'Could not confirm the change. Open Serializd before retrying.',
+    });
   return confirmed;
 });

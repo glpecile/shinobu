@@ -11,7 +11,7 @@ plan 0034's detachment turned into dead ends for every non-BYO user:
 - `SeasonsSection` returned `null` when `item.externalIds.trakt == null`, and
   the accordion fetched seasons only via `useSuspenseTraktShowSeasonsQuery`.
 - `useSeriesNextEpisode` reported `unavailable` unless Trakt was connected
-  *and* the item carried a Trakt id — which hid `LogMediaButton` for every
+  _and_ the item carried a Trakt id — which hid `LogMediaButton` for every
   Simkl-sourced series (its documented fallback was "the season picker", which
   the first gate had also removed).
 
@@ -37,7 +37,7 @@ directly:
   log target. Deliberate edges: a null air date stays permissive (the Trakt
   rule — Up Next's stricter aired-by-count arithmetic is for auto-surfacing,
   not for blocking a deliberate log); a TV pointer with no season number
-  (Simkl's absolute anime numbering) is *unnameable*, never "season 1"; a
+  (Simkl's absolute anime numbering) is _unnameable_, never "season 1"; a
   mid-show item absent from the `watching` snapshot is also unnameable and
   falls back to the (now working) season picker rather than guessing a season
   from a flat episode count.
@@ -49,7 +49,7 @@ without checking its size against
 `docs/solutions/simkl-rate-limits-and-write-lock.md`.
 
 > **Closed 2026-08-01.** The trap fired exactly as written (Doctor Who,
-> 153/153, every episode unticked). The details reads now use one *unfiltered*
+> 153/153, every episode unticked). The details reads now use one _unfiltered_
 > snapshot, which turned out to be **fewer** requests than the filtered chain,
 > not more — and it exposed a second problem the widening alone didn't fix:
 > Simkl sends no `seasons[]` at all for a `completed` entry. Full finding:

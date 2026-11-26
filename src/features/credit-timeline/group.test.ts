@@ -19,9 +19,7 @@ function item(
     type,
     coverImage: '',
     backdropImage: '',
-    ...(releaseDate != null
-      ? { year: Number(releaseDate.slice(0, 4)), releaseDate }
-      : {}),
+    ...(releaseDate != null ? { year: Number(releaseDate.slice(0, 4)), releaseDate } : {}),
     currentProgress: 0,
     progressUnit: 'episode',
     lastUpdated: '2026-09-15T00:00:00.000Z',
@@ -76,25 +74,32 @@ describe('roleCounts', () => {
   });
 
   test('includes anime films and series in format filters while keeping manga in All', () => {
-    const filmography = mergeCreditRows([{
-      role: 'Directing',
-      items: [
-        { ...heron, id: 'anilist-film', type: 'ANIME', isFilm: true },
-        { ...hound, id: 'anilist-series', type: 'ANIME' },
-        { ...wind, id: 'anilist-manga', type: 'MANGA' },
-      ],
-      details: {},
-      roles: {},
-    }]);
+    const filmography = mergeCreditRows([
+      {
+        role: 'Directing',
+        items: [
+          { ...heron, id: 'anilist-film', type: 'ANIME', isFilm: true },
+          { ...hound, id: 'anilist-series', type: 'ANIME' },
+          { ...wind, id: 'anilist-manga', type: 'MANGA' },
+        ],
+        details: {},
+        roles: {},
+      },
+    ]);
     for (const [format, ids] of [
       ['ALL', ['anilist-film', 'anilist-manga', 'anilist-series']],
       ['MOVIE', ['anilist-film']],
       ['TV', ['anilist-series']],
     ] as const) {
       const result = timelineRows(filmography.credits, {
-        format, role: null, folded: new Set(), now: NOW,
+        format,
+        role: null,
+        folded: new Set(),
+        now: NOW,
       });
-      expect(result.flatMap((row) => row.kind === 'entry' ? [row.credit.item.id] : [])).toEqual([...ids]);
+      expect(result.flatMap((row) => (row.kind === 'entry' ? [row.credit.item.id] : []))).toEqual([
+        ...ids,
+      ]);
       expect(roleCounts(filmography, format)).toEqual([{ role: 'Directing', count: ids.length }]);
     }
   });
@@ -112,14 +117,7 @@ describe('timelineRows', () => {
     });
     expect(
       result.map((row) => (row.kind === 'head' ? [row.year, row.count, row.open] : row.key)),
-    ).toEqual([
-      [null, 2, false],
-      [2023, 1, true],
-      'm1',
-      [2013, 1, false],
-      [1984, 1, true],
-      't1',
-    ]);
+    ).toEqual([[null, 2, false], [2023, 1, true], 'm1', [2013, 1, false], [1984, 1, true], 't1']);
   });
 
   test('opens the upcoming head soonest-first with undated work last, and marks group ends', () => {
@@ -129,10 +127,13 @@ describe('timelineRows', () => {
       folded: new Set(),
       now: NOW,
     });
-    expect(result.slice(0, 3).map((row) => (
-      row.kind === 'entry' ? [row.key, row.last] : row.kind === 'head' && row.open
-    )))
-      .toEqual([true, ['m4', false], ['m3', true]]);
+    expect(
+      result
+        .slice(0, 3)
+        .map((row) =>
+          row.kind === 'entry' ? [row.key, row.last] : row.kind === 'head' && row.open,
+        ),
+    ).toEqual([true, ['m4', false], ['m3', true]]);
   });
 
   test('joins every role on a credit, or only the filtered one', () => {
@@ -151,29 +152,39 @@ describe('timelineRows', () => {
   });
 
   test('poster rows stay within each year, preserve roles and keep folded years closed', () => {
-    const result = timelineRows([
-      ...credits,
+    const result = timelineRows(
+      [
+        ...credits,
+        {
+          item: { ...wind, id: 'm5', year: 2023, releaseDate: '2023-01-01' },
+          roles: [{ role: 'Directing', detail: 'Director' }],
+        },
+        {
+          item: { ...wind, id: 'm6', year: 2023, releaseDate: '2023-02-01' },
+          roles: [{ role: 'Directing', detail: 'Director' }],
+        },
+      ],
       {
-        item: { ...wind, id: 'm5', year: 2023, releaseDate: '2023-01-01' },
-        roles: [{ role: 'Directing', detail: 'Director' }],
+        format: 'ALL',
+        role: 'Directing',
+        folded: new Set([UPCOMING_HEAD, 'head-2013']),
+        columns: 2,
+        now: NOW,
       },
-      {
-        item: { ...wind, id: 'm6', year: 2023, releaseDate: '2023-02-01' },
-        roles: [{ role: 'Directing', detail: 'Director' }],
-      },
-    ], {
-      format: 'ALL',
-      role: 'Directing',
-      folded: new Set([UPCOMING_HEAD, 'head-2013']),
-      columns: 2,
-      now: NOW,
-    });
-    expect(result.map((row) => row.kind === 'posters'
-      ? row.entries.map((entry) => [entry.credit.item.id, entry.roles])
-      : row.key)).toEqual([
+    );
+    expect(
+      result.map((row) =>
+        row.kind === 'posters'
+          ? row.entries.map((entry) => [entry.credit.item.id, entry.roles])
+          : row.key,
+      ),
+    ).toEqual([
       'head-upcoming',
       'head-2023',
-      [['m1', 'Director'], ['m5', 'Director']],
+      [
+        ['m1', 'Director'],
+        ['m5', 'Director'],
+      ],
       [['m6', 'Director']],
       'head-2013',
       'head-1984',

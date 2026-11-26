@@ -47,14 +47,8 @@ import {
 } from './copy';
 import { splitWatchlistRemoveTargets } from './remove-targets';
 import { useWriteTargetsSplit } from './targets';
-import {
-  useIsUnwatchlistPending,
-  useUnwatchlistMedia,
-} from './use-unwatchlist-media';
-import {
-  useIsWatchlistWritePending,
-  useWatchlistMedia,
-} from './use-watchlist-media';
+import { useIsUnwatchlistPending, useUnwatchlistMedia } from './use-unwatchlist-media';
+import { useIsWatchlistWritePending, useWatchlistMedia } from './use-watchlist-media';
 
 interface PickerHostProps {
   onCancel: () => void;
@@ -71,9 +65,7 @@ export function WatchlistAddPicker({
   const pending = useIsWatchlistWritePending(item.id);
   const split = useWriteTargetsSplit(item, 'watchlist');
   const [{ held, removal }] = useState(() => {
-    const data = queryClient.getQueryData<WatchlistInputs>(
-      watchlistQueryKeys.inputs(),
-    );
+    const data = queryClient.getQueryData<WatchlistInputs>(watchlistQueryKeys.inputs());
     return {
       held: data == null ? [] : watchlistSourcesFor(data.inputs, item),
       removal: data == null ? null : findWatchlistRemoval(data, item, cachedMangaList(queryClient)),
@@ -83,8 +75,7 @@ export function WatchlistAddPicker({
   const writable = split.writable.filter((id) => !held.includes(id));
   const alreadyOn = split.writable.filter((id) => held.includes(id));
   const { manual } = split;
-  const { selected, toggle, selectAll, selectNone } =
-    useSelectedTargets(writable);
+  const { selected, toggle, selectAll, selectNone } = useSelectedTargets(writable);
   const step = useReportStep<WriteReportLike>((report) => {
     toast.success(addedToastTitle(item), providerLabelList(report.succeeded));
     onCleanClose();
@@ -118,9 +109,7 @@ export function WatchlistAddPicker({
           errorLine="Could not add."
           item={item}
           onDone={onCleanClose}
-          onRetry={() =>
-            write(step.thrown ? selected : [...(step.report?.failed ?? [])])
-          }
+          onRetry={() => write(step.thrown ? selected : [...(step.report?.failed ?? [])])}
           pending={pending}
           pendingLabel={copy.pending}
           step={step}
@@ -142,9 +131,7 @@ export function WatchlistAddPicker({
         className={cn(pending && 'opacity-50')}
         style={{ pointerEvents: pending ? 'none' : 'auto' }}
       >
-        <FieldLabel className="mt-5 mb-2">
-          Write to
-        </FieldLabel>
+        <FieldLabel className="mt-5 mb-2">Write to</FieldLabel>
         {writable.length > 0 && (
           <ProviderToggleList
             onSelectAll={selectAll}
@@ -186,9 +173,7 @@ export function WatchlistAddPicker({
           </View>
         )}
         {writable.length > 0 && selected.length === 0 && (
-          <Text className="text-accent font-sans text-sm mt-2">
-            Select at least one provider.
-          </Text>
+          <Text className="text-accent font-sans text-sm mt-2">Select at least one provider.</Text>
         )}
       </View>
 
@@ -230,9 +215,7 @@ export function WatchlistRemovePicker({
     incomplete,
     letterboxdUserscript,
   );
-  const { selected, toggle, selectAll, selectNone } = useSelectedTargets(
-    split.targets,
-  );
+  const { selected, toggle, selectAll, selectNone } = useSelectedTargets(split.targets);
 
   const copy = unwatchlistCtaCopy(entry.item);
   const { manual, unknown } = split;
@@ -249,10 +232,7 @@ export function WatchlistRemovePicker({
   function write(providers: ProviderId[]) {
     if (pending || providers.length === 0) return;
     haptics.destructive();
-    remove.mutate(
-      { providers, destructive: warned },
-      step.callbacks,
-    );
+    remove.mutate({ providers, destructive: warned }, step.callbacks);
   }
 
   function review() {
@@ -269,9 +249,7 @@ export function WatchlistRemovePicker({
           errorLine="Could not remove."
           item={entry.item}
           onDone={onCleanClose}
-          onRetry={() =>
-            write(step.thrown ? (reviewed ?? []) : [...(step.report?.failed ?? [])])
-          }
+          onRetry={() => write(step.thrown ? (reviewed ?? []) : [...(step.report?.failed ?? [])])}
           pending={pending}
           pendingLabel={copy.pending}
           step={step}
@@ -305,7 +283,12 @@ export function WatchlistRemovePicker({
                 <View className="mt-0.5">
                   <ProviderIcon id={provider} size={20} />
                 </View>
-                <Text className={cn('flex-1 font-sans text-sm leading-relaxed', line.destructive ? 'text-accent' : 'text-foreground')}>
+                <Text
+                  className={cn(
+                    'flex-1 font-sans text-sm leading-relaxed',
+                    line.destructive ? 'text-accent' : 'text-foreground',
+                  )}
+                >
                   <Text className="font-sans-semibold">{PROVIDERS[provider].label}</Text>
                   {` · ${line.text}`}
                 </Text>
@@ -316,7 +299,11 @@ export function WatchlistRemovePicker({
         <WriteSheet.Actions>
           <Button
             icon={<Button.Icon name={destructive ? 'trash-outline' : 'bookmark-outline'} />}
-            label={destructive ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL : unwatchlistConfirmLabel(entry.item, reviewed.length)}
+            label={
+              destructive
+                ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL
+                : unwatchlistConfirmLabel(entry.item, reviewed.length)
+            }
             loading={pending}
             loadingLabel={copy.pending}
             onPress={() => write(reviewed)}
@@ -338,17 +325,13 @@ export function WatchlistRemovePicker({
       <WriteSheet.Header onClose={onCancel}>
         <WriteSheet.Title>{copy.idle}</WriteSheet.Title>
       </WriteSheet.Header>
-      <WriteSheet.Description>
-        Choose where “{entry.item.title}” is removed.
-      </WriteSheet.Description>
+      <WriteSheet.Description>Choose where “{entry.item.title}” is removed.</WriteSheet.Description>
 
       <View
         className={cn(pending && 'opacity-50')}
         style={{ pointerEvents: pending ? 'none' : 'auto' }}
       >
-        <FieldLabel className="mt-5 mb-2">
-          Remove from
-        </FieldLabel>
+        <FieldLabel className="mt-5 mb-2">Remove from</FieldLabel>
         {split.targets.length > 0 && (
           <ProviderToggleList
             onSelectAll={selectAll}
@@ -364,18 +347,13 @@ export function WatchlistRemovePicker({
           reasons={{
             ...manualWriteReasons(manual, 'watchlist-remove', currentPlatform()),
             ...Object.fromEntries(
-              unknown.map((provider) => [
-                provider,
-                'Couldn’t confirm it’s on this list',
-              ]),
+              unknown.map((provider) => [provider, 'Couldn’t confirm it’s on this list']),
             ),
           }}
           verb="Remove on"
         />
         {split.targets.length > 0 && selected.length === 0 && (
-          <Text className="text-accent font-sans text-sm mt-2">
-            Select at least one provider.
-          </Text>
+          <Text className="text-accent font-sans text-sm mt-2">Select at least one provider.</Text>
         )}
       </View>
       <WriteSheet.Actions>

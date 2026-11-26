@@ -32,7 +32,11 @@ export function ManualWriteRows({
         const reason = reasons?.[provider];
         return (
           <PresstableOpacity
-            accessibilityLabel={reason == null ? `${verb} ${PROVIDERS[provider].label}` : `${verb} ${PROVIDERS[provider].label}. ${reason}`}
+            accessibilityLabel={
+              reason == null
+                ? `${verb} ${PROVIDERS[provider].label}`
+                : `${verb} ${PROVIDERS[provider].label}. ${reason}`
+            }
             className="flex-row items-center justify-between px-3 py-2.5 rounded-md"
             key={provider}
             onPress={() => openExternalUrl(url)}
@@ -44,9 +48,7 @@ export function ManualWriteRows({
                   {verb} {PROVIDERS[provider].label}
                 </Text>
                 {reason != null && (
-                  <Text className="text-muted font-sans text-xs mt-0.5">
-                    {reason}
-                  </Text>
+                  <Text className="text-muted font-sans text-xs mt-0.5">{reason}</Text>
                 )}
               </View>
             </View>

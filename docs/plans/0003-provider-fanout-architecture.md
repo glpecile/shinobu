@@ -24,9 +24,9 @@ once and have it written to every tracking service they use.**
   any subset via that provider's own OAuth; there is no Shinobu-owned account. See
   `plan.md` 1.2/1.3.
 - The core write path is `useLogMedia` (`todos/005`, P1): given a `NormalizedMediaItem`
-  + log intent, it fans out in parallel to every *connected* provider *applicable* to
-  that item's type, via an explicit routing table (`lib/providers/routing.ts`) rather
-  than inline type checks.
+  - log intent, it fans out in parallel to every _connected_ provider _applicable_ to
+    that item's type, via an explicit routing table (`lib/providers/routing.ts`) rather
+    than inline type checks.
 - **Anime films are the routing edge case**: `ANIME` in AniList terms, but also a
   `MOVIE` for Trakt/Letterboxd — a single log action may need to hit all three.
 - Partial failure must be surfaced per-provider, never collapsed into one
@@ -35,7 +35,7 @@ once and have it written to every tracking service they use.**
   `ready`) — CSV import/export is the documented fallback if access is denied, not the
   primary design.
 - `todos/001`/`002` (Trakt/AniList) now explicitly include building each provider's
-  *write* adapter, not just the read query — `todos/005` depends on those adapters
+  _write_ adapter, not just the read query — `todos/005` depends on those adapters
   existing.
 
 ## Consequence

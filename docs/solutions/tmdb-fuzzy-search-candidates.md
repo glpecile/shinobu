@@ -3,13 +3,13 @@
 Observed with read-only `/search/multi` calls on 2026-10-14 (#255):
 
 - `breakng bad` and `spirited awya` return no results, whereas `bad` and
-  `spirited` return *Breaking Bad* and *Spirited Away* on page one.
-- `interstelar` returns the distinct title *Interstelar* and *Interstellar
-  Wars*, not *Interstellar*. The prefix `interst` retrieves *Interstellar*.
+  `spirited` return _Breaking Bad_ and _Spirited Away_ on page one.
+- `interstelar` returns the distinct title _Interstelar_ and _Interstellar
+  Wars_, not _Interstellar_. The prefix `interst` retrieves _Interstellar_.
 - `matrx` returns no results. `mat` is too broad: its first page has no
-  *The Matrix*. `matr` does retrieve it.
-- `star wras` finds a literal *Star Wras* record. `star` also retrieves
-  *Star Wars*. Literal titles must remain ahead of spelling suggestions;
+  _The Matrix_. `matr` does retrieve it.
+- `star wras` finds a literal _Star Wras_ record. `star` also retrieves
+  _Star Wars_. Literal titles must remain ahead of spelling suggestions;
   the application cannot assume every unusual spelling is a typo.
 
 `lib/providers/fuzzy-search.ts` therefore ranks direct results, and when
@@ -20,7 +20,7 @@ request failures preserve direct results, and Effect interruption still
 cancels in-flight requests through the HTTP layer.
 
 Fuzzy comparisons end on word boundaries: `matrx` must not suggest
-*Matrimony* just because its first five letters are one edit away. Prefix
+_Matrimony_ just because its first five letters are one edit away. Prefix
 shortening and edit budgets count Unicode code points, not UTF-16 code units;
 splitting a supplementary-plane character (for example `𠮷`) makes
 `encodeURIComponent` throw a defect that the typed-error fallback cannot catch.

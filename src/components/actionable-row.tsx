@@ -21,7 +21,11 @@ function RowActionsButton({
   const alwaysVisible = showActions && process.env.EXPO_OS !== 'web';
   return (
     <View
-      className={cn(alwaysVisible ? 'flex' : 'hidden pointer-fine:flex', showActions ? 'w-11' : 'w-10', 'shrink-0 items-center')}
+      className={cn(
+        alwaysVisible ? 'flex' : 'hidden pointer-fine:flex',
+        showActions ? 'w-11' : 'w-10',
+        'shrink-0 items-center',
+      )}
     >
       <OverlayActionsButton
         label={`More options for ${item.title}`}
@@ -84,10 +88,7 @@ export function ActionableRow({
 
   if (process.env.EXPO_OS !== 'web' && !showActions) {
     return (
-      <PresstableScale
-        className={cn('flex-row items-center', className)}
-        {...pressProps}
-      >
+      <PresstableScale className={cn('flex-row items-center', className)} {...pressProps}>
         {leading}
         <View className="flex-1" />
         {trailing}
@@ -96,7 +97,12 @@ export function ActionableRow({
   }
 
   const actionsButton = (
-    <RowActionsButton item={item} onActions={onActions} visible={hovered} showActions={showActions} />
+    <RowActionsButton
+      item={item}
+      onActions={onActions}
+      visible={hovered}
+      showActions={showActions}
+    />
   );
 
   return (
@@ -106,12 +112,18 @@ export function ActionableRow({
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
-      <PresstableScale className={cn('flex-row items-center shrink min-w-0', showActions && 'flex-1')} {...pressProps}>
+      <PresstableScale
+        className={cn('flex-row items-center shrink min-w-0', showActions && 'flex-1')}
+        {...pressProps}
+      >
         {leading}
       </PresstableScale>
       {!showActions && actionsButton}
       <PresstableScale
-        className={cn('shrink-0 flex-row items-center justify-end self-stretch', showActions ? 'ml-2' : 'grow')}
+        className={cn(
+          'shrink-0 flex-row items-center justify-end self-stretch',
+          showActions ? 'ml-2' : 'grow',
+        )}
         onLongPress={pressProps.onLongPress}
         onPress={pressProps.onPress}
         pressBehavior={pressBehavior}

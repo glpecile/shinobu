@@ -65,7 +65,9 @@ const BOOK_MEMBERSHIP = `query BookMembership($bookId: Int!) {
 function decode<S extends Schema.Constraint>(schema: S, detail: string) {
   return (data: unknown) =>
     Schema.decodeUnknownEffect(schema)(data).pipe(
-      Effect.mapError((error) => new ProviderDecodeError({ provider, detail: `${detail}: ${error.message}` })),
+      Effect.mapError(
+        (error) => new ProviderDecodeError({ provider, detail: `${detail}: ${error.message}` }),
+      ),
     );
 }
 
@@ -240,7 +242,9 @@ export const addBookToHardcoverList = Effect.fnUntraced(function* (
   const existing = data.list_books[0];
   const entryId =
     existing?.id ??
-    (yield* mutateRow(deps, ADD_LIST_BOOK, { object: { list_id: params.listId, book_id: bookId } }));
+    (yield* mutateRow(deps, ADD_LIST_BOOK, {
+      object: { list_id: params.listId, book_id: bookId },
+    }));
   return { entryId: String(entryId) };
 });
 
@@ -284,6 +288,9 @@ export const getHardcoverListMembership = Effect.fnUntraced(function* (
   const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();
   return (data.me[0]?.lists ?? []).map((row) => {
     const entry = row.membership[0];
-    return { ...normalizeHardcoverList(row, nowIso), entryId: entry == null ? null : String(entry.id) };
+    return {
+      ...normalizeHardcoverList(row, nowIso),
+      entryId: entry == null ? null : String(entry.id),
+    };
   });
 });

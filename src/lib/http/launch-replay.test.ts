@@ -4,7 +4,9 @@ const stored = new Map<string, string>();
 let sessionChanged: (key: string) => void;
 mock.module('@/state/session/tokens', () => ({
   isTokenKey: (key: string) => key === 'session.trakt',
-  onSessionChange: (listener: (key: string) => void) => { sessionChanged = listener; },
+  onSessionChange: (listener: (key: string) => void) => {
+    sessionChanged = listener;
+  },
 }));
 mock.module('react-native', () => ({ AppState: { currentState: 'active' } }));
 mock.module('react-native-mmkv', () => ({
@@ -28,12 +30,19 @@ mock.module('react-native-nitro-modules', () => ({
 
 const { endLaunchReplay, fetchWithLaunchReplay, replayFor } = await import('./launch-replay');
 
-const anilist = (query: string) => ({ method: 'POST', body: JSON.stringify({ query, variables: {} }) });
+const anilist = (query: string) => ({
+  method: 'POST',
+  body: JSON.stringify({ query, variables: {} }),
+});
 
 test('only idempotent provider reads replay, keyed by their credentials', () => {
   expect(replayFor('https://api.trakt.tv/sync/watched/shows')).not.toBeNull();
-  expect(replayFor('https://graphql.anilist.co', anilist('query { Viewer { id } }'))).not.toBeNull();
-  expect(replayFor('https://graphql.anilist.co', anilist('\n  mutation { SaveMediaListEntry { id } }'))).toBeNull();
+  expect(
+    replayFor('https://graphql.anilist.co', anilist('query { Viewer { id } }')),
+  ).not.toBeNull();
+  expect(
+    replayFor('https://graphql.anilist.co', anilist('\n  mutation { SaveMediaListEntry { id } }')),
+  ).toBeNull();
   expect(replayFor('https://api.trakt.tv/sync/history', { method: 'POST', body: '{}' })).toBeNull();
   // Simkl's all-items stays gated on activities in JS.
   expect(replayFor('https://api.simkl.com/sync/activities?client_id=x')).not.toBeNull();
@@ -41,8 +50,9 @@ test('only idempotent provider reads replay, keyed by their credentials', () => 
   expect(replayFor('https://letterboxd.com/glp/films/')).toBeNull();
 
   const url = 'https://api.trakt.tv/sync/watched/shows';
-  expect(replayFor(url, { headers: { Authorization: 'Bearer a' } })!.key)
-    .not.toBe(replayFor(url, { headers: { Authorization: 'Bearer b' } })!.key);
+  expect(replayFor(url, { headers: { Authorization: 'Bearer a' } })!.key).not.toBe(
+    replayFor(url, { headers: { Authorization: 'Bearer b' } })!.key,
+  );
 });
 
 test('claims replay once, stops after writes, and drops pending credentials on session change', async () => {
@@ -64,7 +74,9 @@ test('claims replay once, stops after writes, and drops pending credentials on s
     expect(new Headers(sent[1]!.headers).get('prefetchKey')).toBeNull();
 
     const pending = Promise.withResolvers<Response>();
-    const oldRead = fetchWithLaunchReplay(() => pending.promise, url, { headers: { Authorization: 'Bearer old' } });
+    const oldRead = fetchWithLaunchReplay(() => pending.promise, url, {
+      headers: { Authorization: 'Bearer old' },
+    });
     // Nitro's real registration yields before saving its encrypted queue.
     timers[0]!();
     sessionChanged('session.trakt');

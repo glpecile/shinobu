@@ -31,6 +31,6 @@ steps:
         text: MOVIE
         role: StaticText
       timeoutMs: 5000
-executionPrerequisite: "iOS details for Spider-Man: Brand New Day at scroll
+executionPrerequisite: 'iOS details for Spider-Man: Brand New Day at scroll
   offset zero, header and Cast visible, no development overlay. Stage using its
-  card or shared link."
+  card or shared link.'

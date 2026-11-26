@@ -7,7 +7,7 @@ bounced through anilist.co and landed on `localhost:8081/#access_token=…` —
 **Root cause — two stacked gotchas:**
 
 1. **`.env.local` is loaded in every NODE_ENV**, including the
-   `expo export` that `bun run deploy:web` runs. It held the *dev* AniList
+   `expo export` that `bun run deploy:web` runs. It held the _dev_ AniList
    web client id (registered redirect `http://localhost:8081`), with the prod
    one commented out. AniList pins ONE redirect URL per client and ignores
    any `redirect_uri` param, so the deployed bundle's authorize URL always
@@ -24,8 +24,8 @@ bounced through anilist.co and landed on `localhost:8081/#access_token=…` —
   - `.env.development.local` → localhost client (used by `expo start`)
   - `.env.production.local` → shinobu.glpecile.xyz client (used by
     `expo export`)
-  No more comment-toggling one line in `.env.local` — that was the failure
-  mode.
+    No more comment-toggling one line in `.env.local` — that was the failure
+    mode.
 - `build:web` now passes `--clear` so a deploy can never ship
   transform-cached env values.
 

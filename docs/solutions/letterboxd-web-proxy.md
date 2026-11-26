@@ -26,8 +26,8 @@ preview deployment (datacenter IP). Results were **identical from both IPs**.
 ## What doesn't work
 
 - **`POST /api/v0/production-log-entries` is challenged with 403
-  ("Just a moment…")** even from the *same residential IP* as the browser,
-  with the *exact* browser UA, correct `Origin`/`Referer`, valid
+  ("Just a moment…")** even from the _same residential IP_ as the browser,
+  with the _exact_ browser UA, correct `Origin`/`Referer`, valid
   `X-CSRF-TOKEN` (fresh `supermodelCSRF` from the film page), and valid film
   LID. Cloudflare is checking more than IP+UA+cookies on this endpoint —
   consistent with TLS/client fingerprinting (undici/curl ≠ Firefox), which no
@@ -75,7 +75,7 @@ fingerprint) via a throwaway relay (worker/letterboxd-write-spike.ts):
 
 That completes the matrix: three server-side transports (undici, EAS Hosting,
 Workers), four attempts, all 403-challenged. Writes stay native-WebView-only;
-plan 0012's verdict holds a third time. The one cell never tested is *valid*
+plan 0012's verdict holds a third time. The one cell never tested is _valid_
 cookies from Workers egress — the junk-credential test can't rule out a
 cookie-validity-sensitive wall, but the fingerprint-check reasoning
 (server-side fetch ≠ browser TLS) predicts it changes nothing. If a real
@@ -88,14 +88,14 @@ reopen writes; until then the spike route stays as the standing test harness.
 - `eas deploy` failed once with `The specified bucket does not exist` and
   succeeded on immediate retry — transient; retry before debugging.
 - `wrangler deploy` versions propagate unevenly for ~30 s: the first
-  post-deploy requests can hit the *previous* version (e.g. proxy paths
+  post-deploy requests can hit the _previous_ version (e.g. proxy paths
   answered with the assets 404 page). Wait and re-curl before debugging a
   "my route isn't running" symptom (2026-07-22).
 - Dot-segment traversal (`/api/letterboxd/../secret`) never reaches the
   Worker: WHATWG URL normalization collapses it before routing, so the assets
   404 page answers. The handler's `isUnsafePath` check is defense-in-depth for
   non-URL-normalized callers only, not the primary guard (2026-07-22).
-- An *empty* watchlist page renders zero `LazyPoster` components
+- An _empty_ watchlist page renders zero `LazyPoster` components
   (davidehrlich, letterboxd, jack all do) — don't use the component count as a
   proxy-health signal. Use the RSS `<item>` count instead (2026-07-22).
 - `production:identifier` meta is HTML-encoded (`&quot;lid&quot;:`) — regex
@@ -119,7 +119,7 @@ The watchlist rule now accepts an optional page suffix:
 grid pages through `/{user}/watchlist/page/N/`, which the old regex (anchored
 at `watchlist/$`) rejected as a 404 on web.
 
-**What did *not* change** — every other invariant holds and was re-asserted in
+**What did _not_ change** — every other invariant holds and was re-asserted in
 `worker/letterboxd-proxy.test.ts`: GET-only (405 on any other method, including
 on a paged path), unauthenticated (no `Authorization`, no cookies either
 direction, no client headers relayed), username-locked to the same charset, the
@@ -143,22 +143,22 @@ Run against a throwaway test account with real Google Chrome 153 on macOS
 === false`, plus the rebrowser Runtime.enable patch), then curl and the local
 `wrangler dev` spike relay from the **same residential IP**.
 
-| Client | Request | Result |
-|---|---|---|
-| Real Chrome under CDP | `/sign-in/` form submit | Never posts: the form is gated by **Cloudflare Turnstile** (`window.turnstile`, POST to `challenges.cloudflare.com`) that must fill the hidden `authenticationCode` input; under automation the token is never issued and the button spins forever |
-| Real Chrome under CDP (plain Playwright) | forced `POST /user/login.do` | 403 `cf-mitigated: challenge` |
-| Real Chrome under CDP, holding a fresh `cf_clearance` it earned itself | film page `GET /csi/film/{slug}/*` XHRs | 403 `cf-mitigated: challenge` (page itself 200) |
-| curl, same IP, same UA, HTTP/2, full Chrome header set, that `cf_clearance` + csrf cookie | `POST /api/v0/production-log-entries`, `POST /ajax/letterboxd-metadata/`, `GET /csi/...` | 403 challenge, all three |
-| local workerd (`wrangler dev` spike relay), same cookies | `POST /api/v0/production-log-entries` | `challenged: true` |
-| curl, no cookies | public film page, `/settings/` | 200 |
+| Client                                                                                    | Request                                                                                  | Result                                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Real Chrome under CDP                                                                     | `/sign-in/` form submit                                                                  | Never posts: the form is gated by **Cloudflare Turnstile** (`window.turnstile`, POST to `challenges.cloudflare.com`) that must fill the hidden `authenticationCode` input; under automation the token is never issued and the button spins forever |
+| Real Chrome under CDP (plain Playwright)                                                  | forced `POST /user/login.do`                                                             | 403 `cf-mitigated: challenge`                                                                                                                                                                                                                      |
+| Real Chrome under CDP, holding a fresh `cf_clearance` it earned itself                    | film page `GET /csi/film/{slug}/*` XHRs                                                  | 403 `cf-mitigated: challenge` (page itself 200)                                                                                                                                                                                                    |
+| curl, same IP, same UA, HTTP/2, full Chrome header set, that `cf_clearance` + csrf cookie | `POST /api/v0/production-log-entries`, `POST /ajax/letterboxd-metadata/`, `GET /csi/...` | 403 challenge, all three                                                                                                                                                                                                                           |
+| local workerd (`wrangler dev` spike relay), same cookies                                  | `POST /api/v0/production-log-entries`                                                    | `challenged: true`                                                                                                                                                                                                                                 |
+| curl, no cookies                                                                          | public film page, `/settings/`                                                           | 200                                                                                                                                                                                                                                                |
 
 **Reading:** every state-changing endpoint (and the `/csi/` + `/ajax/` XHR
-family) sits behind a bot-management *score* rule. `cf_clearance` does not
+family) sits behind a bot-management _score_ rule. `cf_clearance` does not
 rescue a non-browser client even on the IP+UA that earned it, and it does not
 even rescue the browser that earned it once JS detection has flagged that
 browser as automated. Cookies are therefore not the variable — the client's
 fingerprint and JS-detection verdict are. That closes the last untested cell
-(a *valid signed-in* session replayed from Workers egress) by inference: a
+(a _valid signed-in_ session replayed from Workers egress) by inference: a
 Worker is a non-browser client on a different IP, strictly worse than the
 curl row above. Sign-in is doubly closed: even before the POST's challenge,
 the form needs a Turnstile token only a human-scored browser gets.
@@ -172,7 +172,7 @@ plan 0022 manual link to `/film/{slug}/` is the ceiling on web.
 two things changes: Letterboxd grants official API access
 (`api-docs.letterboxd.com`, request-only; the 2026-07 request went
 unanswered), or Shinobu ships a browser extension whose content script runs
-*on* letterboxd.com in the user's own (human-scored) session — the web
+_on_ letterboxd.com in the user's own (human-scored) session — the web
 analogue of the native WebView bridge. No relay design, Workers Browser
 Rendering included (headless Chrome under CDP is exactly the flagged client
 above), can pass this gate. `worker/letterboxd-write-spike.ts` has now

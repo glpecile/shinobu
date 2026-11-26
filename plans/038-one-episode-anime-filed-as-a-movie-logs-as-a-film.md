@@ -70,11 +70,11 @@ Every consumer keys on `isFilm`:
   `'MOVIE'` when `item.isFilm === true`, else `'TV'`. Letterboxd handles
   `MOVIE` only.
 - `src/lib/providers/trakt/writes.ts`: `isMovie = item.type === 'MOVIE' ||
-  (item.type === 'ANIME' && item.isFilm === true)` → a `movies[]` body.
+(item.type === 'ANIME' && item.isFilm === true)` → a `movies[]` body.
 - `src/lib/providers/letterboxd/writes.ts`: same test, then loads
   `/tmdb/{externalIds.tmdb}/`.
 - `src/lib/providers/anilist/writes.ts:76`: `filmLike = item.isFilm === true
-  || item.type === 'MOVIE'` → `status: 'COMPLETED'`, no progress needed.
+|| item.type === 'MOVIE'` → `status: 'COMPLETED'`, no progress needed.
 - `src/lib/providers/simkl/writes.ts`: an anime with `isFilm === true` is
   written whole, with no episodes, under `anime[]`.
 
@@ -88,25 +88,25 @@ without a TMDB token.
 The details read (`src/state/queries/media-details.ts`, `mediaDetailsQuery`):
 
 ```ts
-      const tmdb = await resolveTmdbId(queryClient, item);
-      const isFilm = tmdb?.isFilm === true ? true : item.isFilm;
+const tmdb = await resolveTmdbId(queryClient, item);
+const isFilm = tmdb?.isFilm === true ? true : item.isFilm;
 ```
 
 After plan 034, the forward block of `enrichExternalIds` ends like this:
 
 ```ts
-    const isFilm = item.isFilm === true;
-    const bridgedTmdb =
-      bridged != null && aniZipTmdbKind(bridged) === (isFilm ? 'movie' : 'tv')
-        ? bridged.tmdb
-        : undefined;
-    const match = isFilm && bridgedTmdb == null ? await cachedTmdbAnimeMatch(queryClient, item) : null;
-    const tvdb = isFilm ? undefined : bridged?.tvdb;
-    const tmdb =
-      match?.tmdbId ??
-      (tvdb != null ? ((await cachedTmdbTvIdByTvdb(queryClient, tvdb)) ?? bridgedTmdb) : bridgedTmdb);
-    const imdb = isFilm || tvdb != null ? bridged?.imdb : undefined;
-    externalIds = { ...externalIds, /* tvdb, tmdb, imdb when present */ };
+const isFilm = item.isFilm === true;
+const bridgedTmdb =
+  bridged != null && aniZipTmdbKind(bridged) === (isFilm ? 'movie' : 'tv')
+    ? bridged.tmdb
+    : undefined;
+const match = isFilm && bridgedTmdb == null ? await cachedTmdbAnimeMatch(queryClient, item) : null;
+const tvdb = isFilm ? undefined : bridged?.tvdb;
+const tmdb =
+  match?.tmdbId ??
+  (tvdb != null ? ((await cachedTmdbTvIdByTvdb(queryClient, tvdb)) ?? bridgedTmdb) : bridgedTmdb);
+const imdb = isFilm || tvdb != null ? bridged?.imdb : undefined;
+externalIds = { ...externalIds /* tvdb, tmdb, imdb when present */ };
 ```
 
 and the function ends with `return { ...item, externalIds };`.
@@ -114,13 +114,13 @@ and the function ends with `return { ...item, externalIds };`.
 `src/features/log-media/use-log-media.ts:440-446` (start of `resolveLogPlan`):
 
 ```ts
-  let item = await enrichExternalIds(queryClient, variables.item, connected);
+let item = await enrichExternalIds(queryClient, variables.item, connected);
 
-  const canonicalInput = intendedEpisodes(variables);
-  const entryInput =
-    variables.entryEpisodes != null && variables.entryEpisodes.length > 0
-      ? variables.entryEpisodes
-      : null;
+const canonicalInput = intendedEpisodes(variables);
+const entryInput =
+  variables.entryEpisodes != null && variables.entryEpisodes.length > 0
+    ? variables.entryEpisodes
+    : null;
 ```
 
 The log for such an entry starts as an **episode** log: the trigger sends
@@ -149,17 +149,18 @@ variables carry no episode fields).
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Install | `bun install --frozen-lockfile` | exit 0 |
-| Typecheck | `bun typecheck` | exit 0, no errors |
-| Lint | `bun lint` | exit 0 |
-| Focused tests | `bun test --isolate src/features/log-media/enrich.test.ts src/features/log-media/use-log-media.test.ts` | all pass |
-| Full tests | `bun run test` | all pass |
+| Purpose       | Command                                                                                                 | Expected on success |
+| ------------- | ------------------------------------------------------------------------------------------------------- | ------------------- |
+| Install       | `bun install --frozen-lockfile`                                                                         | exit 0              |
+| Typecheck     | `bun typecheck`                                                                                         | exit 0, no errors   |
+| Lint          | `bun lint`                                                                                              | exit 0              |
+| Focused tests | `bun test --isolate src/features/log-media/enrich.test.ts src/features/log-media/use-log-media.test.ts` | all pass            |
+| Full tests    | `bun run test`                                                                                          | all pass            |
 
 ## Scope
 
 **In scope** (the only files you should modify):
+
 - `src/features/log-media/enrich.ts` (the forward block and the final `return`)
 - `src/features/log-media/enrich.test.ts`
 - `src/features/log-media/use-log-media.ts` (`resolveLogPlan`, the two input lines)
@@ -167,6 +168,7 @@ variables carry no episode fields).
 - `plans/README.md` (status row)
 
 **Out of scope** (do NOT touch, even though they look related):
+
 - `src/lib/providers/routing.ts` and every `writes.ts`. They already do the
   right thing for `isFilm === true`.
 - `src/lib/providers/anilist/normalize.ts`. Do not make AniList items films
@@ -200,14 +202,15 @@ In the forward block of `src/features/log-media/enrich.ts`:
    title match is a movie:
 
    ```ts
-   const singleMovieId =
-     !single
-       ? undefined
-       : bridged?.tmdb != null && aniZipTmdbKind(bridged) === 'movie'
-         ? bridged.tmdb
-         : bridged?.tvdb == null && bridged?.tmdb == null
-           ? await cachedTmdbAnimeMatch(queryClient, item).then((found) => (found?.isFilm === true ? found.tmdbId : undefined))
-           : undefined;
+   const singleMovieId = !single
+     ? undefined
+     : bridged?.tmdb != null && aniZipTmdbKind(bridged) === 'movie'
+       ? bridged.tmdb
+       : bridged?.tvdb == null && bridged?.tmdb == null
+         ? await cachedTmdbAnimeMatch(queryClient, item).then((found) =>
+             found?.isFilm === true ? found.tmdbId : undefined,
+           )
+         : undefined;
    ```
 
    If the `bridged` type makes `aniZipTmdbKind(bridged)` not compile, follow
@@ -254,14 +257,14 @@ input lines so an item the enrichment made a film drops the caller's episode
 input:
 
 ```ts
-  // A one-episode entry the enrichment filed as a film arrives as an episode
-  // log; a film has no episodes.
-  const film = item.isFilm === true;
-  const canonicalInput = film ? null : intendedEpisodes(variables);
-  const entryInput =
-    !film && variables.entryEpisodes != null && variables.entryEpisodes.length > 0
-      ? variables.entryEpisodes
-      : null;
+// A one-episode entry the enrichment filed as a film arrives as an episode
+// log; a film has no episodes.
+const film = item.isFilm === true;
+const canonicalInput = film ? null : intendedEpisodes(variables);
+const entryInput =
+  !film && variables.entryEpisodes != null && variables.entryEpisodes.length > 0
+    ? variables.entryEpisodes
+    : null;
 ```
 
 Read the rest of `resolveLogPlan` and `planLogWrite` and confirm, without
@@ -290,35 +293,41 @@ a `describe` named `enrichExternalIds — a one-episode entry TMDB files as a
 movie` if that block is missing:
 
 ```ts
-  const ova = (totalEpisodes: number) =>
-    chao({ id: 'anilist-256', type: 'ANIME', isFilm: false, totalEpisodes, externalIds: { anilist: 256 } });
-
-  test('a one-episode OVA bridged to a movie becomes a film', async () => {
-    anizipBridge = { anilist: 256, tmdb: 37910, imdb: 'tt0370754' };
-    const enriched = await enrichExternalIds(client, ova(1), ['letterboxd']);
-    anizipBridge = null;
-    expect(enriched.isFilm).toBe(true);
-    expect(enriched.externalIds).toEqual({ anilist: 256, tmdb: 37910, imdb: 'tt0370754' });
+const ova = (totalEpisodes: number) =>
+  chao({
+    id: 'anilist-256',
+    type: 'ANIME',
+    isFilm: false,
+    totalEpisodes,
+    externalIds: { anilist: 256 },
   });
 
-  test('an unmapped one-episode ONA takes a TMDB movie match, never a show match', async () => {
-    tmdbAnimeMatch = { tmdbId: 901323, isFilm: true };
-    const film = await enrichExternalIds(client, ova(1), ['letterboxd']);
-    tmdbAnimeMatch = { tmdbId: 5, isFilm: false };
-    const show = await enrichExternalIds(client, ova(1), ['letterboxd']);
-    tmdbAnimeMatch = null;
-    expect(film).toMatchObject({ isFilm: true, externalIds: { tmdb: 901323 } });
-    expect(show.isFilm).toBe(false);
-    expect(show.externalIds.tmdb).toBeUndefined();
-  });
+test('a one-episode OVA bridged to a movie becomes a film', async () => {
+  anizipBridge = { anilist: 256, tmdb: 37910, imdb: 'tt0370754' };
+  const enriched = await enrichExternalIds(client, ova(1), ['letterboxd']);
+  anizipBridge = null;
+  expect(enriched.isFilm).toBe(true);
+  expect(enriched.externalIds).toEqual({ anilist: 256, tmdb: 37910, imdb: 'tt0370754' });
+});
 
-  test('a two-episode OVA bridged to a movie stays a series', async () => {
-    anizipBridge = { anilist: 256, tmdb: 37910 };
-    const enriched = await enrichExternalIds(client, ova(2), ['trakt']);
-    anizipBridge = null;
-    expect(enriched.isFilm).toBe(false);
-    expect(enriched.externalIds).toEqual({ anilist: 256 });
-  });
+test('an unmapped one-episode ONA takes a TMDB movie match, never a show match', async () => {
+  tmdbAnimeMatch = { tmdbId: 901323, isFilm: true };
+  const film = await enrichExternalIds(client, ova(1), ['letterboxd']);
+  tmdbAnimeMatch = { tmdbId: 5, isFilm: false };
+  const show = await enrichExternalIds(client, ova(1), ['letterboxd']);
+  tmdbAnimeMatch = null;
+  expect(film).toMatchObject({ isFilm: true, externalIds: { tmdb: 901323 } });
+  expect(show.isFilm).toBe(false);
+  expect(show.externalIds.tmdb).toBeUndefined();
+});
+
+test('a two-episode OVA bridged to a movie stays a series', async () => {
+  anizipBridge = { anilist: 256, tmdb: 37910 };
+  const enriched = await enrichExternalIds(client, ova(2), ['trakt']);
+  anizipBridge = null;
+  expect(enriched.isFilm).toBe(false);
+  expect(enriched.externalIds).toEqual({ anilist: 256 });
+});
 ```
 
 Make sure `simklIds` is `null` for these tests (set it in the block's
@@ -330,23 +339,32 @@ Its fake `cachedAniZipIds` returns `courIds.get(anilistId) ?? prequelIds`, so
 set `courIds` for the fixture and reset it after:
 
 ```ts
-  test('a one-episode entry filed as a TMDB movie plans a film log', async () => {
-    courIds = new Map([[256, { anilist: 256, tmdb: 37910 }]]);
-    const queryClient = client();
-    const item: NormalizedMediaItem = {
-      id: 'anilist-256', title: 'Voices of a Distant Star', coverImage: '', type: 'ANIME',
-      totalEpisodes: 1, currentProgress: 0, progressUnit: 'episode', lastUpdated: '',
-      externalIds: { anilist: 256 },
-    };
+test('a one-episode entry filed as a TMDB movie plans a film log', async () => {
+  courIds = new Map([[256, { anilist: 256, tmdb: 37910 }]]);
+  const queryClient = client();
+  const item: NormalizedMediaItem = {
+    id: 'anilist-256',
+    title: 'Voices of a Distant Star',
+    coverImage: '',
+    type: 'ANIME',
+    totalEpisodes: 1,
+    currentProgress: 0,
+    progressUnit: 'episode',
+    lastUpdated: '',
+    externalIds: { anilist: 256 },
+  };
 
-    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [1] }, ['anilist', 'letterboxd']);
-    courIds = new Map();
+  const plan = await planLogWrite(queryClient, { item, entryEpisodes: [1] }, [
+    'anilist',
+    'letterboxd',
+  ]);
+  courIds = new Map();
 
-    expect(plan.targets).toEqual(['anilist', 'letterboxd']);
-    expect(plan.variables.item.isFilm).toBe(true);
-    expect(plan.variables.entryEpisodes).toBeUndefined();
-    expect(plan.variables.episodes).toBeUndefined();
-  });
+  expect(plan.targets).toEqual(['anilist', 'letterboxd']);
+  expect(plan.variables.item.isFilm).toBe(true);
+  expect(plan.variables.entryEpisodes).toBeUndefined();
+  expect(plan.variables.episodes).toBeUndefined();
+});
 ```
 
 This test needs the watch-state reads for AniList and Letterboxd not to hit

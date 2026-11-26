@@ -58,6 +58,7 @@ consistent with reads), and fragile against Cloudflare / internal-endpoint
 changes.
 
 Architecture constraints (confirmed):
+
 - The write **must execute inside the WebView's browser context** (injected
   `fetch`), not via extracted cookies + nitro-fetch — Letterboxd's internal
   endpoints Cloudflare-challenge non-browser clients
@@ -94,7 +95,7 @@ account access needed** — and recorded in
    (user signs in, we harvest cookies), then writes go over **native
    nitro-fetch** with the `Cookie:` header + `__csrf`. Simpler and testable —
    the writer is pure Effect + injected fetch, no WebView coupling.
-2. **The username is free.** The `letterboxd.signed.in.as` cookie's value *is*
+2. **The username is free.** The `letterboxd.signed.in.as` cookie's value _is_
    the signed-in username — derive it, no scrape.
 
 **The diary write:** `POST /s/save-diary-entry` with `filmId` (numeric),
@@ -104,9 +105,10 @@ account access needed** — and recorded in
 routed to Letterboxd may carry no Letterboxd identity.
 
 **Built this pass (all green, no native dep yet):**
+
 - `lib/providers/letterboxd/writes.ts` — `logToLetterboxd` (film-id resolution
-  + diary POST), Effect-based, fixture-tested (8 tests). Tag param name is the
-  one on-device unknown, isolated as `TAG_FIELD`.
+  - diary POST), Effect-based, fixture-tested (8 tests). Tag param name is the
+    one on-device unknown, isolated as `TAG_FIELD`.
 - `LetterboxdSession { cookie, csrf }` on `LetterboxdDeps`; captured session
   persisted via `connectLetterboxdSession` / `getLetterboxdSession`
   (`ProviderSession.cookie`/`.csrf`); `letterboxdDeps()` injects it.
@@ -114,6 +116,7 @@ routed to Letterboxd may carry no Letterboxd identity.
   `canWrite` flips; a missing session fails as `ProviderAuthError`).
 
 **Remaining (needs the native dep → clean rebuild):**
+
 - Add `nitro-webview` (Nitro-first per AGENTS.md; verified it supports remote
   URL + `evaluateJavaScript`/`getCookies`/`onNavigationStateChange`). Native
   module — clean rebuild required.
@@ -147,8 +150,8 @@ retry once. Deferred until on-device testing shows it's needed.
    only when the user confirms the import ("Mark as imported"), never on
    export — a failed import must not lose logs.
    - Reverse-engineering the authenticated internal endpoints (session cookie
-     + CSRF) was considered and **rejected**: ToS violation, password
-     handling, and Cloudflare-challenged endpoints make it brittle and wrong.
+     - CSRF) was considered and **rejected**: ToS violation, password
+       handling, and Cloudflare-challenged endpoints make it brittle and wrong.
 
 3. **Tags ride the fan-out variables.** `LogMediaVariables` gains
    `tags?: string[]`. The log confirm sheet shows a tags field only when
@@ -246,7 +249,7 @@ lint clean). Final pieces this pass:
   no writes (CORS).
 - **`captureLoginFromCookies`** (`session-cookies.ts`, 6 unit tests) is the pure,
   testable seam between the WebView jar and `connectLetterboxdSession`: it
-  forwards *every* letterboxd.com cookie in the `Cookie` header (the real auth
+  forwards _every_ letterboxd.com cookie in the `Cookie` header (the real auth
   cookie is httpOnly — we never name it, only relay it) and surfaces the CSRF
   token separately.
 - **`registry.ts` `letterboxd.canWrite: true`** — movies + anime films now fan
@@ -281,7 +284,7 @@ confirm a 200.
 
 Revisited whether a **popup window** could bring the write path to web so logging
 works on all four targets. It cannot — and the blocker is the browser's own
-security model, not Letterboxd. Native works only because `nitro-fetch` is *not*
+security model, not Letterboxd. Native works only because `nitro-fetch` is _not_
 a browser (no same-origin policy, no CORS). On web, a page on Shinobu's origin
 acting as `letterboxd.com` hits three independent walls, each fatal on its own:
 
@@ -296,8 +299,8 @@ acting as `letterboxd.com` hits three independent walls, each fatal on its own:
    `postMessage`). It logs the user in and hands us nothing.
 
 The one browser-legal escape — a hidden cross-origin `<form>` POST (CORS doesn't
-block *sending*) — is defeated by the `__csrf` body field, which must match a
-cookie we can't read cross-origin. This is *not* the OAuth-popup pattern: that
+block _sending_) — is defeated by the `__csrf` body field, which must match a
+cookie we can't read cross-origin. This is _not_ the OAuth-popup pattern: that
 works only because the provider redirects back to a URL our origin controls, with
 a readable token. Letterboxd offers no such redirect.
 
@@ -314,7 +317,7 @@ principle.
 **Update 2026-07-20: the stateless-proxy escape was actually tried and is
 also dead.** Plan 0015 deliberately reversed the no-proxy stance and spiked an
 Expo Router API-route relay. Result: server-side reads pass Cloudflare, but
-every state-changing POST (diary write *and* sign-in) is 403-challenged by
+every state-changing POST (diary write _and_ sign-in) is 403-challenged by
 Cloudflare client fingerprinting even from the user's own IP with the exact
 browser UA and valid cookies — so the proxy could never deliver writes, and
 it was abandoned (`docs/solutions/letterboxd-web-proxy.md`). "Keep writes

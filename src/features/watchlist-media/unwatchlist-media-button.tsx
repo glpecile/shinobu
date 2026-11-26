@@ -11,16 +11,9 @@ import type { ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { useConnectedProviders } from '@/state/session';
 
-import {
-  isUnwatchlistCtaSettled,
-  unwatchlistCtaCopy,
-  watchlistResultView,
-} from './copy';
+import { isUnwatchlistCtaSettled, unwatchlistCtaCopy, watchlistResultView } from './copy';
 import { splitWatchlistRemoveTargets } from './remove-targets';
-import {
-  useIsUnwatchlistPending,
-  useLatestUnwatchlistResult,
-} from './use-unwatchlist-media';
+import { useIsUnwatchlistPending, useLatestUnwatchlistResult } from './use-unwatchlist-media';
 
 export function UnwatchlistMediaButton({
   entry,
@@ -57,11 +50,7 @@ export function UnwatchlistMediaButton({
   const unknown = result?.unknown ?? split.unknown;
   const settled = isUnwatchlistCtaSettled(onList, view, unknown);
 
-  if (
-    split.targets.length === 0 &&
-    split.manual.length === 0 &&
-    unknown.length === 0
-  ) {
+  if (split.targets.length === 0 && split.manual.length === 0 && unknown.length === 0) {
     return null;
   }
 

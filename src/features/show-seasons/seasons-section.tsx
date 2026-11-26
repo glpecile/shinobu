@@ -18,19 +18,12 @@ import { usePrefetchTmdbEpisode } from '@/state/queries/tmdb';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import { useState } from 'react';
-import type {
-  NormalizedEpisode,
-  NormalizedMediaItem,
-  NormalizedSeason,
-} from '@/types/media';
+import type { NormalizedEpisode, NormalizedMediaItem, NormalizedSeason } from '@/types/media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import { withLoggedKeys } from '@/features/log-media/optimistic';
 import { useLoggedWatches } from '@/features/log-media/logged-context';
 import { useCatchUpControls } from '@/features/log-media/session/state';
-import {
-  EpisodeActionsSheet,
-  type EpisodePointer,
-} from '@/features/episode-details';
+import { EpisodeActionsSheet, type EpisodePointer } from '@/features/episode-details';
 import { episodeCode } from '@/features/episode-details/episode-label';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -57,7 +50,9 @@ function SeasonsHeading({ source }: { source: ShowSeasonsSource }) {
     <Section>
       <Section.Header>
         <Section.Title>Seasons</Section.Title>
-        {total > 0 && <Section.Subtitle>{`${formatRuntime(total)} total runtime`}</Section.Subtitle>}
+        {total > 0 && (
+          <Section.Subtitle>{`${formatRuntime(total)} total runtime`}</Section.Subtitle>
+        )}
       </Section.Header>
     </Section>
   );
@@ -90,13 +85,15 @@ function ShowDetailsList({
   const logged = useLoggedWatches();
   const watchedKeys = withLoggedKeys(
     traktWatched?.watchedKeys ??
-      new Set(seasons.flatMap((season) =>
-        season.episodes
-          .filter((episode) => simklEpisodeIsWatched(
-            simklEntry, season.number, episode.number, episode.firstAired,
-          ))
-          .map((episode) => `${season.number}-${episode.number}`),
-      )),
+      new Set(
+        seasons.flatMap((season) =>
+          season.episodes
+            .filter((episode) =>
+              simklEpisodeIsWatched(simklEntry, season.number, episode.number, episode.firstAired),
+            )
+            .map((episode) => `${season.number}-${episode.number}`),
+        ),
+      ),
     item,
     logged,
   );
@@ -145,7 +142,10 @@ function ShowDetailsList({
           watched: watchedKeys,
           heading: (
             <SuspenseSection
-              errorToast={{ title: 'Episodes unavailable', message: 'The season list didn’t load — pull to refresh to try again.' }}
+              errorToast={{
+                title: 'Episodes unavailable',
+                message: 'The season list didn’t load — pull to refresh to try again.',
+              }}
               fallback={<SeasonsSkeleton />}
               resetKey={resetKey}
             >
@@ -159,7 +159,11 @@ function ShowDetailsList({
           },
           onMarkEpisode: markEpisode,
           onOpenEpisode: (s, episode) => {
-            prefetchEpisode({ tmdbId: item.externalIds.tmdb, season: s.number, number: episode.number });
+            prefetchEpisode({
+              tmdbId: item.externalIds.tmdb,
+              season: s.number,
+              number: episode.number,
+            });
             pushRoute(routes.episode(item.id, s.number, episode.number));
           },
           onMarkSeason: (s) => {
@@ -194,7 +198,6 @@ function ShowDetailsList({
           pointer != null && watchedKeys?.has(`${pointer.season}-${pointer.number}`) === true
         }
       />
-
     </>
   );
 }
@@ -209,7 +212,5 @@ export function SeasonsSection({
 } & DetailsListProps) {
   const source = useShowSeasonsSource(item);
   if (source == null) return <DetailsList {...layout} />;
-  return (
-    <ShowDetailsList {...layout} item={item} resetKey={resetKey} source={source} />
-  );
+  return <ShowDetailsList {...layout} item={item} resetKey={resetKey} source={source} />;
 }

@@ -30,9 +30,7 @@ describe('filmReleaseStatus', () => {
   test('a film already out is released', () => {
     expect(filmReleaseStatus({ releaseDate: '2026-07-01' }, NOW)).toBe('released');
     expect(filmReleaseStatus({ releaseDate: '1999-03-31' }, NOW)).toBe('released');
-    expect(
-      filmReleaseStatus({ releaseDate: '2026-07-27T00:00:00.000Z' }, NOW),
-    ).toBe('released');
+    expect(filmReleaseStatus({ releaseDate: '2026-07-27T00:00:00.000Z' }, NOW)).toBe('released');
   });
 
   test('a film out later is unreleased', () => {
@@ -52,9 +50,7 @@ describe('filmReleaseStatus', () => {
 
   test('a past year is proof enough when no date survived the merge', () => {
     expect(filmReleaseStatus({ year: 2019 }, NOW)).toBe('released');
-    expect(filmReleaseStatus({ year: 2019, releaseDate: 'nonsense' }, NOW)).toBe(
-      'released',
-    );
+    expect(filmReleaseStatus({ year: 2019, releaseDate: 'nonsense' }, NOW)).toBe('released');
   });
 
   test('the current year alone is not proof — it could still be ahead', () => {
@@ -63,9 +59,7 @@ describe('filmReleaseStatus', () => {
   });
 
   test('a real date always wins over the year fallback', () => {
-    expect(filmReleaseStatus({ year: 2019, releaseDate: '2030-01-01' }, NOW)).toBe(
-      'unreleased',
-    );
+    expect(filmReleaseStatus({ year: 2019, releaseDate: '2030-01-01' }, NOW)).toBe('unreleased');
   });
 });
 
@@ -75,18 +69,14 @@ describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
   });
 
   test('an unreleased film keeps its disabled log CTA beside the watchlist one', () => {
-    expect(
-      watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '2026-12-25' }, NOW),
-    ).toBe(false);
+    expect(watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '2026-12-25' }, NOW)).toBe(false);
     expect(
       watchlistCtaIsPrimary({ type: 'ANIME', isFilm: true, releaseDate: '2026-12-25' }, NOW),
     ).toBe(false);
   });
 
   test('an anime film is film-like; an anime series is not', () => {
-    expect(
-      watchlistCtaIsPrimary({ type: 'ANIME', isFilm: true, year: 2030 }, NOW),
-    ).toBe(true);
+    expect(watchlistCtaIsPrimary({ type: 'ANIME', isFilm: true, year: 2030 }, NOW)).toBe(true);
     expect(watchlistCtaIsPrimary({ type: 'ANIME', isFilm: false }, NOW)).toBe(false);
   });
 
@@ -96,9 +86,7 @@ describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
   });
 
   test('a released film keeps both controls', () => {
-    expect(
-      watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '1997-01-01' }, NOW),
-    ).toBe(false);
+    expect(watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '1997-01-01' }, NOW)).toBe(false);
     expect(watchlistCtaIsPrimary({ type: 'MOVIE', year: 2019 }, NOW)).toBe(false);
   });
 });
@@ -107,18 +95,12 @@ describe('needsReleaseEnrichment', () => {
   test('only `unknown` film rows need the details read', () => {
     expect(needsReleaseEnrichment({ type: 'MOVIE', year: 2026 }, NOW)).toBe(true);
     expect(needsReleaseEnrichment({ type: 'MOVIE' }, NOW)).toBe(true);
-    expect(
-      needsReleaseEnrichment({ type: 'ANIME', isFilm: true, year: 2026 }, NOW),
-    ).toBe(true);
+    expect(needsReleaseEnrichment({ type: 'ANIME', isFilm: true, year: 2026 }, NOW)).toBe(true);
   });
 
   test('judgeable rows and series never pay for the fetch', () => {
-    expect(
-      needsReleaseEnrichment({ type: 'MOVIE', releaseDate: '2026-08-28' }, NOW),
-    ).toBe(false);
-    expect(
-      needsReleaseEnrichment({ type: 'MOVIE', releaseDate: '2026-12-25' }, NOW),
-    ).toBe(false);
+    expect(needsReleaseEnrichment({ type: 'MOVIE', releaseDate: '2026-08-28' }, NOW)).toBe(false);
+    expect(needsReleaseEnrichment({ type: 'MOVIE', releaseDate: '2026-12-25' }, NOW)).toBe(false);
     expect(needsReleaseEnrichment({ type: 'MOVIE', year: 2019 }, NOW)).toBe(false);
     expect(needsReleaseEnrichment({ type: 'TV' }, NOW)).toBe(false);
     expect(needsReleaseEnrichment({ type: 'ANIME', year: 2026 }, NOW)).toBe(false);
@@ -130,26 +112,21 @@ describe('hasStartedAiring', () => {
 
   test('an aired episode proves the season is running', () => {
     expect(
-      hasStartedAiring({ year: 2026 }, [
-        { firstAired: '2026-09-01T14:00:00.000Z' },
-        {},
-      ], NOW_2026),
+      hasStartedAiring({ year: 2026 }, [{ firstAired: '2026-09-01T14:00:00.000Z' }, {}], NOW_2026),
     ).toBe(true);
   });
 
   test('an entirely undated announced season has not started', () => {
     const undated = Array.from({ length: 10 }, () => ({}));
     expect(hasStartedAiring({ year: 2026 }, undated, NOW_2026)).toBe(false);
-    expect(
-      hasStartedAiring({ year: 2026, releaseDate: '2026-12-01' }, undated, NOW_2026),
-    ).toBe(false);
+    expect(hasStartedAiring({ year: 2026, releaseDate: '2026-12-01' }, undated, NOW_2026)).toBe(
+      false,
+    );
   });
 
   test('the back catalogue stays loggable without a single air date', () => {
     expect(hasStartedAiring({ year: 2005 }, [{}, {}], NOW_2026)).toBe(true);
-    expect(
-      hasStartedAiring({ releaseDate: '2026-04-05' }, [{}], NOW_2026),
-    ).toBe(true);
+    expect(hasStartedAiring({ releaseDate: '2026-04-05' }, [{}], NOW_2026)).toBe(true);
   });
 });
 
@@ -165,19 +142,19 @@ describe('preAiringDisplay', () => {
   });
 
   test('released series render normally', () => {
-    expect(
-      preAiringDisplay({ type: 'TV', releaseDate: '2026-07-01' }, [{}], 0, NOW),
-    ).toBe('progress');
+    expect(preAiringDisplay({ type: 'TV', releaseDate: '2026-07-01' }, [{}], 0, NOW)).toBe(
+      'progress',
+    );
     expect(preAiringDisplay({ type: 'ANIME', year: 2019 }, [{}, {}], 0, NOW)).toBe('progress');
   });
 
   test('a dated future premiere counts down, even while episodes load', () => {
-    expect(
-      preAiringDisplay({ type: 'TV', releaseDate: '2026-08-19' }, undefined, 0, NOW),
-    ).toBe('countdown');
-    expect(
-      preAiringDisplay({ type: 'TV', releaseDate: '2026-08-19' }, [{}], 0, NOW),
-    ).toBe('countdown');
+    expect(preAiringDisplay({ type: 'TV', releaseDate: '2026-08-19' }, undefined, 0, NOW)).toBe(
+      'countdown',
+    );
+    expect(preAiringDisplay({ type: 'TV', releaseDate: '2026-08-19' }, [{}], 0, NOW)).toBe(
+      'countdown',
+    );
   });
 
   test('loading stays permissive when nothing dates the series', () => {
@@ -187,12 +164,7 @@ describe('preAiringDisplay', () => {
 
   test('an anime premiere comes from episode 1, not the item', () => {
     expect(
-      preAiringDisplay(
-        { type: 'ANIME', year: 2026 },
-        [{ firstAired: '2026-08-19' }, {}],
-        0,
-        NOW,
-      ),
+      preAiringDisplay({ type: 'ANIME', year: 2026 }, [{ firstAired: '2026-08-19' }, {}], 0, NOW),
     ).toBe('countdown');
   });
 

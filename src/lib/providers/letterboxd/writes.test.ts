@@ -43,7 +43,9 @@ function fakeDeps(options: {
   return {
     username: 'gian',
     session: SESSION,
-    fetch: async () => { throw new Error('Native writes must not fetch the film page'); },
+    fetch: async () => {
+      throw new Error('Native writes must not fetch the film page');
+    },
     webFetch: withWebFetch
       ? async (request) => {
           options.onWrite?.(request);
@@ -58,13 +60,17 @@ describe('logToLetterboxd', () => {
     let captured: LetterboxdWebRequest | undefined;
     const deps: LetterboxdDeps = {
       username: 'gian',
-      fetch: async () => { throw new Error('Web film fetch must not run'); },
+      fetch: async () => {
+        throw new Error('Web film fetch must not run');
+      },
       userscriptFetch: async (request) => {
         captured = request;
         return { status: 200, body: '{"logEntry":{"id":"abc"}}' };
       },
     };
-    await Effect.runPromise(logToLetterboxd(deps, movie({ tmdb: 999 }), { tags: ['spike'], liked: true }));
+    await Effect.runPromise(
+      logToLetterboxd(deps, movie({ tmdb: 999 }), { tags: ['spike'], liked: true }),
+    );
     expect(captured?.filmPath).toBe('/tmdb/999/');
     expect(captured?.tags).toEqual(['spike']);
     expect(captured?.liked).toBe(true);

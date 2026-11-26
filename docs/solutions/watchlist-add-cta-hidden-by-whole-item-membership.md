@@ -17,7 +17,7 @@ Three causes were suspected up front, and none of them was it:
 2. **Stale `WatchlistEntry.sources` still listing `simkl`.** No: the report
    survives a restart with a cold, freshly-gathered cache.
 3. **`incomplete` (Letterboxd's paginated scrape) leaking into the predicate.**
-   No: it only ever *withholds* an add, and the add was withheld for Simkl,
+   No: it only ever _withholds_ an add, and the add was withheld for Simkl,
    whose leg is not paginated.
 
 `shouldOfferWatchlistAdd` was in fact returning **true** the whole time. It is
@@ -27,7 +27,7 @@ not what suppressed the row.
 
 `WatchlistMediaButton` derives its label from `isWatchlistCtaSettled(onList,
 view)`, and `onList` is `useIsWatchlisted(item)` — a **whole-item** boolean over
-the gathered rows: "is this film on *a* watchlist". The film was still on the
+the gathered rows: "is this film on _a_ watchlist". The film was still on the
 Letterboxd one, so:
 
 1. `onList === true` → `settled === true`.
@@ -38,13 +38,13 @@ Letterboxd one, so:
 
 Either way, the add is unreachable. The row rendering at all is what made this
 read as "`shouldOfferWatchlistAdd` returned false" — the gate that decides
-*whether* the row exists and the rule that decides *what it claims* were two
+_whether_ the row exists and the rule that decides _what it claims_ were two
 different rules answering two different questions, and only one of them was
 per-provider.
 
 `shouldOfferWatchlistAdd`'s own docblock had already written down the correct
-rule for this state — *"a film on the Letterboxd watchlist and not on Trakt's is
-exactly where an add is most useful"* — it just never reached the label.
+rule for this state — _"a film on the Letterboxd watchlist and not on Trakt's is
+exactly where an add is most useful"_ — it just never reached the label.
 
 ## The fix
 
@@ -87,7 +87,7 @@ greyed "On your watchlist" — and on the home feed's sheet that row is
 caller handed `CardActionsSheet` a `watchlistRemoval` prop, and only
 `/watchlist` did.
 
-The settled press *is* the remove entry point, but it is inert in host mode by
+The settled press _is_ the remove entry point, but it is inert in host mode by
 design: a host that is already a sheet must not stack a second one (plan 0032
 U3), so the card-actions sheet composes its own removal row instead — which it
 only ever built from the caller's prop.

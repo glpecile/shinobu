@@ -24,9 +24,7 @@ TaskManager.defineTask(NOTIFICATIONS_BACKGROUND_TASK, async () => {
 });
 
 export async function registerNotificationsBackgroundTask(): Promise<void> {
-  const isRegistered = await TaskManager.isTaskRegisteredAsync(
-    NOTIFICATIONS_BACKGROUND_TASK,
-  );
+  const isRegistered = await TaskManager.isTaskRegisteredAsync(NOTIFICATIONS_BACKGROUND_TASK);
   if (isRegistered) return;
   // Restricted on iOS simulators and when Background App Refresh is off,
   // where registering only logs a warning.
@@ -38,9 +36,7 @@ export async function registerNotificationsBackgroundTask(): Promise<void> {
 }
 
 export async function unregisterNotificationsBackgroundTask(): Promise<void> {
-  const isRegistered = await TaskManager.isTaskRegisteredAsync(
-    NOTIFICATIONS_BACKGROUND_TASK,
-  );
+  const isRegistered = await TaskManager.isTaskRegisteredAsync(NOTIFICATIONS_BACKGROUND_TASK);
   if (!isRegistered) return;
   await BackgroundTask.unregisterTaskAsync(NOTIFICATIONS_BACKGROUND_TASK);
 }

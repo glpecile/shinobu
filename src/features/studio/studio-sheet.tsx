@@ -18,7 +18,12 @@ interface StudioSheetProps {
 export function StudioSheet({ studio, open, onClose }: StudioSheetProps) {
   const pushRoute = usePushRoute();
   const canOpenStudio = useTmdbToken() !== '';
-  const href = studio == null ? null : studio.tmdbId != null ? routes.studio(studio.tmdbId) : routes.studioLookup(studio.name);
+  const href =
+    studio == null
+      ? null
+      : studio.tmdbId != null
+        ? routes.studio(studio.tmdbId)
+        : routes.studioLookup(studio.name);
 
   return (
     <Sheet onClose={onClose} open={open && studio != null}>

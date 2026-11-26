@@ -8,13 +8,13 @@ fields is only a guess, not a reliable artwork API.
 
 Unauthenticated Bun GET probes:
 
-| Film | Guessed 600×900 | Guessed 230×345 | Film-page JSON-LD poster |
-| --- | --- | --- | --- |
-| Onibaba (`49601`) | 403 | 200 | `sm/upload/3x/qu/ti/2g/nITg6iRWo3CVWJEnhV4AiD3ukfx-…` |
-| Alien (`51714`) | 403 | 200 | `sm/upload/8v/f1/qw/aa/bg7K6VtUG7Ew70gQj6SSroD5d4R-…` |
-| 21 Grams (`51632`) | 403 | 403 | `sm/upload/ee/gx/q4/xd/Aps7GzrYiJZKHNT524Rsg4jaXej-…` |
-| Obsession (`1234472`) | 403 | 403 | `1234472-obsession-2025-2-…` |
-| Tuner (`1234878`) | 200 | 200 | `1234878-tuner-…` |
+| Film                  | Guessed 600×900 | Guessed 230×345 | Film-page JSON-LD poster                              |
+| --------------------- | --------------- | --------------- | ----------------------------------------------------- |
+| Onibaba (`49601`)     | 403             | 200             | `sm/upload/3x/qu/ti/2g/nITg6iRWo3CVWJEnhV4AiD3ukfx-…` |
+| Alien (`51714`)       | 403             | 200             | `sm/upload/8v/f1/qw/aa/bg7K6VtUG7Ew70gQj6SSroD5d4R-…` |
+| 21 Grams (`51632`)    | 403             | 403             | `sm/upload/ee/gx/q4/xd/Aps7GzrYiJZKHNT524Rsg4jaXej-…` |
+| Obsession (`1234472`) | 403             | 403             | `1234472-obsession-2025-2-…`                          |
+| Tuner (`1234878`)     | 200             | 200             | `1234878-tuner-…`                                     |
 
 Different sizes working for the same film show that a 403 is not sufficient
 evidence of a client-wide Cloudflare challenge. Some poster assets live under

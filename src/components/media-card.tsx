@@ -33,11 +33,17 @@ export function progressLabel(item: NormalizedMediaItem): string | null {
   const hasTotal = item.totalEpisodes != null && item.totalEpisodes > 0;
   switch (item.progressUnit) {
     case 'chapter':
-      return hasTotal ? `Ch ${item.currentProgress} / ${item.totalEpisodes}` : `Ch ${item.currentProgress}`;
+      return hasTotal
+        ? `Ch ${item.currentProgress} / ${item.totalEpisodes}`
+        : `Ch ${item.currentProgress}`;
     case 'page':
-      return hasTotal ? `p. ${item.currentProgress} / ${item.totalEpisodes}` : `p. ${item.currentProgress}`;
+      return hasTotal
+        ? `p. ${item.currentProgress} / ${item.totalEpisodes}`
+        : `p. ${item.currentProgress}`;
     case 'episode':
-      return hasTotal ? `${item.currentProgress}/${item.totalEpisodes} ep` : `${item.currentProgress} ep`;
+      return hasTotal
+        ? `${item.currentProgress}/${item.totalEpisodes} ep`
+        : `${item.currentProgress} ep`;
   }
 }
 
@@ -52,7 +58,11 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
   const pushRoute = usePushRoute();
   const reduceMotion = useReducedMotion();
   const [displayedUri, setDisplayedUri] = useState<string | null>(null);
-  const zoom = process.env.EXPO_OS === 'ios' && !reduceMotion && coverImage !== '' && displayedUri === coverImage;
+  const zoom =
+    process.env.EXPO_OS === 'ios' &&
+    !reduceMotion &&
+    coverImage !== '' &&
+    displayedUri === coverImage;
   const href = routes.details(item.id, item.type);
 
   const newTab = useNewTabPress(href);
@@ -64,18 +74,19 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
     pushRoute(href);
   }
 
-  const poster = coverImage !== '' ? (
-    <Image
-      source={{ uri: coverImage }}
-      className="w-full h-full ios:rounded-lg"
-      contentFit="cover"
-      {...(process.env.EXPO_OS === 'ios' ? { transition: 0 } : {})}
-      onDisplay={process.env.EXPO_OS === 'ios' ? () => setDisplayedUri(coverImage) : undefined}
-      onError={process.env.EXPO_OS === 'ios' ? () => setDisplayedUri(null) : undefined}
-    />
-  ) : (
-    <PosterPlaceholder className="w-full h-full border-0" />
-  );
+  const poster =
+    coverImage !== '' ? (
+      <Image
+        source={{ uri: coverImage }}
+        className="w-full h-full ios:rounded-lg"
+        contentFit="cover"
+        {...(process.env.EXPO_OS === 'ios' ? { transition: 0 } : {})}
+        onDisplay={process.env.EXPO_OS === 'ios' ? () => setDisplayedUri(coverImage) : undefined}
+        onError={process.env.EXPO_OS === 'ios' ? () => setDisplayedUri(null) : undefined}
+      />
+    ) : (
+      <PosterPlaceholder className="w-full h-full border-0" />
+    );
 
   const content = (
     <View className="w-full h-full rounded-lg overflow-hidden border border-border/50">
@@ -93,15 +104,17 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
         </Text>
         <View className="flex-row items-center mt-1.5">
           <Text className="text-accent-foreground/70 text-xs font-sans flex-1" numberOfLines={1}>
-            {item.type}{progress != null ? ` · ${progress}` : ''}
+            {item.type}
+            {progress != null ? ` · ${progress}` : ''}
           </Text>
-          {source != null && <View className="ml-2"><ProviderIcon id={source} size={12} /></View>}
+          {source != null && (
+            <View className="ml-2">
+              <ProviderIcon id={source} size={12} />
+            </View>
+          )}
         </View>
         {subtitle != null && subtitle !== '' && (
-          <Text
-            className="text-accent-foreground/70 text-xs font-sans mt-0.5"
-            numberOfLines={1}
-          >
+          <Text className="text-accent-foreground/70 text-xs font-sans mt-0.5" numberOfLines={1}>
             {subtitle}
           </Text>
         )}
@@ -109,7 +122,9 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
     </View>
   );
   const pressProps = {
-    accessibilityLabel: [item.title, item.type, progress, subtitle, sourceLabel].filter(Boolean).join(' · '),
+    accessibilityLabel: [item.title, item.type, progress, subtitle, sourceLabel]
+      .filter(Boolean)
+      .join(' · '),
     onLongPress: () => onActionsPress(item),
     className: 'w-full h-full',
   };

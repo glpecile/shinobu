@@ -47,7 +47,12 @@ export function splitWatchlistRemoveTargets(
   errors: readonly ProviderFailure[],
   incomplete: readonly ProviderId[] = [],
   letterboxdUserscript = false,
-): { item: NormalizedMediaItem; targets: ProviderId[]; manual: ProviderId[]; unknown: ProviderId[] } {
+): {
+  item: NormalizedMediaItem;
+  targets: ProviderId[];
+  manual: ProviderId[];
+  unknown: ProviderId[];
+} {
   const routed = removalItem(item, sources);
   const { writable, manual } = splitWriteTargets(
     routed,
@@ -57,13 +62,13 @@ export function splitWatchlistRemoveTargets(
     letterboxdUserscript,
   );
   const probe =
-    item.bridgedAniList != null && !hasWatchlistReadLeg(Provider.AniList, connected, errors, incomplete)
+    item.bridgedAniList != null &&
+    !hasWatchlistReadLeg(Provider.AniList, connected, errors, incomplete)
       ? removalItem(item, [...sources, Provider.AniList])
       : routed;
   const unknown = providersForWrite(probe, connected, 'watchlist-remove').filter(
     (provider) =>
-      !sources.includes(provider) &&
-      !hasWatchlistReadLeg(provider, connected, errors, incomplete),
+      !sources.includes(provider) && !hasWatchlistReadLeg(provider, connected, errors, incomplete),
   );
   return {
     item: routed,
@@ -81,7 +86,10 @@ export async function planWatchlistRemove(
   variables: UnwatchlistMediaVariables = {},
   incomplete: readonly ProviderId[] = [],
 ): Promise<WatchlistRemovePlan> {
-  const base = entry.item.type === 'BOOK' ? entry.item : await enrichExternalIds(queryClient, entry.item, connected);
+  const base =
+    entry.item.type === 'BOOK'
+      ? entry.item
+      : await enrichExternalIds(queryClient, entry.item, connected);
   const platform = currentPlatform();
 
   const split = splitWatchlistRemoveTargets(
@@ -109,12 +117,7 @@ export function shouldOfferWatchlistAdd(
   errors: readonly ProviderFailure[] = [],
   incomplete: readonly ProviderId[] = [],
 ): boolean {
-  const { writable, manual } = splitWriteTargets(
-    entry.item,
-    connected,
-    platform,
-    'watchlist',
-  );
+  const { writable, manual } = splitWriteTargets(entry.item, connected, platform, 'watchlist');
   return [...writable, ...manual].some(
     (provider) =>
       !entry.sources.includes(provider) &&

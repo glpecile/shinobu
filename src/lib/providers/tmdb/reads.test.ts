@@ -33,10 +33,7 @@ describe('searchMovie', () => {
   test('omits the year filter entirely for a yearless item', async () => {
     const urls: string[] = [];
     await Effect.runPromise(
-      searchMovie(
-        { fetch: recordingFetch(urls), token: 'test-token' },
-        { query: 'Labyrinth' },
-      ),
+      searchMovie({ fetch: recordingFetch(urls), token: 'test-token' }, { query: 'Labyrinth' }),
     );
 
     expect(urls).toHaveLength(1);
@@ -58,39 +55,41 @@ describe('getMediaCatalogue', () => {
     };
 
     await Effect.runPromise(
-      getMediaCatalogue(
-        { fetch, token: 'test-token' },
-        { kind: 'movie', tmdbId: 603 },
-      ),
+      getMediaCatalogue({ fetch, token: 'test-token' }, { kind: 'movie', tmdbId: 603 }),
     );
 
     expect(urls).toHaveLength(1);
     expect(urls[0]).toContain('append_to_response=credits,release_dates');
   });
 
-  test.each([['Ended', true], ['Canceled', true], ['Returning Series', false], [undefined, undefined]] as const)('TV catalogue carries completion status %s without movie release dates', async (status, ended) => {
-    const urls: string[] = [];
-    const fetch = (input: RequestInfo | URL): Promise<Response> => {
-      urls.push(String(input));
-      return Promise.resolve(
-        new Response(JSON.stringify({ id: 94605, name: 'Arcane', status }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+  test.each([
+    ['Ended', true],
+    ['Canceled', true],
+    ['Returning Series', false],
+    [undefined, undefined],
+  ] as const)(
+    'TV catalogue carries completion status %s without movie release dates',
+    async (status, ended) => {
+      const urls: string[] = [];
+      const fetch = (input: RequestInfo | URL): Promise<Response> => {
+        urls.push(String(input));
+        return Promise.resolve(
+          new Response(JSON.stringify({ id: 94605, name: 'Arcane', status }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      };
+
+      const result = await Effect.runPromise(
+        getMediaCatalogue({ fetch, token: 'test-token' }, { kind: 'tv', tmdbId: 94605 }),
       );
-    };
 
-    const result = await Effect.runPromise(
-      getMediaCatalogue(
-        { fetch, token: 'test-token' },
-        { kind: 'tv', tmdbId: 94605 },
-      ),
-    );
-
-    expect(urls[0]).toContain('append_to_response=aggregate_credits');
-    expect(urls[0]).not.toContain('release_dates');
-    expect(result.catalogue.seriesEnded).toBe(ended);
-  });
+      expect(urls[0]).toContain('append_to_response=aggregate_credits');
+      expect(urls[0]).not.toContain('release_dates');
+      expect(result.catalogue.seriesEnded).toBe(ended);
+    },
+  );
 });
 
 describe('getTvSeasons', () => {
@@ -140,10 +139,7 @@ describe('getTvSeasons', () => {
     expect(urls).toHaveLength(1);
     expect(urls[0]).toContain('append_to_response=season/0,season/1,');
     // Specials sort last, mirroring the Trakt normalizer.
-    expect(seasons.map((season) => season.title)).toEqual([
-      'Season 1',
-      'Specials',
-    ]);
+    expect(seasons.map((season) => season.title)).toEqual(['Season 1', 'Specials']);
     expect(seasons[0]?.episodes).toEqual([
       {
         number: 1,
@@ -159,14 +155,15 @@ describe('getTvSeasons', () => {
     const urls: string[] = [];
     const fetch = (input: RequestInfo | URL): Promise<Response> => {
       urls.push(String(input));
-      const body = urls.length > 1
-        ? {}
-        : {
-            seasons: Array.from({ length: 25 }, (_, index) => ({
-              season_number: index + 1,
-              episode_count: 10,
-            })),
-          };
+      const body =
+        urls.length > 1
+          ? {}
+          : {
+              seasons: Array.from({ length: 25 }, (_, index) => ({
+                season_number: index + 1,
+                episode_count: 10,
+              })),
+            };
       return Promise.resolve(
         new Response(JSON.stringify(body), {
           status: 200,
@@ -182,7 +179,9 @@ describe('getTvSeasons', () => {
     expect(urls).toHaveLength(2);
     expect(urls[0]).toContain('season/19');
     expect(urls[0]).not.toContain('season/20');
-    expect(urls[1]).toContain('append_to_response=season/20,season/21,season/22,season/23,season/24,season/25');
+    expect(urls[1]).toContain(
+      'append_to_response=season/20,season/21,season/22,season/23,season/24,season/25',
+    );
     // A season the append response omitted still renders, just empty.
     expect(seasons).toHaveLength(25);
     expect(seasons[0]?.episodes).toEqual([]);

@@ -17,7 +17,7 @@ What does NOT change: log fan-out, unified feed, search, seasons/episode lists +
 Add to `normalize.ts` (+ tests) and `reads.ts`, reusing `tmdbRequest`/`tmdbImageUrl` (extend `TmdbImageSize` with `'w300'` logos and `'w1280'` hero backdrops):
 
 - **`getMediaCatalogue(deps, { kind: 'movie'|'tv', tmdbId })`** — one request: `/movie/{id}?append_to_response=credits` or `/tv/{id}?append_to_response=aggregate_credits` (aggregate = stable across seasons). Normalizes to:
-  - `catalogue: NormalizedMediaItem` — id `tmdb-{kind}-{id}`, title, overview, poster `w342`, backdrop `w1280`, genre *names*, runtime (`runtime` / `episode_run_time[0]`), `rating` (0 ⇒ unrated, same rule as credits), year, `totalEpisodes` (tv `number_of_episodes`), `externalIds.tmdb`.
+  - `catalogue: NormalizedMediaItem` — id `tmdb-{kind}-{id}`, title, overview, poster `w342`, backdrop `w1280`, genre _names_, runtime (`runtime` / `episode_run_time[0]`), `rating` (0 ⇒ unrated, same rule as credits), year, `totalEpisodes` (tv `number_of_episodes`), `externalIds.tmdb`.
   - `cast: NormalizedCastMember[]` (top ~15 by billing; tv aggregate roles → characters joined) and `crew: NormalizedCrewMember[]` (one entry per person, jobs merged across departments à la `normalizeCrew` in `trakt/normalize.ts`, billing-ordered Directing/Writing/Production first, cap ~20). All members carry `tmdbId` → person cards link directly, no name-lookup hop.
   - `studios: NormalizedStudio[]` from `production_companies` — extend `NormalizedStudio` with `tmdbId?: number` (types/media.ts), id `tmdb-studio-{id}`.
 - **`getStudio(deps, { tmdbId })`** — `Effect.all`: `/company/{id}` + `/discover/movie?with_companies={id}&sort_by=primary_release_date.desc` + `/discover/tv?with_companies=…` (page 1 each, ~20 items/row). Returns `{ company: NormalizedCompany, rows }` where `NormalizedCompany { tmdbId, name, logo (w300), headquarters?, homepage? }` and rows are `{ title: 'Movies'|'TV Shows', items: NormalizedMediaItem[] }` (empty rows dropped). Discover results normalize through a `kind`-explicit variant of the existing `normalizeCredit`.
@@ -39,7 +39,7 @@ getMediaDetails(deps, { type, isFilm, tmdbId, traktId, anilistId }): Effect<Medi
 ```
 
 - kind mapping: `TV → tv`, `MOVIE → movie`, `ANIME → isFilm ? movie : tv` (same `isFilm` reasoning as `routing.ts`).
-- **TMDB path** when `deps.tmdb != null && tmdbId != null`; on *any* failure `Effect.catchAll` → provider path (failover is inside the effect, not a boundary concern).
+- **TMDB path** when `deps.tmdb != null && tmdbId != null`; on _any_ failure `Effect.catchAll` → provider path (failover is inside the effect, not a boundary concern).
 - **Provider path**: `ANIME` + anilistId → `getAnimeCredits` (`anilist/credits.ts`, includes studios; catalogue null). `MOVIE/TV` + traktId → `Effect.all`: `getMediaPeople` + `getMediaStudios` (+ `getMediaImages` folded into a partial catalogue so the header art still recovers). Nothing available → empty `MediaDetails`.
 - Failover matrix unit-tested with fake deps: tmdb success / tmdb 500→trakt / no token→anilist for anime / no ids→empty.
 

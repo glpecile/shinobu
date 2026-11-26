@@ -1,9 +1,5 @@
 import { useQueryErrorResetBoundary } from '@tanstack/react-query';
-import {
-  useLocalSearchParams,
-  useRouter,
-  type ErrorBoundaryProps,
-} from 'expo-router';
+import { useLocalSearchParams, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import { Suspense, startTransition, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion, useSharedValue } from 'react-native-reanimated';
@@ -53,7 +49,11 @@ const FORMAT_OPTIONS = [
   { value: 'ALL', label: 'All' },
   { value: 'TV', label: 'TV', accessibilityLabel: 'TV series' },
   { value: 'MOVIE', label: 'Films' },
-] as const satisfies readonly { value: AnimeFormatFilter; label: string; accessibilityLabel?: string }[];
+] as const satisfies readonly {
+  value: AnimeFormatFilter;
+  label: string;
+  accessibilityLabel?: string;
+}[];
 
 function SeasonWall({
   window,
@@ -171,10 +171,7 @@ function useTrailingFormat(format: AnimeFormatFilter): AnimeFormatFilter {
   const [trailing, setTrailing] = useState(format);
   useEffect(() => {
     if (trailing === format) return;
-    const timer = setTimeout(
-      () => startTransition(() => setTrailing(format)),
-      DURATION.toggle,
-    );
+    const timer = setTimeout(() => startTransition(() => setTrailing(format)), DURATION.toggle);
     return () => clearTimeout(timer);
   }, [format, trailing]);
   return trailing;
@@ -208,20 +205,19 @@ export default function AnimeSeasonsScreen() {
       <Head>
         <title>{`${animeSeasonLabel(window)} Anime — Shinobu`}</title>
       </Head>
-      <View
-        className={cn(
-          'flex-row items-center gap-3 px-6',
-          screenHeaderTopPadding,
-          'pb-2',
-        )}
-      >
+      <View className={cn('flex-row items-center gap-3 px-6', screenHeaderTopPadding, 'pb-2')}>
         <BackButton className="-ml-2" onPress={goBack} />
         <Text className="text-2xl font-display text-foreground">Anime</Text>
         <YearStepper className="ml-auto -mr-3" onChange={setWindow} window={window} />
       </View>
       <View className="sm:flex-row sm:items-center">
         <View className="px-6 pb-3 sm:pe-0">
-          <SeasonStrip className="sm:w-96" onChange={setWindow} progress={progress} window={window} />
+          <SeasonStrip
+            className="sm:w-96"
+            onChange={setWindow}
+            progress={progress}
+            window={window}
+          />
         </View>
         <View className="sm:flex-1">
           <MediaToolbar view={view}>

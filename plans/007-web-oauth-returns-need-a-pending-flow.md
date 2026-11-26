@@ -153,18 +153,19 @@ while a flow is pending would still sign the visitor in (#382 review).
 
 ## Commands you will need
 
-| Purpose   | Command                                                 | Expected on success |
-|-----------|---------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                         | exit 0              |
-| Typecheck | `bun typecheck`                                         | exit 0              |
-| One file  | `bun test src/state/session/use-oauth-callback.test.ts` | all pass            |
+| Purpose   | Command                                                 | Expected on success               |
+| --------- | ------------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                         | exit 0                            |
+| Typecheck | `bun typecheck`                                         | exit 0                            |
+| One file  | `bun test src/state/session/use-oauth-callback.test.ts` | all pass                          |
 | All tests | `bun run test`                                          | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                              | exit 0              |
-| Web smoke | `bun web` (and `bun run dev:worker` beside it)          | app loads at the printed URL |
+| Lint      | `bun lint`                                              | exit 0                            |
+| Web smoke | `bun web` (and `bun run dev:worker` beside it)          | app loads at the printed URL      |
 
 ## Scope
 
 **In scope**:
+
 - `src/state/session/oauth-flow.ts` (create)
 - `src/state/session/use-oauth-callback.ts`
 - `src/state/session/use-oauth-callback.test.ts`
@@ -174,6 +175,7 @@ while a flow is pending would still sign the visitor in (#382 review).
 - `docs/solutions/trakt-oauth-setup.md` — the "Web" section only
 
 **Out of scope**:
+
 - The Simkl flow (`simkl/auth.ts`, `simkl/auth-flow.ts`) and its return branch in `handleOAuthReturn`.
 - Native connect paths (`openAuthSessionAsync` binds the return to the session it opened).
 - `providerIsUsable` / `trakt-migration.ts`.

@@ -45,9 +45,7 @@ export function ExpandableText({
       pressBehavior="immediate"
     >
       <View className="flex-row items-center justify-between mb-1.5">
-        <Text className="text-foreground font-sans-semibold text-base">
-          {title}
-        </Text>
+        <Text className="text-foreground font-sans-semibold text-base">{title}</Text>
         {expandable && <DisclosureChevron open={expanded} size={18} />}
       </View>
       {/* Both copies share this box so the hidden one measures at the
@@ -63,10 +61,7 @@ export function ExpandableText({
               {text}
             </Text>
           ) : (
-            <MarkdownText
-              numberOfLines={expanded ? undefined : lines}
-              text={markdown}
-            />
+            <MarkdownText numberOfLines={expanded ? undefined : lines} text={markdown} />
           )}
         </View>
         {/* The hidden copy has no height constraint: iOS otherwise measures only

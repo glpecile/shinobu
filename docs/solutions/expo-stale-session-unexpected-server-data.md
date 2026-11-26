@@ -9,11 +9,11 @@ that error as the body. Even `bunx expo whoami` crashed with the same error.
 **Cause:** a **stale Expo account session** in `~/.expo/state.json`. The CLI's
 GraphQL client sends the stored `sessionSecret` with every `api.expo.dev` call;
 when that session has expired/been revoked, `currentUserAsync` returns no result
-and throws. Serving a dev-client manifest performs that user lookup, so *every*
+and throws. Serving a dev-client manifest performs that user lookup, so _every_
 manifest request 500s — on every Metro instance on the machine. Nothing is wrong
 with the project, Metro, or the network (the API itself returns 200).
 
-**Red herrings:** the error message blames the *server*; the dev-launcher screen
+**Red herrings:** the error message blames the _server_; the dev-launcher screen
 suggests picking the right dev server (multiple listed is normal — e.g. one
 `expo run:ios` Metro on 8081 and one `expo start --web` on 8090). Neither is the
 issue. `EXPO_OFFLINE=1 bunx expo whoami` printing a clean "Not logged in" instead

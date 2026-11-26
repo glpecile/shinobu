@@ -6,7 +6,7 @@
 isolation (`bun test src/state/queries/mapping.test.ts`) but fails several
 of them — `cachedTraktLookup`, `cachedTraktTextSearch`, `cachedSeasonLayout`,
 `mappingQueryKeys` — when the full suite runs (`bun test`). The failing
-assertions see the *fake* return values (`null`/`undefined`) that other,
+assertions see the _fake_ return values (`null`/`undefined`) that other,
 unrelated test files configured, not the real implementation.
 
 ## Root cause
@@ -16,7 +16,7 @@ Several existing suites (`features/log-media/enrich.test.ts`,
 `features/watchlist-media/use-watchlist-media.test.ts`,
 `use-unwatchlist-media.test.ts`) call
 `mock.module('@/state/queries/mapping', () => ({ ...fakes }))` to fake the
-whole module — a long-standing, working pattern *until* a second file needs
+whole module — a long-standing, working pattern _until_ a second file needs
 the **real** `mapping.ts` in the same process.
 
 `mock.module` mutates a process-wide registry keyed by the module's resolved
@@ -37,9 +37,9 @@ while `lib/providers/simkl/reads.test.ts` exists.
 - **`bun`'s own answer is `--isolate`** ("Run each test file in a fresh
   global object"): confirmed by direct repro
   (`bun test --isolate features/log-media/enrich.test.ts
-  state/queries/mapping.test.ts` → 17/17 pass; without the flag → 8 fail).
+state/queries/mapping.test.ts` → 17/17 pass; without the flag → 8 fail).
   `package.json`'s `test` script now runs `bun test --isolate`, so `bun run
-  test` / `bun test` (via the script) is green. **Bare `bun test` invoked
+test` / `bun test` (via the script) is green. **Bare `bun test` invoked
   directly (bypassing the npm script) does not pick this up** — bun has no
   `bunfig.toml` key or env var for it in this version (both tried and
   confirmed inert). Since bun 1.4.3 a bare multi-file `bun test` stops at the
@@ -50,13 +50,13 @@ while `lib/providers/simkl/reads.test.ts` exists.
   `state/queries/use-unified-feed.test.ts`, both rewritten this way): fake
   `@/lib/http/client`'s `httpFetch` with a URL-substring router (the
   `lib/providers/*/reads.test.ts` / `lib/providers/media-details.test.ts`
-  pattern) and call the *real* provider functions. This never touches the
+  pattern) and call the _real_ provider functions. This never touches the
   module registry, so it can't leak into — or be leaked into by — another
   file regardless of `--isolate`.
 - Whenever a new module gains an import edge into `state/queries/simkl.ts`
   (directly or transitively, e.g. `mapping.ts`/`watchlist.ts`/
   `use-unified-feed.ts` importing `./simkl` for plan 0034), every existing
-  test file that imports the *changed* module unmocked now also needs the
+  test file that imports the _changed_ module unmocked now also needs the
   `expo-crypto` stub (`state/queries/simkl.test.ts`'s pattern) — that part
   is a genuine new transitive dependency per file, not a cross-file leak,
   and `--isolate` does not exempt a file from needing a mock its own import
@@ -66,7 +66,7 @@ while `lib/providers/simkl/reads.test.ts` exists.
 
 Rechecked on 2026-11-07 with bun 1.4.3. Pairing every failing file with
 every mocking file showed about 40 culprits, and most leaks are module
-*state*, not mocks: a module such as `@/state/session/tokens` loads once per
+_state_, not mocks: a module such as `@/state/session/tokens` loads once per
 process and keeps the MMKV store from the first file's stub, so later files
 share stores, caches and singletons even when nothing is mocked. Rewriting
 mocks cannot fix that.
@@ -91,7 +91,7 @@ turned later SSR-shaped tests ("web server rendering…") into browser ones.
 
 ## Rule of thumb
 
-A new test file that needs the *real* implementation of a module some other
+A new test file that needs the _real_ implementation of a module some other
 suite already fakes wholesale via `mock.module` will not reliably coexist
 with it in one `bun test` process without `--isolate`. Either keep the new
 suite HTTP-boundary-driven (no `mock.module` on the contested module) or

@@ -24,10 +24,7 @@ mock.module('expo-crypto', () => ({
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   CryptoEncoding: { BASE64: 'base64' },
   digestStringAsync: async (_algorithm: string, data: string) => {
-    const digest = await crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(data),
-    );
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
     return Buffer.from(digest).toString('base64');
   },
 }));
@@ -76,9 +73,7 @@ beforeEach(() => store.clear());
 
 describe('createSimklPkcePair / deriveSimklCodeChallenge', () => {
   test('matches the RFC 7636 appendix B test vector', async () => {
-    const challenge = await deriveSimklCodeChallenge(
-      'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk',
-    );
+    const challenge = await deriveSimklCodeChallenge('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk');
     expect(challenge).toBe('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
   });
 
@@ -218,8 +213,8 @@ describe('exchangeSimklCode', () => {
 
   test('a token payload without expires_in yields a session without expiresAt', async () => {
     saveSimklAuthFlow({ verifier: 'ver-1', state: 'state-1' });
-    const { deps, sessions } = makeDeps(
-      () => Response.json({ access_token: 'tok-2', token_type: 'bearer' }),
+    const { deps, sessions } = makeDeps(() =>
+      Response.json({ access_token: 'tok-2', token_type: 'bearer' }),
     );
     await Effect.runPromise(
       exchangeSimklCode(deps, {

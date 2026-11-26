@@ -11,7 +11,7 @@ First real provider integration and the **Effect pilot**
 (`docs/brainstorms/2026-07-07-effect-for-provider-layer.md`): Trakt exercises
 OAuth, refresh, read, write, and normalization on one provider before the fan-out
 (`todos/005`) commits to the pattern. Solutions scan done: `web-cors-trakt.md`
-(Trakt is fully browser-callable, API *and* token endpoint — web needs no
+(Trakt is fully browser-callable, API _and_ token endpoint — web needs no
 special-casing) and `web-cors-anilist.md` (irrelevant here, but constrains the
 session shape: AniList-on-web will have no refresh token, so `refreshToken` must
 be optional in the shared session type).
@@ -21,7 +21,7 @@ be optional in the shared session type).
 1. **OAuth = authorization code via `expo-auth-session`, same flow on all
    platforms.** Trakt has no PKCE; token exchange requires `client_secret`
    embedded in the bundle — normal for Trakt's ecosystem (documented in
-   `web-cors-trakt.md`). `usePKCE: false`. The *exchange* and *refresh* POSTs go
+   `web-cors-trakt.md`). `usePKCE: false`. The _exchange_ and _refresh_ POSTs go
    through our own provider layer (typed errors), not `exchangeCodeAsync`, so
    auth failures share the `ProviderError` taxonomy. Credentials come from
    `EXPO_PUBLIC_TRAKT_CLIENT_ID` / `EXPO_PUBLIC_TRAKT_CLIENT_SECRET`
@@ -33,7 +33,7 @@ be optional in the shared session type).
    `HttpFetch` type; nothing above `lib/` imports either file directly.
 3. **Session storage**: one MMKV instance (`createMMKV({ id: 'session' })`),
    key `session.<providerId>`, JSON `ProviderSession { accessToken,
-   refreshToken?, expiresAt? }`. `refreshToken`/`expiresAt` optional (AniList
+refreshToken?, expiresAt? }`. `refreshToken`/`expiresAt` optional (AniList
    implicit grant, above). Reactivity via `useMMKVListener` — no bespoke context
    state to keep in sync with storage. The current store in
    `src/state/session/tokens.ts` has no native `encryptionKey`; web uses
@@ -42,7 +42,7 @@ be optional in the shared session type).
    [`todos/003`](../../todos/003-pending-p2-secure-token-storage.md).
 4. **Dependency injection without Layers** (per the brainstorm's "keep surface
    area small"): every Trakt effect takes a `TraktDeps { fetch: HttpFetch;
-   tokens: TokenStore }` first argument. Tests inject fakes; `state/queries/`
+tokens: TokenStore }` first argument. Tests inject fakes; `state/queries/`
    wires the real modules once. No `Layer`/`Context` until a third provider
    makes the boilerplate hurt.
 5. **Request wrapper contract** (`traktRequest`): sets the three mandatory
@@ -67,13 +67,13 @@ be optional in the shared session type).
    show ids + `seasons[].episodes[]`. Registered shape matches what
    `todos/005`'s `useLogMedia` will call; no UI trigger in this todo.
 8. **UI-first scope (user re-prioritization, 2026-07-07)**: this plan ships a
-   *visible* product slice, not just plumbing —
+   _visible_ product slice, not just plumbing —
    - **Movie catalogue**: `GET /movies/trending?extended=full,images` is public
      (client id header only, no OAuth) → a browsable catalogue screen renders
      real data before login exists. Same normalization pipeline as the watched
      path, so it doubles as live verification of decision 6.
    - **Onboarding/connect experience** (pulls the core of `todos/009`
-     forward): first run shows a connect screen rendered *from the registry*
+     forward): first run shows a connect screen rendered _from the registry_
      (not hardcoded); connecting Trakt flows into the catalogue + watched feed;
      disconnect clears the token. Letterboxd renders its blocked state
      honestly.
@@ -85,7 +85,7 @@ be optional in the shared session type).
    resolver plugin (test preload) aliasing `react-native` →
    `react-native-web` and stubbing Metro-only/native-only modules
    (`expo-image`, router). Uniwind's `className` is a Metro-time transform, so
-   tests assert *behavior and content* (what renders, what handlers fire, what
+   tests assert _behavior and content_ (what renders, what handlers fire, what
    the registry-driven connect screen lists), never styles. If this harness
    fights back, the fallback is documented in `docs/solutions/` and tests drop
    to component-logic level — not silently skipped.

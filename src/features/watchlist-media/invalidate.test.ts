@@ -29,9 +29,7 @@ mock.module('expo-crypto', () => ({
   CryptoEncoding: { BASE64: 'base64' },
   digestStringAsync: async () => 'unused',
 }));
-const { invalidateAfterWatchlist, shouldRefreshNotifications } = await import(
-  './invalidate'
-);
+const { invalidateAfterWatchlist, shouldRefreshNotifications } = await import('./invalidate');
 // Real sessions against faked MMKV: bun's mock.module is process-global and would break other test files importing these modules.
 const { connectLetterboxd } = await import('@/state/session/letterboxd');
 const { connectSerializd } = await import('@/state/session/serializd');

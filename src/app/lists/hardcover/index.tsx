@@ -17,11 +17,16 @@ export default function HardcoverListsScreen() {
   const username = useHardcoverViewerQuery({ enabled: connected && granted }).data?.username;
   return (
     <ListsPage
-      contentKey={Provider.Hardcover} index provider={Provider.Hardcover} title={validKind ? listsTitle(kind) : 'Lists'}
+      contentKey={Provider.Hardcover}
+      index
+      provider={Provider.Hardcover}
+      title={validKind ? listsTitle(kind) : 'Lists'}
       unavailable={!validKind ? 'invalid' : connected ? 'reconnect' : 'connect'}
       url={validKind && connected && granted ? hardcoverListsUrl(username ?? '') : null}
     >
-      {validKind && connected && granted && <ProviderListsPager kind={kind} provider={Provider.Hardcover} username={username ?? ''} />}
+      {validKind && connected && granted && (
+        <ProviderListsPager kind={kind} provider={Provider.Hardcover} username={username ?? ''} />
+      )}
     </ListsPage>
   );
 }

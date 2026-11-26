@@ -29,7 +29,11 @@ function exact(pattern: string): (path: string) => boolean {
 }
 
 /** First match wins. Each exact path specifies one method and any allowed query keys. */
-const RULES: Array<{ match: (path: string) => boolean; method: Method; query?: readonly string[] }> = [
+const RULES: Array<{
+  match: (path: string) => boolean;
+  method: Method;
+  query?: readonly string[];
+}> = [
   { match: (p) => p === 'login', method: 'POST' },
   { match: (p) => p === 'validateauthtoken', method: 'POST' },
   { match: (p) => p === 'watched_v2', method: 'POST' },
@@ -42,7 +46,10 @@ const RULES: Array<{ match: (path: string) => boolean; method: Method; query?: r
   { match: (p) => p === 'watchlist_v2', method: 'POST' },
   { match: (p) => p === 'watchlist/remove_v2', method: 'POST' },
   { match: exact('(?:paused_shows|dropped_shows|currently_watching)(?:/remove)?'), method: 'POST' },
-  { match: (p) => p === 'list/add_item' || p === 'list/edit' || p === 'list/create', method: 'POST' },
+  {
+    match: (p) => p === 'list/add_item' || p === 'list/edit' || p === 'list/create',
+    method: 'POST',
+  },
   { match: (p) => /^list\/[1-9][0-9]{0,14}$/.test(p), method: 'GET' },
   // Coming Soon (plan 0114). Exact match: `search/` holds user search too.
   { match: (p) => p === 'search/upcoming_episodes_v3', method: 'GET' },
@@ -50,9 +57,19 @@ const RULES: Array<{ match: (path: string) => boolean; method: Method; query?: r
   // Season 0 is specials.
   { match: exact(`show/${ID}/season/(?:0|${ID})`), method: 'GET' },
   { match: exact(`user/${SEGMENT}/diary`), method: 'GET', query: ['page'] },
-  { match: exact(`user/${SEGMENT}/(?:lists|liked_lists)`), method: 'GET', query: ['sort_by', 'page'] },
+  {
+    match: exact(`user/${SEGMENT}/(?:lists|liked_lists)`),
+    method: 'GET',
+    query: ['sort_by', 'page'],
+  },
   { match: exact(`user/${SEGMENT}/show/${ID}/progress`), method: 'GET' },
-  { match: exact(`user/${SEGMENT}/(?:watchedpage_v2|currently_watching_page|paused_shows_page|dropped_shows_page)/${ID}`), method: 'GET', query: ['sort_by'] },
+  {
+    match: exact(
+      `user/${SEGMENT}/(?:watchedpage_v2|currently_watching_page|paused_shows_page|dropped_shows_page)/${ID}`,
+    ),
+    method: 'GET',
+    query: ['sort_by'],
+  },
 ];
 
 /** Reject traversal, protocol-relative, and absolute-URL sub-paths outright. */

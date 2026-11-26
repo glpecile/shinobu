@@ -44,8 +44,7 @@ export function EpisodeCard({
   const stacked = entries.length > 1;
   const href = stacked ? undefined : episodeHref(lead);
   const [hovered, setHovered] = useState(false);
-  const showActionsButton =
-    onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
+  const showActionsButton = onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
 
   return (
     <View className={className}>
@@ -55,15 +54,9 @@ export function EpisodeCard({
         onPointerLeave={() => setHovered(false)}
       >
         <PresstableScale
-          accessibilityLabel={[
-            title,
-            label,
-            ...badges.map((badge) => badge.label),
-          ].join(', ')}
+          accessibilityLabel={[title, label, ...badges.map((badge) => badge.label)].join(', ')}
           className="w-full h-36"
-          onLongPress={
-            onActionsPress == null ? undefined : () => onActionsPress(lead.item)
-          }
+          onLongPress={onActionsPress == null ? undefined : () => onActionsPress(lead.item)}
           onPress={() => {
             if (href == null) {
               onPress?.(lead.item);
@@ -78,19 +71,13 @@ export function EpisodeCard({
               <View
                 className="absolute inset-0 rounded-lg border border-border/50 bg-surface opacity-30"
                 style={{
-                  transform: [
-                    { translateX: STACK_OFFSET * 2 },
-                    { translateY: -STACK_OFFSET * 2 },
-                  ],
+                  transform: [{ translateX: STACK_OFFSET * 2 }, { translateY: -STACK_OFFSET * 2 }],
                 }}
               />
               <View
                 className="absolute inset-0 rounded-lg border border-border/50 bg-surface opacity-60"
                 style={{
-                  transform: [
-                    { translateX: STACK_OFFSET },
-                    { translateY: -STACK_OFFSET },
-                  ],
+                  transform: [{ translateX: STACK_OFFSET }, { translateY: -STACK_OFFSET }],
                 }}
               />
             </>
@@ -99,7 +86,11 @@ export function EpisodeCard({
           <View className="w-full h-full rounded-lg overflow-hidden border border-border/50">
             <PosterPlaceholder className="w-full h-full border-0" />
             {art !== '' && (
-              <Image className="absolute inset-0 w-full h-full" contentFit="cover" source={{ uri: art }} />
+              <Image
+                className="absolute inset-0 w-full h-full"
+                contentFit="cover"
+                source={{ uri: art }}
+              />
             )}
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.85)']}
@@ -140,10 +131,7 @@ export function EpisodeCard({
           >
             {title}
           </Text>
-          <MorphText
-            className="text-muted font-sans text-xs mt-0.5"
-            numberOfLines={1}
-          >
+          <MorphText className="text-muted font-sans text-xs mt-0.5" numberOfLines={1}>
             {label}
           </MorphText>
         </View>

@@ -7,20 +7,31 @@ test('the renderer recovers from a failed init, and repeated uncached renders st
   const instantiate = WebAssembly.instantiate;
   const cacheDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'caches');
   // Match Wrangler's precompiled WASM and Data font imports in Bun.
-  plugin({ name: 'og-assets', setup(build) {
-    build.onLoad({ filter: /\.(ttf|wasm)$/ }, async ({ path }) => {
-      const bytes = await Bun.file(path).arrayBuffer();
-      return { exports: { default: path.endsWith('.wasm') ? new WebAssembly.Module(bytes) : bytes }, loader: 'object' };
-    });
-  } });
-  WebAssembly.instantiate = (async (module: BufferSource | WebAssembly.Module, imports?: WebAssembly.Imports) => {
+  plugin({
+    name: 'og-assets',
+    setup(build) {
+      build.onLoad({ filter: /\.(ttf|wasm)$/ }, async ({ path }) => {
+        const bytes = await Bun.file(path).arrayBuffer();
+        return {
+          exports: { default: path.endsWith('.wasm') ? new WebAssembly.Module(bytes) : bytes },
+          loader: 'object',
+        };
+      });
+    },
+  });
+  WebAssembly.instantiate = (async (
+    module: BufferSource | WebAssembly.Module,
+    imports?: WebAssembly.Imports,
+  ) => {
     if (failInit) {
       failInit = false;
       throw new Error('transient instantiate failure');
     }
-    const result: WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource = await Reflect.apply(instantiate, WebAssembly, [module, imports]);
+    const result: WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource =
+      await Reflect.apply(instantiate, WebAssembly, [module, imports]);
     const instance = ('instance' in result ? result.instance : result) as WebAssembly.Instance;
-    if (Object.hasOwn(instance.exports, 'renderer_render')) memory = instance.exports.memory as WebAssembly.Memory;
+    if (Object.hasOwn(instance.exports, 'renderer_render'))
+      memory = instance.exports.memory as WebAssembly.Memory;
     return result;
   }) as typeof instantiate;
   Object.defineProperty(globalThis, 'caches', {
@@ -32,7 +43,11 @@ test('the renderer recovers from a failed init, and repeated uncached renders st
     const env = { ASSETS: { fetch: async () => new Response(null, { status: 404 }) } };
     const ctx = { waitUntil() {} };
     const render = async () => {
-      const response = await handleOgImage(new Request('https://example.test/og/person/lookup/Probe.png'), env, ctx);
+      const response = await handleOgImage(
+        new Request('https://example.test/og/person/lookup/Probe.png'),
+        env,
+        ctx,
+      );
       expect(response.status).toBe(200);
       const bytes = new Uint8Array(await response.arrayBuffer());
       expect(bytes.slice(0, 8)).toEqual(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]));

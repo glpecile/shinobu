@@ -14,9 +14,7 @@ export type SeriesNextEpisodeState =
   | { status: 'loading' }
   | { status: 'ready'; episode: SeriesNextEpisode };
 
-export function useSeriesNextEpisode(
-  item: NormalizedMediaItem | null,
-): SeriesNextEpisodeState {
+export function useSeriesNextEpisode(item: NormalizedMediaItem | null): SeriesNextEpisodeState {
   const connected = useConnectedProviders();
   const traktConnected = connected.includes(Provider.Trakt);
   const simklConnected = connected.includes(Provider.Simkl);

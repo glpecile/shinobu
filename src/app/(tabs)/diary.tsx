@@ -6,10 +6,7 @@ import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
-import {
-  homeHeaderClassName,
-  homeHeaderTitleSize,
-} from '@/components/screen-header-spacing';
+import { homeHeaderClassName, homeHeaderTitleSize } from '@/components/screen-header-spacing';
 import { SectionEnter } from '@/components/section-enter';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -27,7 +24,9 @@ import { useConnectedProviders } from '@/state/session';
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return (
     <View className="flex-1 bg-background">
-      <Head><title>Diary — Shinobu</title></Head>
+      <Head>
+        <title>Diary — Shinobu</title>
+      </Head>
       <DiaryHeader />
       <CenteredNotice>
         <CenteredNotice.Title>Couldn't display your diary</CenteredNotice.Title>
@@ -45,12 +44,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
 function DiaryHeader({ children }: { children?: React.ReactNode }) {
   return (
     <View className={cn(homeHeaderClassName, 'ios:flex-wrap android:flex-wrap gap-x-4 gap-y-2')}>
-      <Text
-        className={cn(
-          homeHeaderTitleSize,
-          'font-display text-foreground tracking-tight',
-        )}
-      >
+      <Text className={cn(homeHeaderTitleSize, 'font-display text-foreground tracking-tight')}>
         Diary
       </Text>
       {children}
@@ -72,8 +66,13 @@ function DiaryScreen() {
   const diary = useDiaryFeedQuery();
   const { openActions, sheetProps } = useCardActions();
   const [picked, setPicked] = useState<DiaryFormat>('ALL');
-  const reading = { chapters: feedReadsType(connected, 'MANGA'), books: feedReadsType(connected, 'BOOK') };
-  const options = DIARY_FORMAT_OPTIONS.filter((option) => option.value !== 'READING' || reading.chapters || reading.books);
+  const reading = {
+    chapters: feedReadsType(connected, 'MANGA'),
+    books: feedReadsType(connected, 'BOOK'),
+  };
+  const options = DIARY_FORMAT_OPTIONS.filter(
+    (option) => option.value !== 'READING' || reading.chapters || reading.books,
+  );
   const format = options.some((option) => option.value === picked) ? picked : 'ALL';
   const formatControl = <DiaryFormatFilter onChange={setPicked} options={options} value={format} />;
   let filter: React.ReactNode = null;
@@ -86,7 +85,10 @@ function DiaryScreen() {
       <CenteredNotice className="mb-16">
         <CenteredNotice.Icon name="phone-portrait-outline" />
         <CenteredNotice.Title>Open your diary on mobile</CenteredNotice.Title>
-        <CenteredNotice.Body>Letterboxd can only be read from the mobile app — open Shinobu on your phone to see your diary.</CenteredNotice.Body>
+        <CenteredNotice.Body>
+          Letterboxd can only be read from the mobile app — open Shinobu on your phone to see your
+          diary.
+        </CenteredNotice.Body>
       </CenteredNotice>
     );
   } else if (diary.isLoading) {
@@ -98,7 +100,9 @@ function DiaryScreen() {
       <CenteredNotice className="mb-16">
         <CenteredNotice.Icon name="cloud-offline-outline" />
         <CenteredNotice.Title>Couldn't load your diary</CenteredNotice.Title>
-        <CenteredNotice.Body>Something went wrong reaching your trackers. Check your connection and try again.</CenteredNotice.Body>
+        <CenteredNotice.Body>
+          Something went wrong reaching your trackers. Check your connection and try again.
+        </CenteredNotice.Body>
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}
           label="Try again"
@@ -111,7 +115,10 @@ function DiaryScreen() {
       <CenteredNotice className="mb-16">
         <CenteredNotice.Icon name="book-outline" />
         <CenteredNotice.Title>No logs yet</CenteredNotice.Title>
-        <CenteredNotice.Body>Log a movie, show, or anime and it'll show up here — and in every tracker you've connected.</CenteredNotice.Body>
+        <CenteredNotice.Body>
+          Log a movie, show, or anime and it'll show up here — and in every tracker you've
+          connected.
+        </CenteredNotice.Body>
       </CenteredNotice>
     );
   } else {
@@ -150,11 +157,7 @@ function DiaryScreen() {
       <SectionEnter className="flex-1" key={diary.isLoading ? 'skeleton' : 'content'}>
         {content}
       </SectionEnter>
-      <CardActionsSheet
-        {...sheetProps}
-        canWatchlist={false}
-        hideLabel="Hide from diary"
-      />
+      <CardActionsSheet {...sheetProps} canWatchlist={false} hideLabel="Hide from diary" />
     </View>
   );
 }

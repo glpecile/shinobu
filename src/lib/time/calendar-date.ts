@@ -2,10 +2,7 @@
  * Format bare dates in UTC to preserve the stated calendar day. Use has-aired for comparisons
  * against local time.
  */
-export function formatCalendarDate(
-  date: string,
-  options: Intl.DateTimeFormatOptions = {},
-): string {
+export function formatCalendarDate(date: string, options: Intl.DateTimeFormatOptions = {}): string {
   const [year, month, day] = date.split('-').map(Number);
   if (!year || !month || !day) return date;
   return calendarFormatter(options).format(new Date(Date.UTC(year, month - 1, day)));

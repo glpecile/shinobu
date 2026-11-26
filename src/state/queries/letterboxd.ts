@@ -37,7 +37,14 @@ import {
   type LetterboxdListKind,
   type LetterboxdListFilmsPage,
 } from '@/lib/providers/letterboxd/lists';
-import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch, getLetterboxdUserscriptListLikeFetch, getLetterboxdUserscriptListMembershipFetch, getLetterboxdUserscriptListCreateFetch, getLetterboxdUserscriptListRenameFetch } from '@/lib/providers/letterboxd/userscript-bridge';
+import {
+  getLetterboxdUserscriptFetch,
+  getLetterboxdUserscriptWatchlistFetch,
+  getLetterboxdUserscriptListLikeFetch,
+  getLetterboxdUserscriptListMembershipFetch,
+  getLetterboxdUserscriptListCreateFetch,
+  getLetterboxdUserscriptListRenameFetch,
+} from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import {
   getLetterboxdWatchlistWebFetch,
@@ -54,10 +61,7 @@ import {
   WATCHLIST_PAGE_SIZE,
 } from '@/lib/providers/letterboxd/watchlist';
 import { Provider } from '@/lib/providers/types';
-import {
-  getLetterboxdSession,
-  getLetterboxdUsername,
-} from '@/state/session/letterboxd';
+import { getLetterboxdSession, getLetterboxdUsername } from '@/state/session/letterboxd';
 import { useConnectedProviders } from '@/state/session';
 import { tmdbToken, useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -81,10 +85,7 @@ const letterboxdWebProxyFetch: HttpFetch = (input, init) => {
     // at the call site, not something to relay.
     return Promise.reject(new Error(`unexpected Letterboxd URL: ${url}`));
   }
-  return fetch(
-    `${LETTERBOXD_WEB_PROXY_BASE_URL}${url.slice(LETTERBOXD_BASE_URL.length)}`,
-    init,
-  );
+  return fetch(`${LETTERBOXD_WEB_PROXY_BASE_URL}${url.slice(LETTERBOXD_BASE_URL.length)}`, init);
 };
 
 /**
@@ -98,17 +99,22 @@ const letterboxdWebProxyFetch: HttpFetch = (input, init) => {
  */
 export function letterboxdDeps(): LetterboxdDeps {
   return {
-    fetch:
-      process.env.EXPO_OS === 'web' ? letterboxdWebProxyFetch : httpFetch,
+    fetch: process.env.EXPO_OS === 'web' ? letterboxdWebProxyFetch : httpFetch,
     username: getLetterboxdUsername(),
     session: getLetterboxdSession(),
     webFetch: getLetterboxdWebFetch(),
     userscriptFetch: getLetterboxdUserscriptFetch(getLetterboxdUsername()),
     userscriptWatchlistFetch: getLetterboxdUserscriptWatchlistFetch(getLetterboxdUsername()),
     watchlistWebFetch: getLetterboxdWatchlistWebFetch(),
-    listMembershipFetch: getLetterboxdUserscriptListMembershipFetch(getLetterboxdUsername()) ?? getLetterboxdListMembershipFetch(),
-    listCreateFetch: getLetterboxdUserscriptListCreateFetch(getLetterboxdUsername()) ?? getLetterboxdListCreateFetch(),
-    listRenameFetch: getLetterboxdUserscriptListRenameFetch(getLetterboxdUsername()) ?? getLetterboxdListRenameFetch(),
+    listMembershipFetch:
+      getLetterboxdUserscriptListMembershipFetch(getLetterboxdUsername()) ??
+      getLetterboxdListMembershipFetch(),
+    listCreateFetch:
+      getLetterboxdUserscriptListCreateFetch(getLetterboxdUsername()) ??
+      getLetterboxdListCreateFetch(),
+    listRenameFetch:
+      getLetterboxdUserscriptListRenameFetch(getLetterboxdUsername()) ??
+      getLetterboxdListRenameFetch(),
     listLikeWebFetch: getLetterboxdListLikeWebFetch(),
     userscriptListLikeFetch: getLetterboxdUserscriptListLikeFetch(getLetterboxdUsername()),
   };
@@ -120,8 +126,7 @@ export function letterboxdDeps(): LetterboxdDeps {
  * web saved unvalidated because the fetch itself was CORS-blocked.
  */
 export function validateLetterboxdUsername(username: string): Promise<boolean> {
-  const fetch =
-    process.env.EXPO_OS === 'web' ? letterboxdWebProxyFetch : httpFetch;
+  const fetch = process.env.EXPO_OS === 'web' ? letterboxdWebProxyFetch : httpFetch;
   return Effect.runPromise(checkUsernameExists({ fetch }, username));
 }
 
@@ -134,9 +139,14 @@ export const letterboxdQueryKeys = {
   diary: (username: string) => [...letterboxdQueryKeys.diaryRoot(), username] as const,
   // An item with neither id never fetches, but its own id keeps a list of them
   // (an AniList season) from sharing one key in `useQueries`.
-  filmWatch: (username: string, item: NormalizedMediaItem) => [...letterboxdQueryKeys.filmWatchesRoot(), username, item.externalIds.letterboxd ?? null, item.externalIds.letterboxd == null ? item.externalIds.tmdb ?? item.id : null] as const,
-  watchlist: (username: string) =>
-    [...letterboxdQueryKeys.all, 'watchlist', username] as const,
+  filmWatch: (username: string, item: NormalizedMediaItem) =>
+    [
+      ...letterboxdQueryKeys.filmWatchesRoot(),
+      username,
+      item.externalIds.letterboxd ?? null,
+      item.externalIds.letterboxd == null ? (item.externalIds.tmdb ?? item.id) : null,
+    ] as const,
+  watchlist: (username: string) => [...letterboxdQueryKeys.all, 'watchlist', username] as const,
   /** The paginated "View all" grid — a separate entry from the feed row's
    *  single-page key so refetching one never discards the other's pages. */
   watchlistPages: (username: string) =>
@@ -147,7 +157,14 @@ export const letterboxdQueryKeys = {
    * suggests the prior account's tags.
    */
   tags: (username: string) => [...letterboxdQueryKeys.all, 'tags', username] as const,
-  listLike: (username: string, owner: string, slug: string) => [...letterboxdQueryKeys.all, 'list-like', username.toLowerCase(), owner.toLowerCase(), slug] as const,
+  listLike: (username: string, owner: string, slug: string) =>
+    [
+      ...letterboxdQueryKeys.all,
+      'list-like',
+      username.toLowerCase(),
+      owner.toLowerCase(),
+      slug,
+    ] as const,
   listsRoot: () => [...letterboxdQueryKeys.all, 'lists'] as const,
   lists: (username: string, kind: LetterboxdListKind) =>
     [...letterboxdQueryKeys.listsRoot(), username, kind] as const,
@@ -161,7 +178,9 @@ export const letterboxdQueryKeys = {
  * which a list's progress already makes, so the film page downloads once.
  */
 export function useLetterboxdPosterQuery(uri: string | null, failed: boolean) {
-  const slug = uri?.match(/^https:\/\/a\.ltrbxd\.com\/resized\/film-poster\/(?:\d\/)+\d+-([a-z0-9]+(?:-[a-z0-9]+)*)-0-\d+-0-\d+-crop\.jpg(?:\?[^#]*)?$/)?.[1];
+  const slug = uri?.match(
+    /^https:\/\/a\.ltrbxd\.com\/resized\/film-poster\/(?:\d\/)+\d+-([a-z0-9]+(?:-[a-z0-9]+)*)-0-\d+-0-\d+-crop\.jpg(?:\?[^#]*)?$/,
+  )?.[1];
   return useQuery({
     ...letterboxdFilmQuery(slug ?? null, useTmdbToken() !== ''),
     enabled: failed && slug != null,
@@ -171,17 +190,22 @@ export function useLetterboxdPosterQuery(uri: string | null, failed: boolean) {
 }
 
 function retryListRead(failureCount: number, error: Error) {
-  return failureCount < 1 && isRetryable(error)
-    && !(error instanceof ProviderNetworkError && [403, 404, 502].includes(error.status ?? 0));
+  return (
+    failureCount < 1 &&
+    isRetryable(error) &&
+    !(error instanceof ProviderNetworkError && [403, 404, 502].includes(error.status ?? 0))
+  );
 }
 
 /** Rails and View all share pages; only the full screen requests successors. */
 function letterboxdListsOptions(username: string, kind: LetterboxdListKind) {
   return infiniteQueryOptions({
     queryKey: letterboxdQueryKeys.lists(username, kind),
-    queryFn: ({ pageParam, signal }) => Effect.runPromise(
-      getListsPage({ ...letterboxdDeps(), username }, { kind, page: pageParam }), { signal },
-    ),
+    queryFn: ({ pageParam, signal }) =>
+      Effect.runPromise(
+        getListsPage({ ...letterboxdDeps(), username }, { kind, page: pageParam }),
+        { signal },
+      ),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasNextPage && lastPageParam < 9999 ? lastPageParam + 1 : undefined,
@@ -209,9 +233,9 @@ export function useSuspenseLetterboxdListFilmsQuery(owner: string, slug: string)
   const options = infiniteQueryOptions({
     queryKey: letterboxdQueryKeys.listFilms(owner, slug),
     queryFn: ({ pageParam, signal }) =>
-      Effect.runPromise(
-        getListFilmsPage(letterboxdDeps(), { owner, slug, page: pageParam }), { signal },
-      ),
+      Effect.runPromise(getListFilmsPage(letterboxdDeps(), { owner, slug, page: pageParam }), {
+        signal,
+      }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasNextPage && lastPageParam < 9999 ? lastPageParam + 1 : undefined,
@@ -230,17 +254,23 @@ export function useLetterboxdListLike(username: string, owner: string, slug: str
   const queryClient = useQueryClient();
   const queryKey = letterboxdQueryKeys.listLike(username, owner, slug);
   const lists = useInfiniteQuery({
-    ...letterboxdListsOptions(username, 'liked'), enabled: false,
+    ...letterboxdListsOptions(username, 'liked'),
+    enabled: false,
   });
   const likeState = useQuery<boolean>({ queryKey, queryFn: skipToken, staleTime: Infinity });
-  const listed = lists.data?.pages.some((page) => page.lists.some((list) => list.owner.toLowerCase() === owner.toLowerCase() && list.slug === slug));
+  const listed = lists.data?.pages.some((page) =>
+    page.lists.some(
+      (list) => list.owner.toLowerCase() === owner.toLowerCase() && list.slug === slug,
+    ),
+  );
   const complete = lists.data?.pages.at(-1)?.hasNextPage === false;
   const currentLiked = likeState.data ?? (listed ? true : complete ? false : undefined);
   const pending = useIsMutating({ mutationKey: queryKey }) > 0;
   const mutation = useMutation({
     mutationKey: queryKey,
     scope: { id: queryKey.join('/') },
-    mutationFn: (liked: boolean) => Effect.runPromise(setListLiked(letterboxdDeps(), { owner, slug, liked })),
+    mutationFn: (liked: boolean) =>
+      Effect.runPromise(setListLiked(letterboxdDeps(), { owner, slug, liked })),
     onMutate: (next: boolean) => {
       const previous = queryClient.getQueryData<boolean>(queryKey) ?? currentLiked;
       queryClient.setQueryData(queryKey, next);
@@ -250,8 +280,11 @@ export function useLetterboxdListLike(username: string, owner: string, slug: str
       if (previous == null) queryClient.removeQueries({ queryKey, exact: true });
       else queryClient.setQueryData(queryKey, previous);
     },
-    onSuccess: (confirmed: boolean) => { queryClient.setQueryData(queryKey, confirmed); },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.lists(username, 'liked') }),
+    onSuccess: (confirmed: boolean) => {
+      queryClient.setQueryData(queryKey, confirmed);
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.lists(username, 'liked') }),
     retry: false,
   });
   return { ...mutation, liked: currentLiked, isPending: mutation.isPending || pending };
@@ -259,9 +292,11 @@ export function useLetterboxdListLike(username: string, owner: string, slug: str
 
 /** List-only films aren't in the home/watchlist feed; details must reuse their source pages. */
 export function findInLetterboxdListsCache(queryClient: QueryClient, id: string) {
-  return queryClient.getQueriesData<{ pages: LetterboxdListFilmsPage[] }>({
-    queryKey: letterboxdQueryKeys.listFilmsRoot(),
-  }).flatMap(([, data]) => data?.pages.flatMap((page) => page.items) ?? [])
+  return queryClient
+    .getQueriesData<{ pages: LetterboxdListFilmsPage[] }>({
+      queryKey: letterboxdQueryKeys.listFilmsRoot(),
+    })
+    .flatMap(([, data]) => data?.pages.flatMap((page) => page.items) ?? [])
     .find((item) => item.id === id);
 }
 
@@ -269,7 +304,14 @@ export function findInLetterboxdListsCache(queryClient: QueryClient, id: string)
 export function letterboxdFilmQuery(slug: string | null, hasTmdb: boolean) {
   return {
     queryKey: [...letterboxdQueryKeys.film(slug ?? ''), hasTmdb],
-    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getFilmItem({ fetch: letterboxdDeps().fetch, tmdb: hasTmdb ? tmdbDeps() : null }, slug ?? ''), { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(
+        getFilmItem(
+          { fetch: letterboxdDeps().fetch, tmdb: hasTmdb ? tmdbDeps() : null },
+          slug ?? '',
+        ),
+        { signal },
+      ),
     enabled: slug != null,
     // Identity never churns; only the Letterboxd average drifts, and a day is
     // the persisted snapshot's lifetime anyway.
@@ -301,7 +343,8 @@ export function useSuspenseLetterboxdFilmQuery(slug: string) {
 function letterboxdSlugQuery(tmdbId: number) {
   return {
     queryKey: letterboxdQueryKeys.slug(tmdbId),
-    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(resolveFilmSlug(letterboxdDeps(), tmdbId), { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(resolveFilmSlug(letterboxdDeps(), tmdbId), { signal }),
     // A film's slug doesn't change, and invalidateAfterLog reads it after the
     // watch query that fetched it has unsubscribed.
     staleTime: Number.POSITIVE_INFINITY,
@@ -338,9 +381,18 @@ export function letterboxdFilmWatchQuery(username: string | null, item: Normaliz
       }
       signal.throwIfAborted();
       if (slug == null) return null;
-      return Effect.runPromise(getLetterboxdFilmWatch({ ...letterboxdDeps(), username }, { ...item, externalIds: { ...item.externalIds, letterboxd: slug } }), { signal });
+      return Effect.runPromise(
+        getLetterboxdFilmWatch(
+          { ...letterboxdDeps(), username },
+          { ...item, externalIds: { ...item.externalIds, letterboxd: slug } },
+        ),
+        { signal },
+      );
     },
-    enabled: username != null && filmLike && (item.externalIds.letterboxd != null || item.externalIds.tmdb != null),
+    enabled:
+      username != null &&
+      filmLike &&
+      (item.externalIds.letterboxd != null || item.externalIds.tmdb != null),
     // A Shinobu log invalidates these (useLogMedia); this only bounds how long
     // a log made on letterboxd.com itself takes to show.
     staleTime: 60 * 60_000,
@@ -373,14 +425,15 @@ export function useLetterboxdTagsQuery() {
   // Same SSR gate as the watchlist hooks: `connected` is empty in the server
   // snapshot (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md), so the
   // MMKV username read below only ever runs on the client.
-  const username = connected.includes(Provider.Letterboxd)
-    ? (getLetterboxdUsername() ?? '')
-    : '';
+  const username = connected.includes(Provider.Letterboxd) ? (getLetterboxdUsername() ?? '') : '';
 
   return useQuery({
     queryKey: letterboxdQueryKeys.tags(username),
     queryFn: ({ signal }): Promise<LetterboxdTag[]> =>
-      Effect.runPromise(getUserTags(letterboxdDeps()).pipe(Effect.catch(() => Effect.succeed([]))), { signal }),
+      Effect.runPromise(
+        getUserTags(letterboxdDeps()).pipe(Effect.catch(() => Effect.succeed([]))),
+        { signal },
+      ),
     enabled: username !== '',
     staleTime: TAGS_STALE_MS,
     gcTime: TAGS_GC_MS,
@@ -398,9 +451,7 @@ export function useLetterboxdWatchlistPagesQuery() {
   const connected = useConnectedProviders();
   // Same SSR gate as the single-page hook above: `connected` is empty in the
   // server snapshot, so the MMKV read only ever runs on the client.
-  const username = connected.includes(Provider.Letterboxd)
-    ? (getLetterboxdUsername() ?? '')
-    : '';
+  const username = connected.includes(Provider.Letterboxd) ? (getLetterboxdUsername() ?? '') : '';
 
   const queryClient = useQueryClient();
 
@@ -458,9 +509,7 @@ const CATALOGUE_STALE_MS = 15 * 60_000;
  * Resolve watchlist films by title and year, then read TMDB release dates. The year gate keeps
  * a same-title film from supplying the wrong releases.
  */
-function resolveWatchlistFilm(
-  queryClient: QueryClient,
-): ResolveWatchlistFilm {
+function resolveWatchlistFilm(queryClient: QueryClient): ResolveWatchlistFilm {
   return async (film) => {
     const tmdbId =
       film.externalIds.tmdb ??

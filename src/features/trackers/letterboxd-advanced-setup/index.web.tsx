@@ -7,7 +7,10 @@ import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { TAMPERMONKEY_URL } from '@/lib/providers/external-urls';
 import { LETTERBOXD_SIGN_IN_URL } from '@/lib/providers/letterboxd/config';
-import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
+import {
+  useLetterboxdUserscript,
+  useLetterboxdUserscriptUntrusted,
+} from '@/lib/providers/letterboxd/userscript-bridge';
 
 export function LetterboxdAdvancedSetup() {
   const detected = useLetterboxdUserscript();
@@ -20,18 +23,29 @@ export function LetterboxdAdvancedSetup() {
       <Collapsible label="Advanced setup: web writes">
         <View className="gap-4">
           <Text className="text-muted font-sans text-sm">
-            Experimental and optional. Log films and change your watchlist using Tampermonkey
-            and your signed-in Letterboxd browser session. Your cookies stay in
-            Letterboxd. This is not an official API integration.
+            Experimental and optional. Log films and change your watchlist using Tampermonkey and
+            your signed-in Letterboxd browser session. Your cookies stay in Letterboxd. This is not
+            an official API integration.
           </Text>
-          <Text accessibilityLiveRegion="polite" className="text-foreground font-sans-semibold text-sm">
-            {removalDetected ? 'Script detected: logs and watchlist changes' : untrusted ? 'Script detected: update it, then choose “Trust this Shinobu dev server” from its Tampermonkey menu on this tab' : watchlistDetected ? 'Older script detected: update for watchlist removals' : detected ? 'Older script detected: update for watchlist changes' : 'Script not detected in this tab'}
+          <Text
+            accessibilityLiveRegion="polite"
+            className="text-foreground font-sans-semibold text-sm"
+          >
+            {removalDetected
+              ? 'Script detected: logs and watchlist changes'
+              : untrusted
+                ? 'Script detected: update it, then choose “Trust this Shinobu dev server” from its Tampermonkey menu on this tab'
+                : watchlistDetected
+                  ? 'Older script detected: update for watchlist removals'
+                  : detected
+                    ? 'Older script detected: update for watchlist changes'
+                    : 'Script not detected in this tab'}
           </Text>
           <Steps>
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Install Tampermonkey in this browser. Enable userscript execution
-                if your browser asks for it.
+                Install Tampermonkey in this browser. Enable userscript execution if your browser
+                asks for it.
               </Text>
               <Button
                 icon={<Button.Icon name="open-outline" />}
@@ -43,9 +57,9 @@ export function LetterboxdAdvancedSetup() {
             </Steps.Item>
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Install or update the Shinobu script and allow it on Shinobu and Letterboxd.
-                If the link shows source code, paste it into a new Tampermonkey
-                script and save. Then reload this Shinobu tab.
+                Install or update the Shinobu script and allow it on Shinobu and Letterboxd. If the
+                link shows source code, paste it into a new Tampermonkey script and save. Then
+                reload this Shinobu tab.
               </Text>
               <Button
                 icon={<Button.Icon name="open-outline" />}
@@ -57,9 +71,9 @@ export function LetterboxdAdvancedSetup() {
             </Steps.Item>
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Sign into Letterboxd as the same username connected here. Once
-                the script is detected, select Letterboxd under Write to and
-                use Mark as watched, Add to watchlist, or Remove from watchlist as usual.
+                Sign into Letterboxd as the same username connected here. Once the script is
+                detected, select Letterboxd under Write to and use Mark as watched, Add to
+                watchlist, or Remove from watchlist as usual.
               </Text>
               <Button
                 icon={<Button.Icon name="open-outline" />}
@@ -71,13 +85,13 @@ export function LetterboxdAdvancedSetup() {
             </Steps.Item>
           </Steps>
           <Text className="text-muted font-sans text-sm">
-            Each write opens a Letterboxd tab. If it stays open or does not return
-            you here, switch back to your original Shinobu tab to see the result.
-            If the result is uncertain, check Letterboxd before retrying.
+            Each write opens a Letterboxd tab. If it stays open or does not return you here, switch
+            back to your original Shinobu tab to see the result. If the result is uncertain, check
+            Letterboxd before retrying.
           </Text>
           <Text className="text-muted font-sans text-sm">
-            Without the script, Shinobu keeps the manual links. You can disable the
-            script in Tampermonkey and reload Shinobu to return to that mode.
+            Without the script, Shinobu keeps the manual links. You can disable the script in
+            Tampermonkey and reload Shinobu to return to that mode.
           </Text>
         </View>
       </Collapsible>

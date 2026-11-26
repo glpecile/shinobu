@@ -5,5 +5,11 @@ import type { MediaType } from '@/types/media';
 
 export default function LegacyDetailsRoute() {
   const { id, mediaType } = useLocalSearchParams<{ id?: string; mediaType?: MediaType }>();
-  return <Redirect href={typeof id === 'string' && id.indexOf('-') > 0 ? routes.details(id, mediaType) : routes.home} />;
+  return (
+    <Redirect
+      href={
+        typeof id === 'string' && id.indexOf('-') > 0 ? routes.details(id, mediaType) : routes.home
+      }
+    />
+  );
 }

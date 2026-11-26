@@ -18,6 +18,8 @@ export function useNotificationTapNavigation(): void {
     // push-guard-exempt: a notification tap, not a press. Tapping the same
     // show's notification again after backing out is a real second intent, and
     // `clearLastNotificationResponse` above is what stops this one repeating.
-    router.push(routes.details(itemId, mediaType === 'MOVIE' || mediaType === 'TV' ? mediaType : undefined));
+    router.push(
+      routes.details(itemId, mediaType === 'MOVIE' || mediaType === 'TV' ? mediaType : undefined),
+    );
   }, [response, router]);
 }

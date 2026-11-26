@@ -12,18 +12,23 @@ mock.module('react-native-mmkv', () => ({
 }));
 
 const pending: string[] = [];
-let schedule = async (title: string) => { pending.push(title); };
+let schedule = async (title: string) => {
+  pending.push(title);
+};
 mock.module('expo-notifications', () => ({
   AndroidImportance: { DEFAULT: 3 },
   SchedulableTriggerInputTypes: { DATE: 'date' },
   setNotificationChannelAsync: async () => {},
-  cancelAllScheduledNotificationsAsync: async () => { pending.length = 0; },
+  cancelAllScheduledNotificationsAsync: async () => {
+    pending.length = 0;
+  },
   scheduleNotificationAsync: async ({ content }: { content: { title: string } }) => {
     await schedule(content.title);
   },
 }));
 
-const { cancelAllScheduledNotifications, replaceScheduledNotifications } = await import('./index.native');
+const { cancelAllScheduledNotifications, replaceScheduledNotifications } =
+  await import('./index.native');
 const candidate: NotificationCandidate = {
   kind: 'release',
   itemId: 'tmdb:1',
@@ -53,10 +58,16 @@ test('a newer mute or master-off wins over an in-flight replacement', async () =
 
 test('a failed native write leaves the same batch retryable', async () => {
   store.clear();
-  schedule = async () => { throw new Error('Native scheduling failed'); };
-  await expect(replaceScheduledNotifications([candidate])).rejects.toThrow('Native scheduling failed');
+  schedule = async () => {
+    throw new Error('Native scheduling failed');
+  };
+  await expect(replaceScheduledNotifications([candidate])).rejects.toThrow(
+    'Native scheduling failed',
+  );
 
-  schedule = async (title) => { pending.push(title); };
+  schedule = async (title) => {
+    pending.push(title);
+  };
   expect(await replaceScheduledNotifications([candidate])).toBe('replaced');
   expect(pending).toEqual(['A release']);
 });

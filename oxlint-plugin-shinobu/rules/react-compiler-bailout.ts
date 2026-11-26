@@ -50,7 +50,8 @@ export default defineRule({
     // opt-out directive, so the opted-out ranges come from the AST.
     const optedOut: Array<readonly [number, number]> = [];
     function noteOptOut(node: ESTree.Function | ESTree.ArrowFunctionExpression) {
-      if (node.body?.type === 'BlockStatement' && optsOut(node.body.body)) optedOut.push(node.range);
+      if (node.body?.type === 'BlockStatement' && optsOut(node.body.body))
+        optedOut.push(node.range);
     }
     return {
       FunctionDeclaration: noteOptOut,
@@ -69,7 +70,15 @@ export default defineRule({
             configFile: false,
             code: false,
             parserOpts: { plugins: ['jsx', 'typescript'] },
-            plugins: [[reactCompiler, { target: '19', logger: { logEvent: (_: string, event: CompilerEvent) => events.push(event) } }]],
+            plugins: [
+              [
+                reactCompiler,
+                {
+                  target: '19',
+                  logger: { logEvent: (_: string, event: CompilerEvent) => events.push(event) },
+                },
+              ],
+            ],
           });
         } catch {
           return;
@@ -81,9 +90,10 @@ export default defineRule({
           const detail = event.detail ?? {};
           const reason = detail.options?.reason ?? detail.reason ?? event.kind;
           const located = (detail.options?.details ?? []).filter((item) => isLocation(item.loc));
-          const sites = located.length > 0
-            ? located.map((item) => ({ loc: item.loc as Location, why: item.message ?? '' }))
-            : [{ loc: [detail.options?.loc, detail.loc].find(isLocation), why: '' }];
+          const sites =
+            located.length > 0
+              ? located.map((item) => ({ loc: item.loc as Location, why: item.message ?? '' }))
+              : [{ loc: [detail.options?.loc, detail.loc].find(isLocation), why: '' }];
           for (const { loc, why } of sites) {
             context.report({
               ...(loc == null ? { node: program } : { loc }),

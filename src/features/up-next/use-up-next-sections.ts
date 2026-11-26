@@ -1,8 +1,4 @@
-import {
-  useHiddenItems,
-  visibleByIds,
-  type HiddenItem,
-} from '@/state/prefs/hidden-items';
+import { useHiddenItems, visibleByIds, type HiddenItem } from '@/state/prefs/hidden-items';
 import { withLoggedEpisodes } from '@/features/log-media/optimistic';
 import { useLoggedWatches } from '@/features/log-media/logged-context';
 import { useSuspenseUpNextQuery, type UpNextResult } from '@/state/queries/up-next';

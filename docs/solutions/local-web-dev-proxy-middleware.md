@@ -1,7 +1,6 @@
 # Local web dev: /api/* proxies 404 on Metro (and masquerade as "username not found")
 
-**Date:** 2026-07-22 · **Context:** Serializd (plan 0017) + Letterboxd (plan
-0018) web transports both call same-origin `/api/<provider>/*` paths that only
+**Date:** 2026-07-22 · **Context:** Serializd (plan 0017) + Letterboxd (plan 0018) web transports both call same-origin `/api/<provider>/*` paths that only
 exist when the Cloudflare Worker serves the app. Under `bun web` (Metro dev
 server) there is no Worker.
 

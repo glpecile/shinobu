@@ -10,13 +10,23 @@ import { getSerializdUsername } from '@/state/session/serializd';
 
 export default function SerializdListScreen() {
   const { id } = useLocalSearchParams<{ id: string | string[] }>();
-  const username = useConnectedProviders().includes(Provider.Serializd) ? getSerializdUsername() : null;
+  const username = useConnectedProviders().includes(Provider.Serializd)
+    ? getSerializdUsername()
+    : null;
   const valid = typeof id === 'string';
   const url = valid ? serializdListUrl(id) : null;
   const shareHref = valid ? routes.serializdList(id) : undefined;
   return (
-    <ListsPage fallback={<SerializdListSkeleton shareHref={shareHref} signedIn={username != null} />} key={username} provider={Provider.Serializd} shareHref={shareHref} url={url}>
-      {valid && url != null && <SerializdListItems key={url} id={id} url={url} username={username} />}
+    <ListsPage
+      fallback={<SerializdListSkeleton shareHref={shareHref} signedIn={username != null} />}
+      key={username}
+      provider={Provider.Serializd}
+      shareHref={shareHref}
+      url={url}
+    >
+      {valid && url != null && (
+        <SerializdListItems key={url} id={id} url={url} username={username} />
+      )}
     </ListsPage>
   );
 }

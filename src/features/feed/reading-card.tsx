@@ -16,7 +16,13 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 function readingProgress(item: NormalizedMediaItem, inPages: boolean): string {
   const total = item.totalEpisodes;
-  if (item.progressUnit === 'page' && !inPages && item.currentProgress > 0 && total != null && total > 0) {
+  if (
+    item.progressUnit === 'page' &&
+    !inPages &&
+    item.currentProgress > 0 &&
+    total != null &&
+    total > 0
+  ) {
     return `${percentRead(item.currentProgress, total)}%`;
   }
   const progress = progressLabel(item);
@@ -62,7 +68,11 @@ export function ReadingCard({
           <View className="w-32 h-48 rounded-lg overflow-hidden border border-border/50">
             <PosterPlaceholder className="absolute inset-0 border-0" />
             {item.coverImage !== '' && (
-              <Image className="absolute inset-0" contentFit="cover" source={{ uri: item.coverImage }} />
+              <Image
+                className="absolute inset-0"
+                contentFit="cover"
+                source={{ uri: item.coverImage }}
+              />
             )}
           </View>
         </PresstableScale>
@@ -79,7 +89,10 @@ export function ReadingCard({
           />
         )}
       </View>
-      <Text className="text-foreground font-sans-semibold text-sm leading-tight mt-2" numberOfLines={1}>
+      <Text
+        className="text-foreground font-sans-semibold text-sm leading-tight mt-2"
+        numberOfLines={1}
+      >
         {title}
       </Text>
       <MorphText className="text-muted font-sans text-xs mt-0.5" numberOfLines={1}>

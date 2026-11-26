@@ -61,7 +61,10 @@ describe('validateAuthToken', () => {
   test('an invalid token is a reconnect auth error', async () => {
     const error = await Effect.runPromise(
       Effect.flip(
-        validateAuthToken(deps(() => Response.json({ isValid: false })), 'tok-x'),
+        validateAuthToken(
+          deps(() => Response.json({ isValid: false })),
+          'tok-x',
+        ),
       ),
     );
     expect(error).toBeInstanceOf(ProviderAuthError);

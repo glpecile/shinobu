@@ -12,10 +12,9 @@ export function dismissBootSplash() {
   };
   node.animate([{ opacity: 1 }, { opacity: 0 }], options).onfinish = () => node.remove();
   if (!reduced) {
-    node.querySelector('[data-boot-mark]')?.animate(
-      [{ transform: 'scale(1)' }, { transform: 'scale(1.5)' }],
-      options,
-    );
+    node
+      .querySelector('[data-boot-mark]')
+      ?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.5)' }], options);
   }
 }
 

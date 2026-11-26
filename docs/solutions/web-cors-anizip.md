@@ -21,11 +21,11 @@ the other.
   Movies have `thetvdb_id: null` and rely on `themoviedb_id`/`imdb_id`.
 - The `episodes` block keys **AniList-entry-relative episode numbers** to TVDB
   season/episode numbers (`seasonNumber`, `episodeNumber`, plus
-  `absoluteEpisodeNumber` as a separate field). *Corrected 2026-07-27:* the
+  `absoluteEpisodeNumber` as a separate field). _Corrected 2026-07-27:_ the
   original note called the keys "absolute episode numbers" — they are not.
   Live probes of two titles show the keys start at `"1"` for every entry, so a
   sequel entry's `"1"` carries `{seasonNumber: 2, episodeNumber: 1,
-  absoluteEpisodeNumber: 13}` (Dan Da Dan S2, anilist 185660) and a split-cour
+absoluteEpisodeNumber: 13}` (Dan Da Dan S2, anilist 185660) and a split-cour
   entry's `"1"` carries `{seasonNumber: 2, episodeNumber: 13}` (Mushoku Tensei
   S2 part 2, anilist 166873). A first-season entry maps to itself (Gachiakuta,
   anilist 178025). `"S1"`-style keys are AniDB specials and carry no season
@@ -51,7 +51,7 @@ becoming a feed-path cost:
   widening the feed-path decode. Only `{season, number}` survives the decode.
 - **Action paths only, ~1 h flat cache.** `cachedAniZipEpisodeMap`
   (`state/queries/mapping.ts`, key `['mapping', 'anizip-episodes', anilistId]`)
-  caches hits *and* misses under one flat `staleTime`/`gcTime` of an hour —
+  caches hits _and_ misses under one flat `staleTime`/`gcTime` of an hour —
   short precisely because this is the one ani.zip read whose content changes:
   a just-aired episode lands in the dataset hours late, and a forever-cached
   miss would skip Trakt/Serializd for the rest of the session. The single

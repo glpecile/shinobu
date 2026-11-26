@@ -33,9 +33,7 @@ export function ProviderSheet({
 }) {
   return (
     <Sheet autoFocus onClose={onClose} open={open && id != null}>
-      {id != null && (
-        <ProviderSheetContent connected={connected} id={id} onDone={onClose} />
-      )}
+      {id != null && <ProviderSheetContent connected={connected} id={id} onDone={onClose} />}
     </Sheet>
   );
 }
@@ -55,7 +53,8 @@ function ProviderSheetContent({
   const { label } = PROVIDERS[id];
   const name = account.username ?? `${label} account`;
   const { profileUrl } = account;
-  const a11yLabel = account.username == null ? `Connected to ${label}` : `Connected as ${account.username}`;
+  const a11yLabel =
+    account.username == null ? `Connected to ${label}` : `Connected as ${account.username}`;
   const muted = useThemeColor('--color-muted');
   const accountCard = (
     <View className="flex-row items-center gap-3 bg-background border border-border rounded-lg px-4 py-3">
@@ -122,8 +121,8 @@ function ProviderSheetContent({
               <Ionicons color={muted} name="information-circle-outline" size={16} />
             </View>
             <Text className="flex-1 text-muted font-sans text-sm">
-              Disconnect signs Shinobu out of {label} on this device. Your {label}{' '}
-              account and its data do not change.
+              Disconnect signs Shinobu out of {label} on this device. Your {label} account and its
+              data do not change.
             </Text>
           </View>
           <Button

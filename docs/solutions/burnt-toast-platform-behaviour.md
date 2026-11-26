@@ -38,7 +38,7 @@ Sonner's host offsets.
 - `toast.success(title, message?)` → 2 s; `toast.error(title, message?)` → 3.5 s.
 - The haptic fires from `@/lib/haptics` inside the wrapper, never delegated to
   the toast library (R10) — covers Android, no double-fire on iOS.
-- Toasts stay announcement-only (plan 0032 R7): sonner-native *supports*
+- Toasts stay announcement-only (plan 0032 R7): sonner-native _supports_
   actions/press handlers; we deliberately never pass one. Recourse (a
   `providerItemUrl` link, a failed provider) lives on the sheet that stays
   open, never a toast.

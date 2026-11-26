@@ -23,9 +23,7 @@ export function StatTile({
       ) : (
         value
       )}
-      {caption != null && (
-        <Text className="text-sm text-muted font-sans">{caption}</Text>
-      )}
+      {caption != null && <Text className="text-sm text-muted font-sans">{caption}</Text>}
     </View>
   );
 }

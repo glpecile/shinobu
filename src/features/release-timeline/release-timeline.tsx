@@ -18,15 +18,7 @@ const ICONS: Record<keyof ReleaseCalendar, ComponentProps<typeof Ionicons>['name
   physical: 'disc-outline',
 };
 
-function Stop({
-  stop,
-  first,
-  last,
-}: {
-  stop: ReleaseStop;
-  first: boolean;
-  last: boolean;
-}) {
+function Stop({ stop, first, last }: { stop: ReleaseStop; first: boolean; last: boolean }) {
   const accent = useThemeColor('--color-accent');
   const muted = useThemeColor('--color-muted');
   const iconColor = stop.upcoming ? accent : muted;
@@ -53,11 +45,7 @@ function Stop({
         />
       </View>
       <View className="w-5 items-center mr-2">
-        <Ionicons
-          color={iconColor}
-          name={ICONS[stop.kind]}
-          size={15}
-        />
+        <Ionicons color={iconColor} name={ICONS[stop.kind]} size={15} />
       </View>
       <Text
         className={cn(
@@ -93,12 +81,7 @@ export function ReleaseTimeline({ item }: { item: NormalizedMediaItem }) {
         <Section.Title>Release</Section.Title>
       </Section.Header>
       {stops.map((stop, index) => (
-        <Stop
-          first={index === 0}
-          key={stop.kind}
-          last={index === stops.length - 1}
-          stop={stop}
-        />
+        <Stop first={index === 0} key={stop.kind} last={index === stops.length - 1} stop={stop} />
       ))}
     </Section>
   );

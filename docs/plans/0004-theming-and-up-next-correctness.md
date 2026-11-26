@@ -22,7 +22,7 @@ and a placeholder for a future notifications idea so it isn't lost.
   (Uniwind `system` mode); dark is the primary/designed-for mode (`plan.md` 1.1) but
   light must render correctly. See `AGENTS.md` "Theming."
 - **Up Next timezone correctness**: an episode is only "up next" once it has aired in
-  the *user's* local timezone — not the show's origin timezone, not a naive
+  the _user's_ local timezone — not the show's origin timezone, not a naive
   date-only comparison. Centralize this in one utility (`lib/time/hasAired.ts`).
   Tracked as `todos/006` (P2, since the read-aggregation feed depends on it being
   right from the start, not patched in later).

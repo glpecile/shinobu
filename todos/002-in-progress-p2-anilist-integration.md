@@ -43,8 +43,8 @@ Remaining before this closes:
 
 ## Update (2026-07-27 — plan `docs/plans/0027-anime-season-mapping.md`)
 
-Plan 0011 decision 7's explicit deferral — *"multi-season absolute numbering
-defers to a follow-up using ani.zip's episode table"* — **is shipped**. AniList
+Plan 0011 decision 7's explicit deferral — _"multi-season absolute numbering
+defers to a follow-up using ani.zip's episode table"_ — **is shipped**. AniList
 entry-relative episode numbers are now translated to canonical
 `{season, number}` pairs via ani.zip's per-episode table before any
 Trakt/Serializd write, so a sequel-season or split-cour entry no longer logs

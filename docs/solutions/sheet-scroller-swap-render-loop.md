@@ -13,10 +13,12 @@ looked like two different sheets; they are the same sheet one frame apart.
 thing it was wrapping:
 
 ```tsx
-function measure(event) { setOverflows(event.nativeEvent.layout.height > maxHeight) }
-const body = <View onLayout={measure}>{children}</View>
-if (!overflows) return body                      // plain View
-return <ScrollView style={{ maxHeight }}>{body}</ScrollView>   // …or a scroller
+function measure(event) {
+  setOverflows(event.nativeEvent.layout.height > maxHeight);
+}
+const body = <View onLayout={measure}>{children}</View>;
+if (!overflows) return body; // plain View
+return <ScrollView style={{ maxHeight }}>{body}</ScrollView>; // …or a scroller
 ```
 
 That `if` reads like a style change. It is an **unmount**: React sees a
@@ -40,7 +42,7 @@ last round.
 
 ## Fix
 
-The scroller is always in the tree, and only its *height* changes:
+The scroller is always in the tree, and only its _height_ changes:
 
 ```tsx
 const { height, scrollEnabled } = sheetScrollMetrics(contentHeight, maxHeight)
@@ -60,7 +62,7 @@ depend on the scroller (children lay out unbounded along the scroll axis).
 before the first `onLayout` — there is no height to give, and a `ScrollView`
 with no height fills whatever contains it. That frame is the one the sheet's
 native `'content'` detent measures, so putting the height on the scroller itself
-made *every* sheet open at the 85% cap. An auto-height `View` has nothing to
+made _every_ sheet open at the 85% cap. An auto-height `View` has nothing to
 fill: with no definite height above it the scroller's `flexGrow` has no free
 space to claim and reports its content instead.
 
@@ -74,7 +76,7 @@ The bottom sheet's `'content'` detent does follow the subtree in both directions
 — collapsing a section shrinks the sheet back — but it follows what it is given,
 and what it was given on the first frame was a tag picker painting its entire
 vocabulary before collapsing. So the sheet opened at the cap. In the pre-fix
-shapes (wrapper swap, and height on the scroller itself) it then *stayed* there,
+shapes (wrapper swap, and height on the scroller itself) it then _stayed_ there,
 a screen of dead space under its buttons; with the fix it snaps down instead,
 which is better and still wrong.
 
@@ -85,7 +87,7 @@ guessing the other way costs the sheet's entire opening height.
 
 ## Rule
 
-**Never choose an element *type* from a measurement of the subtree inside it.**
+**Never choose an element _type_ from a measurement of the subtree inside it.**
 Change its style. If a wrapper genuinely has to appear or disappear, hoist the
 state that decides it above the boundary that remounts, or accept that
 everything inside restarts every time it flips.

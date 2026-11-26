@@ -96,13 +96,13 @@ Effect failure.
 
 ## Commands you will need
 
-| Purpose   | Command                                       | Expected on success |
-|-----------|-----------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`               | exit 0              |
-| Typecheck | `bun typecheck`                               | exit 0              |
-| One file  | `bun test src/state/queries/up-next.test.ts`  | all pass            |
-| All tests | `bun run test`                                | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                    | exit 0              |
+| Purpose   | Command                                      | Expected on success               |
+| --------- | -------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`              | exit 0                            |
+| Typecheck | `bun typecheck`                              | exit 0                            |
+| One file  | `bun test src/state/queries/up-next.test.ts` | all pass                          |
+| All tests | `bun run test`                               | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                   | exit 0                            |
 
 ## Scope
 
@@ -131,11 +131,11 @@ In `traktInputs`:
 - After `results` is computed:
 
 ```ts
-  const inputs = results.filter((input): input is ProgressUpNextInput => input != null);
-  // One show failing omits that show; every show failing is the leg failing,
-  // so settle() reports it instead of replacing good cached rows with none.
-  if (attempted > 0 && inputs.length === 0 && firstFailure !== undefined) throw firstFailure;
-  return inputs;
+const inputs = results.filter((input): input is ProgressUpNextInput => input != null);
+// One show failing omits that show; every show failing is the leg failing,
+// so settle() reports it instead of replacing good cached rows with none.
+if (attempted > 0 && inputs.length === 0 && firstFailure !== undefined) throw firstFailure;
+return inputs;
 ```
 
 `inputs.length === 0 && firstFailure !== undefined` with `attempted > 0` means
@@ -154,17 +154,17 @@ Add one case to `describe('fetchUpNextInputs')` in `up-next.test.ts`, right
 after `'one show’s progress failing omits that show, not the rest'`:
 
 ```ts
-  test('every show’s progress failing is a Trakt error, not an empty section', async () => {
-    const { client } = fakeClient({
-      shows: [show(1, '2026-07-20T00:00:00.000Z'), show(2, '2026-07-19T00:00:00.000Z')],
-      failingProgress: [1, 2],
-    });
-
-    const inputs = await fetchUpNextInputs(client, ['trakt']);
-
-    expect(inputs.progress).toEqual([]);
-    expect(inputs.errors).toContainEqual({ provider: 'trakt', message: 'progress 1 down' });
+test('every show’s progress failing is a Trakt error, not an empty section', async () => {
+  const { client } = fakeClient({
+    shows: [show(1, '2026-07-20T00:00:00.000Z'), show(2, '2026-07-19T00:00:00.000Z')],
+    failingProgress: [1, 2],
   });
+
+  const inputs = await fetchUpNextInputs(client, ['trakt']);
+
+  expect(inputs.progress).toEqual([]);
+  expect(inputs.errors).toContainEqual({ provider: 'trakt', message: 'progress 1 down' });
+});
 ```
 
 `progress 1 down` assumes show 1 is attempted first (most recent first, and

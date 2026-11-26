@@ -11,12 +11,8 @@ export interface QuickLogOutcome {
   notice: string | null;
 }
 
-export function resolveQuickLog(
-  result: LogMediaResult,
-  source: ProviderId,
-): QuickLogOutcome {
-  const sourceOk =
-    result.succeeded.includes(source) || result.skipped.includes(source);
+export function resolveQuickLog(result: LogMediaResult, source: ProviderId): QuickLogOutcome {
+  const sourceOk = result.succeeded.includes(source) || result.skipped.includes(source);
 
   if (!sourceOk) {
     const blamed = result.failed.length > 0 ? result.failed : [source];

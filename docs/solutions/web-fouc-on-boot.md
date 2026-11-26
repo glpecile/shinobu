@@ -75,7 +75,7 @@ Three layered pieces, all in this branch:
    `position: fixed` `<div>` (dark background, Shinobu's 忍 kanji + wordmark,
    system font stack so it has no font to wait on) rendered as a plain
    sibling of `#root` in the static HTML — outside the React tree entirely,
-   so hydration can never touch it. It covers *everything* — both root
+   so hydration can never touch it. It covers _everything_ — both root
    causes — for the entire boot window, then `_layout.tsx` removes it
    (`document.getElementById("boot-loader")?.remove()`) in the same
    `useEffect` that already fires once `fontsLoaded` is true. A `setTimeout`

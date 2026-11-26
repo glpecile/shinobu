@@ -6,13 +6,13 @@ pager neighbours, and disclosures that must move surrounding content.
 
 ## Findings and fixes
 
-| Before | After | Why |
-| --- | --- | --- |
-| Web Diary supplies an always-on row layout transition | Reflow only on native | Initial measurements compete with the section entrance; web layout animations scale text (see `diary-disclosure-keeps-flat-virtualization.md`) |
-| Neighbouring seasonal pages pulse their loading blocks | Static offscreen skeletons, visible page still pulses | Up to 48 invisible loops in list mode; keep pages mounted for smooth swipes |
-| Empty-state tiles bob with reduced motion enabled | Static tilted tiles | Decorative CSS loops do not inherit timing animations' reduced-motion handling |
-| Diary rail endpoints animate height | Top-anchored scaleY | Identical childless hairline without per-frame layout |
-| Episode pager exposes neighbouring page content to accessibility | Hide non-active pages from accessibility | Match the shared pager's one-page accessibility contract |
+| Before                                                           | After                                                 | Why                                                                                                                                            |
+| ---------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web Diary supplies an always-on row layout transition            | Reflow only on native                                 | Initial measurements compete with the section entrance; web layout animations scale text (see `diary-disclosure-keeps-flat-virtualization.md`) |
+| Neighbouring seasonal pages pulse their loading blocks           | Static offscreen skeletons, visible page still pulses | Up to 48 invisible loops in list mode; keep pages mounted for smooth swipes                                                                    |
+| Empty-state tiles bob with reduced motion enabled                | Static tilted tiles                                   | Decorative CSS loops do not inherit timing animations' reduced-motion handling                                                                 |
+| Diary rail endpoints animate height                              | Top-anchored scaleY                                   | Identical childless hairline without per-frame layout                                                                                          |
+| Episode pager exposes neighbouring page content to accessibility | Hide non-active pages from accessibility              | Match the shared pager's one-page accessibility contract                                                                                       |
 
 ## Investigate separately
 

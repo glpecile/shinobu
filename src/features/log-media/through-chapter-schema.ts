@@ -11,7 +11,12 @@ export function throughChapterText(text: string, from: number, total?: number): 
   return digits === '' ? '' : String(Math.min(Number(digits), chapterCap(from, total)));
 }
 
-export function stepThroughChapter(text: string, step: 1 | -1, from: number, total?: number): string {
+export function stepThroughChapter(
+  text: string,
+  step: 1 | -1,
+  from: number,
+  total?: number,
+): string {
   return String(Math.min(chapterCap(from, total), Math.max(from, Number(text) + step)));
 }
 

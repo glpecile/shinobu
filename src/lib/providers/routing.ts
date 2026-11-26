@@ -2,7 +2,10 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { PROVIDERS } from './registry';
 import { Provider, type ProviderDescriptor, type ProviderId, type WriteSupport } from './types';
 
-type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant' | 'anilistVolume' | 'bridgedAniList'>;
+type RoutableItem = Pick<
+  NormalizedMediaItem,
+  'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant' | 'anilistVolume' | 'bridgedAniList'
+>;
 
 /** An id Trakt/Letterboxd's movie-TV world can resolve. */
 function hasMovieTvIds(item: RoutableItem): boolean {
@@ -16,7 +19,9 @@ function hasMovieTvIds(item: RoutableItem): boolean {
  * per-provider URL shape (`external-urls.ts`'s `isMovieShaped`/`isShowShaped`)
  * must agree on, so it lives here instead of two hand-written copies.
  */
-export function animeEffectiveMovieTvType(item: Pick<NormalizedMediaItem, 'isFilm'>): 'MOVIE' | 'TV' {
+export function animeEffectiveMovieTvType(
+  item: Pick<NormalizedMediaItem, 'isFilm'>,
+): 'MOVIE' | 'TV' {
   return item.isFilm === true ? 'MOVIE' : 'TV';
 }
 
@@ -45,7 +50,11 @@ function effectiveTypes(item: RoutableItem): readonly MediaType[] {
  * volume number. A removal takes only the entry a merged card proves
  * (`removalItem` sets the id to the card's `bridgedAniList`).
  */
-function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteCapability): boolean {
+function carriesReadingId(
+  item: RoutableItem,
+  id: ProviderId,
+  capability: WriteCapability,
+): boolean {
   switch (item.type) {
     case 'BOOK':
       switch (id) {
@@ -55,7 +64,8 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
           // A removal deletes the entry a card proves it holds (`removalItem`),
           // never one the search bridge guessed.
           return capability === 'watchlist-remove'
-            ? item.externalIds.anilist != null && item.externalIds.anilist === item.bridgedAniList?.id
+            ? item.externalIds.anilist != null &&
+                item.externalIds.anilist === item.bridgedAniList?.id
             : item.externalIds.anilist != null && item.anilistVolume != null;
         default:
           return false;
@@ -72,13 +82,17 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
  * `sources` holds AniList for the entry the book is grouped under, and only by
  * that entry's id (plan 0117 B6), never by an id the search bridge guessed.
  */
-export function removalItem(item: NormalizedMediaItem, sources: readonly ProviderId[]): NormalizedMediaItem {
+export function removalItem(
+  item: NormalizedMediaItem,
+  sources: readonly ProviderId[],
+): NormalizedMediaItem {
   if (item.type !== 'BOOK') return item;
   const { anilist: _searched, ...ids } = item.externalIds;
   const card = item.bridgedAniList;
   return {
     ...item,
-    externalIds: card != null && sources.includes(Provider.AniList) ? { ...ids, anilist: card.id } : ids,
+    externalIds:
+      card != null && sources.includes(Provider.AniList) ? { ...ids, anilist: card.id } : ids,
   };
 }
 
@@ -184,7 +198,9 @@ export function unmatchedWriteTargets(
   // A bridged book with no volume number has no AniList write to make, but
   // the reader can open the entry (plan 0117 B5).
   if (item.type === 'BOOK') {
-    return item.externalIds.anilist != null && item.anilistVolume == null && connected.includes(Provider.AniList)
+    return item.externalIds.anilist != null &&
+      item.anilistVolume == null &&
+      connected.includes(Provider.AniList)
       ? [Provider.AniList]
       : [];
   }
@@ -202,7 +218,9 @@ export function unmatchedWriteTargets(
 
 /** Why the log sheet lists an unmatched target as a manual row. */
 export function unmatchedWriteReason(item: Pick<NormalizedMediaItem, 'type'>): string {
-  return item.type === 'BOOK' ? 'AniList can’t tell which volume this is' : 'No match for this title';
+  return item.type === 'BOOK'
+    ? 'AniList can’t tell which volume this is'
+    : 'No match for this title';
 }
 
 /**
@@ -226,7 +244,8 @@ export function providersForRatings(
  * Serializd takes shows, and Hardcover takes a book that carries its id.
  */
 export function listProviderFor(
-  item: Pick<NormalizedMediaItem, 'type' | 'isFilm'> & Partial<Pick<NormalizedMediaItem, 'externalIds'>>,
+  item: Pick<NormalizedMediaItem, 'type' | 'isFilm'> &
+    Partial<Pick<NormalizedMediaItem, 'externalIds'>>,
   connected: readonly ProviderId[],
 ): typeof Provider.Letterboxd | typeof Provider.Serializd | typeof Provider.Hardcover | null {
   switch (item.type) {
@@ -264,7 +283,13 @@ export function isManualWriteTarget(
   capability?: WriteCapability,
   letterboxdUserscript = false,
 ): boolean {
-  if (provider === Provider.Letterboxd && platform === 'web' && capability != null && letterboxdUserscript) return false;
+  if (
+    provider === Provider.Letterboxd &&
+    platform === 'web' &&
+    capability != null &&
+    letterboxdUserscript
+  )
+    return false;
   return PROVIDERS[provider].unsupportedWritePlatforms?.includes(platform) ?? false;
 }
 
@@ -320,7 +345,12 @@ export function resolveWriteTargets(
   return targets.filter(
     (provider) =>
       writeSupport(PROVIDERS[provider], options.capability) !== 'manual' &&
-      !isManualWriteTarget(provider, options.platform, options.capability, options.letterboxdUserscript),
+      !isManualWriteTarget(
+        provider,
+        options.platform,
+        options.capability,
+        options.letterboxdUserscript,
+      ),
   );
 }
 

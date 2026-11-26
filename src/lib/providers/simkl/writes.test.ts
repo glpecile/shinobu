@@ -268,9 +268,7 @@ describe('logToSimkl', () => {
     );
     const body = requestBody(calls[0]!);
     expect(body.movies).toBeUndefined();
-    expect(body.anime).toEqual([
-      { ids: { mal: 32281 }, watched_at: '2026-07-30T21:00:00.000Z' },
-    ]);
+    expect(body.anime).toEqual([{ ids: { mal: 32281 }, watched_at: '2026-07-30T21:00:00.000Z' }]);
   });
 
   test('an entry with no Simkl-resolvable id is a reasoned skip', async () => {
@@ -332,9 +330,7 @@ describe('addToSimklWatchlist', () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url.pathname).toBe('/sync/add-to-list');
     const body = requestBody(calls[0]!);
-    expect(body.movies).toEqual([
-      { to: 'plantowatch', ids: { tmdb: 603, imdb: 'tt0133093' } },
-    ]);
+    expect(body.movies).toEqual([{ to: 'plantowatch', ids: { tmdb: 603, imdb: 'tt0133093' } }]);
   });
 
   test('an all-not_found add is a reasoned skip', async () => {
@@ -373,9 +369,7 @@ function makeRemoveDeps(
   removeResponse: () => Response = okRemoveResponse,
 ) {
   return makeDeps((url) =>
-    new URL(url).pathname.startsWith('/sync/all-items')
-      ? Response.json(library)
-      : removeResponse(),
+    new URL(url).pathname.startsWith('/sync/all-items') ? Response.json(library) : removeResponse(),
   );
 }
 
@@ -476,7 +470,9 @@ describe('setSimklTrackingStatus', () => {
   test('a watching row moves to hold by its own ids, and a completed row is a skip', async () => {
     const { deps, calls } = makeDeps(() => okAddToListResponse());
     await Effect.runPromise(setSimklTrackingStatus(deps, libraryRow('watching'), 'paused'));
-    const skipped = await Effect.runPromise(setSimklTrackingStatus(deps, libraryRow('completed'), 'dropped'));
+    const skipped = await Effect.runPromise(
+      setSimklTrackingStatus(deps, libraryRow('completed'), 'dropped'),
+    );
 
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url.pathname).toBe('/sync/add-to-list');

@@ -7,7 +7,12 @@ import { MorphText } from '@/components/morph-text';
 import { Sheet } from '@/components/sheet';
 import type { LogMediaResult, LogMediaVariables } from '@/features/log-media/fan-out';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
-import { DEFAULT_LOG_TAGS, LogConfirmForm, LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
+import {
+  DEFAULT_LOG_TAGS,
+  LogConfirmForm,
+  LogFormFields,
+  labels,
+} from '@/features/log-media/log-confirm-sheet';
 import { isEpisodeLog, type LogRequest } from '@/features/log-media/log-request';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { sequelLogRequest } from '@/features/log-media/sequel-log';
@@ -65,7 +70,11 @@ function distinctReasons(rows: readonly LedgerRow[]): ProviderWriteOutcome[] {
   for (const row of rows) {
     for (const outcome of row.result?.outcomes ?? []) {
       const text =
-        outcome.status === 'error' ? outcome.message : outcome.status === 'queued' ? undefined : outcome.reason;
+        outcome.status === 'error'
+          ? outcome.message
+          : outcome.status === 'queued'
+            ? undefined
+            : outcome.reason;
       if (text == null) continue;
       const key = `${outcome.provider}:${outcome.status}:${text}`;
       if (!seen.has(key)) seen.set(key, outcome);
@@ -108,7 +117,13 @@ function LogSessionSheet({ request, open }: { request: LogRequest; open: boolean
 }
 
 /** Sheet-agnostic content for both the app-level drawer and inline card-actions (native drawers cannot co-present). */
-export function LogSheetContent({ request, open, onClose, onDismiss, onOpenRequest }: {
+export function LogSheetContent({
+  request,
+  open,
+  onClose,
+  onDismiss,
+  onOpenRequest,
+}: {
   request: LogRequest;
   open: boolean;
   onClose: () => void;
@@ -116,23 +131,90 @@ export function LogSheetContent({ request, open, onClose, onDismiss, onOpenReque
   onOpenRequest?: (request: LogRequest) => void;
 }) {
   if (!isEpisodeLog(request)) {
-    return <LogConfirmForm onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} open={open} request={request} />;
+    return (
+      <LogConfirmForm
+        onClose={onClose}
+        onDismiss={onDismiss}
+        onOpenRequest={onOpenRequest}
+        open={open}
+        request={request}
+      />
+    );
   }
-  return request.entry != null
-    ? <QuickCatchUpForm entry={request.entry} onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} open={open} />
-    : <EpisodeCatchUpForm onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} open={open} request={request} />;
+  return request.entry != null ? (
+    <QuickCatchUpForm
+      entry={request.entry}
+      onClose={onClose}
+      onDismiss={onDismiss}
+      onOpenRequest={onOpenRequest}
+      open={open}
+    />
+  ) : (
+    <EpisodeCatchUpForm
+      onClose={onClose}
+      onDismiss={onDismiss}
+      onOpenRequest={onOpenRequest}
+      open={open}
+      request={request}
+    />
+  );
 }
 
-function QuickCatchUpForm({ entry, open, onClose, onDismiss, onOpenRequest }: { entry: UpNextEpisodeEntry; open: boolean; onClose: () => void; onDismiss?: () => void; onOpenRequest?: (request: LogRequest) => void }) {
+function QuickCatchUpForm({
+  entry,
+  open,
+  onClose,
+  onDismiss,
+  onOpenRequest,
+}: {
+  entry: UpNextEpisodeEntry;
+  open: boolean;
+  onClose: () => void;
+  onDismiss?: () => void;
+  onOpenRequest?: (request: LogRequest) => void;
+}) {
   const evidence = useCatchUpEvidence(entry);
   const queue = evidence.status === 'ready' ? catchUpQueue(entry, evidence.evidence) : null;
-  return <CatchUpForm item={entry.item} first={entryEpisode(entry)} queue={queue} source={entry.source} open={open} onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} />;
+  return (
+    <CatchUpForm
+      item={entry.item}
+      first={entryEpisode(entry)}
+      queue={queue}
+      source={entry.source}
+      open={open}
+      onClose={onClose}
+      onDismiss={onDismiss}
+      onOpenRequest={onOpenRequest}
+    />
+  );
 }
 
-function EpisodeCatchUpForm({ request, open, onClose, onDismiss, onOpenRequest }: { request: LogRequest; open: boolean; onClose: () => void; onDismiss?: () => void; onOpenRequest?: (request: LogRequest) => void }) {
+function EpisodeCatchUpForm({
+  request,
+  open,
+  onClose,
+  onDismiss,
+  onOpenRequest,
+}: {
+  request: LogRequest;
+  open: boolean;
+  onClose: () => void;
+  onDismiss?: () => void;
+  onOpenRequest?: (request: LogRequest) => void;
+}) {
   const queue = useEpisodeLogQueue(request);
   const first = request.episodes?.[0] ?? { number: request.entryEpisodes![0] };
-  return <CatchUpForm item={request.item} first={first} queue={queue} open={open} onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} />;
+  return (
+    <CatchUpForm
+      item={request.item}
+      first={first}
+      queue={queue}
+      open={open}
+      onClose={onClose}
+      onDismiss={onDismiss}
+      onOpenRequest={onOpenRequest}
+    />
+  );
 }
 
 function CatchUpForm({
@@ -160,7 +242,11 @@ function CatchUpForm({
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
   const [findingSequel, startSequelHandoff] = useTransition();
   const { trackBusy, trackLog, openLog } = useCatchUpControls();
-  const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
+  const {
+    writable: targets,
+    manual: manualTargets,
+    unmatched: unmatchedTargets,
+  } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useTargetSelection(targets);
   const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(false);
@@ -172,7 +258,9 @@ function CatchUpForm({
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;
-    return () => { openRef.current = false; };
+    return () => {
+      openRef.current = false;
+    };
   }, [open]);
 
   const queue = frozen ?? live;
@@ -187,18 +275,20 @@ function CatchUpForm({
     currentRow?.status === 'done' &&
     currentRow.result != null &&
     isCleanWriteReport(currentRow.result);
-  const allSettled =
-    lastConfirmed && ledger.every((row) => row.status !== 'pending');
+  const allSettled = lastConfirmed && ledger.every((row) => row.status !== 'pending');
   const allClean =
     allSettled &&
     ledger.every(
       (row) => row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
     );
 
-  useLogReconcileQuery({
-    ...episodeVariables(item, current),
-    providers: selectedProviders,
-  }, open);
+  useLogReconcileQuery(
+    {
+      ...episodeVariables(item, current),
+      providers: selectedProviders,
+    },
+    open,
+  );
 
   const ledgerRef = useRef<LedgerRow[]>([]);
   const lastFiredRef = useRef(false);
@@ -214,7 +304,12 @@ function CatchUpForm({
     if (!clean) return;
     const followUp = completion(rows.map((row) => row.episode));
     if (followUp != null) {
-      setCompletionOffer({ ...followUp, watchedAt: watchedAt?.toISOString(), tags: parseTags(tags), liked });
+      setCompletionOffer({
+        ...followUp,
+        watchedAt: watchedAt?.toISOString(),
+        tags: parseTags(tags),
+        liked,
+      });
       return;
     }
     if (rows.length > 1) {
@@ -242,15 +337,20 @@ function CatchUpForm({
     const close = onDismiss ?? onClose;
     const anilistId = item.externalIds.anilist;
     const epoch = sequelEpochRef.current;
-    if (anilistId == null || epoch == null || epoch !== providerSessionEpoch(Provider.AniList) ||
-      rows.some((row) => (row.result?.queued.length ?? 0) > 0)) {
+    if (
+      anilistId == null ||
+      epoch == null ||
+      epoch !== providerSessionEpoch(Provider.AniList) ||
+      rows.some((row) => (row.result?.queued.length ?? 0) > 0)
+    ) {
       close();
       return;
     }
     startSequelHandoff(async () => {
       const sequel = sequelLogRequest(await fetchAniListSequel(queryClient, anilistId));
       if (!openRef.current) return;
-      if (sequel != null && epoch === providerSessionEpoch(Provider.AniList)) (onOpenRequest ?? openLog)(sequel);
+      if (sequel != null && epoch === providerSessionEpoch(Provider.AniList))
+        (onOpenRequest ?? openLog)(sequel);
       else close();
     });
   }
@@ -280,13 +380,16 @@ function CatchUpForm({
     const episodeCode = capitalize(catchUpEpisodeCode(episode));
     record(episode, { status: 'pending' });
     const write = logMedia.mutateAsync(variables);
-    trackLog(loggedWatch(variables, next), write.then((result) => result.settled));
+    trackLog(
+      loggedWatch(variables, next),
+      write.then((result) => result.settled),
+    );
 
     // Await the Up Next refetch so busy clears only after the updated data lands (docs/solutions/quick-log-settle-refresh-to-update.md).
     trackBusy(
       item.id,
       write.then((result) =>
-        (source == null || resolveQuickLog(result, source).phase === 'settling')
+        source == null || resolveQuickLog(result, source).phase === 'settling'
           ? queryClient.invalidateQueries(
               { queryKey: upNextQueryKeys.inputs() },
               { cancelRefetch: false },
@@ -330,9 +433,12 @@ function CatchUpForm({
       lastFiredRef.current = true;
       const anilistId = item.externalIds.anilist;
       if (episode.season == null && anilistId != null) {
-        const cached = queryClient.getQueryData<NormalizedMediaItem>(anilistQueryKeys.anime(anilistId));
+        const cached = queryClient.getQueryData<NormalizedMediaItem>(
+          anilistQueryKeys.anime(anilistId),
+        );
         const total = cached?.totalEpisodes ?? item.totalEpisodes;
-        if (episode.number === total) sequelEpochRef.current = providerSessionEpoch(Provider.AniList);
+        if (episode.number === total)
+          sequelEpochRef.current = providerSessionEpoch(Provider.AniList);
       }
     }
     fire(episode, variablesFor(episode), plan[index + 1]);
@@ -363,8 +469,7 @@ function CatchUpForm({
       (row.status === 'done' && row.result != null && !isCleanWriteReport(row.result)),
   );
   const clean = ledger.filter(
-    (row) =>
-      row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
+    (row) => row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
   );
   const landed = clean.filter((row) => (row.result?.succeeded.length ?? 0) > 0).length;
   const saved = clean.length - landed;
@@ -377,7 +482,13 @@ function CatchUpForm({
 
   return (
     <WriteSheet.Step key={completionOffer != null ? 'completion' : reported ? 'report' : 'form'}>
-      {completionOffer != null ? <LetterboxdCompletionOffer request={completionOffer} onClose={onClose} onOpenRequest={onOpenRequest} /> : reported ? (
+      {completionOffer != null ? (
+        <LetterboxdCompletionOffer
+          request={completionOffer}
+          onClose={onClose}
+          onOpenRequest={onOpenRequest}
+        />
+      ) : reported ? (
         <ChainReport
           findingSequel={findingSequel}
           item={item}
@@ -396,9 +507,7 @@ function CatchUpForm({
               {`Log ${code}`}
             </MorphText>
             <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
-              <Text className="text-muted font-sans text-sm leading-relaxed">
-                “{item.title}”
-              </Text>
+              <Text className="text-muted font-sans text-sm leading-relaxed">“{item.title}”</Text>
               {remainingCopy != null && (
                 <MorphText className="text-muted font-sans text-sm leading-relaxed">
                   {`· ${remainingCopy}`}
@@ -407,47 +516,46 @@ function CatchUpForm({
             </View>
           </WriteSheet.Header>
 
-            <LogFormFields
-              item={item}
-              manualTargets={manualTargets}
-              unmatchedTargets={unmatchedTargets}
-              onClose={onClose}
-              onDismiss={onDismiss}
-              onSelectedProvidersChange={setSelectedProviders}
-              onTagsChange={setTags}
-              liked={liked}
-              onLikedChange={setLiked}
-              onWatchedAtChange={setWatchedAt}
-              pending={awaiting}
-              selectedProviders={selectedProviders}
-              tags={tags}
-              targets={targets}
-              watchedAt={watchedAt}
-            />
+          <LogFormFields
+            item={item}
+            manualTargets={manualTargets}
+            unmatchedTargets={unmatchedTargets}
+            onClose={onClose}
+            onDismiss={onDismiss}
+            onSelectedProvidersChange={setSelectedProviders}
+            onTagsChange={setTags}
+            liked={liked}
+            onLikedChange={setLiked}
+            onWatchedAtChange={setWatchedAt}
+            pending={awaiting}
+            selectedProviders={selectedProviders}
+            tags={tags}
+            targets={targets}
+            watchedAt={watchedAt}
+          />
 
-            {(!currentLanded || findingSequel) && (
-              <WriteSheet.Actions>
-                <Button
-                  variant="log"
-                  disabled={selectedProviders.length === 0 || queue == null}
-                  icon={<Button.Icon name="eye" />}
-                  label={chainLabel(code, { landed, failed: problems.length, saved })}
-                  loading={awaiting || queue == null}
-                  loadingLabel={findingSequel ? 'Finding next episode…' : 'Logging…'}
-                  morphLabel
-                  onPress={confirm}
-                />
-              </WriteSheet.Actions>
-            )}
+          {(!currentLanded || findingSequel) && (
+            <WriteSheet.Actions>
+              <Button
+                variant="log"
+                disabled={selectedProviders.length === 0 || queue == null}
+                icon={<Button.Icon name="eye" />}
+                label={chainLabel(code, { landed, failed: problems.length, saved })}
+                loading={awaiting || queue == null}
+                loadingLabel={findingSequel ? 'Finding next episode…' : 'Logging…'}
+                morphLabel
+                onPress={confirm}
+              />
+            </WriteSheet.Actions>
+          )}
 
-            {simklQueued && (
-              <Text className="text-muted font-sans text-xs text-center mt-3">
-                Simkl takes one write every 20 seconds, so the rest wait their
-                turn — keep going.
-              </Text>
-            )}
-          </>
-        )}
+          {simklQueued && (
+            <Text className="text-muted font-sans text-xs text-center mt-3">
+              Simkl takes one write every 20 seconds, so the rest wait their turn — keep going.
+            </Text>
+          )}
+        </>
+      )}
     </WriteSheet.Step>
   );
 }
@@ -473,22 +581,14 @@ function ChainReport({
   selectedProviders: readonly ProviderId[];
   sending: number;
 }) {
-  const failedProviders = [
-    ...new Set(problems.flatMap((row) => row.result?.failed ?? [])),
-  ];
-  const succeededProviders = [
-    ...new Set(ledger.flatMap((row) => row.result?.succeeded ?? [])),
-  ];
+  const failedProviders = [...new Set(problems.flatMap((row) => row.result?.failed ?? []))];
+  const succeededProviders = [...new Set(ledger.flatMap((row) => row.result?.succeeded ?? []))];
   const thrown = [
     ...new Set(
-      ledger.flatMap((row) =>
-        row.status === 'error' ? [row.message ?? 'Could not log.'] : [],
-      ),
+      ledger.flatMap((row) => (row.status === 'error' ? [row.message ?? 'Could not log.'] : [])),
     ),
   ];
-  const retryable = ledger.filter(
-    (row) => retryProviders(row, selectedProviders) != null,
-  );
+  const retryable = ledger.filter((row) => retryProviders(row, selectedProviders) != null);
   const pendingLabel = findingSequel ? 'Finding next episode…' : sending > 0 ? 'Retrying…' : null;
 
   return (
@@ -496,8 +596,13 @@ function ChainReport({
       <WriteSheet.Header done onClose={onDone}>
         <WriteSheet.Title>
           {problems.length > 0
-            ? chainFailure(problems.map((row) => catchUpEpisodeCode(row.episode)), failedProviders)
-            : sending > 0 ? 'Retrying…' : 'Logged'}
+            ? chainFailure(
+                problems.map((row) => catchUpEpisodeCode(row.episode)),
+                failedProviders,
+              )
+            : sending > 0
+              ? 'Retrying…'
+              : 'Logged'}
         </WriteSheet.Title>
       </WriteSheet.Header>
       {landed > 0 && succeededProviders.length > 0 && (
@@ -527,7 +632,8 @@ function ChainReport({
             variant="log"
             icon={<Button.Icon name="refresh" />}
             label={
-              pendingLabel ?? (retryable.length === 1
+              pendingLabel ??
+              (retryable.length === 1
                 ? capitalize(`retry ${catchUpEpisodeCode(retryable[0]!.episode)}`)
                 : `Retry ${retryable.length} episodes`)
             }

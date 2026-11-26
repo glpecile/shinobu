@@ -2,8 +2,15 @@ import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-quer
 
 import { enrichExternalIds } from '@/features/log-media/enrich';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
-import { hasLetterboxdUserscript, useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
-import { resolveWriteTargets, splitWriteTargets, type WriteCapability } from '@/lib/providers/routing';
+import {
+  hasLetterboxdUserscript,
+  useLetterboxdUserscript,
+} from '@/lib/providers/letterboxd/userscript-bridge';
+import {
+  resolveWriteTargets,
+  splitWriteTargets,
+  type WriteCapability,
+} from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -38,7 +45,13 @@ export async function planWatchlistWrite(
     letterboxdUserscript,
     ...(variables.providers != null ? { onlyProviders: variables.providers } : {}),
   });
-  const { manual } = splitWriteTargets(enriched, connected, platform, 'watchlist', letterboxdUserscript);
+  const { manual } = splitWriteTargets(
+    enriched,
+    connected,
+    platform,
+    'watchlist',
+    letterboxdUserscript,
+  );
 
   return { item: enriched, targets, manual };
 }
@@ -61,5 +74,8 @@ export function useWriteTargetsSplit(
     queryFn: () => enrichExternalIds(queryClient, item, connected),
   });
 
-  return { ...splitWriteTargets(enriched, connected, platform, capability, letterboxdUserscript), item: enriched };
+  return {
+    ...splitWriteTargets(enriched, connected, platform, capability, letterboxdUserscript),
+    item: enriched,
+  };
 }

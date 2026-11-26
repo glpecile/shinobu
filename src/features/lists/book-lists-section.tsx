@@ -25,11 +25,17 @@ function BookListsRail({ bookId }: { bookId: number }) {
   const { fontScale } = useWindowDimensions();
   const { openList, sheetProps } = useListSheet();
   const { data } = useSuspenseHardcoverBookListsQuery(bookId);
-  const lists = visibleByIds(data.map(hardcoverListSummary), useHiddenLists(), (list) => [list.href]);
+  const lists = visibleByIds(data.map(hardcoverListSummary), useHiddenLists(), (list) => [
+    list.href,
+  ]);
   if (lists.length === 0) return null;
   return (
     <View className="-mx-4 -mb-6 mt-8">
-      <CollapsibleSection collapseKey="details-book-lists" leading={<ProviderIcon id={Provider.Hardcover} size={16} />} title="Lists">
+      <CollapsibleSection
+        collapseKey="details-book-lists"
+        leading={<ProviderIcon id={Provider.Hardcover} size={16} />}
+        title="Lists"
+      >
         <VirtualizedRail
           data={lists}
           estimatedItemSize={CARD_WIDTH + 16}
@@ -54,13 +60,23 @@ function BookListsSkeleton() {
     <View className="mt-8">
       <Skeleton className="h-6 w-24 rounded mb-4" />
       <View className="flex-row overflow-hidden">
-        {[0, 1, 2].map((index) => <View className="w-60 mr-4" key={index}><ListCardSkeleton delay={staggerDelay(index)} /></View>)}
+        {[0, 1, 2].map((index) => (
+          <View className="w-60 mr-4" key={index}>
+            <ListCardSkeleton delay={staggerDelay(index)} />
+          </View>
+        ))}
       </View>
     </View>
   );
 }
 
-export function BookListsSection({ item, resetKey }: { item: NormalizedMediaItem; resetKey?: unknown }) {
+export function BookListsSection({
+  item,
+  resetKey,
+}: {
+  item: NormalizedMediaItem;
+  resetKey?: unknown;
+}) {
   const connected = useConnectedProviders().includes(Provider.Hardcover);
   const granted = useHardcoverListsGranted();
   const bookId = item.externalIds.hardcover;

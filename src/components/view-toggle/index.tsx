@@ -13,7 +13,10 @@ export function ViewToggle({ view, onChange, size }: ViewToggleProps) {
   return (
     <View className="h-11 flex-row items-center px-0.5">
       <View
-        className={cn('absolute inset-x-0 rounded-full border border-border', size === 'sm' ? 'top-0.75 h-9.5' : 'inset-y-0')}
+        className={cn(
+          'absolute inset-x-0 rounded-full border border-border',
+          size === 'sm' ? 'top-0.75 h-9.5' : 'inset-y-0',
+        )}
         style={{ pointerEvents: 'none' }}
       />
       {(
@@ -30,8 +33,18 @@ export function ViewToggle({ view, onChange, size }: ViewToggleProps) {
           key={id}
           onPress={() => onChange(id)}
         >
-          <View className={cn('w-10 items-center justify-center rounded-full', size === 'sm' ? 'h-8' : 'h-9.5', view === id && 'bg-accent-tonal')}>
-            <Ionicons color={view === id ? selected : muted} name={icon} size={size === 'sm' ? 14 : 18} />
+          <View
+            className={cn(
+              'w-10 items-center justify-center rounded-full',
+              size === 'sm' ? 'h-8' : 'h-9.5',
+              view === id && 'bg-accent-tonal',
+            )}
+          >
+            <Ionicons
+              color={view === id ? selected : muted}
+              name={icon}
+              size={size === 'sm' ? 14 : 18}
+            />
           </View>
         </PresstableOpacity>
       ))}

@@ -15,15 +15,24 @@ export interface MediaProgress {
 }
 
 /** Movie/TV numbers occupy different namespaces; anime cours match only exact entry IDs. */
-export function sameProgressItem(item: NormalizedMediaItem, candidate: NormalizedMediaItem): boolean {
+export function sameProgressItem(
+  item: NormalizedMediaItem,
+  candidate: NormalizedMediaItem,
+): boolean {
   const film = item.type === 'MOVIE' || item.isFilm === true;
   const candidateFilm = candidate.type === 'MOVIE' || candidate.isFilm === true;
-  if (film !== candidateFilm || (item.type === 'MANGA') !== (candidate.type === 'MANGA')) return false;
+  if (film !== candidateFilm || (item.type === 'MANGA') !== (candidate.type === 'MANGA'))
+    return false;
   if (item.type === 'ANIME' && !film) {
-    return (item.externalIds.anilist != null && item.externalIds.anilist === candidate.externalIds.anilist) ||
-      (item.externalIds.simkl != null && item.externalIds.simkl === candidate.externalIds.simkl);
+    return (
+      (item.externalIds.anilist != null &&
+        item.externalIds.anilist === candidate.externalIds.anilist) ||
+      (item.externalIds.simkl != null && item.externalIds.simkl === candidate.externalIds.simkl)
+    );
   }
-  return ID_KEYS.some((key) => item.externalIds[key] != null && item.externalIds[key] === candidate.externalIds[key]);
+  return ID_KEYS.some(
+    (key) => item.externalIds[key] != null && item.externalIds[key] === candidate.externalIds[key],
+  );
 }
 
 /** One value per row, sorted, with equal values kept in list order. */
@@ -43,9 +52,13 @@ export interface LibraryIndex<T> {
   columns: Record<IdKey | 'year', Column>;
 }
 
-const valueOf = (item: NormalizedMediaItem, key: IdKey | 'year') => key === 'year' ? item.year : item.externalIds[key];
+const valueOf = (item: NormalizedMediaItem, key: IdKey | 'year') =>
+  key === 'year' ? item.year : item.externalIds[key];
 
-export function indexLibrary<T>(rows: readonly T[], itemOf: (row: T) => NormalizedMediaItem): LibraryIndex<T> {
+export function indexLibrary<T>(
+  rows: readonly T[],
+  itemOf: (row: T) => NormalizedMediaItem,
+): LibraryIndex<T> {
   const columns = {} as Record<IdKey | 'year', Column>;
   for (const key of [...ID_KEYS, 'year'] as const) {
     const order: number[] = [];
@@ -63,7 +76,11 @@ export function indexLibrary<T>(rows: readonly T[], itemOf: (row: T) => Normaliz
 }
 
 /** Row numbers whose `key` equals `value`, in list order. */
-export function rowsWith<T>(index: LibraryIndex<T>, key: IdKey | 'year', value: number | string): Int32Array {
+export function rowsWith<T>(
+  index: LibraryIndex<T>,
+  key: IdKey | 'year',
+  value: number | string,
+): Int32Array {
   const { values, rows } = index.columns[key];
   let start = 0;
   let end = values.length;
@@ -78,7 +95,12 @@ export function rowsWith<T>(index: LibraryIndex<T>, key: IdKey | 'year', value: 
 }
 
 /** The earliest row sharing one of `keys` with `item` that `accept` takes: what `find` over the rows returns. */
-export function firstRow<T>(index: LibraryIndex<T>, item: NormalizedMediaItem, keys: readonly IdKey[], accept: (row: T) => boolean = () => true): T | undefined {
+export function firstRow<T>(
+  index: LibraryIndex<T>,
+  item: NormalizedMediaItem,
+  keys: readonly IdKey[],
+  accept: (row: T) => boolean = () => true,
+): T | undefined {
   let first = -1;
   for (const key of keys) {
     const value = item.externalIds[key];
@@ -94,32 +116,65 @@ export function firstRow<T>(index: LibraryIndex<T>, item: NormalizedMediaItem, k
   return first === -1 ? undefined : index.rows[first];
 }
 
-export function findProgressRow<T>(index: LibraryIndex<T>, item: NormalizedMediaItem): T | undefined {
+export function findProgressRow<T>(
+  index: LibraryIndex<T>,
+  item: NormalizedMediaItem,
+): T | undefined {
   return firstRow(index, item, ID_KEYS, (row) => sameProgressItem(item, index.itemOf(row)));
 }
 
 /** Exact identities first; a unique film title/alias and year can bridge an AniList library entry. Pass an index when matching many items. */
-export function findAniListProgress(item: NormalizedMediaItem, library: readonly AniListLibraryEntry[] | LibraryIndex<AniListLibraryEntry>) {
+export function findAniListProgress(
+  item: NormalizedMediaItem,
+  library: readonly AniListLibraryEntry[] | LibraryIndex<AniListLibraryEntry>,
+) {
   const index = 'columns' in library ? library : indexLibrary(library, (entry) => entry.item);
   const exact = findProgressRow(index, item);
   if (exact != null) return exact;
   if (!(item.type === 'MOVIE' || item.isFilm === true) || item.year == null) return undefined;
   const wanted = titleKey(item.title);
-  const candidates = [...rowsWith(index, 'year', item.year)].map((row) => index.rows[row]).filter(({ item: anime }) => anime.isFilm === true &&
-    [anime.title, ...Object.values(anime.titles ?? {})].some((title) => title != null && titleKey(title) === wanted));
+  const candidates = [...rowsWith(index, 'year', item.year)]
+    .map((row) => index.rows[row])
+    .filter(
+      ({ item: anime }) =>
+        anime.isFilm === true &&
+        [anime.title, ...Object.values(anime.titles ?? {})].some(
+          (title) => title != null && titleKey(title) === wanted,
+        ),
+    );
   return candidates.length === 1 ? candidates[0] : undefined;
 }
 
 /** Never sum providers' copies of the same progress or treat a started series as completed. */
-export function mergeMediaProgress(item: NormalizedMediaItem, sources: readonly MediaProgress[]): MediaProgress {
+export function mergeMediaProgress(
+  item: NormalizedMediaItem,
+  sources: readonly MediaProgress[],
+): MediaProgress {
   const film = item.type === 'MOVIE' || item.isFilm === true;
-  const episodeProgress = sources.some((source) => source.unit === item.progressUnit && source.current > 0);
-  const unit = !film && !episodeProgress && item.currentProgress === 0 && sources.some((source) => source.unit === 'season') ? 'season' : item.progressUnit;
+  const episodeProgress = sources.some(
+    (source) => source.unit === item.progressUnit && source.current > 0,
+  );
+  const unit =
+    !film &&
+    !episodeProgress &&
+    item.currentProgress === 0 &&
+    sources.some((source) => source.unit === 'season')
+      ? 'season'
+      : item.progressUnit;
   const numeric = sources.filter((source) => source.unit === unit);
   const current = Math.max(item.currentProgress, ...numeric.map((source) => source.current));
-  const total = (unit === item.progressUnit ? item.totalEpisodes : undefined) ?? numeric.find((source) => source.total != null && source.total > 0)?.total;
+  const total =
+    (unit === item.progressUnit ? item.totalEpisodes : undefined) ??
+    numeric.find((source) => source.total != null && source.total > 0)?.total;
   const watched = sources.some((source) => source.watched) || current > 0;
-  const completed = sources.some((source) => source.completed) ||
+  const completed =
+    sources.some((source) => source.completed) ||
     (!film && total != null && total > 0 && current >= total);
-  return { watched, completed: film ? watched : completed, current: film ? Number(watched) : current, total: film ? 1 : total, unit };
+  return {
+    watched,
+    completed: film ? watched : completed,
+    current: film ? Number(watched) : current,
+    total: film ? 1 : total,
+    unit,
+  };
 }

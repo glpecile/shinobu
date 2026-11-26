@@ -24,7 +24,10 @@ import { DURATION, TIMING_EASE_IN_OUT } from '@/lib/motion';
 import { usePullScroll } from './pull-scroll';
 import { MARK_BOX, PULL_TRIGGER, RefreshMark } from './refresh-mark';
 
-type RefreshControlProps = Omit<ComponentProps<typeof GestureRefreshControl>, 'onRefresh' | 'refreshing'> & {
+type RefreshControlProps = Omit<
+  ComponentProps<typeof GestureRefreshControl>,
+  'onRefresh' | 'refreshing'
+> & {
   onRefresh: () => Promise<unknown>;
   tab?: string;
 };
@@ -48,7 +51,10 @@ export function RefreshControl({
   progressViewOffset = 0,
   ...native
 }: RefreshControlProps) {
-  const { children, style } = native as { children?: ReactNode; style?: ComponentProps<typeof AnimatedView>['style'] };
+  const { children, style } = native as {
+    children?: ReactNode;
+    style?: ComponentProps<typeof AnimatedView>['style'];
+  };
   const { offset, scrollRef, scrollGesture } = usePullScroll();
   const [refreshing, startRefresh] = useTransition();
   const pull = useSharedValue(0);

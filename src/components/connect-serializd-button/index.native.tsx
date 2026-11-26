@@ -2,10 +2,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import {
-  ProviderSigninWebView,
-  type CookiePair,
-} from '@/components/provider-signin-webview';
+import { ProviderSigninWebView, type CookiePair } from '@/components/provider-signin-webview';
 import {
   extractSerializdLogin,
   SERIALIZD_SIGN_IN_URL,
@@ -32,9 +29,8 @@ export function ConnectSerializdButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        Serializd has no public API, so Shinobu signs you in through a secure web
-        view and keeps only the resulting access token on this device — your
-        password is never sent to Shinobu.
+        Serializd has no public API, so Shinobu signs you in through a secure web view and keeps
+        only the resulting access token on this device — your password is never sent to Shinobu.
       </Text>
       {status === 'error' && (
         <Text className="text-accent font-sans text-xs">

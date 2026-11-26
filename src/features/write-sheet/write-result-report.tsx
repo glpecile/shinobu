@@ -84,10 +84,7 @@ export interface WriteResultReportProps {
   outcomes: readonly ProviderWriteOutcome[];
   item: UrlItem;
   verb?: string;
-  failedHeadline?: (
-    failed: readonly ProviderId[],
-    succeeded: readonly ProviderId[],
-  ) => string;
+  failedHeadline?: (failed: readonly ProviderId[], succeeded: readonly ProviderId[]) => string;
   reconcileLine?: (skipped: readonly ProviderId[]) => string;
 }
 
@@ -102,7 +99,9 @@ export function WriteResultReport({
   const succeeded = outcomes
     .filter((outcome) => outcome.status === 'ok')
     .map((outcome) => outcome.provider);
-  const queued = outcomes.filter((outcome) => outcome.status === 'queued').map((outcome) => outcome.provider);
+  const queued = outcomes
+    .filter((outcome) => outcome.status === 'queued')
+    .map((outcome) => outcome.provider);
   const { reconcileSkipped, reasonedSkips } = splitSkippedOutcomes(outcomes);
   const okReasons = okReasonOutcomes(outcomes);
 
@@ -135,9 +134,7 @@ export function WriteResultReport({
         </Text>
       )}
       {reconcileSkipped.length > 0 && reconcileLine != null && (
-        <Text className="text-muted font-sans text-sm mt-3">
-          {reconcileLine(reconcileSkipped)}
-        </Text>
+        <Text className="text-muted font-sans text-sm mt-3">{reconcileLine(reconcileSkipped)}</Text>
       )}
       {(okReasons.length > 0 || reasonedSkips.length > 0) && (
         <View className="mt-3 gap-2">

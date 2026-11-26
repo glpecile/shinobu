@@ -1,16 +1,36 @@
-import { queryOptions, useQuery, useSuspenseInfiniteQuery, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useQuery,
+  useSuspenseInfiniteQuery,
+  useSuspenseQuery,
+  type QueryClient,
+} from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
-import { getSerializdList, getSerializdListsPage, type SerializdListEntry, type SerializdListKind } from '@/lib/providers/serializd/lists';
+import {
+  getSerializdList,
+  getSerializdListsPage,
+  type SerializdListEntry,
+  type SerializdListKind,
+} from '@/lib/providers/serializd/lists';
 import { serializdBaseUrl, serializdFetch } from '@/lib/providers/serializd/transport';
 import { loginToSerializd, validateAuthToken } from '@/lib/providers/serializd/auth';
 import type { SerializdDeps, SerializdSession } from '@/lib/providers/serializd/deps';
 import { Provider } from '@/lib/providers/types';
 import { getSerializdSession, getSerializdUsername } from '@/state/session/serializd';
 import { getWatchedEpisodeKeys } from '@/lib/providers/serializd/progress';
-import { getSerializdTrackingLists, serializdTrackingState } from '@/lib/providers/serializd/tracking';
-import { getSerializdWatchedShows, type SerializdWatchedShow } from '@/lib/providers/serializd/watched';
-import { getSerializdUpcoming, type SerializdUpcomingEpisode } from '@/lib/providers/serializd/upcoming';
+import {
+  getSerializdTrackingLists,
+  serializdTrackingState,
+} from '@/lib/providers/serializd/tracking';
+import {
+  getSerializdWatchedShows,
+  type SerializdWatchedShow,
+} from '@/lib/providers/serializd/watched';
+import {
+  getSerializdUpcoming,
+  type SerializdUpcomingEpisode,
+} from '@/lib/providers/serializd/upcoming';
 
 export function serializdDeps(username?: string | null): SerializdDeps {
   const session = getSerializdSession();
@@ -55,12 +75,16 @@ export function validateSerializdToken(token: string): Promise<SerializdSession>
  */
 export const serializdQueryKeys = {
   all: [Provider.Serializd] as const,
-  watchedShows: (username: string) => [...serializdQueryKeys.all, 'watched-shows', username] as const,
-  trackingLists: (username: string) => [...serializdQueryKeys.all, 'tracking-lists', username] as const,
+  watchedShows: (username: string) =>
+    [...serializdQueryKeys.all, 'watched-shows', username] as const,
+  trackingLists: (username: string) =>
+    [...serializdQueryKeys.all, 'tracking-lists', username] as const,
   listsRoot: () => [...serializdQueryKeys.all, 'lists'] as const,
-  lists: (username: string, kind: SerializdListKind) => [...serializdQueryKeys.listsRoot(), username, kind] as const,
+  lists: (username: string, kind: SerializdListKind) =>
+    [...serializdQueryKeys.listsRoot(), username, kind] as const,
   listRoot: () => [...serializdQueryKeys.all, 'list'] as const,
-  list: (username: string | null, id: string) => [...serializdQueryKeys.listRoot(), username, id] as const,
+  list: (username: string | null, id: string) =>
+    [...serializdQueryKeys.listRoot(), username, id] as const,
   upcoming: (username: string) => [...serializdQueryKeys.all, 'upcoming', username] as const,
   progress: (username: string, tmdbId: number) =>
     [...serializdQueryKeys.all, 'progress', username, tmdbId] as const,
@@ -69,7 +93,8 @@ export const serializdQueryKeys = {
 function watchedShowsQuery(username: string | null) {
   return queryOptions({
     queryKey: serializdQueryKeys.watchedShows(username ?? ''),
-    queryFn: ({ signal }) => Effect.runPromise(getSerializdWatchedShows(serializdDeps(username)), { signal }),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getSerializdWatchedShows(serializdDeps(username)), { signal }),
     staleTime: 5 * 60_000,
     retry: false,
   });
@@ -77,7 +102,11 @@ function watchedShowsQuery(username: string | null) {
 
 /** Mounted TV marks share one account-wide read, not a request chain per poster. */
 export function useSerializdWatchedShowsQuery(username: string | null) {
-  return useQuery({ ...watchedShowsQuery(username), enabled: username != null, throwOnError: false });
+  return useQuery({
+    ...watchedShowsQuery(username),
+    enabled: username != null,
+    throwOnError: false,
+  });
 }
 
 function findWatchedShow(shows: readonly SerializdWatchedShow[], tmdbId: number) {
@@ -87,7 +116,8 @@ function findWatchedShow(shows: readonly SerializdWatchedShow[], tmdbId: number)
 function trackingListsQuery(username: string | null) {
   return queryOptions({
     queryKey: serializdQueryKeys.trackingLists(username ?? ''),
-    queryFn: ({ signal }) => Effect.runPromise(getSerializdTrackingLists(serializdDeps(username)), { signal }),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getSerializdTrackingLists(serializdDeps(username)), { signal }),
     staleTime: 5 * 60_000,
     retry: false,
   });
@@ -107,7 +137,13 @@ export async function fetchSerializdTrackingState(queryClient: QueryClient, tmdb
   return serializdTrackingState(lists, tmdbId, findWatchedShow(watched, tmdbId));
 }
 
-export function useSerializdTrackingStateQuery({ tmdbId, enabled }: { tmdbId: number | undefined; enabled: boolean }) {
+export function useSerializdTrackingStateQuery({
+  tmdbId,
+  enabled,
+}: {
+  tmdbId: number | undefined;
+  enabled: boolean;
+}) {
   const username = getSerializdUsername();
   const on = enabled && username != null && tmdbId != null;
   const lists = useQuery({ ...trackingListsQuery(username), enabled: on });
@@ -120,7 +156,10 @@ export function useSerializdTrackingStateQuery({ tmdbId, enabled }: { tmdbId: nu
 export function useSerializdProgressQuery(tmdbId: number | undefined, username: string | null) {
   return useQuery({
     queryKey: serializdQueryKeys.progress(username ?? '', tmdbId ?? -1),
-    queryFn: ({ signal }) => Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(username), { tmdbId: tmdbId! }), { signal }),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(username), { tmdbId: tmdbId! }), {
+        signal,
+      }),
     enabled: username != null && tmdbId != null,
     staleTime: 5 * 60_000,
   });
@@ -129,7 +168,8 @@ export function useSerializdProgressQuery(tmdbId: number | undefined, username: 
 export function useSuspenseSerializdUpcomingQuery(username: string) {
   return useSuspenseQuery({
     queryKey: serializdQueryKeys.upcoming(username),
-    queryFn: ({ signal }) => Effect.runPromise(getSerializdUpcoming(serializdDeps(username)), { signal }),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getSerializdUpcoming(serializdDeps(username)), { signal }),
     staleTime: 60 * 60_000,
   });
 }
@@ -140,9 +180,14 @@ const LISTS_STALE_MS = 15 * 60_000;
 export function useSuspenseSerializdListsQuery(username: string, kind: SerializdListKind) {
   return useSuspenseInfiniteQuery({
     queryKey: serializdQueryKeys.lists(username, kind),
-    queryFn: ({ pageParam, signal }) => Effect.runPromise(getSerializdListsPage(serializdDeps(username), { username, kind, page: pageParam }), { signal }),
+    queryFn: ({ pageParam, signal }) =>
+      Effect.runPromise(
+        getSerializdListsPage(serializdDeps(username), { username, kind, page: pageParam }),
+        { signal },
+      ),
     initialPageParam: 1,
-    getNextPageParam: (lastPage, _pages, page) => lastPage.hasNextPage && page < 9999 ? page + 1 : undefined,
+    getNextPageParam: (lastPage, _pages, page) =>
+      lastPage.hasNextPage && page < 9999 ? page + 1 : undefined,
     staleTime: LISTS_STALE_MS,
   });
 }
@@ -150,7 +195,8 @@ export function useSuspenseSerializdListsQuery(username: string, kind: Serializd
 export function useSuspenseSerializdListQuery(username: string | null, id: string) {
   return useSuspenseQuery({
     queryKey: serializdQueryKeys.list(username, id),
-    queryFn: ({ signal }) => Effect.runPromise(getSerializdList(serializdDeps(username), id), { signal }),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getSerializdList(serializdDeps(username), id), { signal }),
     staleTime: LISTS_STALE_MS,
     gcTime: LISTS_STALE_MS,
   });
@@ -161,13 +207,21 @@ export function findInSerializdListsCache(queryClient: QueryClient, id: string) 
   if (typeof window === 'undefined') return undefined;
   // Same username source as the detail query's key (`getSerializdUsername()`),
   // so a connected-but-invalid session never hides a cached hit.
-  return queryClient.getQueriesData<{ entries: SerializdListEntry[] }>({ queryKey: [...serializdQueryKeys.listRoot(), getSerializdUsername() ?? null] })
-    .flatMap(([, data]) => data?.entries ?? []).find((entry) => entry.item.id === id)?.item;
+  return queryClient
+    .getQueriesData<{ entries: SerializdListEntry[] }>({
+      queryKey: [...serializdQueryKeys.listRoot(), getSerializdUsername() ?? null],
+    })
+    .flatMap(([, data]) => data?.entries ?? [])
+    .find((entry) => entry.item.id === id)?.item;
 }
 
 /** Coming Soon cards carry TMDB ids, which a cold details read can't serve without a TMDB token. */
 export function findInSerializdUpcomingCache(queryClient: QueryClient, id: string) {
   if (typeof window === 'undefined') return undefined;
-  return queryClient.getQueriesData<SerializdUpcomingEpisode[]>({ queryKey: [...serializdQueryKeys.all, 'upcoming'] })
-    .flatMap(([, data]) => data ?? []).find((episode) => episode.item.id === id)?.item;
+  return queryClient
+    .getQueriesData<SerializdUpcomingEpisode[]>({
+      queryKey: [...serializdQueryKeys.all, 'upcoming'],
+    })
+    .flatMap(([, data]) => data ?? [])
+    .find((episode) => episode.item.id === id)?.item;
 }

@@ -7,19 +7,13 @@ export function builderTmdbToken(): string {
   return process.env.EXPO_PUBLIC_TMDB_TOKEN ?? '';
 }
 
-export function resolveTmdbToken(sources: {
-  builder: string;
-  stored: string | null;
-}): string {
+export function resolveTmdbToken(sources: { builder: string; stored: string | null }): string {
   return sources.builder !== '' ? sources.builder : (sources.stored ?? '');
 }
 
 export type TmdbImageSize = 'w185' | 'w300' | 'w342' | 'w780' | 'w1280' | 'original';
 
-export function tmdbImageUrl(
-  path: string | null | undefined,
-  size: TmdbImageSize,
-): string {
+export function tmdbImageUrl(path: string | null | undefined, size: TmdbImageSize): string {
   if (path == null || path === '') return '';
   return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
 }

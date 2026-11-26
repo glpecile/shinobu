@@ -6,46 +6,70 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 export type DiscussionBoard = 'a' | 'tv' | 'co';
 
-const catalogSchema = Schema.Array(Schema.Struct({
-  threads: Schema.Array(Schema.Struct({
-    no: Schema.Int,
-    sub: Schema.optional(Schema.String),
-    com: Schema.optional(Schema.String),
-    tim: Schema.optional(Schema.Int),
-    spoiler: Schema.optional(Schema.Int),
-    filedeleted: Schema.optional(Schema.Int),
-  })),
-}));
+const catalogSchema = Schema.Array(
+  Schema.Struct({
+    threads: Schema.Array(
+      Schema.Struct({
+        no: Schema.Int,
+        sub: Schema.optional(Schema.String),
+        com: Schema.optional(Schema.String),
+        tim: Schema.optional(Schema.Int),
+        spoiler: Schema.optional(Schema.Int),
+        filedeleted: Schema.optional(Schema.Int),
+      }),
+    ),
+  }),
+);
 
 export function discussionBoards(item: NormalizedMediaItem): DiscussionBoard[] {
-  const anime = item.type === 'ANIME' || item.externalIds.anilist != null || item.externalIds.mal != null;
+  const anime =
+    item.type === 'ANIME' || item.externalIds.anilist != null || item.externalIds.mal != null;
   const movie = item.type === 'MOVIE' || item.isFilm === true;
-  return anime ? movie ? ['a', 'tv', 'co'] : ['a'] : ['tv', 'co'];
+  return anime ? (movie ? ['a', 'tv', 'co'] : ['a']) : ['tv', 'co'];
 }
 
 export function plainText(value: string): string {
-  return value.replace(/<[^>]*>/g, ' ').replace(/&#(x[\da-f]+|\d+);/gi, (_, code: string) => {
-    const point = code.toLowerCase().startsWith('x') ? parseInt(code.slice(1), 16) : Number(code);
-    return point <= 0x10ffff ? String.fromCodePoint(point) : ' ';
-  }).replace(/&(?:amp|quot|apos|lt|gt|nbsp);/gi, (entity) => {
-    switch (entity.toLowerCase()) {
-      case '&amp;': return '&';
-      case '&quot;': return '"';
-      case '&apos;': return "'";
-      default: return ' ';
-    }
-  });
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&#(x[\da-f]+|\d+);/gi, (_, code: string) => {
+      const point = code.toLowerCase().startsWith('x') ? parseInt(code.slice(1), 16) : Number(code);
+      return point <= 0x10ffff ? String.fromCodePoint(point) : ' ';
+    })
+    .replace(/&(?:amp|quot|apos|lt|gt|nbsp);/gi, (entity) => {
+      switch (entity.toLowerCase()) {
+        case '&amp;':
+          return '&';
+        case '&quot;':
+          return '"';
+        case '&apos;':
+          return "'";
+        default:
+          return ' ';
+      }
+    });
 }
 
 function normalize(value: string): string {
-  return plainText(value).normalize('NFKC').toLowerCase()
-    .replace(/['’]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  return plainText(value)
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
 }
 
 const EPISODE_MARKERS = /\bs(\d+)\s*e(\d+)\b|\b(?:episode|ep|e)\.?\s*#?\s*(\d+)\b/gi;
-const DISCUSSION_CONTEXT = new RegExp(`${EPISODE_MARKERS.source}|\\b(?:discussion|general|thread)\\b`, 'i');
+const DISCUSSION_CONTEXT = new RegExp(
+  `${EPISODE_MARKERS.source}|\\b(?:discussion|general|thread)\\b`,
+  'i',
+);
 
-export function indexThread(thread: { id: number; subject: string; opening: string; image?: string }) {
+export function indexThread(thread: {
+  id: number;
+  subject: string;
+  opening: string;
+  image?: string;
+}) {
   const raw = `${thread.subject} ${thread.opening}`;
   const subject = normalize(thread.subject);
   return {
@@ -56,15 +80,19 @@ export function indexThread(thread: { id: number; subject: string; opening: stri
     subjectText: ` ${subject} `,
     subjectLower: thread.subject.toLowerCase(),
     subjectHasContext: DISCUSSION_CONTEXT.test(thread.subject),
-    horrorGeneral: /^(?:hsg\s+)?horror(?:\s+(?:and\s+)?supernatural)?(?:\s+(?:movies?|films?|shows?|tv))?\s+(?:general|discussion|thread)\b/.test(subject),
+    horrorGeneral:
+      /^(?:hsg\s+)?horror(?:\s+(?:and\s+)?supernatural)?(?:\s+(?:movies?|films?|shows?|tv))?\s+(?:general|discussion|thread)\b/.test(
+        subject,
+      ),
     markers: [...raw.matchAll(EPISODE_MARKERS)].map((marker) =>
       marker[3] != null
         ? { number: Number(marker[3]) }
-        : { season: Number(marker[1]), number: Number(marker[2]) }),
+        : { season: Number(marker[1]), number: Number(marker[2]) },
+    ),
   };
 }
 
-export const getDiscussionCatalog = Effect.fn('getDiscussionCatalog')(function*(
+export const getDiscussionCatalog = Effect.fn('getDiscussionCatalog')(function* (
   fetch: HttpFetch,
   board: DiscussionBoard,
 ) {
@@ -78,13 +106,19 @@ export const getDiscussionCatalog = Effect.fn('getDiscussionCatalog')(function*(
     catch: (cause) => new Error('Could not load discussion catalog', { cause }),
   });
   const pages = yield* Schema.decodeUnknownEffect(catalogSchema)(body);
-  return pages.flatMap((page) => page.threads).map((thread) => indexThread({
-    id: thread.no,
-    subject: plainText(thread.sub ?? ''),
-    opening: plainText(thread.com ?? ''),
-    image: thread.tim != null && thread.tim > 0 && thread.spoiler !== 1 && thread.filedeleted !== 1
-      ? `https://i.4cdn.org/${board}/${thread.tim}s.jpg` : '',
-  }));
+  return pages
+    .flatMap((page) => page.threads)
+    .map((thread) =>
+      indexThread({
+        id: thread.no,
+        subject: plainText(thread.sub ?? ''),
+        opening: plainText(thread.com ?? ''),
+        image:
+          thread.tim != null && thread.tim > 0 && thread.spoiler !== 1 && thread.filedeleted !== 1
+            ? `https://i.4cdn.org/${board}/${thread.tim}s.jpg`
+            : '',
+      }),
+    );
 });
 
 export function matchDiscussionThreads(
@@ -95,26 +129,51 @@ export function matchDiscussionThreads(
 ) {
   const titles = [item.title, ...Object.values(item.titles ?? {}), ...(item.titleAliases ?? [])]
     .filter((title): title is string => title != null && title.trim() !== '')
-    .map(normalize).filter((title) => title !== '');
-  const initials = titles.map((title) => title.split(' ').map((word) => word[0]).join(''))
+    .map(normalize)
+    .filter((title) => title !== '');
+  const initials = titles
+    .map((title) =>
+      title
+        .split(' ')
+        .map((word) => word[0])
+        .join(''),
+    )
     .filter((alias) => /^[a-z]{3,6}$/.test(alias));
   const horror = item.genres?.some((genre) => normalize(genre) === 'horror') === true;
-  return catalog.flatMap((thread) => {
-    if (thread.id <= 0) return [];
-    const horrorGeneral = horror && thread.horrorGeneral;
-    const abbreviated = initials.some((alias) => thread.subjectText.includes(` ${alias} `) && (
-      thread.subjectHasContext || thread.subjectLower.includes(`/${alias}/`)
-    ));
-    if (!titles.some((title) => thread.text.includes(` ${title} `)) && !abbreviated && !horrorGeneral) return [];
-    if (!horrorGeneral && number != null && thread.markers.length > 0 && !thread.markers.some((marker) =>
-      marker.season == null ? marker.number === number
-        : marker.season === season && marker.number === number,
-    )) return [];
-    return [{
-      id: thread.id,
-      title: thread.subject.trim() || item.title,
-      image: thread.image,
-      episodeSpecific: !horrorGeneral && number != null && thread.markers.length > 0,
-    }];
-  }).sort((a, b) => b.id - a.id);
+  return catalog
+    .flatMap((thread) => {
+      if (thread.id <= 0) return [];
+      const horrorGeneral = horror && thread.horrorGeneral;
+      const abbreviated = initials.some(
+        (alias) =>
+          thread.subjectText.includes(` ${alias} `) &&
+          (thread.subjectHasContext || thread.subjectLower.includes(`/${alias}/`)),
+      );
+      if (
+        !titles.some((title) => thread.text.includes(` ${title} `)) &&
+        !abbreviated &&
+        !horrorGeneral
+      )
+        return [];
+      if (
+        !horrorGeneral &&
+        number != null &&
+        thread.markers.length > 0 &&
+        !thread.markers.some((marker) =>
+          marker.season == null
+            ? marker.number === number
+            : marker.season === season && marker.number === number,
+        )
+      )
+        return [];
+      return [
+        {
+          id: thread.id,
+          title: thread.subject.trim() || item.title,
+          image: thread.image,
+          episodeSpecific: !horrorGeneral && number != null && thread.markers.length > 0,
+        },
+      ];
+    })
+    .sort((a, b) => b.id - a.id);
 }

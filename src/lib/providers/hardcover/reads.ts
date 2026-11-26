@@ -37,7 +37,9 @@ const provider = Provider.Hardcover;
 function decode<S extends Schema.Constraint>(schema: S, detail: string) {
   return (data: unknown) =>
     Schema.decodeUnknownEffect(schema)(data).pipe(
-      Effect.mapError((error) => new ProviderDecodeError({ provider, detail: `${detail}: ${error.message}` })),
+      Effect.mapError(
+        (error) => new ProviderDecodeError({ provider, detail: `${detail}: ${error.message}` }),
+      ),
     );
 }
 
@@ -68,7 +70,9 @@ export function getViewer(deps: HardcoverDeps): Effect.Effect<HardcoverViewer, P
           username,
           ...(image?.url != null && image.url !== '' ? { avatar: image.url } : {}),
         })),
-        Effect.mapError(() => new ProviderDecodeError({ provider, detail: 'invalid viewer response' })),
+        Effect.mapError(
+          () => new ProviderDecodeError({ provider, detail: 'invalid viewer response' }),
+        ),
       ),
     ),
   );
@@ -163,7 +167,10 @@ export function getBookEntry(
       Schema.decodeUnknownEffect(bookEntryData)(data).pipe(
         Effect.mapError(
           (error) =>
-            new ProviderDecodeError({ provider, detail: `invalid library entry: ${error.message}` }),
+            new ProviderDecodeError({
+              provider,
+              detail: `invalid library entry: ${error.message}`,
+            }),
         ),
       ),
     ),
@@ -219,14 +226,18 @@ const LIBRARY = `query Library($statuses: [Int!]!) {
  * it. Read books are left out: no surface lists them, and a long-time
  * reader's finished shelf would ride along on every refresh.
  */
-export function getLibrary(deps: HardcoverDeps): Effect.Effect<HardcoverLibraryEntry[], ProviderError> {
+export function getLibrary(
+  deps: HardcoverDeps,
+): Effect.Effect<HardcoverLibraryEntry[], ProviderError> {
   return hardcoverRequest<unknown>(deps, LIBRARY, {
     variables: {
       statuses: [HardcoverStatus.WantToRead, HardcoverStatus.Reading],
     },
   }).pipe(
     Effect.flatMap(decode(libraryData, 'invalid library response')),
-    Effect.map((data) => (data.me[0]?.user_books ?? []).flatMap((row) => normalizeHardcoverLibraryRow(row) ?? [])),
+    Effect.map((data) =>
+      (data.me[0]?.user_books ?? []).flatMap((row) => normalizeHardcoverLibraryRow(row) ?? []),
+    ),
   );
 }
 
@@ -276,18 +287,26 @@ export function getReadingJournal(
 
 /** `results` is Typesense's raw response; each hit's `document` is one book. */
 const searchData = Schema.Struct({
-  search: optionalNullable(Schema.Struct({
-    error: optionalNullable(Schema.String),
-    results: optionalNullable(Schema.Struct({
-      hits: optionalNullable(Schema.Array(Schema.Struct({
-        document: Schema.Struct({
-          ...hardcoverBookFields,
-          id: optionalNullable(hardcoverBookFields.id),
-          author_names: optionalNullable(Schema.Array(Schema.String)),
+  search: optionalNullable(
+    Schema.Struct({
+      error: optionalNullable(Schema.String),
+      results: optionalNullable(
+        Schema.Struct({
+          hits: optionalNullable(
+            Schema.Array(
+              Schema.Struct({
+                document: Schema.Struct({
+                  ...hardcoverBookFields,
+                  id: optionalNullable(hardcoverBookFields.id),
+                  author_names: optionalNullable(Schema.Array(Schema.String)),
+                }),
+              }),
+            ),
+          ),
         }),
-      }))),
-    })),
-  })),
+      ),
+    }),
+  ),
 });
 
 export interface HardcoverBookHit {
@@ -320,34 +339,55 @@ export const searchBooks = Effect.fnUntraced(function* (
   return (data.search?.results?.hits ?? []).flatMap(({ document: { id, ...document } }) =>
     id == null
       ? []
-      : [{ item: normalizeHardcoverBook({ ...document, id }, nowIso), authors: document.author_names ?? [] }],
+      : [
+          {
+            item: normalizeHardcoverBook({ ...document, id }, nowIso),
+            authors: document.author_names ?? [],
+          },
+        ],
   );
 });
 
 const bookData = Schema.Struct({
-  books_by_pk: optionalNullable(Schema.Struct({
-    ...hardcoverBookFields,
-    contributions: optionalNullable(Schema.Array(Schema.Struct({
-      contribution: optionalNullable(Schema.String),
-      author: optionalNullable(Schema.Struct({
-        id: Schema.Number,
-        name: Schema.String,
-        image: hardcoverBookFields.image,
-      })),
-    }))),
-    featured_book_series: optionalNullable(Schema.Struct({
-      position: optionalNullable(numeric),
-      series: optionalNullable(Schema.Struct({ name: Schema.String })),
-    })),
-    book_characters: optionalNullable(Schema.Array(Schema.Struct({
-      only_mentioned: optionalNullable(Schema.Boolean),
-      character: optionalNullable(Schema.Struct({
-        id: numeric,
-        name: Schema.String,
-      })),
-    }))),
-    cached_similar_book_ids: optionalNullable(Schema.Array(numeric)),
-  })),
+  books_by_pk: optionalNullable(
+    Schema.Struct({
+      ...hardcoverBookFields,
+      contributions: optionalNullable(
+        Schema.Array(
+          Schema.Struct({
+            contribution: optionalNullable(Schema.String),
+            author: optionalNullable(
+              Schema.Struct({
+                id: Schema.Number,
+                name: Schema.String,
+                image: hardcoverBookFields.image,
+              }),
+            ),
+          }),
+        ),
+      ),
+      featured_book_series: optionalNullable(
+        Schema.Struct({
+          position: optionalNullable(numeric),
+          series: optionalNullable(Schema.Struct({ name: Schema.String })),
+        }),
+      ),
+      book_characters: optionalNullable(
+        Schema.Array(
+          Schema.Struct({
+            only_mentioned: optionalNullable(Schema.Boolean),
+            character: optionalNullable(
+              Schema.Struct({
+                id: numeric,
+                name: Schema.String,
+              }),
+            ),
+          }),
+        ),
+      ),
+      cached_similar_book_ids: optionalNullable(Schema.Array(numeric)),
+    }),
+  ),
 });
 
 export interface HardcoverBookSeries {
@@ -428,15 +468,22 @@ export const getBook = Effect.fnUntraced(function* (
     characters: (book.book_characters ?? []).flatMap(({ character, only_mentioned }) =>
       character == null
         ? []
-        : [{
-            id: `hardcover-character-${character.id}`,
-            name: character.name,
-            role: only_mentioned === true ? 'Mentioned' : '',
-            image: '',
-          }],
+        : [
+            {
+              id: `hardcover-character-${character.id}`,
+              name: character.name,
+              role: only_mentioned === true ? 'Mentioned' : '',
+              image: '',
+            },
+          ],
     ),
     ...(series?.series != null
-      ? { series: { name: series.series.name, ...(series.position != null ? { position: series.position } : {}) } }
+      ? {
+          series: {
+            name: series.series.name,
+            ...(series.position != null ? { position: series.position } : {}),
+          },
+        }
       : {}),
     similarBookIds: book.cached_similar_book_ids ?? [],
   };
@@ -467,20 +514,24 @@ export const getBooks = Effect.fnUntraced(function* (
 });
 
 const authorData = Schema.Struct({
-  authors: Schema.Array(Schema.Struct({
-    id: Schema.Number,
-    name: Schema.String,
-    slug: optionalNullable(Schema.String),
-    bio: optionalNullable(Schema.String),
-    born_date: optionalNullable(Schema.String),
-    death_date: optionalNullable(Schema.String),
-    location: optionalNullable(Schema.String),
-    image: hardcoverBookFields.image,
-  })),
-  books: Schema.Array(Schema.Struct({
-    ...hardcoverBookFields,
-    contributions: Schema.Array(Schema.Struct({ contribution: optionalNullable(Schema.String) })),
-  })),
+  authors: Schema.Array(
+    Schema.Struct({
+      id: Schema.Number,
+      name: Schema.String,
+      slug: optionalNullable(Schema.String),
+      bio: optionalNullable(Schema.String),
+      born_date: optionalNullable(Schema.String),
+      death_date: optionalNullable(Schema.String),
+      location: optionalNullable(Schema.String),
+      image: hardcoverBookFields.image,
+    }),
+  ),
+  books: Schema.Array(
+    Schema.Struct({
+      ...hardcoverBookFields,
+      contributions: Schema.Array(Schema.Struct({ contribution: optionalNullable(Schema.String) })),
+    }),
+  ),
 });
 
 const AUTHOR_BOOKS_LIMIT = 100;
@@ -529,7 +580,9 @@ export const getAuthor = Effect.fnUntraced(function* (
   }
 
   const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();
-  const rows = new Map<string, PersonCreditRow>([['Author', { role: 'Author', items: [], details: {}, roles: {} }]]);
+  const rows = new Map<string, PersonCreditRow>([
+    ['Author', { role: 'Author', items: [], details: {}, roles: {} }],
+  ]);
   for (const { contributions, ...book } of data.books) {
     const item = normalizeHardcoverBook(book, nowIso);
     // An empty role is the book's author, as on the book page.

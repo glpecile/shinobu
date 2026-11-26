@@ -12,7 +12,7 @@ Two things compound:
 
 1. The sidebar was `w-full` below `md` and `md:w-60 md:transition-[width]`
    above it. The transition becomes active in the same style recalc that
-   changes the width, so crossing `md` *animated* `100%` → `240px` over 220ms.
+   changes the width, so crossing `md` _animated_ `100%` → `240px` over 220ms.
    The content column started at ~16px wide (sampled per frame) and grew back.
 2. Legend List (3.3.11, `handleLayout`) sets `needsOtherAxisSize` when the list
    measures under 10px across, then pins the scroller to its measured cross

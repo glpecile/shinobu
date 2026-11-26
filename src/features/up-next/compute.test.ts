@@ -3,12 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { NormalizedMediaItem } from '@/types/media';
 import { normalizeCurrentAnimeEntry } from '@/lib/providers/anilist/normalize';
 
-import {
-  calendarWeek,
-  nextSplitChange,
-  computeUpNext,
-  selectUpNextPool,
-} from './compute';
+import { calendarWeek, nextSplitChange, computeUpNext, selectUpNextPool } from './compute';
 import { entryLabel } from './entry';
 import type {
   AniListUpNextInput,
@@ -22,20 +17,11 @@ import type {
 
 const NOW = new Date(2026, 6, 23, 20, 0);
 
-function localInstant(
-  year: number,
-  month: number,
-  day: number,
-  hours = 0,
-  minutes = 0,
-): string {
+function localInstant(year: number, month: number, day: number, hours = 0, minutes = 0): string {
   return new Date(year, month - 1, day, hours, minutes).toISOString();
 }
 
-function show(
-  traktId: number,
-  overrides: Partial<NormalizedMediaItem> = {},
-): NormalizedMediaItem {
+function show(traktId: number, overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return {
     id: `trakt-${traktId}`,
     title: `Show ${traktId}`,
@@ -111,10 +97,7 @@ function calendarInput(
   return { item, source: 'trakt', episode, ...overrides };
 }
 
-function film(
-  traktId: number,
-  overrides: Partial<NormalizedMediaItem> = {},
-): NormalizedMediaItem {
+function film(traktId: number, overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return {
     id: `trakt-${traktId}`,
     title: `Film ${traktId}`,
@@ -272,9 +255,9 @@ describe('computeUpNext — Trakt shows', () => {
       }),
       NOW,
     );
-    expect(
-      data.continueWatching.map((entry) => entry.item.externalIds.trakt),
-    ).toEqual([12, 11, 10, 9]);
+    expect(data.continueWatching.map((entry) => entry.item.externalIds.trakt)).toEqual([
+      12, 11, 10, 9,
+    ]);
   });
 });
 
@@ -359,7 +342,11 @@ describe('computeUpNext — film releases (U5/R3)', () => {
       inputs({
         releases: [
           releaseInput(
-            film(301, { id: 'letterboxd-film-301', externalIds: ids, title: 'Film 301 (Letterboxd)' }),
+            film(301, {
+              id: 'letterboxd-film-301',
+              externalIds: ids,
+              title: 'Film 301 (Letterboxd)',
+            }),
             'theatrical',
             '2026-07-24',
             'letterboxd',
@@ -467,12 +454,8 @@ describe('computeUpNext — timezone boundaries (todos/006)', () => {
       }),
       now,
     );
-    expect(
-      data.continueWatching.map((entry) => entry.item.externalIds.trakt),
-    ).toEqual([11]);
-    expect(data.calendar.map((entry) => entry.item.externalIds.trakt)).toEqual([
-      12,
-    ]);
+    expect(data.continueWatching.map((entry) => entry.item.externalIds.trakt)).toEqual([11]);
+    expect(data.calendar.map((entry) => entry.item.externalIds.trakt)).toEqual([12]);
   });
 
   test('an instant that already passed counts as aired across a date-line boundary', () => {
@@ -495,9 +478,7 @@ describe('computeUpNext — timezone boundaries (todos/006)', () => {
   test('a date-only air date is read as local midnight, not UTC midnight', () => {
     const data = computeUpNext(
       inputs({
-        calendar: [
-          calendarInput(show(14), { season: 1, number: 2, firstAired: '2026-07-24' }),
-        ],
+        calendar: [calendarInput(show(14), { season: 1, number: 2, firstAired: '2026-07-24' })],
       }),
       NOW,
     );
@@ -566,9 +547,7 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
   test('no pointer + a known total → aired while episodes remain', () => {
     const data = computeUpNext(
       inputs({
-        anilist: [
-          anilistInput(anime(5, { currentProgress: 3 }), { totalEpisodes: 12 }),
-        ],
+        anilist: [anilistInput(anime(5, { currentProgress: 3 }), { totalEpisodes: 12 })],
       }),
       NOW,
     );
@@ -580,9 +559,7 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
   test('no pointer + caught up to the total → excluded', () => {
     const data = computeUpNext(
       inputs({
-        anilist: [
-          anilistInput(anime(6, { currentProgress: 12 }), { totalEpisodes: 12 }),
-        ],
+        anilist: [anilistInput(anime(6, { currentProgress: 12 }), { totalEpisodes: 12 })],
       }),
       NOW,
     );
@@ -618,32 +595,37 @@ describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
   test('a planned sequel waits for its prequel to be completed without hiding current progress or its upcoming premiere', () => {
     const airingAt = Math.floor(NOW.getTime() / 1000);
     for (const status of ['CURRENT', null, 'COMPLETED']) {
-      const sequel = normalizeCurrentAnimeEntry({
-        status: 'PLANNING',
-        progress: 0,
-        media: {
-          id: 40,
-          episodes: 12,
-          nextAiringEpisode: { episode: 1, airingAt },
-          airingSchedule: { nodes: [{ episode: 1, airingAt }] },
-          relations: {
-            edges: [
-              {
-                relationType: 'PREQUEL',
-                node: { type: 'ANIME', mediaListEntry: status == null ? null : { status } },
-              },
-              { relationType: 'SIDE_STORY', node: { type: 'ANIME' } },
-              { relationType: 'PREQUEL', node: { type: 'MANGA' } },
-            ],
+      const sequel = normalizeCurrentAnimeEntry(
+        {
+          status: 'PLANNING',
+          progress: 0,
+          media: {
+            id: 40,
+            episodes: 12,
+            nextAiringEpisode: { episode: 1, airingAt },
+            airingSchedule: { nodes: [{ episode: 1, airingAt }] },
+            relations: {
+              edges: [
+                {
+                  relationType: 'PREQUEL',
+                  node: { type: 'ANIME', mediaListEntry: status == null ? null : { status } },
+                },
+                { relationType: 'SIDE_STORY', node: { type: 'ANIME' } },
+                { relationType: 'PREQUEL', node: { type: 'MANGA' } },
+              ],
+            },
           },
         },
-      }, NOW.toISOString());
+        NOW.toISOString(),
+      );
       const current = anilistInput(anime(38), { totalEpisodes: 24 });
       const data = inputs({ anilist: [current, sequel] });
-      expect(computeUpNext(data, NOW).continueWatching.map((entry) => entry.item.id))
-        .toEqual(status === 'COMPLETED' ? ['anilist-40', 'anilist-38'] : ['anilist-38']);
-      expect(computeUpNext(data, new Date(NOW.getTime() - 1)).calendar.map((entry) => entry.item.id))
-        .toEqual(['anilist-40']);
+      expect(computeUpNext(data, NOW).continueWatching.map((entry) => entry.item.id)).toEqual(
+        status === 'COMPLETED' ? ['anilist-40', 'anilist-38'] : ['anilist-38'],
+      );
+      expect(
+        computeUpNext(data, new Date(NOW.getTime() - 1)).calendar.map((entry) => entry.item.id),
+      ).toEqual(['anilist-40']);
     }
   });
 
@@ -677,9 +659,9 @@ describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
         source: 'anilist',
         episode: { number: 1 },
       });
-      expect(
-        computeUpNext(refreshed, new Date(2026, 7, 1, 12, 0, 0, 1)).continueWatching,
-      ).toEqual([]);
+      expect(computeUpNext(refreshed, new Date(2026, 7, 1, 12, 0, 0, 1)).continueWatching).toEqual(
+        [],
+      );
     }
   });
 
@@ -765,9 +747,7 @@ describe('computeUpNext — cross-provider dedupe (R5)', () => {
             firstAired: AIRED,
           }),
         ],
-        anilist: [
-          anilistInput(anime(21, { currentProgress: 5 }), { totalEpisodes: 24 }),
-        ],
+        anilist: [anilistInput(anime(21, { currentProgress: 5 }), { totalEpisodes: 24 })],
       }),
       NOW,
     );
@@ -961,7 +941,11 @@ describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () =
     expect(data.calendar).toHaveLength(1);
     expect(data.calendar[0].source).toBe('anilist');
     expect(data.calendar[0].item.externalIds).toEqual({
-      anilist: 901, mal: 55555, simkl: 9901, tmdb: 283428, tvdb: 459627,
+      anilist: 901,
+      mal: 55555,
+      simkl: 9901,
+      tmdb: 283428,
+      tvdb: 459627,
     });
     expect(episodeOf(data.calendar[0]).number).toBe(6);
     expect(item.externalIds).toEqual({ anilist: 901, mal: 55555 });
@@ -1018,11 +1002,7 @@ describe('calendarWeek — the week strip buckets (U8)', () => {
   test('the week always has one cell per window day, empty ones included', () => {
     const week = calendarWeek(upcoming(40, 7, 25), NOW);
     expect(week).toHaveLength(7);
-    expect(week.map((day) => day.label).slice(0, 3)).toEqual([
-      'Today',
-      'Tomorrow',
-      'Saturday',
-    ]);
+    expect(week.map((day) => day.label).slice(0, 3)).toEqual(['Today', 'Tomorrow', 'Saturday']);
     expect(week[2].entries).toHaveLength(1);
     expect(week[0].entries).toEqual([]);
   });
@@ -1037,9 +1017,7 @@ describe('calendarWeek — the week strip buckets (U8)', () => {
       source: 'trakt',
     };
     const week = calendarWeek([release], NOW);
-    expect(week[1].entries.map((entry) => entry.id)).toEqual([
-      'trakt-60-theatrical',
-    ]);
+    expect(week[1].entries.map((entry) => entry.id)).toEqual(['trakt-60-theatrical']);
     expect(week[0].entries).toEqual([]);
   });
 });
@@ -1076,9 +1054,7 @@ describe('episodesBehind', () => {
     );
     expect(data.continueWatching[0].kind).toBe('episode');
     expect(
-      data.continueWatching[0].kind === 'episode'
-        ? data.continueWatching[0].episodesBehind
-        : null,
+      data.continueWatching[0].kind === 'episode' ? data.continueWatching[0].episodesBehind : null,
     ).toBeUndefined();
   });
 

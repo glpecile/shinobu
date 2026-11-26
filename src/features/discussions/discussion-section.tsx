@@ -10,7 +10,11 @@ import { Section } from '@/components/section';
 import { Sheet } from '@/components/sheet';
 import { SuspenseSection } from '@/components/suspense-section';
 import { discussionBoards, type DiscussionBoard } from '@/lib/http/fourchan';
-import { discussionSubreddit, subredditSearchTerm, type DiscussionSubreddit } from '@/lib/http/reddit';
+import {
+  discussionSubreddit,
+  subredditSearchTerm,
+  type DiscussionSubreddit,
+} from '@/lib/http/reddit';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
 import { DURATION, EASE_OUT } from '@/lib/motion';
@@ -38,15 +42,21 @@ interface DiscussionChrome {
   onOpenChange: (open: boolean) => void;
 }
 
-export function DiscussionSection({ item, episode }: {
-  item: NormalizedMediaItem; episode?: { season: number; number: number };
+export function DiscussionSection({
+  item,
+  episode,
+}: {
+  item: NormalizedMediaItem;
+  episode?: { season: number; number: number };
 }) {
   const [open, setOpen] = useState(false);
   const [redditAttempt, setRedditAttempt] = useState(0);
   const queryClient = useQueryClient();
   const { data: anilistId, isLoading: mappingLoading } = useAniListIdByTmdbQuery(item);
   const animeId = item.externalIds.anilist ?? anilistId ?? null;
-  const { data: anime, isLoading: animeLoading } = useAnimeByIdQuery(item.id.startsWith('anilist-') ? null : animeId);
+  const { data: anime, isLoading: animeLoading } = useAnimeByIdQuery(
+    item.id.startsWith('anilist-') ? null : animeId,
+  );
   const searchItem = {
     ...item,
     titles: { ...item.titles, ...anime?.titles },
@@ -74,8 +84,15 @@ export function DiscussionSection({ item, episode }: {
   };
   const fourchanOnly = <DiscussionBody {...chrome} fade threads={fourchan.threads} />;
   return (
-    <SuspenseSection animateFallback={false} errorFallback={fourchanOnly} fallback={fourchanOnly} resetKey={redditAttempt}>
-      {mappingLoading || animeLoading ? fourchanOnly : (
+    <SuspenseSection
+      animateFallback={false}
+      errorFallback={fourchanOnly}
+      fallback={fourchanOnly}
+      resetKey={redditAttempt}
+    >
+      {mappingLoading || animeLoading ? (
+        fourchanOnly
+      ) : (
         <RedditDiscussions
           {...chrome}
           episode={episode}
@@ -87,80 +104,122 @@ export function DiscussionSection({ item, episode }: {
   );
 }
 
-function RedditDiscussions({ fourchan, item, episode, ...chrome }: DiscussionChrome & {
-  fourchan: Discussion[]; item: NormalizedMediaItem; episode?: { season: number; number: number };
+function RedditDiscussions({
+  fourchan,
+  item,
+  episode,
+  ...chrome
+}: DiscussionChrome & {
+  fourchan: Discussion[];
+  item: NormalizedMediaItem;
+  episode?: { season: number; number: number };
 }) {
-  const reddit = useSuspenseRedditDiscussionsQuery(chrome.subreddit, chrome.term, item, episode?.season, episode?.number);
-  return <DiscussionBody {...chrome} fade={fourchan.length === 0} threads={[...fourchan, ...reddit]} />;
+  const reddit = useSuspenseRedditDiscussionsQuery(
+    chrome.subreddit,
+    chrome.term,
+    item,
+    episode?.season,
+    episode?.number,
+  );
+  return (
+    <DiscussionBody {...chrome} fade={fourchan.length === 0} threads={[...fourchan, ...reddit]} />
+  );
 }
 
-function DiscussionBody({ threads, boards, subreddit, term, isFetching, onRefresh, open, onOpenChange, fade }: DiscussionChrome & {
-  threads: Discussion[]; fade: boolean;
+function DiscussionBody({
+  threads,
+  boards,
+  subreddit,
+  term,
+  isFetching,
+  onRefresh,
+  open,
+  onOpenChange,
+  fade,
+}: DiscussionChrome & {
+  threads: Discussion[];
+  fade: boolean;
 }) {
   const reducedMotion = useReducedMotion();
   if (threads.length === 0) return null;
   return (
-    <AnimatedView style={fade ? {
-      animationName: discussionFade,
-      animationDuration: reducedMotion ? 1 : DURATION.swap,
-      animationTimingFunction: EASE_OUT,
-      animationFillMode: 'both',
-    } : undefined}>
-    <Section>
-      <Section.Header>
-        <Section.Title>Discussion</Section.Title>
-        <View className="flex-1" />
-        <Button
-          icon={<Button.Icon name="ellipsis-horizontal" />}
-          iconOnly
-          label="Discussion options"
-          loading={isFetching}
-          onPress={() => onOpenChange(true)}
-          size="sm"
-          variant="quiet"
-        />
-      </Section.Header>
-      <Rail contentContainerClassName="gap-4">
-        {threads.map(({ key, ...preview }) => <DiscussionCard key={key} {...preview} />)}
-      </Rail>
-      <Sheet onClose={() => onOpenChange(false)} open={open}>
-        <Sheet.Header className="items-center">
-          <Text className="font-display text-xl text-foreground">Discussion options</Text>
-        </Sheet.Header>
-        <View className="mt-5 gap-2">
+    <AnimatedView
+      style={
+        fade
+          ? {
+              animationName: discussionFade,
+              animationDuration: reducedMotion ? 1 : DURATION.swap,
+              animationTimingFunction: EASE_OUT,
+              animationFillMode: 'both',
+            }
+          : undefined
+      }
+    >
+      <Section>
+        <Section.Header>
+          <Section.Title>Discussion</Section.Title>
+          <View className="flex-1" />
           <Button
-            align="start"
-            icon={<Button.Icon name="refresh" />}
-            label="Refresh discussions"
+            icon={<Button.Icon name="ellipsis-horizontal" />}
+            iconOnly
+            label="Discussion options"
             loading={isFetching}
-            loadingLabel="Refreshing discussions"
-            onPress={() => {
-              onOpenChange(false);
-              onRefresh();
-            }}
+            onPress={() => onOpenChange(true)}
+            size="sm"
             variant="quiet"
           />
-          {boards.map((board) => (
-            <DiscussionLink
-              accessibilityLabel={`Open 4chan /${board}/ catalog`}
-              key={board}
-              label={`/${board}/`}
-              url={`https://boards.4chan.org/${board}/catalog`}
-            />
+        </Section.Header>
+        <Rail contentContainerClassName="gap-4">
+          {threads.map(({ key, ...preview }) => (
+            <DiscussionCard key={key} {...preview} />
           ))}
-          <DiscussionLink
-            accessibilityLabel={`Search r/${subreddit} on Reddit`}
-            label={`r/${subreddit}`}
-            url={`https://www.reddit.com/r/${subreddit}/search/?q=${encodeURIComponent(term)}&restrict_sr=on&sort=new`}
-          />
-        </View>
-      </Sheet>
-    </Section>
+        </Rail>
+        <Sheet onClose={() => onOpenChange(false)} open={open}>
+          <Sheet.Header className="items-center">
+            <Text className="font-display text-xl text-foreground">Discussion options</Text>
+          </Sheet.Header>
+          <View className="mt-5 gap-2">
+            <Button
+              align="start"
+              icon={<Button.Icon name="refresh" />}
+              label="Refresh discussions"
+              loading={isFetching}
+              loadingLabel="Refreshing discussions"
+              onPress={() => {
+                onOpenChange(false);
+                onRefresh();
+              }}
+              variant="quiet"
+            />
+            {boards.map((board) => (
+              <DiscussionLink
+                accessibilityLabel={`Open 4chan /${board}/ catalog`}
+                key={board}
+                label={`/${board}/`}
+                url={`https://boards.4chan.org/${board}/catalog`}
+              />
+            ))}
+            <DiscussionLink
+              accessibilityLabel={`Search r/${subreddit} on Reddit`}
+              label={`r/${subreddit}`}
+              url={`https://www.reddit.com/r/${subreddit}/search/?q=${encodeURIComponent(term)}&restrict_sr=on&sort=new`}
+            />
+          </View>
+        </Sheet>
+      </Section>
     </AnimatedView>
   );
 }
 
-function DiscussionLink({ label, url, accessibilityLabel }: { label: string; url: string; accessibilityLabel: string }) {
+function DiscussionLink({
+  label,
+  url,
+  accessibilityLabel,
+}: {
+  label: string;
+  url: string;
+  accessibilityLabel: string;
+}) {
   const { loading, open } = useLinkHandoff(() => openExternalUrl(url, { inApp: false }));
   return (
     <Button

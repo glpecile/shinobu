@@ -1,9 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  useLocalSearchParams,
-  useRouter,
-  type ErrorBoundaryProps,
-} from 'expo-router';
+import { useLocalSearchParams, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import { Suspense, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -15,10 +11,7 @@ import Head from '@/components/head';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
-import {
-  filterWatchlistEntries,
-  parseWatchlistProvider,
-} from '@/features/watchlist/filter';
+import { filterWatchlistEntries, parseWatchlistProvider } from '@/features/watchlist/filter';
 import { PosterWall } from '@/features/media-layout/poster-wall';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 import { MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
@@ -38,10 +31,7 @@ import { useLetterboxdWatchlistPagesQuery } from '@/state/queries/letterboxd';
 import { useMediaMetadata } from '@/state/queries/media-metadata';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { ProviderFailure } from '@/state/queries/settle';
-import {
-  refreshWatchlistInputs,
-  watchlistQueryKeys,
-} from '@/state/queries/watchlist';
+import { refreshWatchlistInputs, watchlistQueryKeys } from '@/state/queries/watchlist';
 
 function LegFailureNotice({
   failures,
@@ -193,11 +183,7 @@ function WatchlistGrid({
       {layout}
       <CardActionsSheet
         {...sheetProps}
-        watchlistRemoval={
-          activeEntry == null
-            ? null
-            : { entry: activeEntry, errors, incomplete }
-        }
+        watchlistRemoval={activeEntry == null ? null : { entry: activeEntry, errors, incomplete }}
       />
     </>
   );
@@ -222,13 +208,7 @@ export default function WatchlistScreen() {
       <Head>
         <title>Watchlist — Shinobu</title>
       </Head>
-      <View
-        className={cn(
-          'flex-row items-center gap-3 px-6',
-          screenHeaderTopPadding,
-          'pb-4',
-        )}
-      >
+      <View className={cn('flex-row items-center gap-3 px-6', screenHeaderTopPadding, 'pb-4')}>
         <BackButton className="-ml-2" onPress={goBack} />
         <Text className="text-2xl font-display text-foreground">Watchlist</Text>
       </View>

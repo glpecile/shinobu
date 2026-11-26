@@ -5,8 +5,8 @@ web motion system, then apply `review-animations` to the result.
 
 ## Opportunities
 
-| Location | Today | Purpose | Frequency | Recipe |
-| --- | --- | --- | --- | --- |
+| Location                                                | Today                                                                                  | Purpose          | Frequency    | Recipe                                                                                                                                                         |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `components/overlay-actions-button.tsx` and its callers | Hover actions appear and disappear abruptly; two callers unmount them on pointer leave | State indication | Tens per day | Retarget opacity with `EASE_OUT`, 120ms on reveal and exit. Keep focus reveal instant. No movement, including with reduced motion. Keep hover callers mounted. |
 
 ## Rejected candidates
@@ -46,14 +46,14 @@ hardware animation timing remains a separate check.
 
 ## Review
 
-| Before | After | Why |
-| --- | --- | --- |
-| Hover actions snap into place | Opacity retargets in 120ms; focus reveals instantly | A small state change stays legible without moving content or delaying keyboard access |
-| Media cards and link pills unmount hover actions | Actions stay mounted and receive visibility | Exit fades can complete; hidden controls can reveal on keyboard focus |
-| Every liked heart mounts with a scale pop | The selected icon changes immediately | A frequent field toggle already has press feedback; loading a liked item should not celebrate |
-| Web tabs replay a blur/fade | Tab switches have no extra page entrance | Frequent navigation should respond immediately |
-| Card presses scale under reduced motion | Card presses dim under reduced motion | Keep feedback without movement, through the shared pressable |
-| Sidebar keyboard shortcut animates width | Shortcut snaps; reduced motion also disables pointer-driven width transitions | Keyboard use must stay immediate; reduced motion must not resize the page gradually |
+| Before                                           | After                                                                         | Why                                                                                           |
+| ------------------------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Hover actions snap into place                    | Opacity retargets in 120ms; focus reveals instantly                           | A small state change stays legible without moving content or delaying keyboard access         |
+| Media cards and link pills unmount hover actions | Actions stay mounted and receive visibility                                   | Exit fades can complete; hidden controls can reveal on keyboard focus                         |
+| Every liked heart mounts with a scale pop        | The selected icon changes immediately                                         | A frequent field toggle already has press feedback; loading a liked item should not celebrate |
+| Web tabs replay a blur/fade                      | Tab switches have no extra page entrance                                      | Frequent navigation should respond immediately                                                |
+| Card presses scale under reduced motion          | Card presses dim under reduced motion                                         | Keep feedback without movement, through the shared pressable                                  |
+| Sidebar keyboard shortcut animates width         | Shortcut snaps; reduced motion also disables pointer-driven width transitions | Keyboard use must stay immediate; reduced motion must not resize the page gradually           |
 
 Code review verdict: **Approve** the scoped changes. The only new animation is
 an interruptible opacity transition using existing tokens, with no new timers,

@@ -30,10 +30,7 @@ const { watchlistSourcesFor } = await import('./use-is-watchlisted');
 
 import type { WatchlistInput } from './types';
 
-function film(
-  id: string,
-  overrides: Partial<NormalizedMediaItem> = {},
-): NormalizedMediaItem {
+function film(id: string, overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return {
     id,
     title: 'Heat',
@@ -82,7 +79,6 @@ describe('watchlistSourcesFor (owner report 2026-08-01)', () => {
       'trakt',
     ]);
   });
-
 });
 
 describe('the hook registers no query observer', () => {

@@ -14,9 +14,7 @@ export function CenteredNotice({
   children: ReactNode;
 }) {
   return (
-    <View className={cn('flex-1 items-center justify-center px-8', className)}>
-      {children}
-    </View>
+    <View className={cn('flex-1 items-center justify-center px-8', className)}>{children}</View>
   );
 }
 

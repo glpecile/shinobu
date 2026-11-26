@@ -38,31 +38,63 @@ function entryRoute(entry: SerializdListEntry) {
 
 const membershipLayout = LinearTransition.duration(DURATION.swap);
 
-export function SerializdListItems({ username, id, url }: { username: string | null; id: string; url: string }) {
+export function SerializdListItems({
+  username,
+  id,
+  url,
+}: {
+  username: string | null;
+  id: string;
+  url: string;
+}) {
   const query = useSuspenseSerializdListQuery(username, id);
   const list = query.data;
   const [actionEntry, setActionEntry] = useState<SerializdListEntry | null>(null);
-  const target = username != null && username.toLowerCase() === list.owner.toLowerCase()
-    ? { provider: Provider.Serializd, username, id, title: list.title, url } : null;
+  const target =
+    username != null && username.toLowerCase() === list.owner.toLowerCase()
+      ? { provider: Provider.Serializd, username, id, title: list.title, url }
+      : null;
   const sort = useMediaSort('lists');
   const reducedMotion = useReducedMotion();
-  const progress = useMediaProgress([...new Map(list.entries.map((entry) => [entry.item.id, entry.item])).values()]);
-  const byId = new Map(progress.items.map((item, index) => [item.id, { item, state: progress.progress[index] }]));
-  const entries = list.entries.map((entry) => ({ ...entry, item: applyPrimaryMetadata(entry.item, byId.get(entry.item.id)?.item), progress: byId.get(entry.item.id)?.state }));
+  const progress = useMediaProgress([
+    ...new Map(list.entries.map((entry) => [entry.item.id, entry.item])).values(),
+  ]);
+  const byId = new Map(
+    progress.items.map((item, index) => [item.id, { item, state: progress.progress[index] }]),
+  );
+  const entries = list.entries.map((entry) => ({
+    ...entry,
+    item: applyPrimaryMetadata(entry.item, byId.get(entry.item.id)?.item),
+    progress: byId.get(entry.item.id)?.state,
+  }));
   const pushRoute = usePushRoute();
   const { openActions, sheetProps } = useCardActions();
   return (
     <>
-      <Head><title>{`${list.title} — Shinobu`}</title></Head>
+      <Head>
+        <title>{`${list.title} — Shinobu`}</title>
+      </Head>
       <ListsHeader
         shareHref={routes.serializdList(id)}
-        metadata={<ListProgress countLabel={`${list.itemCount} ${list.itemCount === 1 ? 'item' : 'items'}`} partial={!list.complete} state={progress} />}
-        provider={Provider.Serializd} subtitle={`by ${list.owner}`} title={list.title}
+        metadata={
+          <ListProgress
+            countLabel={`${list.itemCount} ${list.itemCount === 1 ? 'item' : 'items'}`}
+            partial={!list.complete}
+            state={progress}
+          />
+        }
+        provider={Provider.Serializd}
+        subtitle={`by ${list.owner}`}
+        title={list.title}
       />
-      <MediaToolbar notice={sort !== 'default' && !list.complete ? <SortingLoadedNotice /> : undefined}>
+      <MediaToolbar
+        notice={sort !== 'default' && !list.complete ? <SortingLoadedNotice /> : undefined}
+      >
         <MediaSortControl scope="lists" sort={sort} />
         {target != null && <RenameList key={list.title} target={target} />}
-        <ToolbarIcon><ProviderListLink iconOnly provider={Provider.Serializd} url={url} /></ToolbarIcon>
+        <ToolbarIcon>
+          <ProviderListLink iconOnly provider={Provider.Serializd} url={url} />
+        </ToolbarIcon>
       </MediaToolbar>
       <List
         className="flex-1"
@@ -78,7 +110,10 @@ export function SerializdListItems({ username, id, url }: { username: string | n
         refreshControl={<RefreshControl onRefresh={query.refetch} />}
         renderItem={({ item: entry }) => (
           <ActionableRow
-            accessibility={{ accessibilityLabel: `${entry.item.title}. ${entry.subtitle}`, accessibilityRole: 'button' }}
+            accessibility={{
+              accessibilityLabel: `${entry.item.title}. ${entry.subtitle}`,
+              accessibilityRole: 'button',
+            }}
             className="px-6 py-2.5"
             href={entryRoute(entry)}
             item={entry.item}
@@ -87,46 +122,97 @@ export function SerializdListItems({ username, id, url }: { username: string | n
               <>
                 <SmallPoster recyclingKey={entry.id} size="md" uri={entry.item.coverImage} />
                 <View className="shrink ml-4">
-                  <Text className="font-sans-semibold text-foreground text-base" numberOfLines={2}>{entry.item.title}</Text>
-                  <Text className="font-sans text-muted text-xs mt-1" numberOfLines={2}>{entry.subtitle}</Text>
+                  <Text className="font-sans-semibold text-foreground text-base" numberOfLines={2}>
+                    {entry.item.title}
+                  </Text>
+                  <Text className="font-sans text-muted text-xs mt-1" numberOfLines={2}>
+                    {entry.subtitle}
+                  </Text>
                 </View>
               </>
             }
-            onActions={(item) => { setActionEntry(entry); openActions(item); }}
+            onActions={(item) => {
+              setActionEntry(entry);
+              openActions(item);
+            }}
             onPress={() => pushRoute(entryRoute(entry))}
-            trailing={<View className="flex-row items-center gap-2">{entry.progress != null && <WatchedMark item={entry.item} showProgress state={entry.progress} />}</View>}
+            trailing={
+              <View className="flex-row items-center gap-2">
+                {entry.progress != null && (
+                  <WatchedMark item={entry.item} showProgress state={entry.progress} />
+                )}
+              </View>
+            }
           />
         )}
-        ListFooterComponent={!list.complete ? (
-          <CenteredNotice>
-            <CenteredNotice.Title>More items on Serializd</CenteredNotice.Title>
-            <CenteredNotice.Body>{`Serializd returned ${list.entries.length} of ${list.itemCount} items. Open the original list to see the rest.`}</CenteredNotice.Body>
-            <ProviderListLink provider={Provider.Serializd} url={url} />
-          </CenteredNotice>
-        ) : undefined}
-        ListEmptyComponent={list.complete ? (
-          <CenteredNotice>
-            <CenteredNotice.Icon name="list-outline" />
-            <CenteredNotice.Title>This list is empty</CenteredNotice.Title>
-            <CenteredNotice.Body>{target != null ? 'Use the + button to add your first show.' : 'Items added on Serializd will appear here.'}</CenteredNotice.Body>
-            <ProviderListLink provider={Provider.Serializd} url={url} />
-          </CenteredNotice>
-        ) : undefined}
+        ListFooterComponent={
+          !list.complete ? (
+            <CenteredNotice>
+              <CenteredNotice.Title>More items on Serializd</CenteredNotice.Title>
+              <CenteredNotice.Body>{`Serializd returned ${list.entries.length} of ${list.itemCount} items. Open the original list to see the rest.`}</CenteredNotice.Body>
+              <ProviderListLink provider={Provider.Serializd} url={url} />
+            </CenteredNotice>
+          ) : undefined
+        }
+        ListEmptyComponent={
+          list.complete ? (
+            <CenteredNotice>
+              <CenteredNotice.Icon name="list-outline" />
+              <CenteredNotice.Title>This list is empty</CenteredNotice.Title>
+              <CenteredNotice.Body>
+                {target != null
+                  ? 'Use the + button to add your first show.'
+                  : 'Items added on Serializd will appear here.'}
+              </CenteredNotice.Body>
+              <ProviderListLink provider={Provider.Serializd} url={url} />
+            </CenteredNotice>
+          ) : undefined
+        }
       />
-      <CardActionsSheet {...sheetProps} canHide={false} listRemoval={target == null || actionEntry == null ? null : { target, entryId: actionEntry.id, subtitle: actionEntry.subtitle }} />
-      {target != null && <AddToList items={entries.filter((entry) => entry.season == null && entry.episode == null).map((entry) => entry.item)} target={target} />}
+      <CardActionsSheet
+        {...sheetProps}
+        canHide={false}
+        listRemoval={
+          target == null || actionEntry == null
+            ? null
+            : { target, entryId: actionEntry.id, subtitle: actionEntry.subtitle }
+        }
+      />
+      {target != null && (
+        <AddToList
+          items={entries
+            .filter((entry) => entry.season == null && entry.episode == null)
+            .map((entry) => entry.item)}
+          target={target}
+        />
+      )}
     </>
   );
 }
 
 /** `signedIn` reserves Rename's slot: ownership is unknown until the list loads, and most lists opened are one's own. */
-export function SerializdListSkeleton({ shareHref, signedIn }: { shareHref?: string; signedIn: boolean }) {
+export function SerializdListSkeleton({
+  shareHref,
+  signedIn,
+}: {
+  shareHref?: string;
+  signedIn: boolean;
+}) {
   // Rename drops its label on a phone (`RenameList`).
   const compact = useWindowDimensions().width < 640;
   return (
     <>
-      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded-full" />} provider={Provider.Serializd} shareHref={shareHref} subtitle="" />
-      <MediaToolbarSkeleton actions={signedIn && compact ? 2 : 1} labelled={signedIn && !compact} scope="lists" />
+      <ListsHeader
+        metadata={<Skeleton className="h-4 w-28 rounded-full" />}
+        provider={Provider.Serializd}
+        shareHref={shareHref}
+        subtitle=""
+      />
+      <MediaToolbarSkeleton
+        actions={signedIn && compact ? 2 : 1}
+        labelled={signedIn && !compact}
+        scope="lists"
+      />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />

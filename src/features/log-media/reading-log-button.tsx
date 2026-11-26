@@ -6,7 +6,8 @@ import type { LogRequest } from './log-request';
 
 function readingLogRequest(item: NormalizedMediaItem): LogRequest | null {
   const description = `“${item.title}”`;
-  const total = item.totalEpisodes != null && item.totalEpisodes > 0 ? item.totalEpisodes : undefined;
+  const total =
+    item.totalEpisodes != null && item.totalEpisodes > 0 ? item.totalEpisodes : undefined;
   switch (item.type) {
     case 'MANGA': {
       const reread = total != null && item.currentProgress >= total;
@@ -18,7 +19,9 @@ function readingLogRequest(item: NormalizedMediaItem): LogRequest | null {
           : description,
         title: reread ? 'Reread' : `Log chapter ${next}`,
         entryEpisodes: [next],
-        ...(!reread && (total == null || total > next) ? { chapterRange: { from: next, total } } : {}),
+        ...(!reread && (total == null || total > next)
+          ? { chapterRange: { from: next, total } }
+          : {}),
       };
     }
     case 'BOOK':

@@ -1,11 +1,36 @@
 import { useSyncExternalStore } from 'react';
-import type { LetterboxdListCreateFetch, LetterboxdListCreateRequest, LetterboxdListRenameFetch, LetterboxdListRenameRequest, LetterboxdListMembershipFetch, LetterboxdListLikeWebFetch, LetterboxdListMembershipRequest, LetterboxdListLikeWebRequest, LetterboxdWatchlistWebFetch, LetterboxdWatchlistWebRequest, LetterboxdWebFetch, LetterboxdWebRequest, LetterboxdWebResponse } from '@/lib/providers/letterboxd/deps';
+import type {
+  LetterboxdListCreateFetch,
+  LetterboxdListCreateRequest,
+  LetterboxdListRenameFetch,
+  LetterboxdListRenameRequest,
+  LetterboxdListMembershipFetch,
+  LetterboxdListLikeWebFetch,
+  LetterboxdListMembershipRequest,
+  LetterboxdListLikeWebRequest,
+  LetterboxdWatchlistWebFetch,
+  LetterboxdWatchlistWebRequest,
+  LetterboxdWebFetch,
+  LetterboxdWebRequest,
+  LetterboxdWebResponse,
+} from '@/lib/providers/letterboxd/deps';
 
 const READY_ATTRIBUTE = 'data-shinobu-letterboxd-bridge';
 const UNTRUSTED_ATTRIBUTE = 'data-shinobu-letterboxd-untrusted';
 
-export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' | 'list-create' | 'list-rename' = 'log'): boolean {
-  const version = typeof document !== 'undefined' ? document.documentElement.getAttribute(READY_ATTRIBUTE) : null;
+export function hasLetterboxdUserscript(
+  capability:
+    | 'log'
+    | 'watchlist'
+    | 'watchlist-remove'
+    | 'like'
+    | 'list-like'
+    | 'list-membership'
+    | 'list-create'
+    | 'list-rename' = 'log',
+): boolean {
+  const version =
+    typeof document !== 'undefined' ? document.documentElement.getAttribute(READY_ATTRIBUTE) : null;
   if (version === '11') return true;
   if (capability === 'list-rename') return false;
   if (version === '10') return true;
@@ -15,52 +40,98 @@ export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watch
   if (version === '8' || version === '7') return true;
   if (capability === 'list-like') return false;
   if (capability === 'like') return version === '6';
-  return version === '6' || version === '5' || (capability !== 'watchlist-remove' && version === '4') || (capability === 'log' && version === '3');
+  return (
+    version === '6' ||
+    version === '5' ||
+    (capability !== 'watchlist-remove' && version === '4') ||
+    (capability === 'log' && version === '3')
+  );
 }
 
 function subscribe(listener: () => void) {
   const observer = new MutationObserver(listener);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: [READY_ATTRIBUTE, UNTRUSTED_ATTRIBUTE] });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: [READY_ATTRIBUTE, UNTRUSTED_ATTRIBUTE],
+  });
   return () => observer.disconnect();
 }
 
-function serverSnapshot() { return false; }
+function serverSnapshot() {
+  return false;
+}
 
-export function useLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' | 'list-create' | 'list-rename' = 'log'): boolean {
+export function useLetterboxdUserscript(
+  capability:
+    | 'log'
+    | 'watchlist'
+    | 'watchlist-remove'
+    | 'like'
+    | 'list-like'
+    | 'list-membership'
+    | 'list-create'
+    | 'list-rename' = 'log',
+): boolean {
   return useSyncExternalStore(subscribe, () => hasLetterboxdUserscript(capability), serverSnapshot);
 }
 
 /** The script is installed, but this dev server lacks its `shinobu-trust-localhost` opt-in. */
 export function useLetterboxdUserscriptUntrusted(): boolean {
-  return useSyncExternalStore(subscribe, () => document.documentElement.hasAttribute(UNTRUSTED_ATTRIBUTE), serverSnapshot);
+  return useSyncExternalStore(
+    subscribe,
+    () => document.documentElement.hasAttribute(UNTRUSTED_ATTRIBUTE),
+    serverSnapshot,
+  );
 }
 
 /** The userscript owns the cross-tab handoff. Cookies never enter Shinobu. */
-export function getLetterboxdUserscriptFetch(username: string | null): LetterboxdWebFetch | undefined {
+export function getLetterboxdUserscriptFetch(
+  username: string | null,
+): LetterboxdWebFetch | undefined {
   if (!username || !hasLetterboxdUserscript()) return undefined;
   return (request) => {
     if (request.liked && !hasLetterboxdUserscript('like')) {
-      return Promise.reject(new Error('Update the Letterboxd script to support likes. Nothing was sent.'));
+      return Promise.reject(
+        new Error('Update the Letterboxd script to support likes. Nothing was sent.'),
+      );
     }
     return sendRequest(username, 'log', request);
   };
 }
 
-export function getLetterboxdUserscriptWatchlistFetch(username: string | null): LetterboxdWatchlistWebFetch | undefined {
+export function getLetterboxdUserscriptWatchlistFetch(
+  username: string | null,
+): LetterboxdWatchlistWebFetch | undefined {
   if (!username || !hasLetterboxdUserscript('watchlist')) return undefined;
   return (request) => {
     if (!request.inWatchlist && !hasLetterboxdUserscript('watchlist-remove')) {
-      return Promise.reject(new Error('Update the Letterboxd script to support watchlist removals. Nothing was sent.'));
+      return Promise.reject(
+        new Error('Update the Letterboxd script to support watchlist removals. Nothing was sent.'),
+      );
     }
     return sendRequest(username, 'watchlist', request);
   };
 }
 
-export function getLetterboxdUserscriptListLikeFetch(username: string | null): LetterboxdListLikeWebFetch | undefined {
-  return username && hasLetterboxdUserscript('list-like') ? (request) => sendRequest(username, 'list-like', request) : undefined;
+export function getLetterboxdUserscriptListLikeFetch(
+  username: string | null,
+): LetterboxdListLikeWebFetch | undefined {
+  return username && hasLetterboxdUserscript('list-like')
+    ? (request) => sendRequest(username, 'list-like', request)
+    : undefined;
 }
 
-function sendRequest(username: string, capability: 'log' | 'watchlist' | 'list-like' | 'list-membership' | 'list-create' | 'list-rename', request: LetterboxdListCreateRequest | LetterboxdListRenameRequest | LetterboxdListMembershipRequest | LetterboxdWebRequest | LetterboxdWatchlistWebRequest | LetterboxdListLikeWebRequest): Promise<LetterboxdWebResponse> {
+function sendRequest(
+  username: string,
+  capability: 'log' | 'watchlist' | 'list-like' | 'list-membership' | 'list-create' | 'list-rename',
+  request:
+    | LetterboxdListCreateRequest
+    | LetterboxdListRenameRequest
+    | LetterboxdListMembershipRequest
+    | LetterboxdWebRequest
+    | LetterboxdWatchlistWebRequest
+    | LetterboxdListLikeWebRequest,
+): Promise<LetterboxdWebResponse> {
   return new Promise((resolve, reject) => {
     const id = crypto.randomUUID();
     const cleanup = () => {
@@ -68,31 +139,62 @@ function sendRequest(username: string, capability: 'log' | 'watchlist' | 'list-l
       window.removeEventListener('message', receive);
     };
     const receive = (event: MessageEvent) => {
-      if (event.source !== window || event.origin !== location.origin ||
-          event.data?.type !== 'shinobu-letterboxd-result' || event.data.id !== id) return;
+      if (
+        event.source !== window ||
+        event.origin !== location.origin ||
+        event.data?.type !== 'shinobu-letterboxd-result' ||
+        event.data.id !== id
+      )
+        return;
       const result = event.data.response;
-      if (!result || !Number.isInteger(result.status) || result.status < 0 || result.status > 599 ||
-          typeof result.body !== 'string' || result.body.length > 8192) return;
+      if (
+        !result ||
+        !Number.isInteger(result.status) ||
+        result.status < 0 ||
+        result.status > 599 ||
+        typeof result.body !== 'string' ||
+        result.body.length > 8192
+      )
+        return;
       cleanup();
       resolve(result);
     };
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error('Letterboxd userscript timed out. Check Letterboxd before retrying; the write may have succeeded.'));
+      reject(
+        new Error(
+          'Letterboxd userscript timed out. Check Letterboxd before retrying; the write may have succeeded.',
+        ),
+      );
     }, 60_000);
     window.addEventListener('message', receive);
-    window.postMessage({ type: `shinobu-letterboxd-${capability}`, id, request: { ...request, username } }, location.origin);
+    window.postMessage(
+      { type: `shinobu-letterboxd-${capability}`, id, request: { ...request, username } },
+      location.origin,
+    );
   });
 }
 
-export function getLetterboxdUserscriptListMembershipFetch(username: string | null): LetterboxdListMembershipFetch | undefined {
-  return username && hasLetterboxdUserscript('list-membership') ? (request) => sendRequest(username, 'list-membership', request) : undefined;
+export function getLetterboxdUserscriptListMembershipFetch(
+  username: string | null,
+): LetterboxdListMembershipFetch | undefined {
+  return username && hasLetterboxdUserscript('list-membership')
+    ? (request) => sendRequest(username, 'list-membership', request)
+    : undefined;
 }
 
-export function getLetterboxdUserscriptListCreateFetch(username: string | null): LetterboxdListCreateFetch | undefined {
-  return username && hasLetterboxdUserscript('list-create') ? (request) => sendRequest(username, 'list-create', request) : undefined;
+export function getLetterboxdUserscriptListCreateFetch(
+  username: string | null,
+): LetterboxdListCreateFetch | undefined {
+  return username && hasLetterboxdUserscript('list-create')
+    ? (request) => sendRequest(username, 'list-create', request)
+    : undefined;
 }
 
-export function getLetterboxdUserscriptListRenameFetch(username: string | null): LetterboxdListRenameFetch | undefined {
-  return username && hasLetterboxdUserscript('list-rename') ? (request) => sendRequest(username, 'list-rename', request) : undefined;
+export function getLetterboxdUserscriptListRenameFetch(
+  username: string | null,
+): LetterboxdListRenameFetch | undefined {
+  return username && hasLetterboxdUserscript('list-rename')
+    ? (request) => sendRequest(username, 'list-rename', request)
+    : undefined;
 }

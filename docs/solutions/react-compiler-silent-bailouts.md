@@ -45,7 +45,9 @@ hand:
 const babel = require('@babel/core');
 const events = [];
 babel.transformSync(source, {
-  filename, babelrc: false, configFile: false,
+  filename,
+  babelrc: false,
+  configFile: false,
   presets: [['@babel/preset-typescript', { isTSX: true, allExtensions: true }]],
   plugins: [['babel-plugin-react-compiler', { logger: { logEvent: (_, e) => events.push(e) } }]],
 });

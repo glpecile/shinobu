@@ -29,5 +29,9 @@ function subscribe(onStoreChange: () => void): () => void {
 
 /** Independent standing preferences for watchlist and custom-list contents. */
 export function useMediaSort(scope: MediaSortScope): MediaSort {
-  return useSyncExternalStore(subscribe, () => readSort(scope), () => 'default' as const);
+  return useSyncExternalStore(
+    subscribe,
+    () => readSort(scope),
+    () => 'default' as const,
+  );
 }

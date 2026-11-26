@@ -10,7 +10,7 @@ Frame-by-frame it is the list restructuring three or four times in ~400 ms.
 ## Cause
 
 `useDiaryFeedQuery` runs one infinite query per provider and merges them in
-render. The screen swapped the skeleton for the list as soon as *any*
+render. The screen swapped the skeleton for the list as soon as _any_
 provider had entries (`isLoading && entryCount === 0`). Simkl answers first,
 then Trakt, then AniList, each ~100 ms apart, and every arrival re-runs
 `mergeDiaryEntries` + `groupDiaryEntries`: the day re-sorts, cross-provider
@@ -24,7 +24,7 @@ feed cannot look calm while its inputs are still arriving.
 
 ## Fix
 
-Hold the skeleton until every active provider's *first attempt* has settled
+Hold the skeleton until every active provider's _first attempt_ has settled
 (data or error), then mount the list once with one enter fade on its root.
 `isLoading` in the hook is now `query.isLoading && query.failureCount === 0`:
 a provider already retrying (backoff runs seconds) no longer holds the

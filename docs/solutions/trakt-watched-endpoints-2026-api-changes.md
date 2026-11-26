@@ -35,7 +35,7 @@ Trakt announced breaking changes to `/sync/watched/*` and
   `state/queries/trakt.ts`) returns the item's own art when present
   (trending/search items are unaffected) and otherwise fetches
   `/{movies|shows}/:id?extended=full,images` — one small public request per
-  *rendered* artless card, cached with `staleTime: Infinity` since art doesn't
+  _rendered_ artless card, cached with `staleTime: Infinity` since art doesn't
   churn. `MediaCard` and the details hero consume the hook instead of
   `item.coverImage` directly. Never bulk-enrich the whole watched list up
   front — that's O(library) requests against a 1000-per-5-min rate limit.

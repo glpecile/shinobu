@@ -52,16 +52,16 @@ mapping under `letterboxdQueryKeys.slug(tmdb)`.
 `src/features/log-media/use-log-media.ts`, `invalidateAfterLog` (~line 652):
 
 ```ts
-  if (succeeded.includes('letterboxd')) {
-    queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.filmWatchesRoot() });
-    // A pre-write RSS response must not repopulate the shared input as fresh.
-    void queryClient.cancelQueries({ queryKey: DIARY_QUERY_ROOT });
-    void queryClient.cancelQueries({ queryKey: letterboxdQueryKeys.diaryRoot() });
-    queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.diaryRoot(), refetchType: 'none' });
-  }
+if (succeeded.includes('letterboxd')) {
+  queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.filmWatchesRoot() });
+  // A pre-write RSS response must not repopulate the shared input as fresh.
+  void queryClient.cancelQueries({ queryKey: DIARY_QUERY_ROOT });
+  void queryClient.cancelQueries({ queryKey: letterboxdQueryKeys.diaryRoot() });
+  queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.diaryRoot(), refetchType: 'none' });
+}
 ```
 
-`item` here is the *enriched* item (it may carry `externalIds.letterboxd` and/or `externalIds.tmdb`).
+`item` here is the _enriched_ item (it may carry `externalIds.letterboxd` and/or `externalIds.tmdb`).
 `getLetterboxdUsername()` (`@/state/session/letterboxd`) is already imported in this file.
 
 Test file: `src/features/log-media/invalidate-after-log.test.ts`.
@@ -71,13 +71,13 @@ shows the pattern: a real `QueryClient`, `setQueryData` on several keys, then
 
 ## Commands you will need
 
-| Purpose   | Command                                                         | Expected on success |
-|-----------|-----------------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                                 | exit 0              |
-| Typecheck | `bun typecheck`                                                 | exit 0              |
-| One file  | `bun test src/features/log-media/invalidate-after-log.test.ts`  | all pass            |
-| All tests | `bun run test`                                                  | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                                      | exit 0              |
+| Purpose   | Command                                                        | Expected on success               |
+| --------- | -------------------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                                | exit 0                            |
+| Typecheck | `bun typecheck`                                                | exit 0                            |
+| One file  | `bun test src/features/log-media/invalidate-after-log.test.ts` | all pass                          |
+| All tests | `bun run test`                                                 | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                                     | exit 0                            |
 
 ## Scope
 
@@ -100,17 +100,19 @@ of `invalidateAfterLog` only), `src/features/log-media/invalidate-after-log.test
 Replace the root invalidation with:
 
 ```ts
-    // Only this film's watch reads changed. The root holds one HTML-scrape
-    // query per film on every mounted list, so invalidating it refetched them all.
-    const tmdb = item.externalIds.tmdb ?? null;
-    const slug =
-      item.externalIds.letterboxd ??
-      (tmdb != null ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb)) ?? null : null);
-    queryClient.invalidateQueries({
-      queryKey: letterboxdQueryKeys.filmWatchesRoot(),
-      predicate: ({ queryKey }) =>
-        (slug != null && queryKey[3] === slug) || (tmdb != null && queryKey[4] === tmdb),
-    });
+// Only this film's watch reads changed. The root holds one HTML-scrape
+// query per film on every mounted list, so invalidating it refetched them all.
+const tmdb = item.externalIds.tmdb ?? null;
+const slug =
+  item.externalIds.letterboxd ??
+  (tmdb != null
+    ? (queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb)) ?? null)
+    : null);
+queryClient.invalidateQueries({
+  queryKey: letterboxdQueryKeys.filmWatchesRoot(),
+  predicate: ({ queryKey }) =>
+    (slug != null && queryKey[3] === slug) || (tmdb != null && queryKey[4] === tmdb),
+});
 ```
 
 Check the slug query's data type by reading `letterboxdSlugQuery` in
@@ -155,7 +157,7 @@ after the mocks, like the existing `watchlistQueryKeys` import.
 
 - The `filmWatch` key shape differs from `[root…, username, slug|null, tmdb|null]`.
 - Another log path (catch-up chain, Letterboxd completion offer) relies on the
-  root invalidation to refresh a *different* film. Search for
+  root invalidation to refresh a _different_ film. Search for
   `filmWatchesRoot` across `src/` and read each hit before step 1.
 
 ## Maintenance notes

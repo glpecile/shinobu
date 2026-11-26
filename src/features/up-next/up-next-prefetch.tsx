@@ -18,12 +18,9 @@ export function UpNextPrefetch(): null {
     };
 
     warm();
-    const subscription = AppState.addEventListener(
-      'change',
-      (state: AppStateStatus) => {
-        if (state === 'active') warm();
-      },
-    );
+    const subscription = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') warm();
+    });
     return () => subscription.remove();
   }, [queryClient, connected]);
 

@@ -2,15 +2,9 @@ import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 import { simklDiaryEntries } from './diary';
-import type {
-  SimklLibrary,
-  SimklLibraryEntry,
-  SimklWatchedEpisode,
-} from './normalize';
+import type { SimklLibrary, SimklLibraryEntry, SimklWatchedEpisode } from './normalize';
 
-function item(
-  overrides: Partial<NormalizedMediaItem> & { id: string },
-): NormalizedMediaItem {
+function item(overrides: Partial<NormalizedMediaItem> & { id: string }): NormalizedMediaItem {
   return {
     title: 'Untitled',
     coverImage: '',
@@ -29,9 +23,7 @@ function libraryEntry(
   const watchedEpisodes: SimklWatchedEpisode[] = overrides.watchedEpisodes ?? [];
   return {
     status: 'watching',
-    watchedKeys: new Set(
-      watchedEpisodes.map((episode) => `${episode.season}-${episode.number}`),
-    ),
+    watchedKeys: new Set(watchedEpisodes.map((episode) => `${episode.season}-${episode.number}`)),
     watchedEpisodes,
     ...overrides,
   };
@@ -92,9 +84,7 @@ describe('simklDiaryEntries — episodes', () => {
         anime: [
           libraryEntry({
             item: item({ id: 'simkl-200', type: 'ANIME', title: 'KAMUI' }),
-            watchedEpisodes: [
-              { season: 1, number: 5, watchedAt: '2026-07-31T18:00:00Z' },
-            ],
+            watchedEpisodes: [{ season: 1, number: 5, watchedAt: '2026-07-31T18:00:00Z' }],
           }),
         ],
       }),
@@ -149,9 +139,7 @@ describe('simklDiaryEntries — plays (movies & anime films)', () => {
           libraryEntry({
             item: item({ id: 'simkl-400', type: 'ANIME', isFilm: true }),
             status: 'completed',
-            watchedEpisodes: [
-              { season: 1, number: 1, watchedAt: '2026-07-28T19:00:00Z' },
-            ],
+            watchedEpisodes: [{ season: 1, number: 1, watchedAt: '2026-07-28T19:00:00Z' }],
           }),
         ],
       }),
@@ -165,17 +153,12 @@ describe('simklDiaryEntries — plays (movies & anime films)', () => {
 
 describe('simklDiaryEntries — window', () => {
   test('caps the projection at the 500 newest entries', () => {
-    const watchedEpisodes: SimklWatchedEpisode[] = Array.from(
-      { length: 510 },
-      (_, index) => ({
-        season: 1,
-        number: index + 1,
-        // Episode N watched N minutes after midnight — higher N is newer.
-        watchedAt: new Date(
-          Date.UTC(2026, 0, 1, 0, index),
-        ).toISOString(),
-      }),
-    );
+    const watchedEpisodes: SimklWatchedEpisode[] = Array.from({ length: 510 }, (_, index) => ({
+      season: 1,
+      number: index + 1,
+      // Episode N watched N minutes after midnight — higher N is newer.
+      watchedAt: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+    }));
     const entries = simklDiaryEntries(
       library({
         shows: [libraryEntry({ item: item({ id: 'simkl-100' }), watchedEpisodes })],

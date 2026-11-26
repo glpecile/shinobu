@@ -5,7 +5,10 @@ import { prefetchLogReconcile } from '@/features/log-media/use-log-media';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 
-type ReconcileVariables = Pick<LogMediaVariables, 'item' | 'episodes' | 'entryEpisodes' | 'providers'>;
+type ReconcileVariables = Pick<
+  LogMediaVariables,
+  'item' | 'episodes' | 'entryEpisodes' | 'providers'
+>;
 
 export const logReconcileQueryKeys = {
   warm: (connected: readonly ProviderId[], variables: ReconcileVariables) =>

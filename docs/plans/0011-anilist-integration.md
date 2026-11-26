@@ -32,7 +32,7 @@ Product requirements from this session (2026-07-14):
 
 1. **Auth: implicit grant with an embedded client id, on every platform**
    (otraku's exact flow: `anilist.co/api/v2/oauth/authorize?client_id=N&
-   response_type=token`, token returned in the redirect's **URL fragment**).
+response_type=token`, token returned in the redirect's **URL fragment**).
    - No BYO credentials — unlike Trakt (where BYO is intentional), AniList API
      clients have no approval gate and the implicit grant involves no secret,
      so Shinobu ships its own client id. One tap to connect.
@@ -51,7 +51,7 @@ Product requirements from this session (2026-07-14):
      `?code=…` (query, Trakt) and erases both from the URL. Fragments never
      reach the server — safe for static pre-rendering.
 2. **Provider lib mirrors `trakt/`**: `lib/providers/anilist/{config,deps,
-   http,normalize,reads,writes,index}.ts`, Effect-based with the shared
+http,normalize,reads,writes,index}.ts`, Effect-based with the shared
    `ProviderError` taxonomy, deps-injection without Layers, tests on fixtures.
    `anilistGraphQL<A>(deps, query, variables)` is the single transport:
    GraphQL-over-POST, 401 → `ProviderAuthError` (+ token clear — nothing to
@@ -60,14 +60,14 @@ Product requirements from this session (2026-07-14):
    (`web-cors-anilist.md`) — keep feed reads to O(1) queries.
 3. **Reads**: `getViewer` (id, cached ~forever under its own query key),
    `getCurrentAnime(viewerId)` (`MediaListCollection(type: ANIME, status:
-   CURRENT)`), `getTrendingAnime` (public `Page.media(type: ANIME, sort:
-   TRENDING_DESC)`). Normalization: `anilist-${id}`, `type: 'ANIME'`,
+CURRENT)`), `getTrendingAnime` (public `Page.media(type: ANIME, sort:
+TRENDING_DESC)`). Normalization: `anilist-${id}`, `type: 'ANIME'`,
    `isFilm: format === 'MOVIE'`, title `english ?? romaji`, `averageScore/10`,
    `progressUnit: 'episode'`, `updatedAt` epoch-seconds → ISO instant.
 4. **Writes**: `logToAniList(deps, item, opts)` via `SaveMediaListEntry` —
    films: `status: COMPLETED` (rewatch: `repeat + 1`); series episodes:
    `progress: n` (`status: CURRENT`, or `COMPLETED` when `n ==
-   totalEpisodes`).
+totalEpisodes`).
 5. **Identity mapping: ani.zip** (`api.ani.zip/mappings`), the API face of the
    community anime-lists dataset (per this session's decision: mapping
    dataset over title search). Verified CORS-open
@@ -81,12 +81,12 @@ Product requirements from this session (2026-07-14):
    the existing partial-failure outcomes.
 6. **Routing widens for anime, still declaration-driven**: `effectiveTypes`
    maps ANIME series → `['ANIME', 'TV']` and anime films → `['ANIME',
-   'MOVIE']` (anime series are TV shows to Trakt); a TV/MOVIE item whose
+'MOVIE']` (anime series are TV shows to Trakt); a TV/MOVIE item whose
    `externalIds.anilist` is populated (reverse-mapped) also matches ANIME
    providers. `useLogMedia` enriches `externalIds` through ani.zip before
    computing targets, so routing itself stays pure and unit-tested.
 7. **Reconcile-then-write (the sync rule)** — `features/log-media/
-   reconcile.ts`, pure + unit-tested. Per applicable provider, compare its
+reconcile.ts`, pure + unit-tested. Per applicable provider, compare its
    current recorded state for the item (Trakt: watched movies/show progress;
    AniList: the `MediaList` entry):
    - Provider missing the watch (film unwatched / episode beyond its
@@ -96,9 +96,9 @@ Product requirements from this session (2026-07-14):
    - Every applicable provider already has it (parity) → **rewatch on all**:
      Trakt gets a new `/sync/history` entry; AniList gets `repeat + 1`
      (films) / `status: REPEATING` with the episode's progress (series).
-   Scope now: anime **films + single-season series** (AniList entries are
-   per-season, so entry progress ≡ season-1 episode number). Multi-season
-   absolute numbering defers to a follow-up using ani.zip's episode table.
+     Scope now: anime **films + single-season series** (AniList entries are
+     per-season, so entry progress ≡ season-1 episode number). Multi-season
+     absolute numbering defers to a follow-up using ani.zip's episode table.
 8. **Feed**: rows become Your Shows, Your Anime (`status: CURRENT`), Trending
    Movies, Trending TV Shows, Trending Anime (public — anime renders before
    any connection, matching Trakt's trending rows). `use-unified-feed` keys

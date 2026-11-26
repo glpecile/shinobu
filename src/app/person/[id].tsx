@@ -9,5 +9,9 @@ export default function LegacyPersonRoute() {
   const anilistId = parseAniListItemId(id);
   if (anilistId != null) return <Redirect href={routes.anilistPerson(anilistId)} />;
   const tmdbId = Number(id);
-  return <Redirect href={Number.isSafeInteger(tmdbId) && tmdbId > 0 ? routes.person(tmdbId) : routes.home} />;
+  return (
+    <Redirect
+      href={Number.isSafeInteger(tmdbId) && tmdbId > 0 ? routes.person(tmdbId) : routes.home}
+    />
+  );
 }

@@ -8,24 +8,20 @@ import { PresstableOpacity } from '@/components/presstable';
 import { EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
-export function ViewAllLink({
-  title,
-  onPress,
-}: {
-  title: string;
-  onPress: () => void;
-}) {
+export function ViewAllLink({ title, onPress }: { title: string; onPress: () => void }) {
   const foreground = useThemeColor('--color-foreground');
   const reduceMotion = useReducedMotion();
   const [hovered, setHovered] = useState(false);
   return (
     <View
       className="shrink-0"
-      onPointerEnter={(event) => setHovered(
-        event.nativeEvent.pointerType !== 'touch'
-        && typeof globalThis.matchMedia === 'function'
-        && globalThis.matchMedia('(hover: hover) and (pointer: fine)').matches,
-      )}
+      onPointerEnter={(event) =>
+        setHovered(
+          event.nativeEvent.pointerType !== 'touch' &&
+            typeof globalThis.matchMedia === 'function' &&
+            globalThis.matchMedia('(hover: hover) and (pointer: fine)').matches,
+        )
+      }
       onPointerLeave={() => setHovered(false)}
     >
       <PresstableOpacity

@@ -27,11 +27,27 @@ describe('getAnimeRelations', () => {
     const fetch: HttpFetch = async (_url, init) => {
       calls++;
       if (new Headers(init?.headers).has('Authorization')) return new Response('', { status: 401 });
-      return Response.json({ data: { Media: { id: 1, title: { romaji: 'Public title' }, episodes: 1 } } });
+      return Response.json({
+        data: { Media: { id: 1, title: { romaji: 'Public title' }, episodes: 1 } },
+      });
     };
-    const result = await Effect.runPromise(getAnimeRelations({ fetch, tokens: {
-      get: () => session, set: (value) => { session = value; }, clear: () => { session = null; },
-    } }, { mediaId: 1, withCredits: false }));
+    const result = await Effect.runPromise(
+      getAnimeRelations(
+        {
+          fetch,
+          tokens: {
+            get: () => session,
+            set: (value) => {
+              session = value;
+            },
+            clear: () => {
+              session = null;
+            },
+          },
+        },
+        { mediaId: 1, withCredits: false },
+      ),
+    );
     expect(result.item?.title).toBe('Public title');
     expect(result.entryState).toBeNull();
     expect(session).toBeNull();
@@ -45,7 +61,9 @@ describe('getAnimeRelations', () => {
             edges: [{ role: 'MAIN', node: { id: 10, name: { full: 'Makio' }, image: null } }],
           },
           staff: {
-            edges: [{ role: 'Story & Art', node: { id: 20, name: { full: 'Tomoko' }, image: null } }],
+            edges: [
+              { role: 'Story & Art', node: { id: 20, name: { full: 'Tomoko' }, image: null } },
+            ],
           },
           tags: [
             { name: 'Family Life', isMediaSpoiler: false },
@@ -80,7 +98,9 @@ describe('getAnimeRelations', () => {
       getAnimeRelations({ ...DEPS, fetch }, { mediaId: 1, withCredits: true }),
     );
 
-    expect(characters).toEqual([{ id: 'anilist-character-10', name: 'Makio', role: 'Main', image: '' }]);
+    expect(characters).toEqual([
+      { id: 'anilist-character-10', name: 'Makio', role: 'Main', image: '' },
+    ]);
     expect(staff.map((member) => [member.anilistId, member.job])).toEqual([[20, 'Story & Art']]);
     expect(tags).toEqual(['Family Life']);
     expect(recommendations.map((item) => item.id)).toEqual(['anilist-4']);
@@ -91,15 +111,35 @@ describe('getAnimeRelations', () => {
   });
 });
 
-const tv = (id: number, episodes: number | null = 12) => ({ id, type: 'ANIME', format: 'TV', episodes });
+const tv = (id: number, episodes: number | null = 12) => ({
+  id,
+  type: 'ANIME',
+  format: 'TV',
+  episodes,
+});
 
 describe('getSeriesNeighbours', () => {
   test.each([
     { name: 'no relations', edges: [], prequel: 'none' },
-    { name: 'only sequels and manga', edges: [{ relationType: 'SEQUEL', node: tv(2) }, { relationType: 'SOURCE', node: { id: 3, type: 'MANGA', format: 'MANGA', episodes: null } }], prequel: 'none' },
-    { name: 'a later cour labelled OTHER', edges: [{ relationType: 'OTHER', node: tv(1) }], prequel: null },
+    {
+      name: 'only sequels and manga',
+      edges: [
+        { relationType: 'SEQUEL', node: tv(2) },
+        { relationType: 'SOURCE', node: { id: 3, type: 'MANGA', format: 'MANGA', episodes: null } },
+      ],
+      prequel: 'none',
+    },
+    {
+      name: 'a later cour labelled OTHER',
+      edges: [{ relationType: 'OTHER', node: tv(1) }],
+      prequel: null,
+    },
     { name: 'a hidden node', edges: [{ relationType: 'PREQUEL', node: null }], prequel: null },
-    { name: 'one prequel', edges: [{ relationType: 'PREQUEL', node: tv(1) }], prequel: { id: 1, episodes: 12 } },
+    {
+      name: 'one prequel',
+      edges: [{ relationType: 'PREQUEL', node: tv(1) }],
+      prequel: { id: 1, episodes: 12 },
+    },
   ])('$name', async ({ edges, prequel }) => {
     const deps = { ...DEPS, fetch: mockFetch({ data: { Media: { relations: { edges } } } }) };
     const result = await Effect.runPromise(getSeriesNeighbours(deps, { mediaId: 9 }));

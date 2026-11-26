@@ -31,7 +31,7 @@ and digital (and physical), in order, instead of the single muted
 ### Summary
 
 The details header carries at most one release fact today: the earliest
-worldwide *home* release, collapsed into one date plus a label that has to
+worldwide _home_ release, collapsed into one date plus a label that has to
 hedge ("Digital & physical release" when the two share a day). The theatrical
 date is nowhere on the screen, even though TMDB already sends it in the same
 payload — so "it's out in cinemas, when can I watch it at home?" (the actual
@@ -93,7 +93,7 @@ day, and a film released today reads as released — consistent with the log
 button, which accepts it from midnight on. The countdown reuses
 `formatRelativeDay` rather than a second phrasing.
 
-Display formatting parses the *other* way — UTC, via the new shared
+Display formatting parses the _other_ way — UTC, via the new shared
 `lib/time/calendar-date` — so "Feb 27, 2024" is Feb 27 west of Greenwich too.
 The two parses answer different questions and are documented as such;
 `features/person`'s private copy of that formatter now imports the shared one.
@@ -114,7 +114,7 @@ on the first and last row, and a lone stop draws no trunk at all.
 button must never block on missing data" (plan 0014-era) — loses its only
 consumer and goes away. `features/log-media/release-gate.ts` replaces it with a
 three-way `filmReleaseStatus`: `released` / `unreleased` / `unknown`, so the
-button can say *why* it's disabled instead of collapsing "not out yet" and "we
+button can say _why_ it's disabled instead of collapsing "not out yet" and "we
 have no idea" into one sentence.
 
 Films get the strict rule; **episodes keep the permissive one** (`firstAired ==
@@ -124,7 +124,7 @@ episode inside an already-airing season routinely has none.
 The `year` fallback keeps the strict rule from over-blocking: a Letterboxd item
 (slug + title + year) carries no release date until a TMDB read backfills one,
 and with no TMDB token that read never happens — so a year already behind us
-counts as proof the film is out. Only *no date and no past year* is refused,
+counts as proof the film is out. Only _no date and no past year_ is refused,
 which is exactly the unannounced-project case.
 
 ---

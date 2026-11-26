@@ -9,7 +9,7 @@ to any two logs made close together (a film right after an episode).
 
 Simkl serialises `/sync/*` writes per user behind a ~20-second lock
 (`simkl-rate-limits-and-write-lock.md`). `logToSimkl` already batches one
-fan-out into one POST, but every *fan-out* was its own POST, and the global
+fan-out into one POST, but every _fan-out_ was its own POST, and the global
 retry predicate rightly refuses to retry a rate-limit error.
 
 ## Fix
@@ -19,7 +19,7 @@ history write goes through (`simklLogAdapter`'s default `log`).
 
 - No lock engaged and nothing in flight → POST immediately.
 - Otherwise the entry waits; when the lock lifts (21s after the previous POST
-  *completed*), everything waiting goes as ONE POST and every waiter resolves
+  _completed_), everything waiting goes as ONE POST and every waiter resolves
   with that POST's result. `logToSimkl` folds entries for the same item (same
   ids, same `watched_at`) into one `seasons[].episodes[]`.
 - A POST that fails transiently is retried with a 2s → 4s → 8s → 16s backoff,

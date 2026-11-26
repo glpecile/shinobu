@@ -3,11 +3,7 @@ import * as Effect from 'effect/Effect';
 
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps, SerializdSession } from './deps';
-import {
-  addToSerializdWatchlist,
-  logToSerializd,
-  removeFromSerializdWatchlist,
-} from './writes';
+import { addToSerializdWatchlist, logToSerializd, removeFromSerializdWatchlist } from './writes';
 
 interface Recorded {
   url: string;
@@ -32,9 +28,7 @@ function fakeDeps(opts: {
       const url = String(input);
       const method = init?.method ?? 'GET';
       const body =
-        init?.body != null
-          ? (JSON.parse(String(init.body)) as Record<string, unknown>)
-          : undefined;
+        init?.body != null ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
       opts.onRequest?.({ url, method, body });
       if (url.includes('/season/')) return Response.json({ seasonId });
       if (url.endsWith('/episode_log/add')) {
@@ -196,9 +190,11 @@ describe('logToSerializd', () => {
     expect(paths).toContain('/show/reviews/add');
     expect(paths).not.toContain('/watched_v2');
 
-    expect(requests.find((r) => r.url.endsWith('/episode_log/add'))!.body).toMatchObject(
-      { episode_numbers: [1, 2], season_id: 555, show_id: 1396 },
-    );
+    expect(requests.find((r) => r.url.endsWith('/episode_log/add'))!.body).toMatchObject({
+      episode_numbers: [1, 2],
+      season_id: 555,
+      show_id: 1396,
+    });
     const diary = requests.find((r) => r.url.endsWith('/show/reviews/add'))!.body!;
     expect(diary).toMatchObject({ show_id: 1396, season_id: 555, is_log: true });
     expect(diary.episode_number).toBeUndefined();
@@ -215,11 +211,7 @@ describe('logToSerializd', () => {
       }),
     );
     const paths = requests.slice(0, 3).map((r) => new URL(r.url).pathname);
-    expect(paths).toEqual([
-      '/show/1396/season/1',
-      '/episode_log/add',
-      '/show/reviews/add',
-    ]);
+    expect(paths).toEqual(['/show/1396/season/1', '/episode_log/add', '/show/reviews/add']);
     expect(requests[2].body).toMatchObject({ episode_number: 5 });
   });
 });
@@ -247,9 +239,7 @@ function watchlistDeps(opts: {
       const path = new URL(url).pathname;
       const method = init?.method ?? 'GET';
       const body =
-        init?.body != null
-          ? (JSON.parse(String(init.body)) as Record<string, unknown>)
-          : undefined;
+        init?.body != null ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
       opts.onRequest?.({ url, method, body });
 
       if (path.endsWith('/progress')) {
@@ -286,9 +276,7 @@ describe('addToSerializdWatchlist', () => {
       onRequest: (r) => requests.push(r),
     });
 
-    const result = await Effect.runPromise(
-      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
-    );
+    const result = await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
 
     expect(requestLines(requests)).toEqual([
       'GET /show/1396',
@@ -310,16 +298,11 @@ describe('addToSerializdWatchlist', () => {
     const requests: Recorded[] = [];
     const deps = watchlistDeps({
       seasons: THREE_SEASONS,
-      watchedSeasons: [
-        { seasonNumber: 1, watchedEpisodes: [] },
-        { seasonNumber: 2 },
-      ],
+      watchedSeasons: [{ seasonNumber: 1, watchedEpisodes: [] }, { seasonNumber: 2 }],
       onRequest: (r) => requests.push(r),
     });
 
-    const result = await Effect.runPromise(
-      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
-    );
+    const result = await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
 
     expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [13] });
     expect(result).toEqual({
@@ -335,9 +318,7 @@ describe('addToSerializdWatchlist', () => {
       onRequest: (r) => requests.push(r),
     });
 
-    const result = await Effect.runPromise(
-      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
-    );
+    const result = await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
     expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [11, 12, 13] });
     expect(result).toEqual({ status: 'ok' });
   });
@@ -383,18 +364,14 @@ describe('addToSerializdWatchlist', () => {
       onRequest: (r) => requests.push(r),
     });
 
-    const result = await Effect.runPromise(
-      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
-    );
+    const result = await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
     expect(result).toEqual({ status: 'skipped', reason: 'already watched on Serializd' });
     expect(requestLines(requests).some((p) => p.startsWith('POST'))).toBe(false);
   });
 
   test('a catalogue with nothing watchlistable skips with its own reason, not "already watched"', async () => {
     const deps = watchlistDeps({ seasons: [{ id: 10, seasonNumber: 0, episodeCount: 4 }] });
-    const result = await Effect.runPromise(
-      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
-    );
+    const result = await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
     expect(result).toEqual({
       status: 'skipped',
       reason: 'Serializd lists no watchlistable season for this show yet',
@@ -428,9 +405,7 @@ describe('addToSerializdWatchlist', () => {
       onRequest: (r) => requests.push(r),
     });
 
-    const result = await Effect.runPromise(
-      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
-    );
+    const result = await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
     expect(result).toEqual({ status: 'ok' });
     const post = requests.find((r) => r.method === 'POST');
     expect(post?.body).toEqual({ show_id: 1396, season_ids: [11, 12, 13] });
@@ -451,9 +426,7 @@ describe('addToSerializdWatchlist', () => {
     const requests: Recorded[] = [];
     const deps = watchlistDeps({ seasons: THREE_SEASONS, onRequest: (r) => requests.push(r) });
 
-    const result = await Effect.runPromise(
-      addToSerializdWatchlist(deps, tvShow({ trakt: 1 })),
-    );
+    const result = await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ trakt: 1 })));
     expect(result).toEqual({
       status: 'skipped',
       reason: expect.stringContaining('TMDB id'),

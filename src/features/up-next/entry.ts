@@ -5,9 +5,7 @@ import type { UpNextEntry, UpNextRelease } from './types';
 
 /** ISO instant for an episode, or bare `YYYY-MM-DD` for a release (unnormalized so `lib/time` preserves `isDateOnly`). */
 export function entryInstant(entry: UpNextEntry): string | undefined {
-  return entry.kind === 'episode'
-    ? entry.episode.firstAired
-    : entry.release.date;
+  return entry.kind === 'episode' ? entry.episode.firstAired : entry.release.date;
 }
 
 const RELEASE_LABELS: Record<UpNextRelease['kind'], string> = {

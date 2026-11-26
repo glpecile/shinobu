@@ -61,10 +61,10 @@ export function aniZipTmdbKind(ids: { tvdb?: number | undefined }): 'movie' | 't
 Evidence for the rule, from the anime-lists dataset on 2026-11-12 (entries
 with an AniList id and a TMDB id):
 
-| ani.zip record | TMDB id is a TV id | TMDB id is a movie id |
-|----------------|-------------------:|----------------------:|
-| has `thetvdb_id` | 6,953 | 253 |
-| has no `thetvdb_id` | 8 | 1,066 |
+| ani.zip record      | TMDB id is a TV id | TMDB id is a movie id |
+| ------------------- | -----------------: | --------------------: |
+| has `thetvdb_id`    |              6,953 |                   253 |
+| has no `thetvdb_id` |                  8 |                 1,066 |
 
 If `aniZipTmdbKind` does not exist in `anizip.ts`, plan 032 has not landed:
 STOP.
@@ -86,52 +86,52 @@ block; this plan rewrites the part from `const bridged` to the end of the
 `if (mapped != null)` body):
 
 ```ts
-  // AniList-origin anime → movie/TV-side ids (only useful when a movie/TV
-  // provider is connected). ...
-  if (
-    isAnime &&
-    externalIds.anilist != null &&
-    externalIds.trakt == null &&
-    externalIds.tmdb == null &&
-    externalIds.tvdb == null &&
-    (connected.includes(Provider.Trakt) ||
-      connected.includes(Provider.Serializd) ||
-      connected.includes(Provider.Simkl) ||
-      (item.isFilm === true && connected.includes(Provider.Letterboxd)))
-  ) {
-    const anizip = await cachedAniZipIds(queryClient, {
-      anilistId: externalIds.anilist,
-    });
-    // ani.zip lags a new release by days, and Simkl often links it already.
-    const simkl =
-      anizip?.tvdb != null || anizip?.tmdb != null
-        ? null
-        : await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist });
-    const bridged = simkl?.tvdb != null || simkl?.tmdb != null ? simkl : anizip;
-    // Neither maps some new films (The Last Blossom, 2025), so a film takes
-    // the details read's TMDB title match. A series doesn't: a wrong show
-    // would get Trakt and Serializd writes with no ani.zip episode table.
-    const match =
-      item.isFilm === true && bridged?.tvdb == null && bridged?.tmdb == null
-        ? await cachedTmdbAnimeMatch(queryClient, item)
-        : null;
-    const mapped = match != null ? { ...bridged, tmdb: match.tmdbId } : bridged;
-    if (mapped != null) {
-      // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
-      // sequel cour's own id), so a series takes TVDB → TMDB like the details
-      // read does, and keeps ani.zip's only when that misses.
-      const tmdb =
-        item.isFilm !== true && mapped.tvdb != null
-          ? ((await cachedTmdbTvIdByTvdb(queryClient, mapped.tvdb)) ?? mapped.tmdb)
-          : mapped.tmdb;
-      externalIds = {
-        ...externalIds,
-        ...(mapped.tvdb != null ? { tvdb: mapped.tvdb } : {}),
-        ...(tmdb != null ? { tmdb } : {}),
-        ...(mapped.imdb != null ? { imdb: mapped.imdb } : {}),
-      };
-    }
+// AniList-origin anime → movie/TV-side ids (only useful when a movie/TV
+// provider is connected). ...
+if (
+  isAnime &&
+  externalIds.anilist != null &&
+  externalIds.trakt == null &&
+  externalIds.tmdb == null &&
+  externalIds.tvdb == null &&
+  (connected.includes(Provider.Trakt) ||
+    connected.includes(Provider.Serializd) ||
+    connected.includes(Provider.Simkl) ||
+    (item.isFilm === true && connected.includes(Provider.Letterboxd)))
+) {
+  const anizip = await cachedAniZipIds(queryClient, {
+    anilistId: externalIds.anilist,
+  });
+  // ani.zip lags a new release by days, and Simkl often links it already.
+  const simkl =
+    anizip?.tvdb != null || anizip?.tmdb != null
+      ? null
+      : await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist });
+  const bridged = simkl?.tvdb != null || simkl?.tmdb != null ? simkl : anizip;
+  // Neither maps some new films (The Last Blossom, 2025), so a film takes
+  // the details read's TMDB title match. A series doesn't: a wrong show
+  // would get Trakt and Serializd writes with no ani.zip episode table.
+  const match =
+    item.isFilm === true && bridged?.tvdb == null && bridged?.tmdb == null
+      ? await cachedTmdbAnimeMatch(queryClient, item)
+      : null;
+  const mapped = match != null ? { ...bridged, tmdb: match.tmdbId } : bridged;
+  if (mapped != null) {
+    // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
+    // sequel cour's own id), so a series takes TVDB → TMDB like the details
+    // read does, and keeps ani.zip's only when that misses.
+    const tmdb =
+      item.isFilm !== true && mapped.tvdb != null
+        ? ((await cachedTmdbTvIdByTvdb(queryClient, mapped.tvdb)) ?? mapped.tmdb)
+        : mapped.tmdb;
+    externalIds = {
+      ...externalIds,
+      ...(mapped.tvdb != null ? { tvdb: mapped.tvdb } : {}),
+      ...(tmdb != null ? { tmdb } : {}),
+      ...(mapped.imdb != null ? { imdb: mapped.imdb } : {}),
+    };
   }
+}
 ```
 
 `cachedTmdbAnimeMatch` (`src/state/queries/mapping.ts:616-635`) searches TMDB
@@ -143,15 +143,15 @@ always of the right kind for a film.
 `src/state/queries/media-details.ts:96-104` (inside `resolveTmdbId`):
 
 ```ts
-  const ids = await cachedAniZipIds(queryClient, {
-    anilistId: item.externalIds.anilist,
-  });
-  if (item.isFilm === true && ids?.tmdb != null) return { tmdbId: ids.tmdb };
-  if (item.isFilm !== true && ids?.tvdb != null) {
-    const tmdbId = await cachedTmdbTvIdByTvdb(queryClient, ids.tvdb);
-    if (tmdbId != null) return { tmdbId };
-  }
-  return (await cachedTmdbAnimeMatch(queryClient, item)) ?? undefined;
+const ids = await cachedAniZipIds(queryClient, {
+  anilistId: item.externalIds.anilist,
+});
+if (item.isFilm === true && ids?.tmdb != null) return { tmdbId: ids.tmdb };
+if (item.isFilm !== true && ids?.tvdb != null) {
+  const tmdbId = await cachedTmdbTvIdByTvdb(queryClient, ids.tvdb);
+  if (tmdbId != null) return { tmdbId };
+}
+return (await cachedTmdbAnimeMatch(queryClient, item)) ?? undefined;
 ```
 
 ### Conventions that apply
@@ -172,17 +172,18 @@ always of the right kind for a film.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Install | `bun install --frozen-lockfile` | exit 0 |
-| Typecheck | `bun typecheck` | exit 0, no errors |
-| Lint | `bun lint` | exit 0 |
-| Focused tests | `bun test --isolate src/features/log-media/enrich.test.ts src/features/log-media/use-log-media.test.ts` | all pass |
-| Full tests | `bun run test` | all pass |
+| Purpose       | Command                                                                                                 | Expected on success |
+| ------------- | ------------------------------------------------------------------------------------------------------- | ------------------- |
+| Install       | `bun install --frozen-lockfile`                                                                         | exit 0              |
+| Typecheck     | `bun typecheck`                                                                                         | exit 0, no errors   |
+| Lint          | `bun lint`                                                                                              | exit 0              |
+| Focused tests | `bun test --isolate src/features/log-media/enrich.test.ts src/features/log-media/use-log-media.test.ts` | all pass            |
+| Full tests    | `bun run test`                                                                                          | all pass            |
 
 ## Scope
 
 **In scope** (the only files you should modify):
+
 - `src/features/log-media/enrich.ts` (the forward block only)
 - `src/features/log-media/enrich.test.ts`
 - `src/state/queries/media-details.ts` (one condition in `resolveTmdbId`)
@@ -190,6 +191,7 @@ always of the right kind for a film.
 - `plans/README.md` (status row)
 
 **Out of scope** (do NOT touch, even though they look related):
+
 - The reverse map at the end of `enrichExternalIds` (plan 032 owns it).
 - `src/lib/providers/routing.ts`. Routing stays id-driven.
 - `cachedTmdbAnimeMatch` and `pickAnimeTmdbMatch`. Do not loosen the match.
@@ -215,33 +217,33 @@ films` through the closing brace of `if (mapped != null) { … }`) with code of
 this shape:
 
 ```ts
-    const isFilm = item.isFilm === true;
-    // The bridge gives one TMDB id without its kind (aniZipTmdbKind): a film
-    // filed as a show's special carries the show's TV id.
-    const bridgedTmdb =
-      bridged != null && aniZipTmdbKind(bridged) === (isFilm ? 'movie' : 'tv')
-        ? bridged.tmdb
-        : undefined;
-    // A film with no movie id takes the details read's TMDB title match
-    // (The Last Blossom, 2025). A series doesn't: a wrong show would get
-    // Trakt and Serializd writes with no ani.zip episode table.
-    const match = isFilm && bridgedTmdb == null ? await cachedTmdbAnimeMatch(queryClient, item) : null;
-    // A film's TVDB id names its parent show, never the film.
-    const tvdb = isFilm ? undefined : bridged?.tvdb;
-    // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
-    // sequel cour's own id), so a series takes TVDB → TMDB like the details
-    // read does, and keeps ani.zip's only when that misses.
-    const tmdb =
-      match?.tmdbId ??
-      (tvdb != null ? ((await cachedTmdbTvIdByTvdb(queryClient, tvdb)) ?? bridgedTmdb) : bridgedTmdb);
-    // A non-film without a TVDB id is bridged to a movie: none of its ids is a show's.
-    const imdb = isFilm || tvdb != null ? bridged?.imdb : undefined;
-    externalIds = {
-      ...externalIds,
-      ...(tvdb != null ? { tvdb } : {}),
-      ...(tmdb != null ? { tmdb } : {}),
-      ...(imdb != null ? { imdb } : {}),
-    };
+const isFilm = item.isFilm === true;
+// The bridge gives one TMDB id without its kind (aniZipTmdbKind): a film
+// filed as a show's special carries the show's TV id.
+const bridgedTmdb =
+  bridged != null && aniZipTmdbKind(bridged) === (isFilm ? 'movie' : 'tv')
+    ? bridged.tmdb
+    : undefined;
+// A film with no movie id takes the details read's TMDB title match
+// (The Last Blossom, 2025). A series doesn't: a wrong show would get
+// Trakt and Serializd writes with no ani.zip episode table.
+const match = isFilm && bridgedTmdb == null ? await cachedTmdbAnimeMatch(queryClient, item) : null;
+// A film's TVDB id names its parent show, never the film.
+const tvdb = isFilm ? undefined : bridged?.tvdb;
+// ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
+// sequel cour's own id), so a series takes TVDB → TMDB like the details
+// read does, and keeps ani.zip's only when that misses.
+const tmdb =
+  match?.tmdbId ??
+  (tvdb != null ? ((await cachedTmdbTvIdByTvdb(queryClient, tvdb)) ?? bridgedTmdb) : bridgedTmdb);
+// A non-film without a TVDB id is bridged to a movie: none of its ids is a show's.
+const imdb = isFilm || tvdb != null ? bridged?.imdb : undefined;
+externalIds = {
+  ...externalIds,
+  ...(tvdb != null ? { tvdb } : {}),
+  ...(tmdb != null ? { tmdb } : {}),
+  ...(imdb != null ? { imdb } : {}),
+};
 ```
 
 Notes for getting it exactly right:
@@ -253,13 +255,13 @@ Notes for getting it exactly right:
   first and pass `{ tvdb }`.
 - The behaviour table you are implementing:
 
-  | Item | Bridge has TVDB id | Result |
-  |------|--------------------|--------|
-  | film | no | `tmdb` = bridge's id (a movie id). No title match call. |
-  | film | yes | `tmdb` = title match id, or none. `tvdb` not adopted. `imdb` adopted. |
-  | film | no bridge ids at all | `tmdb` = title match id, or none (unchanged behaviour). |
-  | not a film | yes | `tvdb` adopted. `tmdb` = TVDB → TMDB lookup, else bridge's id (unchanged behaviour). |
-  | not a film | no | nothing adopted from the bridge. |
+  | Item       | Bridge has TVDB id   | Result                                                                               |
+  | ---------- | -------------------- | ------------------------------------------------------------------------------------ |
+  | film       | no                   | `tmdb` = bridge's id (a movie id). No title match call.                              |
+  | film       | yes                  | `tmdb` = title match id, or none. `tvdb` not adopted. `imdb` adopted.                |
+  | film       | no bridge ids at all | `tmdb` = title match id, or none (unchanged behaviour).                              |
+  | not a film | yes                  | `tvdb` adopted. `tmdb` = TVDB → TMDB lookup, else bridge's id (unchanged behaviour). |
+  | not a film | no                   | nothing adopted from the bridge.                                                     |
 
 **Verify**: `bun typecheck && bun lint` → both exit 0.
 
@@ -268,13 +270,14 @@ Notes for getting it exactly right:
 In `src/state/queries/media-details.ts`, `resolveTmdbId`, change
 
 ```ts
-  if (item.isFilm === true && ids?.tmdb != null) return { tmdbId: ids.tmdb };
+if (item.isFilm === true && ids?.tmdb != null) return { tmdbId: ids.tmdb };
 ```
 
 to
 
 ```ts
-  if (item.isFilm === true && ids?.tmdb != null && aniZipTmdbKind(ids) === 'movie') return { tmdbId: ids.tmdb };
+if (item.isFilm === true && ids?.tmdb != null && aniZipTmdbKind(ids) === 'movie')
+  return { tmdbId: ids.tmdb };
 ```
 
 and import `aniZipTmdbKind` from `@/lib/providers/mapping/anizip`. A film whose
@@ -302,7 +305,8 @@ describe('enrichExternalIds — a bridge id of the other kind', () => {
     tmdbByTvdb = null;
   });
 
-  const film = () => chao({ id: 'anilist-405', type: 'ANIME', isFilm: true, externalIds: { anilist: 405 } });
+  const film = () =>
+    chao({ id: 'anilist-405', type: 'ANIME', isFilm: true, externalIds: { anilist: 405 } });
 
   test('a film tied to a TVDB show takes the title match, not the show’s id', async () => {
     anizipBridge = { anilist: 405, tvdb: 78960, tmdb: 19849 };

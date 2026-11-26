@@ -1,9 +1,5 @@
 import { Host } from '@expo/ui';
-import {
-  SegmentedButton,
-  SingleChoiceSegmentedButtonRow,
-  Text,
-} from '@expo/ui/jetpack-compose';
+import { SegmentedButton, SingleChoiceSegmentedButtonRow, Text } from '@expo/ui/jetpack-compose';
 import { height, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useColorScheme, View } from 'react-native';
 
@@ -28,7 +24,12 @@ export function NativeSegmentedControl<T extends string>({
   const foreground = useThemeColor('--color-foreground');
   return (
     <View accessibilityLabel={accessibilityLabel} className={className}>
-      <Host colorScheme={scheme ?? undefined} matchContents={{ vertical: true }} seedColor={accent} style={{ width: '100%' }}>
+      <Host
+        colorScheme={scheme ?? undefined}
+        matchContents={{ vertical: true }}
+        seedColor={accent}
+        style={{ width: '100%' }}
+      >
         <SingleChoiceSegmentedButtonRow>
           {options.map((option) => (
             <SegmentedButton

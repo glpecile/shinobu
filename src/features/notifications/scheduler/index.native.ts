@@ -28,7 +28,9 @@ let pendingMutation: Promise<unknown> = Promise.resolve();
 
 function mutateSchedule<T>(operation: () => Promise<T>): Promise<T> {
   const result = pendingMutation.then(operation);
-  pendingMutation = result.catch(() => { clearStoredHash(); });
+  pendingMutation = result.catch(() => {
+    clearStoredHash();
+  });
   return result;
 }
 

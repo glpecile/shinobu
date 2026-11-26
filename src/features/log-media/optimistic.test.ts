@@ -7,8 +7,14 @@ import { loggedWatch, withLoggedEpisodes, withLoggedKeys } from './optimistic';
 
 function show(id: string, externalIds: NormalizedMediaItem['externalIds']): NormalizedMediaItem {
   return {
-    id, title: id, coverImage: '', type: 'TV', currentProgress: 0,
-    progressUnit: 'episode', lastUpdated: '', externalIds,
+    id,
+    title: id,
+    coverImage: '',
+    type: 'TV',
+    currentProgress: 0,
+    progressUnit: 'episode',
+    lastUpdated: '',
+    externalIds,
   };
 }
 
@@ -16,12 +22,22 @@ const traktShow = show('trakt-1', { trakt: 1 });
 const anime = show('anilist-9', { anilist: 9 });
 
 const seasoned: UpNextEntry = {
-  kind: 'episode', id: 'trakt-1-s1e12', item: traktShow, status: 'aired', source: 'trakt',
-  episode: { season: 1, number: 12, firstAired: '2026-11-01T00:00:00Z' }, episodesBehind: 3,
+  kind: 'episode',
+  id: 'trakt-1-s1e12',
+  item: traktShow,
+  status: 'aired',
+  source: 'trakt',
+  episode: { season: 1, number: 12, firstAired: '2026-11-01T00:00:00Z' },
+  episodesBehind: 3,
 };
 const unseasoned: UpNextEntry = {
-  kind: 'episode', id: 'anilist-9-e4', item: anime, status: 'aired', source: 'anilist',
-  episode: { number: 4 }, episodesBehind: 2,
+  kind: 'episode',
+  id: 'anilist-9-e4',
+  item: anime,
+  status: 'aired',
+  source: 'anilist',
+  episode: { number: 4 },
+  episodesBehind: 2,
 };
 
 describe('withLoggedEpisodes', () => {
@@ -40,7 +56,10 @@ describe('withLoggedEpisodes', () => {
 
   test('a seasoned card moves to the episode the catch-up chain proved', () => {
     const logged = [
-      loggedWatch({ item: traktShow, episodes: [{ season: 1, number: 12 }] }, { season: 2, number: 1 })!,
+      loggedWatch(
+        { item: traktShow, episodes: [{ season: 1, number: 12 }] },
+        { season: 2, number: 1 },
+      )!,
     ];
 
     expect(withLoggedEpisodes([seasoned], logged)).toMatchObject([
@@ -52,7 +71,9 @@ describe('withLoggedEpisodes', () => {
     const one = [loggedWatch({ item: anime, entryEpisodes: [4] })!];
     const both = [...one, loggedWatch({ item: anime, entryEpisodes: [5] })!];
 
-    expect(withLoggedEpisodes([unseasoned], one)).toMatchObject([{ episode: { number: 5 }, episodesBehind: 1 }]);
+    expect(withLoggedEpisodes([unseasoned], one)).toMatchObject([
+      { episode: { number: 5 }, episodesBehind: 1 },
+    ]);
     expect(withLoggedEpisodes([unseasoned], both)).toEqual([]);
   });
 

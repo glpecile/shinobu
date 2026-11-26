@@ -131,7 +131,12 @@ function book(id: number, statusId: number): HardcoverLibraryEntry {
   return {
     statusId,
     addedAt: `2026-11-0${id}T00:00:00.000Z`,
-    item: { ...film(`hardcover-${id}`, `Book ${id}`, 2020), type: 'BOOK', progressUnit: 'page', externalIds: { hardcover: id } },
+    item: {
+      ...film(`hardcover-${id}`, `Book ${id}`, 2020),
+      type: 'BOOK',
+      progressUnit: 'page',
+      externalIds: { hardcover: id },
+    },
   };
 }
 
@@ -206,10 +211,7 @@ describe('fetchWatchlistInputs', () => {
 
   test('the AniList leg is the anime and reading-list slices of the already-cached reads', async () => {
     const { client, requested } = fakeClient({
-      anime: [
-        plannedAnime(1),
-        { ...plannedAnime(2), status: 'CURRENT' },
-      ],
+      anime: [plannedAnime(1), { ...plannedAnime(2), status: 'CURRENT' }],
       manga: [plannedManga(3)],
     });
 
@@ -268,19 +270,10 @@ describe('fetchWatchlistInputs', () => {
       failing: ['anilist'],
     });
 
-    const inputs = await fetchWatchlistInputs(client, [
-      'trakt',
-      'anilist',
-      'letterboxd',
-    ]);
+    const inputs = await fetchWatchlistInputs(client, ['trakt', 'anilist', 'letterboxd']);
 
-    expect(inputs.inputs.map((input) => input.source)).toEqual([
-      'trakt',
-      'letterboxd',
-    ]);
-    expect(inputs.errors).toEqual([
-      { provider: 'anilist', message: 'anilist down' },
-    ]);
+    expect(inputs.inputs.map((input) => input.source)).toEqual(['trakt', 'letterboxd']);
+    expect(inputs.errors).toEqual([{ provider: 'anilist', message: 'anilist down' }]);
   });
 
   test('the Simkl leg stamps its source and addedAt, one call across every bucket', async () => {
@@ -311,7 +304,11 @@ describe('fetchWatchlistInputs', () => {
     const inputs = await fetchWatchlistInputs(client, ['hardcover']);
 
     expect(inputs.inputs).toEqual([
-      { item: expect.objectContaining({ id: 'hardcover-1' }), source: 'hardcover', addedAt: '2026-11-01T00:00:00.000Z' },
+      {
+        item: expect.objectContaining({ id: 'hardcover-1' }),
+        source: 'hardcover',
+        addedAt: '2026-11-01T00:00:00.000Z',
+      },
     ]);
   });
 
@@ -350,7 +347,7 @@ describe('fetchWatchlistInputs', () => {
 });
 
 describe('watchlistReadProviders (plan 0031 R25/R32)', () => {
-  test('a Trakt-only user contributes a watchlist read — the row\'s new mount gate', () => {
+  test("a Trakt-only user contributes a watchlist read — the row's new mount gate", () => {
     expect(watchlistReadProviders(['trakt'])).toEqual(['trakt']);
     expect(watchlistReadProviders(['anilist'])).toEqual(['anilist']);
   });

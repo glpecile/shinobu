@@ -2,7 +2,7 @@
 
 **Symptom:** After swapping `Promise.all` for `better-all`'s `all()` in
 `fanOutLog`, two fan-out tests failed: `result.outcomes` came back in the order
-tasks *settled* (fast adapters first), not the order of `targets`.
+tasks _settled_ (fast adapters first), not the order of `targets`.
 
 **Cause:** `all()`/`allSettled()` insert keys into their result object as each
 task completes. `Object.values(result)` therefore reflects completion order —

@@ -26,7 +26,10 @@ import { creditRoleLine, type PersonCredit } from '@/features/person/person-cred
 import { TvCreditLine } from '@/features/person/tv-credit-line';
 import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
 import { UnwatchlistMediaButton } from '@/features/watchlist-media/unwatchlist-media-button';
-import { useWatchlistCtaShown, WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
+import {
+  useWatchlistCtaShown,
+  WatchlistMediaButton,
+} from '@/features/watchlist-media/watchlist-media-button';
 import {
   WatchlistAddPicker,
   WatchlistRemovePicker,
@@ -97,10 +100,11 @@ export function CardActionsSheet({
   const connected = useConnectedProviders();
   const reducedMotion = useReducedMotion();
   const muted = useThemeColor('--color-muted');
-  const film = useLetterboxdFilmQuery(open ? sourceItem?.externalIds.letterboxd ?? null : null);
-  const resolved = sourceItem != null && film.data != null
-    ? { ...mergeCatalogueMetadata(sourceItem, film.data), tmdbTvVariant: film.data.tmdbTvVariant }
-    : sourceItem;
+  const film = useLetterboxdFilmQuery(open ? (sourceItem?.externalIds.letterboxd ?? null) : null);
+  const resolved =
+    sourceItem != null && film.data != null
+      ? { ...mergeCatalogueMetadata(sourceItem, film.data), tmdbTvVariant: film.data.tmdbTvVariant }
+      : sourceItem;
   const details = useMediaDetailsQuery(
     open && (film.data != null || (sourceItem != null && needsReleaseEnrichment(sourceItem)))
       ? (resolved ?? undefined)
@@ -111,11 +115,26 @@ export function CardActionsSheet({
   const episodeRuntime = item == null ? undefined : mediaSortValue(item, 'runtime');
   const isSeries = item?.type === 'TV' || (item?.type === 'ANIME' && !item.isFilm);
   const runtimeLabel = isSeries
-    ? [episodeRuntime == null ? null : `${Math.round(episodeRuntime)} min/episode`, runtime == null ? null : `${Math.round(runtime)} min total`].filter(Boolean).join(' · ')
-    : runtime == null ? '' : `${Math.round(runtime)} min`;
+    ? [
+        episodeRuntime == null ? null : `${Math.round(episodeRuntime)} min/episode`,
+        runtime == null ? null : `${Math.round(runtime)} min total`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : runtime == null
+      ? ''
+      : `${Math.round(runtime)} min`;
   const itemId = item?.id;
   const [chosen, setChosen] = useState<{
-    mode: 'actions' | 'copy-title' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove' | 'list-add' | 'more';
+    mode:
+      | 'actions'
+      | 'copy-title'
+      | 'watchlist-add'
+      | 'watchlist-remove'
+      | 'log'
+      | 'list-remove'
+      | 'list-add'
+      | 'more';
     open: boolean;
     itemId: string | undefined;
   }>({ mode: 'actions', open, itemId });
@@ -133,9 +152,7 @@ export function CardActionsSheet({
         ? providerLinksFor(item, connected)
         : providerLinksFor(item, item.bridgedAniList == null ? [] : [Provider.AniList]);
   const hostRemoval =
-    watchlistRemoval != null && watchlistRemoval.entry.item.id === itemId
-      ? watchlistRemoval
-      : null;
+    watchlistRemoval != null && watchlistRemoval.entry.item.id === itemId ? watchlistRemoval : null;
   const cachedRemoval = useCachedWatchlistRemoval(
     item,
     open && canWatchlist && hostRemoval == null,
@@ -161,10 +178,24 @@ export function CardActionsSheet({
         <AddToListPicker item={item} onBack={() => setMode('actions')} onClose={onClose} />
       )}
       {item != null && mode === 'more' && (
-        <MoreActions item={item} key={`more-${item.id}`} onBack={() => setMode('actions')} onClose={onClose} />
+        <MoreActions
+          item={item}
+          key={`more-${item.id}`}
+          onBack={() => setMode('actions')}
+          onClose={onClose}
+        />
       )}
       {item != null && mode === 'list-remove' && listRemoval != null && (
-        <ListMembershipForm entryId={listRemoval.entryId} item={sourceItem ?? item} key={`list-remove-${listRemoval.entryId ?? item.id}`} onBack={() => setMode('actions')} onDone={onClose} present={false} subtitle={listRemoval.subtitle} target={listRemoval.target} />
+        <ListMembershipForm
+          entryId={listRemoval.entryId}
+          item={sourceItem ?? item}
+          key={`list-remove-${listRemoval.entryId ?? item.id}`}
+          onBack={() => setMode('actions')}
+          onDone={onClose}
+          present={false}
+          subtitle={listRemoval.subtitle}
+          target={listRemoval.target}
+        />
       )}
       {item != null && mode === 'watchlist-add' && (
         <WatchlistAddPicker
@@ -175,15 +206,15 @@ export function CardActionsSheet({
         />
       )}
       {item != null && mode === 'watchlist-remove' && removal != null && (
-          <WatchlistRemovePicker
-            entry={removal.entry}
-            errors={removal.errors}
-            incomplete={removal.incomplete}
-            key={`watchlist-remove-${item.id}`}
-            onCancel={() => setMode('actions')}
-            onCleanClose={onClose}
-          />
-        )}
+        <WatchlistRemovePicker
+          entry={removal.entry}
+          errors={removal.errors}
+          incomplete={removal.incomplete}
+          key={`watchlist-remove-${item.id}`}
+          onCancel={() => setMode('actions')}
+          onCleanClose={onClose}
+        />
+      )}
       {item != null && mode === 'log' && logRequest != null && (
         <LogSheetContent
           key={`log-${logRequest.item.id}-${logRequest.title}`}
@@ -222,20 +253,24 @@ export function CardActionsSheet({
                   .filter((part) => part != null)
                   .join(' · ')}
               </SheetHeader.Subtitle>
-              {item.type !== 'MANGA' && item.type !== 'BOOK' && <AnimatedView
-                accessible={runtimeLabel !== ''}
-                accessibilityLabel={runtimeLabel}
-                key={`${item.id}-${runtimeLabel}`}
-                className="min-h-5 flex-row items-center gap-1.5 mt-1"
-                style={{
-                  animationName: runtimeFade,
-                  animationDuration: reducedMotion ? 0 : DURATION.swap,
-                  animationTimingFunction: EASE_OUT,
-                }}
-              >
-                {runtimeLabel !== '' && <Ionicons accessible={false} color={muted} name="time-outline" size={14} />}
-                <Text className="flex-1 text-muted font-sans text-sm">{runtimeLabel}</Text>
-              </AnimatedView>}
+              {item.type !== 'MANGA' && item.type !== 'BOOK' && (
+                <AnimatedView
+                  accessible={runtimeLabel !== ''}
+                  accessibilityLabel={runtimeLabel}
+                  key={`${item.id}-${runtimeLabel}`}
+                  className="min-h-5 flex-row items-center gap-1.5 mt-1"
+                  style={{
+                    animationName: runtimeFade,
+                    animationDuration: reducedMotion ? 0 : DURATION.swap,
+                    animationTimingFunction: EASE_OUT,
+                  }}
+                >
+                  {runtimeLabel !== '' && (
+                    <Ionicons accessible={false} color={muted} name="time-outline" size={14} />
+                  )}
+                  <Text className="flex-1 text-muted font-sans text-sm">{runtimeLabel}</Text>
+                </AnimatedView>
+              )}
             </SheetHeader.Content>
           </SheetHeader>
 
@@ -249,13 +284,9 @@ export function CardActionsSheet({
                   textClassName="text-xs"
                 />
                 <View className="flex-1">
-                  <Text className="text-foreground font-sans-semibold text-sm">
-                    {credit.name}
-                  </Text>
+                  <Text className="text-foreground font-sans-semibold text-sm">{credit.name}</Text>
                   {credit.tvCredits == null && (
-                    <Text className="text-muted font-sans text-sm">
-                      {creditRoleLine(credit)}
-                    </Text>
+                    <Text className="text-muted font-sans text-sm">{creditRoleLine(credit)}</Text>
                   )}
                 </View>
               </View>
@@ -285,12 +316,7 @@ export function CardActionsSheet({
                 }}
               />
             )}
-            <WatchlistRow
-              item={item}
-              onOpenMode={setMode}
-              removal={removal}
-              verb={watchlistVerb}
-            />
+            <WatchlistRow item={item} onOpenMode={setMode} removal={removal} verb={watchlistVerb} />
             {item.type === 'TV' && seriesNext.status === 'unavailable' && (
               <Text className="text-muted font-sans text-sm mb-6">
                 Episodes are logged per season from the details page.
@@ -310,20 +336,17 @@ export function CardActionsSheet({
             />
           </ShareButton.Capsule>
           {links.map((link) => (
-            <ProviderLinkRow
-              className="mt-2"
-              key={link.provider}
-              link={link}
-              onOpened={onClose}
-            />
+            <ProviderLinkRow className="mt-2" key={link.provider} link={link} onOpened={onClose} />
           ))}
-          {listRemoval != null && <Button
-            className="mt-2"
-            icon={<Button.Icon name="trash-outline" />}
-            label="Remove from list"
-            onPress={() => setMode('list-remove')}
-            variant="quiet-accent"
-          />}
+          {listRemoval != null && (
+            <Button
+              className="mt-2"
+              icon={<Button.Icon name="trash-outline" />}
+              label="Remove from list"
+              onPress={() => setMode('list-remove')}
+              variant="quiet-accent"
+            />
+          )}
           {canHide && (
             <Button
               className="mt-2"

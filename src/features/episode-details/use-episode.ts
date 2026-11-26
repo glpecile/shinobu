@@ -1,7 +1,4 @@
-import {
-  useShowSeasonsQuery,
-  useShowSeasonsSource,
-} from '@/state/queries/show-seasons';
+import { useShowSeasonsQuery, useShowSeasonsSource } from '@/state/queries/show-seasons';
 import { useTmdbEpisodeQuery } from '@/state/queries/tmdb';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedEpisode, NormalizedMediaItem, NormalizedRating } from '@/types/media';
@@ -20,11 +17,7 @@ export interface EpisodeView {
 }
 
 /** Merges TMDB metadata over the cached season entry, preserving catalogue `firstAired` since Trakt provides timestamps while TMDB only provides dates. */
-export function useEpisode(
-  item: NormalizedMediaItem,
-  season: number,
-  number: number,
-): EpisodeView {
+export function useEpisode(item: NormalizedMediaItem, season: number, number: number): EpisodeView {
   const hasTmdb = useTmdbToken() !== '';
   const tmdbId = hasTmdb ? item.externalIds.tmdb : undefined;
   const source = useShowSeasonsSource(item);

@@ -60,7 +60,10 @@ mock.module('@/state/queries/mapping', () => ({
   cachedTmdbMovieIdByTitle: () => Promise.resolve(null),
   cachedAniZipEpisodeMap: (_client: unknown, anilistId: number) => {
     mappingCalls.push(`episode-map:${anilistId}`);
-    return Promise.resolve(courMaps.get(anilistId) ?? (prequel !== 'none' && anilistId === prequel?.id ? prequelMap : episodeMap));
+    return Promise.resolve(
+      courMaps.get(anilistId) ??
+        (prequel !== 'none' && anilistId === prequel?.id ? prequelMap : episodeMap),
+    );
   },
   cachedSeasonLayout: (_client: unknown, ids: Record<string, number>) => {
     mappingCalls.push(`season-layout:${JSON.stringify(ids)}`);
@@ -84,21 +87,40 @@ const {
   withUnread,
 } = await import('./use-log-media');
 const { fanOutLog } = await import('./fan-out');
-const { manualLinkForOutcome, splitSkippedOutcomes } = await import(
-  './manual-write-links'
-);
+const { manualLinkForOutcome, splitSkippedOutcomes } = await import('./manual-write-links');
 const { traktQueryKeys } = await import('@/state/queries/trakt');
 const { anilistQueryKeys } = await import('@/state/queries/anilist');
 
 test('a whole-series Letterboxd confirmation reaches only its diary adapter, with no episode payload', async () => {
   const item: NormalizedMediaItem = {
-    id: 'letterboxd-beast-boy-lone-wolf', title: 'Beast Boy: Lone Wolf', coverImage: '',
-    type: 'MOVIE', tmdbTvVariant: 228880, currentProgress: 0, progressUnit: 'episode',
-    lastUpdated: '', externalIds: { letterboxd: 'beast-boy-lone-wolf' },
+    id: 'letterboxd-beast-boy-lone-wolf',
+    title: 'Beast Boy: Lone Wolf',
+    coverImage: '',
+    type: 'MOVIE',
+    tmdbTvVariant: 228880,
+    currentProgress: 0,
+    progressUnit: 'episode',
+    lastUpdated: '',
+    externalIds: { letterboxd: 'beast-boy-lone-wolf' },
   };
-  const plan = await planLogWrite(client(), { item }, ['simkl', 'trakt', 'anilist', 'serializd', 'letterboxd']);
+  const plan = await planLogWrite(client(), { item }, [
+    'simkl',
+    'trakt',
+    'anilist',
+    'serializd',
+    'letterboxd',
+  ]);
   const deliveries: LogMediaVariables[] = [];
-  const result = await fanOutLog({ letterboxd: async (variables) => { deliveries.push(variables); return { status: 'ok' }; } }, plan.writeTargets, plan.variables);
+  const result = await fanOutLog(
+    {
+      letterboxd: async (variables) => {
+        deliveries.push(variables);
+        return { status: 'ok' };
+      },
+    },
+    plan.writeTargets,
+    plan.variables,
+  );
   expect(result.succeeded).toEqual(['letterboxd']);
   expect(result.outcomes).toEqual([{ provider: 'letterboxd', status: 'ok' }]);
   expect(deliveries).toHaveLength(1);
@@ -112,11 +134,20 @@ test('a Letterboxd film the member page already shows is logged again as a rewat
   const { letterboxdFilmWatchQuery } = await import('@/state/queries/letterboxd');
   connectLetterboxd('glptest');
   const item: NormalizedMediaItem = {
-    id: 'letterboxd-inception', title: 'Inception', coverImage: '', type: 'MOVIE',
-    currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { letterboxd: 'inception' },
+    id: 'letterboxd-inception',
+    title: 'Inception',
+    coverImage: '',
+    type: 'MOVIE',
+    currentProgress: 0,
+    progressUnit: 'episode',
+    lastUpdated: '',
+    externalIds: { letterboxd: 'inception' },
   };
   const queryClient = client();
-  queryClient.setQueryData(letterboxdFilmWatchQuery('glptest', item).queryKey, { ...item, currentProgress: 1 });
+  queryClient.setQueryData(letterboxdFilmWatchQuery('glptest', item).queryKey, {
+    ...item,
+    currentProgress: 1,
+  });
   const plan = await planLogWrite(queryClient, { item }, ['letterboxd']);
   expect(plan.writeTargets).toEqual(['letterboxd']);
   expect(plan.variables.rewatch).toBe(true);
@@ -127,22 +158,37 @@ test('a manga chapter range costs the entry read and one save at its last chapte
   const { setProviderSession } = await import('@/state/session/tokens');
   setProviderSession('anilist', { accessToken: 'tok' });
   const item: NormalizedMediaItem = {
-    id: 'anilist-100', title: 'Paper Moon Couriers', coverImage: '', type: 'MANGA',
-    currentProgress: 5, progressUnit: 'chapter', lastUpdated: '', externalIds: { anilist: 100 },
+    id: 'anilist-100',
+    title: 'Paper Moon Couriers',
+    coverImage: '',
+    type: 'MANGA',
+    currentProgress: 5,
+    progressUnit: 'chapter',
+    lastUpdated: '',
+    externalIds: { anilist: 100 },
   };
-  const media = { type: 'MANGA', episodes: null, chapters: null, mediaListEntry: { status: 'CURRENT', progress: 5, repeat: 0 } };
+  const media = {
+    type: 'MANGA',
+    episodes: null,
+    chapters: null,
+    mediaListEntry: { status: 'CURRENT', progress: 5, repeat: 0 },
+  };
   const sent: { query: string; variables: unknown }[] = [];
   httpHandler = async (_input, init) => {
     const body = JSON.parse(String(init?.body)) as { query: string; variables: unknown };
     sent.push(body);
-    return Response.json(body.query.includes('SaveMediaListEntry')
-      ? { data: { SaveMediaListEntry: { id: 1 } } }
-      : { data: { Media: media } });
+    return Response.json(
+      body.query.includes('SaveMediaListEntry')
+        ? { data: { SaveMediaListEntry: { id: 1 } } }
+        : { data: { Media: media } },
+    );
   };
   const queryClient = client();
   seedAniList(queryClient, 100, { status: 'CURRENT', progress: 5 });
 
-  const plan = await planLogWrite(queryClient, { item, entryEpisodes: [6, 7, 8, 9, 10, 11, 12] }, ['anilist']);
+  const plan = await planLogWrite(queryClient, { item, entryEpisodes: [6, 7, 8, 9, 10, 11, 12] }, [
+    'anilist',
+  ]);
   const report = await fanOutLog(logAdapters(queryClient), plan.writeTargets, plan.variables);
 
   expect(plan.rewatch).toBe(false);
@@ -167,14 +213,14 @@ function sequelMap(): AniZipEpisodeMap {
 }
 
 function tenEpisodes(season: number): AniZipEpisodeMap {
-  return new Map(Array.from({ length: 10 }, (_, index) => [index + 1, { season, number: index + 1 }]));
+  return new Map(
+    Array.from({ length: 10 }, (_, index) => [index + 1, { season, number: index + 1 }]),
+  );
 }
 
 const ONE_CONTINUOUS_SEASON: SeasonLayout = [{ season: 1, episodeCount: 24 }];
 
-function animeSeries(
-  overrides: Partial<NormalizedMediaItem> = {},
-): NormalizedMediaItem {
+function animeSeries(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return {
     id: 'anilist-185660',
     title: 'Dan Da Dan Season 2',
@@ -213,10 +259,12 @@ function seedAniList(
 }
 
 function recordingAdapters(seen: Map<ProviderId, LogMediaVariables>) {
-  const make = (provider: ProviderId): WriteAdapter<LogMediaVariables> => (variables) => {
-    seen.set(provider, variables);
-    return Promise.resolve({ status: 'ok' as const });
-  };
+  const make =
+    (provider: ProviderId): WriteAdapter<LogMediaVariables> =>
+    (variables) => {
+      seen.set(provider, variables);
+      return Promise.resolve({ status: 'ok' as const });
+    };
   return {
     trakt: make('trakt'),
     anilist: make('anilist'),
@@ -244,22 +292,46 @@ beforeEach(() => {
 describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () => {
   test.each([
     { name: 'matching TVDB', tvdb: 432832, tmdb: null, targetTvdb: 432832, maps: true },
-    { name: 'matching TVDB-to-TMDB lookup', tvdb: 432832, tmdb: 240411, targetTvdb: undefined, maps: true },
+    {
+      name: 'matching TVDB-to-TMDB lookup',
+      tvdb: 432832,
+      tmdb: 240411,
+      targetTvdb: undefined,
+      maps: true,
+    },
     { name: 'a different show', tvdb: 78857, tmdb: null, targetTvdb: 432832, maps: false },
-    { name: 'an unresolved identity', tvdb: undefined, tmdb: null, targetTvdb: undefined, maps: false },
-  ])('a missing sequel table borrows its prequel only with $name', async ({ tvdb, tmdb, targetTvdb, maps }) => {
-    episodeMap = null;
-    prequel = { id: 20, episodes: 12 };
-    prequelIds = { tvdb };
-    prequelTmdb = tmdb;
-    prequelMap = new Map(Array.from({ length: 12 }, (_, i) => [i + 1, {
-      season: 1, number: i + 1, absolute: i + 1,
-    }]));
-    const item = animeSeries({ externalIds: { anilist: 185660, tvdb: targetTvdb, tmdb: 240411 } });
-    const plan = await planLogWrite(client(), { item, entryEpisodes: [3] }, ['serializd']);
-    expect(plan.variables.episodes).toEqual(maps ? [{ season: 1, number: 15 }] : undefined);
-    expect(plan.mappingSkips.has('serializd')).toBe(!maps);
-  });
+    {
+      name: 'an unresolved identity',
+      tvdb: undefined,
+      tmdb: null,
+      targetTvdb: undefined,
+      maps: false,
+    },
+  ])(
+    'a missing sequel table borrows its prequel only with $name',
+    async ({ tvdb, tmdb, targetTvdb, maps }) => {
+      episodeMap = null;
+      prequel = { id: 20, episodes: 12 };
+      prequelIds = { tvdb };
+      prequelTmdb = tmdb;
+      prequelMap = new Map(
+        Array.from({ length: 12 }, (_, i) => [
+          i + 1,
+          {
+            season: 1,
+            number: i + 1,
+            absolute: i + 1,
+          },
+        ]),
+      );
+      const item = animeSeries({
+        externalIds: { anilist: 185660, tvdb: targetTvdb, tmdb: 240411 },
+      });
+      const plan = await planLogWrite(client(), { item, entryEpisodes: [3] }, ['serializd']);
+      expect(plan.variables.episodes).toEqual(maps ? [{ season: 1, number: 15 }] : undefined);
+      expect(plan.mappingSkips.has('serializd')).toBe(!maps);
+    },
+  );
 
   test.each([
     { name: 'an empty ani.zip table', map: new Map() as AniZipEpisodeMap, maps: true },
@@ -270,7 +342,12 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     const item = animeSeries({ externalIds: { anilist: 203275, tmdb: 328010 } });
     const plan = await planLogWrite(client(), { item, entryEpisodes: [1, 2] }, ['serializd']);
     expect(plan.variables.episodes).toEqual(
-      maps ? [{ season: 1, number: 1 }, { season: 1, number: 2 }] : undefined,
+      maps
+        ? [
+            { season: 1, number: 1 },
+            { season: 1, number: 2 },
+          ]
+        : undefined,
     );
     expect(plan.mappingSkips.has('serializd')).toBe(!maps);
   });
@@ -343,9 +420,7 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     const item = animeSeries();
     seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
 
-    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [3] }, [
-      'anilist',
-    ]);
+    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [3] }, ['anilist']);
 
     expect(mappingCalls).toEqual([]);
     expect(plan.targets).toEqual(['anilist']);
@@ -369,12 +444,21 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     courIds = new Map([[256, { anilist: 256, tmdb: 37910 }]]);
     const queryClient = client();
     const item: NormalizedMediaItem = {
-      id: 'anilist-256', title: 'Voices of a Distant Star', coverImage: '', type: 'ANIME',
-      totalEpisodes: 1, currentProgress: 0, progressUnit: 'episode', lastUpdated: '',
+      id: 'anilist-256',
+      title: 'Voices of a Distant Star',
+      coverImage: '',
+      type: 'ANIME',
+      totalEpisodes: 1,
+      currentProgress: 0,
+      progressUnit: 'episode',
+      lastUpdated: '',
       externalIds: { anilist: 256 },
     };
 
-    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [1] }, ['anilist', 'letterboxd']);
+    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [1] }, [
+      'anilist',
+      'letterboxd',
+    ]);
 
     expect(plan.targets).toEqual(['anilist', 'letterboxd']);
     expect(plan.variables.item.isFilm).toBe(true);
@@ -396,56 +480,77 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     };
     seedTrakt(queryClient, 42, []);
 
-    const plan = await planLogWrite(
-      queryClient,
-      { item, episodes: [{ season: 2, number: 3 }] },
-      ['trakt', 'anilist'],
-    );
+    const plan = await planLogWrite(queryClient, { item, episodes: [{ season: 2, number: 3 }] }, [
+      'trakt',
+      'anilist',
+    ]);
 
     expect(plan.targets).toEqual(['trakt', 'anilist']);
-    expect(plan.mappingSkips.get('anilist')).toBe('Could not find the AniList entry for this season');
+    expect(plan.mappingSkips.get('anilist')).toBe(
+      'Could not find the AniList entry for this season',
+    );
     expect(mappingCalls).toEqual([]);
     expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
   });
-  test.each(['mapped', 'missing-map', 'missing-mal'] as const)('a later TMDB season resolves its cour safely: %s', async (mapping) => {
-    courIds = new Map([
-      [120377, { anilist: 120377, tvdb: 384541, mal: 42310 }],
-      [195539, { anilist: 195539, tvdb: 384541, mal: 61990 }],
-    ]);
-    courMaps = new Map([[120377, tenEpisodes(1)], [195539, tenEpisodes(2)]]);
-    laterCours = new Map([[120377, [195539]]]);
-    const item: NormalizedMediaItem = {
-      id: 'tmdb-tv-105248', title: 'Cyberpunk: Edgerunners', coverImage: '', type: 'TV',
-      currentProgress: 10, progressUnit: 'episode', lastUpdated: '',
-      externalIds: { tmdb: 105248, tvdb: 384541, anilist: 120377, simkl: 1 },
-    };
-    if (mapping === 'missing-map') courMaps.set(195539, new Map());
-    if (mapping === 'missing-mal') courIds.set(195539, { anilist: 195539, tvdb: 384541 });
-    const queryClient = client();
-    seedAniList(queryClient, 195539, { status: 'CURRENT', progress: 2 });
+  test.each(['mapped', 'missing-map', 'missing-mal'] as const)(
+    'a later TMDB season resolves its cour safely: %s',
+    async (mapping) => {
+      courIds = new Map([
+        [120377, { anilist: 120377, tvdb: 384541, mal: 42310 }],
+        [195539, { anilist: 195539, tvdb: 384541, mal: 61990 }],
+      ]);
+      courMaps = new Map([
+        [120377, tenEpisodes(1)],
+        [195539, tenEpisodes(2)],
+      ]);
+      laterCours = new Map([[120377, [195539]]]);
+      const item: NormalizedMediaItem = {
+        id: 'tmdb-tv-105248',
+        title: 'Cyberpunk: Edgerunners',
+        coverImage: '',
+        type: 'TV',
+        currentProgress: 10,
+        progressUnit: 'episode',
+        lastUpdated: '',
+        externalIds: { tmdb: 105248, tvdb: 384541, anilist: 120377, simkl: 1 },
+      };
+      if (mapping === 'missing-map') courMaps.set(195539, new Map());
+      if (mapping === 'missing-mal') courIds.set(195539, { anilist: 195539, tvdb: 384541 });
+      const queryClient = client();
+      seedAniList(queryClient, 195539, { status: 'CURRENT', progress: 2 });
 
-    const plan = await planLogWrite(queryClient, { item, episodes: [{ season: 2, number: 3 }] }, ['anilist', 'simkl']);
+      const plan = await planLogWrite(queryClient, { item, episodes: [{ season: 2, number: 3 }] }, [
+        'anilist',
+        'simkl',
+      ]);
 
-    const deliveries = new Map<ProviderId, LogMediaVariables>();
-    const result = await fanOutLog(
-      withMappingSkips(recordingAdapters(deliveries), plan.mappingSkips),
-      plan.writeTargets,
-      plan.variables,
-    );
-    if (mapping !== 'mapped') {
-      expect(deliveries.has('simkl')).toBe(false);
-      expect(result.outcomes).toContainEqual({
-        provider: 'simkl', status: 'skipped',
-        reason: 'Could not resolve a cour-specific Simkl identity for these episodes',
+      const deliveries = new Map<ProviderId, LogMediaVariables>();
+      const result = await fanOutLog(
+        withMappingSkips(recordingAdapters(deliveries), plan.mappingSkips),
+        plan.writeTargets,
+        plan.variables,
+      );
+      if (mapping !== 'mapped') {
+        expect(deliveries.has('simkl')).toBe(false);
+        expect(result.outcomes).toContainEqual({
+          provider: 'simkl',
+          status: 'skipped',
+          reason: 'Could not resolve a cour-specific Simkl identity for these episodes',
+        });
+        return;
+      }
+      expect(plan.targets).toEqual(['anilist', 'simkl']);
+      expect(plan.variables.item.type).toBe('ANIME');
+      expect(plan.variables.item.externalIds).toEqual({
+        tmdb: 105248,
+        tvdb: 384541,
+        anilist: 195539,
+        mal: 61990,
       });
-      return;
-    }
-    expect(plan.targets).toEqual(['anilist', 'simkl']);
-    expect(plan.variables.item.type).toBe('ANIME');
-    expect(plan.variables.item.externalIds).toEqual({ tmdb: 105248, tvdb: 384541, anilist: 195539, mal: 61990 });
-    expect(plan.variables.entryEpisodes).toEqual([3]);
-    expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
-  });
+      expect(plan.variables.entryEpisodes).toEqual([3]);
+      expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
+    },
+  );
 });
 
 describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
@@ -505,11 +610,9 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
     const queryClient = client();
     const item = animeSeries();
 
-    const plan = await planLogWrite(
-      queryClient,
-      { item, episodes: [{ season: 2, number: 3 }] },
-      ['simkl'],
-    );
+    const plan = await planLogWrite(queryClient, { item, episodes: [{ season: 2, number: 3 }] }, [
+      'simkl',
+    ]);
 
     expect(plan.variables.entryEpisodes).toBeUndefined();
     expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
@@ -531,11 +634,10 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
     const item = animeSeries();
     seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
 
-    const plan = await planLogWrite(
-      queryClient,
-      { item, episodes: [{ season: 1, number: 3 }] },
-      ['anilist', 'simkl'],
-    );
+    const plan = await planLogWrite(queryClient, { item, episodes: [{ season: 1, number: 3 }] }, [
+      'anilist',
+      'simkl',
+    ]);
 
     expect(plan.variables.entryEpisodes).toEqual([3]);
 
@@ -551,8 +653,14 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
 
   test('an entry Simkl cannot build is skipped on its own and never queued', async () => {
     const item: NormalizedMediaItem = {
-      id: 'letterboxd-inception', title: 'Inception', coverImage: '', type: 'MOVIE',
-      currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: {},
+      id: 'letterboxd-inception',
+      title: 'Inception',
+      coverImage: '',
+      type: 'MOVIE',
+      currentProgress: 0,
+      progressUnit: 'episode',
+      lastUpdated: '',
+      externalIds: {},
     };
     const calls: unknown[] = [];
     const adapter = simklLogAdapter(client(), (entry) => {
@@ -616,8 +724,14 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
   test('a provider without a watch-state read does not turn a rewatch into a catch-up', async () => {
     const queryClient = client();
     const item: NormalizedMediaItem = {
-      id: 'trakt-1', title: 'Inception', coverImage: '', type: 'MOVIE',
-      currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { trakt: 1, tmdb: 27205 },
+      id: 'trakt-1',
+      title: 'Inception',
+      coverImage: '',
+      type: 'MOVIE',
+      currentProgress: 0,
+      progressUnit: 'episode',
+      lastUpdated: '',
+      externalIds: { trakt: 1, tmdb: 27205 },
     };
     queryClient.setQueryData(traktQueryKeys.watchedMovies(), [item]);
 
@@ -630,9 +744,8 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
 });
 
 async function connectTrakt() {
-  const { setProviderClientId, setProviderClientSecret, setProviderSession } = await import(
-    '@/state/session/tokens'
-  );
+  const { setProviderClientId, setProviderClientSecret, setProviderSession } =
+    await import('@/state/session/tokens');
   setProviderSession('trakt', { accessToken: 'tok' });
   setProviderClientId('trakt', 'cid');
   setProviderClientSecret('trakt', 'secret');
@@ -640,8 +753,14 @@ async function connectTrakt() {
 
 describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
   const inception: NormalizedMediaItem = {
-    id: 'trakt-1', title: 'Inception', coverImage: '', type: 'MOVIE',
-    currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { trakt: 1, tmdb: 27205 },
+    id: 'trakt-1',
+    title: 'Inception',
+    coverImage: '',
+    type: 'MOVIE',
+    currentProgress: 0,
+    progressUnit: 'episode',
+    lastUpdated: '',
+    externalIds: { trakt: 1, tmdb: 27205 },
   };
 
   test('a first watch that landed but reported failure is not sent again', async () => {
@@ -653,10 +772,14 @@ describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
       const url = String(input);
       if (init?.method === 'POST' && url.includes('/sync/history')) {
         posts += 1;
-        watched = [{
-          plays: 1, last_watched_at: '2026-11-01T00:00:00.000Z', last_updated_at: '2026-11-01T00:00:00.000Z',
-          movie: { title: 'Inception', year: 2010, ids: { trakt: 1, tmdb: 27205 } },
-        }];
+        watched = [
+          {
+            plays: 1,
+            last_watched_at: '2026-11-01T00:00:00.000Z',
+            last_updated_at: '2026-11-01T00:00:00.000Z',
+            movie: { title: 'Inception', year: 2010, ids: { trakt: 1, tmdb: 27205 } },
+          },
+        ];
         return new Response('', { status: 504 });
       }
       if (url.includes('/sync/watched/movies')) return Response.json(watched);
@@ -681,8 +804,14 @@ describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
   });
 
   const tmdbShow: NormalizedMediaItem = {
-    id: 'tmdb-1399', title: 'Game of Thrones', coverImage: '', type: 'TV',
-    currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 1399 },
+    id: 'tmdb-1399',
+    title: 'Game of Thrones',
+    coverImage: '',
+    type: 'TV',
+    currentProgress: 0,
+    progressUnit: 'episode',
+    lastUpdated: '',
+    externalIds: { tmdb: 1399 },
   };
 
   test.each([
@@ -730,7 +859,12 @@ describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
   test('a replay sends a target that never left the device, even when its watch state cannot be read', async () => {
     const plan = await planLogWrite(
       client(),
-      { item: inception, providers: ['simkl'], retryOf: { rewatch: false, unsent: ['simkl'] }, replay: 'r1' },
+      {
+        item: inception,
+        providers: ['simkl'],
+        retryOf: { rewatch: false, unsent: ['simkl'] },
+        replay: 'r1',
+      },
       ['simkl'],
     );
 
@@ -802,11 +936,17 @@ async function connectHardcover(onMutation: (variables: Record<string, unknown>)
   setProviderSession('hardcover', { accessToken: 'tok' });
   const library: { entry: unknown } = { entry: null };
   httpHandler = async (_input, init) => {
-    const body = JSON.parse(String(init?.body)) as { query: string; variables: Record<string, unknown> };
+    const body = JSON.parse(String(init?.body)) as {
+      query: string;
+      variables: Record<string, unknown>;
+    };
     if (body.query.startsWith('query BookEntry')) {
-      return Response.json({ data: { me: [{ user_books: library.entry == null ? [] : [library.entry] }] } });
+      return Response.json({
+        data: { me: [{ user_books: library.entry == null ? [] : [library.entry] }] },
+      });
     }
-    if (!body.query.trimStart().startsWith('mutation')) return Response.json({ data: { books_by_pk: null } });
+    if (!body.query.trimStart().startsWith('mutation'))
+      return Response.json({ data: { books_by_pk: null } });
     return onMutation(body.variables);
   };
   return library;
@@ -814,10 +954,23 @@ async function connectHardcover(onMutation: (variables: Record<string, unknown>)
 
 describe('the Hardcover leg of the log fan-out (plan 0117 B3)', () => {
   const book: NormalizedMediaItem = {
-    id: 'hardcover-427578', title: 'No Longer Human', coverImage: '', type: 'BOOK',
-    currentProgress: 0, progressUnit: 'page', lastUpdated: '', externalIds: { hardcover: 427578 },
+    id: 'hardcover-427578',
+    title: 'No Longer Human',
+    coverImage: '',
+    type: 'BOOK',
+    currentProgress: 0,
+    progressUnit: 'page',
+    lastUpdated: '',
+    externalIds: { hardcover: 427578 },
   };
-  const everyProvider: ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd', 'simkl', 'hardcover'];
+  const everyProvider: ProviderId[] = [
+    'trakt',
+    'anilist',
+    'letterboxd',
+    'serializd',
+    'simkl',
+    'hardcover',
+  ];
 
   test('a book finished late in the evening goes to Hardcover alone, on the reader’s day', async () => {
     const zone = process.env.TZ;
@@ -846,7 +999,14 @@ describe('the Hardcover leg of the log fan-out (plan 0117 B3)', () => {
     expect(plan.targets).toEqual(['hardcover']);
     expect(report.succeeded).toEqual(['hardcover']);
     expect(sent).toEqual([
-      { object: { book_id: 427578, status_id: 3, user_date: '2026-10-31', action_at: '2026-11-01T01:30:00.000Z' } },
+      {
+        object: {
+          book_id: 427578,
+          status_id: 3,
+          user_date: '2026-10-31',
+          action_at: '2026-11-01T01:30:00.000Z',
+        },
+      },
     ]);
   });
 
@@ -854,20 +1014,33 @@ describe('the Hardcover leg of the log fan-out (plan 0117 B3)', () => {
     let mutations = 0;
     const library = await connectHardcover(() => {
       mutations += 1;
-      library.entry = { id: 456, status_id: 3, user_book_reads: [{ id: 12, finished_at: '2026-11-12' }] };
+      library.entry = {
+        id: 456,
+        status_id: 3,
+        user_book_reads: [{ id: 12, finished_at: '2026-11-12' }],
+      };
       return new Response('', { status: 504 });
     });
     const queryClient = client();
 
-    const first = await planLogWrite(queryClient, { item: book, reading: { finished: true } }, ['hardcover']);
+    const first = await planLogWrite(queryClient, { item: book, reading: { finished: true } }, [
+      'hardcover',
+    ]);
     const report = await fanOutLog(logAdapters(queryClient), first.writeTargets, first.variables);
     invalidateAfterLog(queryClient, first.item, report.succeeded, first.skipped);
     const retry = await planLogWrite(
       queryClient,
-      { item: book, reading: { finished: true }, providers: report.failed, retryOf: { rewatch: first.rewatch } },
+      {
+        item: book,
+        reading: { finished: true },
+        providers: report.failed,
+        retryOf: { rewatch: first.rewatch },
+      },
       ['hardcover'],
     );
-    const later = await planLogWrite(client(), { item: book, reading: { finished: true } }, ['hardcover']);
+    const later = await planLogWrite(client(), { item: book, reading: { finished: true } }, [
+      'hardcover',
+    ]);
 
     expect(report.failed).toEqual(['hardcover']);
     expect(retry.skipped).toEqual(['hardcover']);

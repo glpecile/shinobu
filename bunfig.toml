@@ -1,2 +1,12 @@
 [test]
 preload = ["./scripts/test-isolation-guard.ts"]
+
+[fmt]
+singleQuote = true
+printWidth = 100
+ignorePatterns = [
+  ".agents/skills/**",
+  "skills-lock.json",
+  "src/lib/fonts/web-faces.ts",
+  "src/uniwind-types.d.ts",
+]

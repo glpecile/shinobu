@@ -9,7 +9,8 @@ export default defineRule({
     schema: [],
   },
   create(context) {
-    if (context.filename.endsWith('/src/lib/routes.ts') || /\.test\.tsx?$/.test(context.filename)) return {};
+    if (context.filename.endsWith('/src/lib/routes.ts') || /\.test\.tsx?$/.test(context.filename))
+      return {};
 
     const routers = new Set(['router']);
     const routerHooks = new Set(['useRouter']);
@@ -21,7 +22,11 @@ export default defineRule({
       seen.add(node);
       switch (node?.type) {
         case 'Literal':
-          if (typeof node.value !== 'string' || /^(?!shinobu:)[a-z][a-z0-9+.-]*:|^\/\//i.test(node.value)) return;
+          if (
+            typeof node.value !== 'string' ||
+            /^(?!shinobu:)[a-z][a-z0-9+.-]*:|^\/\//i.test(node.value)
+          )
+            return;
           break;
         case 'TemplateLiteral':
           if (/^(?!shinobu:)[a-z][a-z0-9+.-]*:|^\/\//i.test(node.quasis[0].value.raw)) return;
@@ -32,7 +37,10 @@ export default defineRule({
             const variable = scope.variables.find((entry) => entry.name === node.name);
             if (variable != null) {
               const definition = variable.defs[0]?.node;
-              return check(definition?.type === 'VariableDeclarator' ? definition.init : undefined, seen);
+              return check(
+                definition?.type === 'VariableDeclarator' ? definition.init : undefined,
+                seen,
+              );
             }
             scope = scope.upper;
           }
@@ -54,7 +62,11 @@ export default defineRule({
         default:
           return;
       }
-      context.report({ node, message: 'Define app destinations in src/lib/routes.ts and use routes.*, not inline route strings.' });
+      context.report({
+        node,
+        message:
+          'Define app destinations in src/lib/routes.ts and use routes.*, not inline route strings.',
+      });
     }
 
     return {
@@ -64,19 +76,31 @@ export default defineRule({
           if (specifier.type !== 'ImportSpecifier') continue;
           const imported = nodeName(specifier.imported);
           switch (imported) {
-            case 'router': routers.add(specifier.local.name); break;
-            case 'useRouter': routerHooks.add(specifier.local.name); break;
-            case 'usePushRoute': pushHooks.add(specifier.local.name); break;
-            default: break;
+            case 'router':
+              routers.add(specifier.local.name);
+              break;
+            case 'useRouter':
+              routerHooks.add(specifier.local.name);
+              break;
+            case 'usePushRoute':
+              pushHooks.add(specifier.local.name);
+              break;
+            default:
+              break;
           }
         }
       },
       CallExpression(node) {
         const callee = node.callee;
         if (callee.type === 'Identifier' && pushes.has(callee.name)) check(node.arguments[0]);
-        if (callee.type === 'MemberExpression' &&
+        if (
+          callee.type === 'MemberExpression' &&
           (routers.has(nodeName(callee.object) ?? '') || isCallTo(callee.object, routerHooks)) &&
-          ['push', 'replace', 'navigate', 'dismissTo', 'prefetch'].includes(nodeName(callee.property) ?? '')) check(node.arguments[0]);
+          ['push', 'replace', 'navigate', 'dismissTo', 'prefetch'].includes(
+            nodeName(callee.property) ?? '',
+          )
+        )
+          check(node.arguments[0]);
       },
       JSXAttribute(node) {
         if (node.name.name === 'href') check(node.value);
@@ -86,15 +110,28 @@ export default defineRule({
       },
       VariableDeclarator(node) {
         if (node.id.type === 'Identifier') {
-          if (routers.has(nodeName(node.init) ?? '') || isCallTo(node.init, routerHooks)) routers.add(node.id.name);
-          if (pushes.has(nodeName(node.init) ?? '') || isCallTo(node.init, pushHooks)) pushes.add(node.id.name);
+          if (routers.has(nodeName(node.init) ?? '') || isCallTo(node.init, routerHooks))
+            routers.add(node.id.name);
+          if (pushes.has(nodeName(node.init) ?? '') || isCallTo(node.init, pushHooks))
+            pushes.add(node.id.name);
         }
-        if (node.id.type === 'ObjectPattern' && (routers.has(nodeName(node.init) ?? '') || isCallTo(node.init, routerHooks))) {
+        if (
+          node.id.type === 'ObjectPattern' &&
+          (routers.has(nodeName(node.init) ?? '') || isCallTo(node.init, routerHooks))
+        ) {
           for (const property of node.id.properties) {
-            if (property.type === 'Property' && ['push', 'replace', 'navigate', 'dismissTo', 'prefetch'].includes(nodeName(property.key) ?? '') && property.value?.type === 'Identifier') pushes.add(property.value.name);
+            if (
+              property.type === 'Property' &&
+              ['push', 'replace', 'navigate', 'dismissTo', 'prefetch'].includes(
+                nodeName(property.key) ?? '',
+              ) &&
+              property.value?.type === 'Identifier'
+            )
+              pushes.add(property.value.name);
           }
         }
-        if (node.id.type === 'Identifier' && /(?:href|route)$/i.test(node.id.name)) check(node.init);
+        if (node.id.type === 'Identifier' && /(?:href|route)$/i.test(node.id.name))
+          check(node.init);
       },
     };
   },

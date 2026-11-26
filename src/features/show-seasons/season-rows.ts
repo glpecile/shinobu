@@ -4,7 +4,14 @@ import type { NormalizedEpisode, NormalizedSeason } from '@/types/media';
 export type SeasonRow =
   | { kind: 'season'; key: string; season: NormalizedSeason; open: boolean }
   | { kind: 'mark'; key: string; season: NormalizedSeason }
-  | { kind: 'episode'; key: string; season: NormalizedSeason; episode: NormalizedEpisode; index: number; last: boolean };
+  | {
+      kind: 'episode';
+      key: string;
+      season: NormalizedSeason;
+      episode: NormalizedEpisode;
+      index: number;
+      last: boolean;
+    };
 
 export function seasonRows(
   seasons: readonly NormalizedSeason[],

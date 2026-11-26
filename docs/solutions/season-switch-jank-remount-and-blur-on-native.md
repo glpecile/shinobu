@@ -30,7 +30,7 @@ No easing or duration change fixes either.
   scroll snap on web (react-native-web maps it to `scroll-snap-type`), no pager
   library. The selected cour and its two neighbours stay mounted, so a swipe
   reveals a wall that already exists and a tab tap is a scroll, not a remount.
-  Neighbours of the *settled* page mount after the scroll comes to rest
+  Neighbours of the _settled_ page mount after the scroll comes to rest
   (`onMomentumScrollEnd`), never mid-gesture; a tab tap mounts only its
   target, and only when it is not already a neighbour. The mounted window
   used to follow the selected index, so a tap mounted the next neighbour on
@@ -54,10 +54,10 @@ No easing or duration change fixes either.
 ## Web: settle only at rest
 
 react-native-web's ScrollView never fires `onMomentumScrollEnd`; it emits
-`onScroll` only, and with `scrollEventThrottle` at 0 that means exactly *two*
+`onScroll` only, and with `scrollEventThrottle` at 0 that means exactly _two_
 events per scroll — one on the first moved frame and one 100ms after the last.
 Settling from that first event (or from any sample taken while a tab tap's
-page scroll is in flight) reads the page being *left*, and the URL snaps
+page scroll is in flight) reads the page being _left_, and the URL snaps
 straight back to it — the "always reverts to the current season" bug. A
 quiet-period timer stood in for momentum end for a while; it's gone now that
 web moves only by tap (see "Trackpad swipes on web don't page"): the tap's
@@ -100,7 +100,7 @@ Fading each label between foreground and background can only be keyed to the
 settled `value`, so it lagged the pill during a swipe and jumped at the end.
 The web `SegmentedControl` renders the pill as an `overflow-hidden` copy of the
 whole label row in inverted colours, counter-translated by the same amount
-the pill moves, so the inverted text *is* the pill and tracks it to the pixel
+the pill moves, so the inverted text _is_ the pill and tracks it to the pixel
 at every position. Both the pill and the copy read the same `progress` shared
 value (or the same CSS transition when there is no pager).
 

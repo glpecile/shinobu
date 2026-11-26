@@ -28,16 +28,16 @@ interface ProviderToggleProps {
   detail?: string;
 }
 
-function ProviderToggle({
-  id, selected, onToggle, detail,
-}: ProviderToggleProps) {
+function ProviderToggle({ id, selected, onToggle, detail }: ProviderToggleProps) {
   const accent = useThemeColor('--color-accent');
   const muted = useThemeColor('--color-muted');
   const descriptor = PROVIDERS[id];
 
   return (
     <PresstableOpacity
-      accessibilityLabel={detail == null ? `Write to ${descriptor.label}` : `Write to ${descriptor.label}, ${detail}`}
+      accessibilityLabel={
+        detail == null ? `Write to ${descriptor.label}` : `Write to ${descriptor.label}, ${detail}`
+      }
       accessibilityRole="button"
       accessibilityState={{ checked: selected }}
       aria-pressed={selected}

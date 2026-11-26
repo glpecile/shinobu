@@ -9,37 +9,56 @@ GlobalRegistrator.register();
 afterAll(() => GlobalRegistrator.unregister());
 const { render, waitFor } = await import('@testing-library/react');
 const item: NormalizedMediaItem = {
-  id: 'tmdb-tv-209867', title: 'Frieren: Beyond Journey’s End', type: 'TV',
-  coverImage: '', currentProgress: 0, progressUnit: 'episode', lastUpdated: '',
-  externalIds: { tmdb: 209867 }, genres: ['Animation'],
+  id: 'tmdb-tv-209867',
+  title: 'Frieren: Beyond Journey’s End',
+  type: 'TV',
+  coverImage: '',
+  currentProgress: 0,
+  progressUnit: 'episode',
+  lastUpdated: '',
+  externalIds: { tmdb: 209867 },
+  genres: ['Animation'],
 };
 let mapping = { data: null as number | null, isLoading: true };
 let anime = { data: undefined as NormalizedMediaItem | undefined, isLoading: false };
 const requests: string[] = [];
 mock.module('@/state/queries/mapping', () => ({ useAniListIdByTmdbQuery: () => mapping }));
 mock.module('@/state/queries/anilist', () => ({ useAnimeByIdQuery: () => anime }));
-mock.module('@/lib/http/client', () => ({ httpFetch: async (url: string) => {
-  if (url.includes('reddit')) {
-    requests.push(url);
-    return new Response('<feed><entry><id>t3_abc</id><title>Sousou no Frieren discussion</title></entry></feed>');
-  }
-  return Response.json([{ threads: [{ no: 1, sub: 'Frieren: Beyond Journey’s End discussion' }] }]);
-} }));
+mock.module('@/lib/http/client', () => ({
+  httpFetch: async (url: string) => {
+    if (url.includes('reddit')) {
+      requests.push(url);
+      return new Response(
+        '<feed><entry><id>t3_abc</id><title>Sousou no Frieren discussion</title></entry></feed>',
+      );
+    }
+    return Response.json([
+      { threads: [{ no: 1, sub: 'Frieren: Beyond Journey’s End discussion' }] },
+    ]);
+  },
+}));
 const Box = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
 mock.module('react-native', () => ({ Text: Box, View: Box }));
 mock.module('react-native-reanimated', () => ({ useReducedMotion: () => true }));
 mock.module('@/lib/motion', () => ({ DURATION: { swap: 180 }, EASE_OUT: 'ease-out' }));
 mock.module('@/components/animated-view', () => ({ AnimatedView: Box }));
-mock.module('@/components/button', () => ({ Button: Object.assign(() => null, { Icon: () => null }) }));
+mock.module('@/components/button', () => ({
+  Button: Object.assign(() => null, { Icon: () => null }),
+}));
 mock.module('@/components/rail', () => ({ Rail: Box }));
-mock.module('@/components/section', () => ({ Section: Object.assign(Box, { Header: Box, Title: Box }) }));
+mock.module('@/components/section', () => ({
+  Section: Object.assign(Box, { Header: Box, Title: Box }),
+}));
 mock.module('@/components/sheet', () => ({ Sheet: Object.assign(() => null, { Header: Box }) }));
 mock.module('@/components/suspense-section', () => ({
-  SuspenseSection: ({ children, fallback }: { children: ReactNode; fallback: ReactNode }) =>
-    <Suspense fallback={fallback}>{children}</Suspense>,
+  SuspenseSection: ({ children, fallback }: { children: ReactNode; fallback: ReactNode }) => (
+    <Suspense fallback={fallback}>{children}</Suspense>
+  ),
 }));
 mock.module('@/lib/open-external-url', () => ({ openExternalUrl: () => {} }));
-mock.module('@/lib/open-external-url/use-link-handoff', () => ({ useLinkHandoff: () => ({ loading: false, open: () => {} }) }));
+mock.module('@/lib/open-external-url/use-link-handoff', () => ({
+  useLinkHandoff: () => ({ loading: false, open: () => {} }),
+}));
 mock.module('./discussion-card', () => ({
   DiscussionCard: ({ site }: { site: string }) => <span>{site}</span>,
 }));
@@ -47,7 +66,11 @@ const { DiscussionSection } = await import('./discussion-section');
 
 test('keeps 4chan visible and spends one Reddit request after anime identity and titles resolve', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const screen = () => <QueryClientProvider client={client}><DiscussionSection item={item} /></QueryClientProvider>;
+  const screen = () => (
+    <QueryClientProvider client={client}>
+      <DiscussionSection item={item} />
+    </QueryClientProvider>
+  );
   const view = render(screen());
   try {
     await view.findAllByText('4chan');

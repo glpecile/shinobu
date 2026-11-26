@@ -246,9 +246,7 @@ describe('fetchUpNextInputs', () => {
 
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
-    expect(inputs.progress.map((input) => input.item.externalIds.trakt)).toEqual([
-      1, 3,
-    ]);
+    expect(inputs.progress.map((input) => input.item.externalIds.trakt)).toEqual([1, 3]);
     expect(inputs.errors).toEqual([]);
   });
 
@@ -266,10 +264,7 @@ describe('fetchUpNextInputs', () => {
   test('the pool caps the per-show request fan (R6/KTD-2)', async () => {
     const { client, progressRequests } = fakeClient({
       shows: Array.from({ length: 25 }, (_, index) =>
-        show(
-          index + 1,
-          `2026-07-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`,
-        ),
+        show(index + 1, `2026-07-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`),
       ),
     });
 
@@ -290,9 +285,7 @@ describe('fetchUpNextInputs', () => {
 
     expect(inputs.anilist).toHaveLength(1);
     expect(inputs.progress).toEqual([]);
-    expect(inputs.errors).toEqual([
-      { provider: 'trakt', message: 'watched shows down' },
-    ]);
+    expect(inputs.errors).toEqual([{ provider: 'trakt', message: 'watched shows down' }]);
   });
 
   test('an unresolvable ani.zip mapping leaves the entry without a TMDB id', async () => {
@@ -354,11 +347,7 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
       { item: movie(11), kind: 'digital', date: '2026-07-26', source: 'trakt' },
     ]);
     // Physical isn't requested in v1 — no row renders it (R3).
-    expect(calendarKeys.map((key) => key[2])).toEqual([
-      'shows',
-      'movies',
-      'streaming',
-    ]);
+    expect(calendarKeys.map((key) => key[2])).toEqual(['shows', 'movies', 'streaming']);
   });
 
   test('the calendar key carries the local start date and the 7-day window', async () => {
@@ -393,9 +382,7 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
     expect(inputs.progress).toHaveLength(1);
     expect(inputs.calendar).toEqual([]);
     expect(inputs.releases).toHaveLength(1);
-    expect(inputs.errors).toEqual([
-      { provider: 'trakt', message: 'shows calendar down' },
-    ]);
+    expect(inputs.errors).toEqual([{ provider: 'trakt', message: 'shows calendar down' }]);
   });
 
   test('the streaming calendar failing keeps the theatrical rows (R7)', async () => {
@@ -417,9 +404,7 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
     expect(inputs.releases).toEqual([
       { item: movie(14), kind: 'theatrical', date: '2026-07-30', source: 'trakt' },
     ]);
-    expect(inputs.errors).toEqual([
-      { provider: 'trakt', message: 'streaming calendar down' },
-    ]);
+    expect(inputs.errors).toEqual([{ provider: 'trakt', message: 'streaming calendar down' }]);
   });
 });
 
@@ -511,7 +496,10 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
       },
       simklCalendars: {
         tv: [
-          simklCalendarEntry(6, { episode: { season: 1, number: 6 }, date: '2026-08-10T20:00:00Z' }),
+          simklCalendarEntry(6, {
+            episode: { season: 1, number: 6 },
+            date: '2026-08-10T20:00:00Z',
+          }),
           simklCalendarEntry(6, { episode: { season: 1, number: 5, title: 'Fifth' } }),
           simklCalendarEntry(6, { date: '2026-07-27T20:00:00Z' }),
         ],
@@ -750,9 +738,7 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
     const inputs = await fetchUpNextInputs(client, ['simkl']);
 
     expect(inputs.progress).toHaveLength(1);
-    expect(inputs.errors).toEqual([
-      { provider: 'simkl', message: 'tv calendar down' },
-    ]);
+    expect(inputs.errors).toEqual([{ provider: 'simkl', message: 'tv calendar down' }]);
   });
 
   test('with neither tracker connected, the AniList and Letterboxd legs still run', async () => {

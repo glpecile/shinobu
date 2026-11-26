@@ -18,50 +18,68 @@ export function useEpisodeLogQueue(request: LogRequest): CatchUpEpisode[] | null
   const source = useShowSeasonsSource(item);
   const seasons = useShowSeasonsQuery(canonical ? source : null);
   const anime = useAniListEpisodesQuery({
-    mediaId: item.externalIds.anilist, enabled: !canonical,
+    mediaId: item.externalIds.anilist,
+    enabled: !canonical,
   });
   const anilist = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
     enabled: !canonical && connected.includes(Provider.AniList),
   });
   const canonicalAnilist = useAniListEpisodeWatchedQuery({
-    item, enabled: canonical && connected.includes(Provider.AniList),
+    item,
+    enabled: canonical && connected.includes(Provider.AniList),
   });
   const trakt = useTraktShowProgressQuery({
     traktId: canonical ? item.externalIds.trakt : undefined,
     enabled: canonical && connected.includes(Provider.Trakt),
   });
   const simkl = useSimklEpisodeStateQuery({
-    item, enabled: canonical && connected.includes(Provider.Simkl),
+    item,
+    enabled: canonical && connected.includes(Provider.Simkl),
   });
   const simklAnime = useSimklLibraryEntryQuery({
-    item: !canonical ? item : null, enabled: connected.includes(Provider.Simkl),
+    item: !canonical ? item : null,
+    enabled: connected.includes(Provider.Simkl),
   });
 
-  if (seasons.isLoading || anime.isLoading || anilist.isLoading ||
-    trakt.isLoading || simkl.isLoading || simklAnime.isLoading || canonicalAnilist.isLoading) return null;
+  if (
+    seasons.isLoading ||
+    anime.isLoading ||
+    anilist.isLoading ||
+    trakt.isLoading ||
+    simkl.isLoading ||
+    simklAnime.isLoading ||
+    canonicalAnilist.isLoading
+  )
+    return null;
   if (canonicalAnilist.isError) return [first];
 
-  if (canonical
-    ? connected.includes(Provider.Trakt) && item.externalIds.trakt != null
-      ? trakt.isError
-      : connected.includes(Provider.Simkl) && simkl.isError
-    : connected.includes(Provider.AniList) && item.externalIds.anilist != null
-      ? anilist.isError
-      : connected.includes(Provider.Simkl) && simklAnime.isError) return [first];
+  if (
+    canonical
+      ? connected.includes(Provider.Trakt) && item.externalIds.trakt != null
+        ? trakt.isError
+        : connected.includes(Provider.Simkl) && simkl.isError
+      : connected.includes(Provider.AniList) && item.externalIds.anilist != null
+        ? anilist.isError
+        : connected.includes(Provider.Simkl) && simklAnime.isError
+  )
+    return [first];
 
   const candidates: CatchUpEpisode[] = [];
   if (canonical) {
     for (const season of seasons.data ?? []) {
       if (season.number === 0) continue;
       for (const episode of season.episodes) {
-        const watched = connected.includes(Provider.Trakt) && trakt.data != null
-          ? trakt.data.watchedKeys.has(`${season.number}-${episode.number}`)
-          : connected.includes(Provider.Simkl) && simklEpisodeIsWatched(
-              simkl.data, season.number, episode.number, episode.firstAired,
-            );
-        if (hasAired(episode.firstAired) && !watched &&
-          !canonicalAnilist.data.has(`${season.number}-${episode.number}`)) {
+        const watched =
+          connected.includes(Provider.Trakt) && trakt.data != null
+            ? trakt.data.watchedKeys.has(`${season.number}-${episode.number}`)
+            : connected.includes(Provider.Simkl) &&
+              simklEpisodeIsWatched(simkl.data, season.number, episode.number, episode.firstAired);
+        if (
+          hasAired(episode.firstAired) &&
+          !watched &&
+          !canonicalAnilist.data.has(`${season.number}-${episode.number}`)
+        ) {
           candidates.push({ season: season.number, number: episode.number, title: episode.title });
         }
       }
@@ -69,17 +87,22 @@ export function useEpisodeLogQueue(request: LogRequest): CatchUpEpisode[] | null
     return catalogueCatchUpQueue(first, candidates);
   }
 
-  const progress = connected.includes(Provider.AniList) && anilist.data != null
-    ? anilist.data.entry?.progress ?? 0
-    : connected.includes(Provider.Simkl) && simklAnime.data != null
-      ? simklAnime.data.item.currentProgress
-      : item.currentProgress;
+  const progress =
+    connected.includes(Provider.AniList) && anilist.data != null
+      ? (anilist.data.entry?.progress ?? 0)
+      : connected.includes(Provider.Simkl) && simklAnime.data != null
+        ? simklAnime.data.item.currentProgress
+        : item.currentProgress;
   const entry = connected.includes(Provider.Simkl) ? simklAnime.data : null;
   const total = entry?.item.totalEpisodes;
-  const airedCount = total != null && entry?.notAiredEpisodes != null
-    ? total - entry.notAiredEpisodes : null;
+  const airedCount =
+    total != null && entry?.notAiredEpisodes != null ? total - entry.notAiredEpisodes : null;
   if (item.externalIds.anilist == null && airedCount != null) {
-    for (let number = first.number + 1; number <= Math.min(airedCount, first.number + 200); number++) {
+    for (
+      let number = first.number + 1;
+      number <= Math.min(airedCount, first.number + 200);
+      number++
+    ) {
       if (number <= progress || entry?.watchedKeys.has(`1-${number}`)) continue;
       candidates.push({ number });
     }

@@ -20,10 +20,16 @@ function depsReplying(response: () => Response, tokens = fakeTokens()): AniListD
 
 describe('anilistGraphQL error mapping', () => {
   test('AniList’s HTTP 500 bad-request envelope is a permanent query rejection', async () => {
-    const error = await Effect.runPromise(Effect.flip(anilistGraphQL(
-      depsReplying(() => Response.json({ error: { status: 500, messages: ['Bad request'] } }, { status: 500 })),
-      'query { X }',
-    )));
+    const error = await Effect.runPromise(
+      Effect.flip(
+        anilistGraphQL(
+          depsReplying(() =>
+            Response.json({ error: { status: 500, messages: ['Bad request'] } }, { status: 500 }),
+          ),
+          'query { X }',
+        ),
+      ),
+    );
     expect(error._tag).toBe('ProviderNetworkError');
     if (error._tag === 'ProviderNetworkError') {
       expect(error.retryable).toBe(false);
@@ -35,15 +41,35 @@ describe('anilistGraphQL error mapping', () => {
   test('an API-disabled response is not a rate limit even with HTTP 429', async () => {
     let calls = 0;
     let cleared = false;
-    const error = await Effect.runPromise(Effect.flip(
-      anilistAuthedRequest(depsReplying(() => {
-        calls += 1;
-        return Response.json({ errors: [{
-          message: 'The AniList API has been temporarily disabled due to severe stability issues.',
-          status: 403,
-        }] }, { status: 429 });
-      }, fakeTokens({ clear: () => { cleared = true; } })), 'query { Viewer { id } }'),
-    ));
+    const error = await Effect.runPromise(
+      Effect.flip(
+        anilistAuthedRequest(
+          depsReplying(
+            () => {
+              calls += 1;
+              return Response.json(
+                {
+                  errors: [
+                    {
+                      message:
+                        'The AniList API has been temporarily disabled due to severe stability issues.',
+                      status: 403,
+                    },
+                  ],
+                },
+                { status: 429 },
+              );
+            },
+            fakeTokens({
+              clear: () => {
+                cleared = true;
+              },
+            }),
+          ),
+          'query { Viewer { id } }',
+        ),
+      ),
+    );
     expect(error._tag).toBe('ProviderNetworkError');
     if (error._tag === 'ProviderNetworkError') {
       expect(error.status).toBe(429);
@@ -55,10 +81,14 @@ describe('anilistGraphQL error mapping', () => {
   });
 
   test('an HTML service failure retains its HTTP status instead of becoming a decode error', async () => {
-    const error = await Effect.runPromise(Effect.flip(anilistGraphQL(
-      depsReplying(() => new Response('<html>Service unavailable</html>', { status: 503 })),
-      'query { Viewer { id } }',
-    )));
+    const error = await Effect.runPromise(
+      Effect.flip(
+        anilistGraphQL(
+          depsReplying(() => new Response('<html>Service unavailable</html>', { status: 503 })),
+          'query { Viewer { id } }',
+        ),
+      ),
+    );
     expect(error._tag).toBe('ProviderNetworkError');
     if (error._tag === 'ProviderNetworkError') expect(error.status).toBe(503);
   });
@@ -67,22 +97,32 @@ describe('anilistGraphQL error mapping', () => {
     { shape: 'null envelope', body: null },
     { shape: 'non-array errors', body: { errors: {} } },
   ])('rejects a $shape as a typed decode error', async ({ body }) => {
-    const error = await Effect.runPromise(Effect.flip(
-      anilistGraphQL(depsReplying(() => Response.json(body)), 'query { Viewer { id } }'),
-    ));
+    const error = await Effect.runPromise(
+      Effect.flip(
+        anilistGraphQL(
+          depsReplying(() => Response.json(body)),
+          'query { Viewer { id } }',
+        ),
+      ),
+    );
     expect(error._tag).toBe('ProviderDecodeError');
   });
 
   test('HTTP 401 maps to ProviderAuthError with refreshFailed (no refresh grant exists)', async () => {
     const result = await Effect.runPromise(
       Effect.result(
-        anilistGraphQL(depsReplying(() => new Response('', { status: 401 })), 'query { Viewer { id } }'),
+        anilistGraphQL(
+          depsReplying(() => new Response('', { status: 401 })),
+          'query { Viewer { id } }',
+        ),
       ),
     );
     expect(result._tag).toBe('Failure');
     if (result._tag === 'Failure') {
       expect(result.failure._tag).toBe('ProviderAuthError');
-      expect(result.failure._tag === 'ProviderAuthError' && result.failure.refreshFailed).toBe(true);
+      expect(result.failure._tag === 'ProviderAuthError' && result.failure.refreshFailed).toBe(
+        true,
+      );
     }
   });
 
@@ -119,25 +159,32 @@ describe('anilistGraphQL error mapping', () => {
     expect(result._tag).toBe('Failure');
     if (result._tag === 'Failure') {
       expect(result.failure._tag).toBe('ProviderRateLimitError');
-      expect(
-        result.failure._tag === 'ProviderRateLimitError' && result.failure.retryAfterMs,
-      ).toBe(30_000);
+      expect(result.failure._tag === 'ProviderRateLimitError' && result.failure.retryAfterMs).toBe(
+        30_000,
+      );
     }
   }, 10_000);
 
   test.each([
     { headers: { 'X-RateLimit-Reset': String(Math.ceil(Date.now() / 1000) + 60) } },
     { headers: {} as Record<string, string> },
-  ])('a cooldown blocks subsequent public and authenticated calls without spending requests: $headers', async ({ headers }) => {
-    let calls = 0;
-    const deps = depsReplying(() => { calls++; return new Response('', { status: 429, headers }); });
-    const error = await Effect.runPromise(Effect.flip(anilistGraphQL(deps, '{ X }')));
-    expect(error._tag).toBe('ProviderRateLimitError');
-    if (error._tag === 'ProviderRateLimitError') expect(error.retryAfterMs).toBeGreaterThan(55_000);
-    await Effect.runPromise(Effect.flip(anilistGraphQL(deps, '{ Y }')));
-    await Effect.runPromise(Effect.flip(anilistAuthedRequest(deps, '{ Viewer { id } }')));
-    expect(calls).toBe(1);
-  });
+  ])(
+    'a cooldown blocks subsequent public and authenticated calls without spending requests: $headers',
+    async ({ headers }) => {
+      let calls = 0;
+      const deps = depsReplying(() => {
+        calls++;
+        return new Response('', { status: 429, headers });
+      });
+      const error = await Effect.runPromise(Effect.flip(anilistGraphQL(deps, '{ X }')));
+      expect(error._tag).toBe('ProviderRateLimitError');
+      if (error._tag === 'ProviderRateLimitError')
+        expect(error.retryAfterMs).toBeGreaterThan(55_000);
+      await Effect.runPromise(Effect.flip(anilistGraphQL(deps, '{ Y }')));
+      await Effect.runPromise(Effect.flip(anilistAuthedRequest(deps, '{ Viewer { id } }')));
+      expect(calls).toBe(1);
+    },
+  );
 
   test('every request carries the app Referer (AniList 403s referer-less clients)', async () => {
     let sent: RequestInit | undefined;
@@ -181,10 +228,19 @@ describe('anilistGraphQL error mapping', () => {
   });
 
   test('GraphQL errors on a 200 fail instead of returning partial data', async () => {
-    const body = { data: null, errors: [{ message: 'Not Found.', status: 404 }, { message: null, status: null }] };
+    const body = {
+      data: null,
+      errors: [
+        { message: 'Not Found.', status: 404 },
+        { message: null, status: null },
+      ],
+    };
     const result = await Effect.runPromise(
       Effect.result(
-        anilistGraphQL(depsReplying(() => Response.json(body)), 'query { X }'),
+        anilistGraphQL(
+          depsReplying(() => Response.json(body)),
+          'query { X }',
+        ),
       ),
     );
     expect(result._tag).toBe('Failure');
@@ -197,7 +253,11 @@ describe('anilistGraphQL error mapping', () => {
 describe('anilistAuthedRequest', () => {
   test('an auth failure clears the stored session (reconnect is the only recovery)', async () => {
     let cleared = false;
-    const tokens = fakeTokens({ clear: () => { cleared = true; } });
+    const tokens = fakeTokens({
+      clear: () => {
+        cleared = true;
+      },
+    });
     const result = await Effect.runPromise(
       Effect.result(
         anilistAuthedRequest(

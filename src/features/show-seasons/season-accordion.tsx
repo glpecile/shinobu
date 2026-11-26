@@ -64,11 +64,7 @@ export function EpisodeRow({
     .join(' · ');
   const label = (
     <>
-      {isWatched ? (
-        <Ionicons color={accent} name="eye" size={16} />
-      ) : (
-        <View className="w-4" />
-      )}
+      {isWatched ? <Ionicons color={accent} name="eye" size={16} /> : <View className="w-4" />}
       <View className="ml-3 flex-1 pr-3">
         <Text
           className="font-sans text-sm"
@@ -126,9 +122,7 @@ export function EpisodeRow({
             variant="quiet"
           />
         ) : (
-          <Text className="text-muted font-sans text-xs px-3">
-            {airsIn ?? 'Unaired'}
-          </Text>
+          <Text className="text-muted font-sans text-xs px-3">{airsIn ?? 'Unaired'}</Text>
         )}
       </View>
     </View>
@@ -159,12 +153,9 @@ export function SeasonHeader({
       >
         <DisclosureChevron from="forward" open={open} size={16} />
         <View className="ml-3 flex-1">
-          <Text className="text-foreground font-sans-semibold text-base">
-            {season.title}
-          </Text>
+          <Text className="text-foreground font-sans-semibold text-base">{season.title}</Text>
           <Text className="text-muted font-sans text-xs mt-0.5">
-            {season.episodes.length}{' '}
-            {season.episodes.length === 1 ? 'episode' : 'episodes'}
+            {season.episodes.length} {season.episodes.length === 1 ? 'episode' : 'episodes'}
             {runtime > 0 ? ` · ${formatRuntime(runtime)}` : ''}
           </Text>
         </View>

@@ -31,7 +31,7 @@ a time is not fewer.
 Writes waiting on the same entry **collapse into one write carrying the highest
 progress**, and every folded caller resolves with that write's result.
 
-Folding only what arrives *mid-flight* barely folds anything: when the
+Folding only what arrives _mid-flight_ barely folds anything: when the
 round-trip is quicker than the user's thumb the queue is idle at every press.
 So a landed write also holds the queue for a **settle window** that later
 arrivals fold into, restarted by each arrival (see the follow-up below). It doubles as request spacing, and costs the user nothing —
@@ -39,7 +39,7 @@ the counter's end state is identical and the sheet stays open until its writes
 settle.
 
 A `null` fold key opts out, for writes that are not a counter: a film's
-`repeat` *increments*, so two rewatch logs are two facts.
+`repeat` _increments_, so two rewatch logs are two facts.
 
 ## Measured
 
@@ -69,7 +69,7 @@ and the refetches each success invalidates (roughly five requests per episode
 against 30/min).
 
 AniList has no bulk progress mutation, and needs none: `UpdateMediaListEntries`
-applies one set of values to many *entries*, and this is one entry's counter.
+applies one set of values to many _entries_, and this is one entry's counter.
 Otraku's `UpdateProgress` is the same single `SaveMediaListEntry`. The bulk call
 is the fold itself.
 

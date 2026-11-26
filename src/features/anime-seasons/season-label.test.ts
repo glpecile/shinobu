@@ -32,10 +32,7 @@ describe('canonicalSeasonTitle (plan 0027 R8)', () => {
   });
 
   test('an entry straddling two canonical seasons has no single header to show', () => {
-    const straddling: AniZipEpisodeMap = new Map([
-      ...table(2, 12),
-      [13, { season: 3, number: 1 }],
-    ]);
+    const straddling: AniZipEpisodeMap = new Map([...table(2, 12), [13, { season: 3, number: 1 }]]);
     expect(canonicalSeasonTitle(straddling)).toBeNull();
   });
 });

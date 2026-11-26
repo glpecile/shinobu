@@ -22,11 +22,5 @@ export function useFloatingBackButtonClearance() {
 export function FloatingBackButton({ onPress }: { onPress: () => void }) {
   const top = useFloatingBackButtonTop();
 
-  return (
-    <BackButton
-      className="absolute left-4"
-      onPress={onPress}
-      style={{ top }}
-    />
-  );
+  return <BackButton className="absolute left-4" onPress={onPress} style={{ top }} />;
 }

@@ -8,7 +8,14 @@ import { hasAired } from '@/lib/time/has-aired';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 import { episodeCode } from './episode-label';
 
-export function EpisodeLogButton({ item, season, number, episode, watched, className }: {
+export function EpisodeLogButton({
+  item,
+  season,
+  number,
+  episode,
+  watched,
+  className,
+}: {
   item: NormalizedMediaItem;
   season: number;
   number: number;
@@ -22,19 +29,30 @@ export function EpisodeLogButton({ item, season, number, episode, watched, class
   if (writable.length === 0 && manual.length === 0) return null;
   const code = episodeCode(season, number);
   const aired = hasAired(episode.firstAired);
-  return <View className={className}>
-    <Button
-      variant="log"
-      disabled={!aired}
-      icon={<Button.Icon name={watched ? 'eye' : 'eye-outline'} />}
-      label={aired ? watched ? 'Rewatch' : 'Mark as watched' : unairedEpisodeLabel(code, episode.firstAired)}
-      loading={pending}
-      morphLabel
-      onPress={() => openLog({
-        item, title: `Log ${code}`,
-        description: `“${item.title}” — ${code}: ${episode.title}`,
-        episodes: [{ season, number }],
-      })}
-    />
-  </View>;
+  return (
+    <View className={className}>
+      <Button
+        variant="log"
+        disabled={!aired}
+        icon={<Button.Icon name={watched ? 'eye' : 'eye-outline'} />}
+        label={
+          aired
+            ? watched
+              ? 'Rewatch'
+              : 'Mark as watched'
+            : unairedEpisodeLabel(code, episode.firstAired)
+        }
+        loading={pending}
+        morphLabel
+        onPress={() =>
+          openLog({
+            item,
+            title: `Log ${code}`,
+            description: `“${item.title}” — ${code}: ${episode.title}`,
+            episodes: [{ season, number }],
+          })
+        }
+      />
+    </View>
+  );
 }

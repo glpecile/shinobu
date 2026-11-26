@@ -30,9 +30,7 @@ export interface ReleaseNotificationCandidate extends NotificationCandidateBase 
   release: UpNextRelease['kind'];
 }
 
-export type NotificationCandidate =
-  | EpisodeNotificationCandidate
-  | ReleaseNotificationCandidate;
+export type NotificationCandidate = EpisodeNotificationCandidate | ReleaseNotificationCandidate;
 
 export type NotificationKind = 'episode' | ReleaseNotificationCandidate['release'];
 
@@ -60,10 +58,7 @@ type RawCandidate = NotificationCandidate & {
   source?: ProviderId;
 };
 
-function sharesIdentity(
-  candidate: RawCandidate,
-  keys: ReadonlySet<string>,
-): boolean {
+function sharesIdentity(candidate: RawCandidate, keys: ReadonlySet<string>): boolean {
   return candidate.keys.some((key) => keys.has(key));
 }
 
@@ -140,10 +135,7 @@ function dedupeEpisodeSources(
   calendar: readonly RawCandidate[],
 ): RawCandidate[] {
   const seen = new Set(pool.map(airingKey));
-  return [
-    ...pool,
-    ...calendar.filter((candidate) => !seen.has(airingKey(candidate))),
-  ];
+  return [...pool, ...calendar.filter((candidate) => !seen.has(airingKey(candidate)))];
 }
 
 function dedupeTrackers(candidates: readonly RawCandidate[]): RawCandidate[] {
@@ -154,8 +146,7 @@ function dedupeTrackers(candidates: readonly RawCandidate[]): RawCandidate[] {
   );
   if (simklKeys.size === 0) return [...candidates];
   return candidates.filter(
-    (candidate) =>
-      candidate.source === Provider.Simkl || !sharesIdentity(candidate, simklKeys),
+    (candidate) => candidate.source === Provider.Simkl || !sharesIdentity(candidate, simklKeys),
   );
 }
 
@@ -177,10 +168,7 @@ function dedupeAniList(
   trackers: readonly RawCandidate[],
 ): RawCandidate[] {
   const anilistKeys = new Set(anilist.flatMap((candidate) => candidate.keys));
-  return [
-    ...anilist,
-    ...trackers.filter((candidate) => !sharesIdentity(candidate, anilistKeys)),
-  ];
+  return [...anilist, ...trackers.filter((candidate) => !sharesIdentity(candidate, anilistKeys))];
 }
 
 function dedupeReleases(releases: readonly RawCandidate[]): RawCandidate[] {
@@ -202,10 +190,7 @@ function batchKey(candidate: RawCandidate, now: Date): string {
     : `release/${candidate.itemId}/${candidate.release}`;
 }
 
-function collapseBatches(
-  candidates: readonly RawCandidate[],
-  now: Date,
-): RawCandidate[] {
+function collapseBatches(candidates: readonly RawCandidate[], now: Date): RawCandidate[] {
   const batches = new Map<string, { lead: RawCandidate; count: number }>();
   for (const candidate of candidates) {
     const key = batchKey(candidate, now);
@@ -263,10 +248,7 @@ export function computeNotificationSchedule(
       .filter((candidate): candidate is RawCandidate => candidate != null),
   );
 
-  const deduped = [
-    ...dedupeAniList(anilistCandidates, trackerCandidates),
-    ...releaseCandidates,
-  ];
+  const deduped = [...dedupeAniList(anilistCandidates, trackerCandidates), ...releaseCandidates];
 
   return collapseBatches(
     deduped.filter(

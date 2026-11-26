@@ -7,15 +7,30 @@ import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 
 export default function LegacyListsScreen() {
-  const { provider = Provider.Letterboxd, kind, owner, slug, id } = useLocalSearchParams<{
-    provider?: string | string[]; kind?: string | string[];
-    owner?: string | string[]; slug?: string | string[]; id?: string | string[];
+  const {
+    provider = Provider.Letterboxd,
+    kind,
+    owner,
+    slug,
+    id,
+  } = useLocalSearchParams<{
+    provider?: string | string[];
+    kind?: string | string[];
+    owner?: string | string[];
+    slug?: string | string[];
+    id?: string | string[];
   }>();
   switch (provider) {
     case Provider.Letterboxd:
       if (id != null) break;
       if (owner != null || slug != null) {
-        if (typeof owner !== 'string' || typeof slug !== 'string' || kind != null || letterboxdListUrl(owner, slug) == null) break;
+        if (
+          typeof owner !== 'string' ||
+          typeof slug !== 'string' ||
+          kind != null ||
+          letterboxdListUrl(owner, slug) == null
+        )
+          break;
         return <Redirect href={routes.letterboxdList(owner, slug)} />;
       }
       if (kind != null && kind !== 'created' && kind !== 'liked') break;
@@ -29,5 +44,10 @@ export default function LegacyListsScreen() {
       if (kind != null && kind !== 'created' && kind !== 'liked') break;
       return <Redirect href={routes.serializdLists(kind ?? 'created')} />;
   }
-  return <ListsPage provider={provider === Provider.Serializd ? Provider.Serializd : Provider.Letterboxd} url={null} />;
+  return (
+    <ListsPage
+      provider={provider === Provider.Serializd ? Provider.Serializd : Provider.Letterboxd}
+      url={null}
+    />
+  );
 }

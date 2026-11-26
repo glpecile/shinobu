@@ -123,21 +123,21 @@ flowchart TB
 
 ## Implementation Units
 
-| U-ID | Title | Key files | Depends on |
-|---|---|---|---|
-| U1 | Search tab double-press focus | `src/app/(tabs)/_layout.tsx`, `src/app/(tabs)/search.tsx`, `src/features/search/focus-signal.ts` | — |
-| U2 | Search clear button | `src/app/(tabs)/search.tsx` | — |
-| U3 | Web Cmd+K | `src/components/app-shell/index.web.tsx` | U1 (shares focus path) |
-| U4 | Web Cmd+click new tab | `src/components/media-card.tsx` | — (collides with U7) |
-| U5 | Movie match confidence | `src/lib/providers/pick-movie-match.ts`, `src/lib/providers/tmdb/reads.ts`, `src/state/queries/mapping.ts`, `src/state/queries/media-details.ts` | — |
-| U6 | Anime film AniList fallback | `src/features/log-media/enrich.ts`, `src/lib/providers/anilist/` | U5 |
-| U7 | Your Shows perf | `src/components/media-carousel.tsx`, `src/state/prefs/hidden-items.ts`, `src/features/feed/feed-rows.tsx`, `src/components/media-card.tsx` | U4 (same file) |
-| U8 | Manga details resolution | `src/app/details/[id].tsx`, `src/lib/providers/media-details.ts` | — |
-| U9 | Letterboxd watchlist pagination + View All | `src/lib/providers/letterboxd/watchlist.ts`, `src/state/queries/letterboxd.ts`, `src/app/watchlist/letterboxd.tsx` (new), `src/features/feed/feed-rows.tsx`, `src/lib/routes.ts` | — |
-| U10 | Settings BYO TMDB token | `src/app/(tabs)/connect.tsx`, `src/lib/providers/tmdb/config.ts`, `src/state/session/tokens.ts` | — |
-| U11 | Log sheet keyboard avoidance (Android) | `src/features/log-media/log-confirm-sheet.tsx`, `src/components/sheet/index.tsx` | — |
-| U12 | Refresh spinner below notch (Android) | `src/components/refreshable-scroll-view.tsx`, `src/app/details/[id].tsx` | — |
-| U13 | Android predictive back | `app.json` | — |
+| U-ID | Title                                      | Key files                                                                                                                                                                        | Depends on             |
+| ---- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| U1   | Search tab double-press focus              | `src/app/(tabs)/_layout.tsx`, `src/app/(tabs)/search.tsx`, `src/features/search/focus-signal.ts`                                                                                 | —                      |
+| U2   | Search clear button                        | `src/app/(tabs)/search.tsx`                                                                                                                                                      | —                      |
+| U3   | Web Cmd+K                                  | `src/components/app-shell/index.web.tsx`                                                                                                                                         | U1 (shares focus path) |
+| U4   | Web Cmd+click new tab                      | `src/components/media-card.tsx`                                                                                                                                                  | — (collides with U7)   |
+| U5   | Movie match confidence                     | `src/lib/providers/pick-movie-match.ts`, `src/lib/providers/tmdb/reads.ts`, `src/state/queries/mapping.ts`, `src/state/queries/media-details.ts`                                 | —                      |
+| U6   | Anime film AniList fallback                | `src/features/log-media/enrich.ts`, `src/lib/providers/anilist/`                                                                                                                 | U5                     |
+| U7   | Your Shows perf                            | `src/components/media-carousel.tsx`, `src/state/prefs/hidden-items.ts`, `src/features/feed/feed-rows.tsx`, `src/components/media-card.tsx`                                       | U4 (same file)         |
+| U8   | Manga details resolution                   | `src/app/details/[id].tsx`, `src/lib/providers/media-details.ts`                                                                                                                 | —                      |
+| U9   | Letterboxd watchlist pagination + View All | `src/lib/providers/letterboxd/watchlist.ts`, `src/state/queries/letterboxd.ts`, `src/app/watchlist/letterboxd.tsx` (new), `src/features/feed/feed-rows.tsx`, `src/lib/routes.ts` | —                      |
+| U10  | Settings BYO TMDB token                    | `src/app/(tabs)/connect.tsx`, `src/lib/providers/tmdb/config.ts`, `src/state/session/tokens.ts`                                                                                  | —                      |
+| U11  | Log sheet keyboard avoidance (Android)     | `src/features/log-media/log-confirm-sheet.tsx`, `src/components/sheet/index.tsx`                                                                                                 | —                      |
+| U12  | Refresh spinner below notch (Android)      | `src/components/refreshable-scroll-view.tsx`, `src/app/details/[id].tsx`                                                                                                         | —                      |
+| U13  | Android predictive back                    | `app.json`                                                                                                                                                                       | —                      |
 
 ### U1. Search tab double-press focuses input
 
@@ -276,13 +276,13 @@ flowchart TB
 
 ## Verification Contract
 
-| Gate | Command / method | Applies to |
-|---|---|---|
-| Lint | `bun lint` | all units |
-| Unit tests | `bun test` | all; new coverage mandatory in U5, U6, U7, U8, U9, U10 |
-| Web smoke | `bun web` + `bun run dev:worker`, manual pass (pattern: `docs/solutions/web-headless-smoke-test-playwright.md`) | U2, U3, U4, U9, U10 |
-| Android device pass | dev client via `bun android` (`bun android:clean` after U13) | U1, U7, U11, U12, U13 |
-| iOS non-regression | spot-check search focus, sheet, refresh | U1, U11, U12 |
+| Gate                | Command / method                                                                                                | Applies to                                             |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Lint                | `bun lint`                                                                                                      | all units                                              |
+| Unit tests          | `bun test`                                                                                                      | all; new coverage mandatory in U5, U6, U7, U8, U9, U10 |
+| Web smoke           | `bun web` + `bun run dev:worker`, manual pass (pattern: `docs/solutions/web-headless-smoke-test-playwright.md`) | U2, U3, U4, U9, U10                                    |
+| Android device pass | dev client via `bun android` (`bun android:clean` after U13)                                                    | U1, U7, U11, U12, U13                                  |
+| iOS non-regression  | spot-check search focus, sheet, refresh                                                                         | U1, U11, U12                                           |
 
 Fan-out/routing invariants (AGENTS.md): partial-failure surfacing and manual-link fallback untouched; `routing.test.ts` and `fan-out.test.ts` must stay green.
 

@@ -155,7 +155,11 @@ describe('normalizeHardcoverJournal', () => {
       metadata: { progress: 12.4, progress_pages: 26 },
     });
 
-    expect(entry).toMatchObject({ readingEvent: 'progressed', pages: { from: 1, to: 26 }, percent: { from: 0, to: 12 } });
+    expect(entry).toMatchObject({
+      readingEvent: 'progressed',
+      pages: { from: 1, to: 26 },
+      percent: { from: 0, to: 12 },
+    });
   });
 
   test('an unfinished update rounds its percent inside 1–99', () => {

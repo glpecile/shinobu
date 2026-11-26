@@ -18,10 +18,7 @@ import { exchangeSimklCode } from '@/state/queries/simkl';
 import { exchangeTraktCode } from '@/state/queries/trakt';
 
 import { takeOAuthFlow } from './oauth-flow';
-import {
-  getClientIdForProvider,
-  getClientSecretForProvider,
-} from './provider-config';
+import { getClientIdForProvider, getClientSecretForProvider } from './provider-config';
 import { connectedProviderIds } from './tokens';
 
 export type OAuthCallbackStatus = 'idle' | 'exchanging' | 'error';
@@ -81,7 +78,14 @@ function consumeMarkedReturnParams(marker: string): {
   }
 
   const url = new URL(window.location.href);
-  for (const name of ['code', 'error', 'error_description', 'state', 'iss', SIMKL_OAUTH_MARKER_PARAM]) {
+  for (const name of [
+    'code',
+    'error',
+    'error_description',
+    'state',
+    'iss',
+    SIMKL_OAUTH_MARKER_PARAM,
+  ]) {
     url.searchParams.delete(name);
   }
   window.history.replaceState(null, '', url.toString());
@@ -117,9 +121,9 @@ export async function handleOAuthReturn(
   if (anilistReturn != null) {
     const expected = takeOAuthFlow(Provider.AniList);
     if (expected == null) return;
-    const state = new URLSearchParams(
-      anilistReturn.slice(anilistReturn.indexOf('#') + 1),
-    ).get('state');
+    const state = new URLSearchParams(anilistReturn.slice(anilistReturn.indexOf('#') + 1)).get(
+      'state',
+    );
     // A missing `state` fails too: a crafted link sent while a flow is
     // pending would otherwise complete it.
     if (state !== expected) {

@@ -12,7 +12,10 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import { providersForRatings } from '@/lib/providers/routing';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useSuspenseAniListRelationsQuery } from '@/state/queries/anilist';
-import { useSuspenseLetterboxdFilmQuery, useSuspenseLetterboxdSlugQuery } from '@/state/queries/letterboxd';
+import {
+  useSuspenseLetterboxdFilmQuery,
+  useSuspenseLetterboxdSlugQuery,
+} from '@/state/queries/letterboxd';
 import { useSuspenseSimklRatingsQuery } from '@/state/queries/simkl';
 import { useSuspenseWikidataRatingsQuery } from '@/state/queries/wikidata';
 import { useConnectedProviders } from '@/state/session';
@@ -31,7 +34,11 @@ const SOURCE_NAMES: Record<RatingSource, string> = {
 };
 
 // UTC: a bare `YYYY-MM-DD` parses at UTC midnight, so the month can't shift west of Greenwich.
-const monthFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' });
+const monthFormatter = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 
 function asOfMonth(asOf: string): string {
   const date = new Date(asOf);
@@ -40,10 +47,14 @@ function asOfMonth(asOf: string): string {
 
 function scoreText(rating: NormalizedRating): string {
   switch (rating.scale) {
-    case 10: return rating.value.toFixed(1);
-    case 5: return rating.value.toFixed(2);
-    case 100: return String(Math.round(rating.value));
-    case '%': return `${Math.round(rating.value)}%`;
+    case 10:
+      return rating.value.toFixed(1);
+    case 5:
+      return rating.value.toFixed(2);
+    case 100:
+      return String(Math.round(rating.value));
+    case '%':
+      return `${Math.round(rating.value)}%`;
   }
 }
 
@@ -72,12 +83,16 @@ function RatingChip({ rating, item, episode }: ChipProps & { rating: NormalizedR
     >
       <Text className="text-foreground font-sans-semibold text-sm">
         {scoreText(rating)}
-        {rating.scale !== '%' && <Text className="text-muted font-sans text-xs">{` /${rating.scale}`}</Text>}
+        {rating.scale !== '%' && (
+          <Text className="text-muted font-sans text-xs">{` /${rating.scale}`}</Text>
+        )}
       </Text>
       {rating.votes != null && (
         <Text className="text-muted font-sans text-xs">{`(${formatCount(rating.votes)})`}</Text>
       )}
-      {rating.rank != null && <Text className="text-muted font-sans text-xs">{`#${rating.rank}`}</Text>}
+      {rating.rank != null && (
+        <Text className="text-muted font-sans text-xs">{`#${rating.rank}`}</Text>
+      )}
       {rating.asOf != null && (
         <Text className="text-muted font-sans text-xs">{asOfMonth(rating.asOf)}</Text>
       )}
@@ -96,13 +111,22 @@ function ProviderLink({ provider, url }: { provider: ProviderId; url: string }) 
   );
 }
 
-function ProviderScore({ provider, url, ratings, ...chip }: ChipProps & {
+function ProviderScore({
+  provider,
+  url,
+  ratings,
+  ...chip
+}: ChipProps & {
   provider: ProviderId;
   url: string;
   ratings: readonly NormalizedRating[] | undefined;
 }) {
   const own = ratings?.find(({ source }) => source === provider);
-  return own != null ? <RatingChip rating={own} {...chip} /> : <ProviderLink provider={provider} url={url} />;
+  return own != null ? (
+    <RatingChip rating={own} {...chip} />
+  ) : (
+    <ProviderLink provider={provider} url={url} />
+  );
 }
 
 function SimklScores(props: ChipProps & { url: string }) {
@@ -110,15 +134,20 @@ function SimklScores(props: ChipProps & { url: string }) {
   return (
     <View className="flex-row gap-2">
       <ProviderScore provider={Provider.Simkl} ratings={data} {...props} />
-      {data.filter(({ source }) => source !== Provider.Simkl).map((rating) => (
-        <RatingChip key={rating.source} rating={rating} {...props} />
-      ))}
+      {data
+        .filter(({ source }) => source !== Provider.Simkl)
+        .map((rating) => (
+          <RatingChip key={rating.source} rating={rating} {...props} />
+        ))}
     </View>
   );
 }
 
 function AniListScore(props: ChipProps & { url: string; mediaId: number }) {
-  const { data } = useSuspenseAniListRelationsQuery({ mediaId: props.mediaId, type: props.item.type });
+  const { data } = useSuspenseAniListRelationsQuery({
+    mediaId: props.mediaId,
+    type: props.item.type,
+  });
   return <ProviderScore provider={Provider.AniList} ratings={data.item?.ratings} {...props} />;
 }
 
@@ -129,10 +158,19 @@ function LetterboxdFilmScore({ slug, ...props }: ChipProps & { url: string; slug
 
 function LetterboxdScore(props: ChipProps & { url: string; tmdbId: number }) {
   const { data: slug } = useSuspenseLetterboxdSlugQuery(props.tmdbId);
-  return slug == null ? <ProviderLink provider={Provider.Letterboxd} url={props.url} /> : <LetterboxdFilmScore slug={slug} {...props} />;
+  return slug == null ? (
+    <ProviderLink provider={Provider.Letterboxd} url={props.url} />
+  ) : (
+    <LetterboxdFilmScore slug={slug} {...props} />
+  );
 }
 
-function ProviderRating({ provider, url, item, resetKey }: {
+function ProviderRating({
+  provider,
+  url,
+  item,
+  resetKey,
+}: {
   provider: ProviderId;
   url: string;
   item: NormalizedMediaItem;
@@ -149,9 +187,12 @@ function ProviderRating({ provider, url, item, resetKey }: {
       score = anilist == null ? null : <AniListScore item={item} mediaId={anilist} url={url} />;
       break;
     case Provider.Letterboxd:
-      score = letterboxd != null
-        ? <LetterboxdFilmScore item={item} slug={letterboxd} url={url} />
-        : tmdb != null ? <LetterboxdScore item={item} tmdbId={tmdb} url={url} /> : null;
+      score =
+        letterboxd != null ? (
+          <LetterboxdFilmScore item={item} slug={letterboxd} url={url} />
+        ) : tmdb != null ? (
+          <LetterboxdScore item={item} tmdbId={tmdb} url={url} />
+        ) : null;
       break;
     case Provider.Hardcover:
       return <ProviderScore item={item} provider={provider} ratings={item.ratings} url={url} />;
@@ -161,7 +202,12 @@ function ProviderRating({ provider, url, item, resetKey }: {
   }
   if (score == null) return link;
   return (
-    <SuspenseSection animateFallback={false} errorFallback={link} fallback={link} resetKey={resetKey}>
+    <SuspenseSection
+      animateFallback={false}
+      errorFallback={link}
+      fallback={link}
+      resetKey={resetKey}
+    >
       {score}
     </SuspenseSection>
   );
@@ -172,7 +218,9 @@ function WikidataScores({ item }: { item: NormalizedMediaItem }) {
   if (data.length === 0) return null;
   return (
     <View className="flex-row gap-2">
-      {data.map((rating) => <RatingChip item={item} key={rating.source} rating={rating} />)}
+      {data.map((rating) => (
+        <RatingChip item={item} key={rating.source} rating={rating} />
+      ))}
     </View>
   );
 }
@@ -213,7 +261,13 @@ export function RatingsSection({
         )}
         {links.map(({ provider, url }) =>
           scored.includes(provider) ? (
-            <ProviderRating item={item} key={provider} provider={provider} resetKey={resetKey} url={url} />
+            <ProviderRating
+              item={item}
+              key={provider}
+              provider={provider}
+              resetKey={resetKey}
+              url={url}
+            />
           ) : (
             <ProviderLink key={provider} provider={provider} url={url} />
           ),

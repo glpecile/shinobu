@@ -62,22 +62,21 @@ const FOREVER = {
  * query retries: callers await these in sequence.
  */
 export function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) {
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.anizip(lookup),
-    queryFn: () => fetchAniZipIds(httpFetch, lookup),
-    ...FOREVER,
-    retry: false,
-  }).catch(() => null);
+  return queryClient
+    .fetchQuery({
+      queryKey: mappingQueryKeys.anizip(lookup),
+      queryFn: () => fetchAniZipIds(httpFetch, lookup),
+      ...FOREVER,
+      retry: false,
+    })
+    .catch(() => null);
 }
 ```
 
 `AniZipLookup` (`src/lib/providers/mapping/anizip.ts:21-24`):
 
 ```ts
-export type AniZipLookup =
-  | { anilistId: number }
-  | { tvdbId: number }
-  | { tmdbId: number };
+export type AniZipLookup = { anilistId: number } | { tvdbId: number } | { tmdbId: number };
 ```
 
 `fetchAniZipIds` returns `null` for a 404 or an absent `mappings` block, and
@@ -124,22 +123,24 @@ function for `staleTime`: `(query) => number`.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Install | `bun install --frozen-lockfile` | exit 0 |
-| Typecheck | `bun typecheck` | exit 0, no errors |
-| Lint | `bun lint` | exit 0 |
-| Focused tests | `bun test --isolate src/state/queries/mapping.test.ts` | all pass |
-| Full tests | `bun run test` | all pass |
+| Purpose       | Command                                                | Expected on success |
+| ------------- | ------------------------------------------------------ | ------------------- |
+| Install       | `bun install --frozen-lockfile`                        | exit 0              |
+| Typecheck     | `bun typecheck`                                        | exit 0, no errors   |
+| Lint          | `bun lint`                                             | exit 0              |
+| Focused tests | `bun test --isolate src/state/queries/mapping.test.ts` | all pass            |
+| Full tests    | `bun run test`                                         | all pass            |
 
 ## Scope
 
 **In scope** (the only files you should modify):
+
 - `src/state/queries/mapping.ts`
 - `src/state/queries/mapping.test.ts`
 - `plans/README.md` (status row)
 
 **Out of scope** (do NOT touch, even though they look related):
+
 - `src/state/queries/persist.ts`. The allowlist and `MAX_AGE_MS` stay.
 - `useAniListIdByTmdbQuery` in `mapping.ts`. It looks up by TMDB id, where a
   miss means "not an anime" for almost every title, and must stay forever.
@@ -169,16 +170,18 @@ const UNMAPPED_STALE_MS = 24 * 60 * 60_000;
  * goes stale; every other answer never churns.
  */
 export function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) {
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.anizip(lookup),
-    queryFn: () => fetchAniZipIds(httpFetch, lookup),
-    ...FOREVER,
-    staleTime: ({ state }) =>
-      'anilistId' in lookup && state.data?.tvdb == null && state.data?.tmdb == null
-        ? UNMAPPED_STALE_MS
-        : Number.POSITIVE_INFINITY,
-    retry: false,
-  }).catch(() => null);
+  return queryClient
+    .fetchQuery({
+      queryKey: mappingQueryKeys.anizip(lookup),
+      queryFn: () => fetchAniZipIds(httpFetch, lookup),
+      ...FOREVER,
+      staleTime: ({ state }) =>
+        'anilistId' in lookup && state.data?.tvdb == null && state.data?.tmdb == null
+          ? UNMAPPED_STALE_MS
+          : Number.POSITIVE_INFINITY,
+      retry: false,
+    })
+    .catch(() => null);
 }
 ```
 
@@ -203,21 +206,34 @@ tests. Import `cachedAniZipIds` the same way the file imports the other
 describe('cachedAniZipIds', () => {
   test('an unmapped AniList record is asked again after a day', async () => {
     const client = freshClient();
-    client.setQueryData(mappingQueryKeys.anizip({ anilistId: 177686 }), { anilist: 177686 }, {
-      updatedAt: Date.now() - 25 * 60 * 60_000,
-    });
-    routes = [['anilist_id=177686', { mappings: { anilist_id: 177686, themoviedb_id: '1294972' } }]];
+    client.setQueryData(
+      mappingQueryKeys.anizip({ anilistId: 177686 }),
+      { anilist: 177686 },
+      {
+        updatedAt: Date.now() - 25 * 60 * 60_000,
+      },
+    );
+    routes = [
+      ['anilist_id=177686', { mappings: { anilist_id: 177686, themoviedb_id: '1294972' } }],
+    ];
 
     expect(await cachedAniZipIds(client, { anilistId: 177686 })).toMatchObject({ tmdb: 1294972 });
   });
 
   test('a mapped record is never asked again', async () => {
     const client = freshClient();
-    client.setQueryData(mappingQueryKeys.anizip({ anilistId: 16498 }), { anilist: 16498, tvdb: 267440 }, {
-      updatedAt: Date.now() - 400 * 24 * 60 * 60_000,
-    });
+    client.setQueryData(
+      mappingQueryKeys.anizip({ anilistId: 16498 }),
+      { anilist: 16498, tvdb: 267440 },
+      {
+        updatedAt: Date.now() - 400 * 24 * 60 * 60_000,
+      },
+    );
 
-    expect(await cachedAniZipIds(client, { anilistId: 16498 })).toEqual({ anilist: 16498, tvdb: 267440 });
+    expect(await cachedAniZipIds(client, { anilistId: 16498 })).toEqual({
+      anilist: 16498,
+      tvdb: 267440,
+    });
     expect(requestedUrls).toHaveLength(0);
   });
 });

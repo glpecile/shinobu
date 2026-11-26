@@ -18,8 +18,12 @@ function item(id: string): NormalizedMediaItem {
   };
 }
 
-const progress = (current: number, completed = false): MediaProgress =>
-  ({ watched: current > 0 || completed, completed, current, unit: 'episode' });
+const progress = (current: number, completed = false): MediaProgress => ({
+  watched: current > 0 || completed,
+  completed,
+  current,
+  unit: 'episode',
+});
 
 describe('seasonShelf', () => {
   test('completed wins over a watching status', () => {
@@ -39,33 +43,58 @@ describe('seasonShelf', () => {
 
 describe('seasonRows', () => {
   const items = ['a', 'b', 'c', 'd', 'e'].map(item);
-  const shelves: Record<string, SeasonShelf> = { a: 'rest', b: 'watching', c: 'rest', d: 'watching', e: 'seen' };
+  const shelves: Record<string, SeasonShelf> = {
+    a: 'rest',
+    b: 'watching',
+    c: 'rest',
+    d: 'watching',
+    e: 'seen',
+  };
   const shelfOf = (entry: NormalizedMediaItem) => shelves[entry.id];
   const nextAiring = { d: { episode: 3, airingAt: '2026-11-08T12:00:00.000Z' } };
 
   test('shelves in order, watching soonest first, posters chunked to columns', () => {
-    const rows = seasonRows(items, shelfOf, nextAiring, { folded: new Set(), columns: 2, now: new Date('2026-11-07T00:00:00Z') });
-    expect(rows.map((row) => (row.kind === 'posters' ? row.items.map((entry) => entry.id).join('') : row.key))).toEqual([
-      'watching', 'db', 'seen', 'e', 'rest', 'ac',
-    ]);
+    const rows = seasonRows(items, shelfOf, nextAiring, {
+      folded: new Set(),
+      columns: 2,
+      now: new Date('2026-11-07T00:00:00Z'),
+    });
+    expect(
+      rows.map((row) =>
+        row.kind === 'posters' ? row.items.map((entry) => entry.id).join('') : row.key,
+      ),
+    ).toEqual(['watching', 'db', 'seen', 'e', 'rest', 'ac']);
     expect(rows[0]).toMatchObject({ kind: 'head', count: 2, open: true, next: nextAiring.d });
   });
 
   test('a folded shelf keeps its head and drops its titles', () => {
-    const rows = seasonRows(items, shelfOf, nextAiring, { folded: new Set(['rest']), now: new Date('2026-11-07T00:00:00Z') });
+    const rows = seasonRows(items, shelfOf, nextAiring, {
+      folded: new Set(['rest']),
+      now: new Date('2026-11-07T00:00:00Z'),
+    });
     expect(rows.at(-1)).toMatchObject({ kind: 'head', key: 'rest', open: false });
   });
 
   test('expired airing pointers do not sort ahead of upcoming episodes', () => {
-    const rows = seasonRows([items[1], items[3]], shelfOf, {
-      b: { episode: 1, airingAt: '2026-11-07T10:00:00.000Z' },
-      d: nextAiring.d,
-    }, { folded: new Set(['watching']), now: new Date('2026-11-07T12:00:00.000Z') });
+    const rows = seasonRows(
+      [items[1], items[3]],
+      shelfOf,
+      {
+        b: { episode: 1, airingAt: '2026-11-07T10:00:00.000Z' },
+        d: nextAiring.d,
+      },
+      { folded: new Set(['watching']), now: new Date('2026-11-07T12:00:00.000Z') },
+    );
     expect(rows[0]).toMatchObject({ key: 'watching', next: nextAiring.d });
   });
 
   test('with nothing tracked, the plain catalogue with no heads, whatever is folded', () => {
-    const rows = seasonRows(items, () => 'rest', {}, { folded: new Set(['rest']), now: new Date('2026-11-07T00:00:00Z') });
+    const rows = seasonRows(
+      items,
+      () => 'rest',
+      {},
+      { folded: new Set(['rest']), now: new Date('2026-11-07T00:00:00Z') },
+    );
     expect(rows.map((row) => row.kind)).toEqual(['entry', 'entry', 'entry', 'entry', 'entry']);
   });
 });

@@ -55,7 +55,9 @@ function hardcover(
       if (read != null) return Response.json({ data: options.reads?.[read] });
       const mutation = { name: /^mutation \w+[^{]*\{\s*(\w+)/.exec(query)?.[1] ?? '', variables };
       mutations.push(mutation);
-      return Response.json({ data: { [mutation.name]: options.answer?.(mutation) ?? { id: 900 } } });
+      return Response.json({
+        data: { [mutation.name]: options.answer?.(mutation) ?? { id: 900 } },
+      });
     },
   };
   return { deps, mutations };
@@ -73,14 +75,19 @@ describe('createHardcoverList', () => {
     });
 
     const result = await run(
-      createHardcoverList(deps, { ...DRAFT, items: [book(1, 'One'), book(2, 'Two'), book(3, 'Three')] }),
+      createHardcoverList(deps, {
+        ...DRAFT,
+        items: [book(1, 'One'), book(2, 'Two'), book(3, 'Three')],
+      }),
     );
 
     expect(result).toMatchObject({ success: { id: '900', failed: ['Two'] } });
     expect(mutations).toEqual([
       {
         name: 'insert_list',
-        variables: { object: { name: 'Dazai', description: '', privacy_setting_id: 3, ranked: false } },
+        variables: {
+          object: { name: 'Dazai', description: '', privacy_setting_id: 3, ranked: false },
+        },
       },
       { name: 'insert_list_book', variables: { object: { list_id: 900, book_id: 1 } } },
       { name: 'insert_list_book', variables: { object: { list_id: 900, book_id: 2 } } },
@@ -89,20 +96,30 @@ describe('createHardcoverList', () => {
   });
 
   test('errors on the list fail the create and add no book', async () => {
-    const { deps, mutations } = hardcover({ answer: () => ({ errors: ['Name is taken'], id: null }) });
+    const { deps, mutations } = hardcover({
+      answer: () => ({ errors: ['Name is taken'], id: null }),
+    });
 
     const result = await run(createHardcoverList(deps, { ...DRAFT, items: [BOOK] }));
 
-    expect(result).toMatchObject({ _tag: 'Failure', failure: { _tag: 'ProviderNetworkError', retryable: false } });
+    expect(result).toMatchObject({
+      _tag: 'Failure',
+      failure: { _tag: 'ProviderNetworkError', retryable: false },
+    });
     expect(mutations).toHaveLength(1);
   });
 
   test('a book with no Hardcover id, or a ninth book, sends nothing', async () => {
     const { deps, mutations } = hardcover();
 
-    const noId = await run(createHardcoverList(deps, { ...DRAFT, items: [{ ...BOOK, externalIds: {} }] }));
+    const noId = await run(
+      createHardcoverList(deps, { ...DRAFT, items: [{ ...BOOK, externalIds: {} }] }),
+    );
     const tooMany = await run(
-      createHardcoverList(deps, { ...DRAFT, items: Array.from({ length: 9 }, (_, i) => book(i + 1, 'Book')) }),
+      createHardcoverList(deps, {
+        ...DRAFT,
+        items: Array.from({ length: 9 }, (_, i) => book(i + 1, 'Book')),
+      }),
     );
 
     expect([noId._tag, tooMany._tag]).toEqual(['Failure', 'Failure']);
@@ -130,7 +147,9 @@ describe('list edits', () => {
       },
     });
 
-    const result = await run(updateHardcoverList(deps, { id: 7, name: 'New', description: 'Notes' }));
+    const result = await run(
+      updateHardcoverList(deps, { id: 7, name: 'New', description: 'Notes' }),
+    );
 
     expect(result).toMatchObject({ success: { name: 'New' } });
     expect(mutations).toEqual([
@@ -156,7 +175,10 @@ describe('list edits', () => {
 
     const result = await run(deleteHardcoverList(deps, 7));
 
-    expect(result).toMatchObject({ _tag: 'Failure', failure: { _tag: 'ProviderNetworkError', retryable: false } });
+    expect(result).toMatchObject({
+      _tag: 'Failure',
+      failure: { _tag: 'ProviderNetworkError', retryable: false },
+    });
     expect(mutations).toEqual([{ name: 'delete_list', variables: { id: 7 } }]);
   });
 });

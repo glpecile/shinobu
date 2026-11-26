@@ -12,7 +12,7 @@ execution: code
 
 ## Goal Capsule
 
-- **Objective:** Ship local, serverless release notifications — "new episode aired" alerts for tracked shows/anime — scheduled ahead of time from known air dates, refreshed on app foreground *and* by a periodic Android background task (otraku parity: `workmanager` + `flutter_local_notifications`). Closes `todos/007-pending-p3-release-notifications.md`.
+- **Objective:** Ship local, serverless release notifications — "new episode aired" alerts for tracked shows/anime — scheduled ahead of time from known air dates, refreshed on app foreground _and_ by a periodic Android background task (otraku parity: `workmanager` + `flutter_local_notifications`). Closes `todos/007-pending-p3-release-notifications.md`.
 - **Authority:** AGENTS.md conventions (no backend, `hasAired` centralization, CNG rebuild rules) override this plan; this plan overrides implementer preference on scope and sequencing; the owner's live decisions override both.
 - **Execution profile:** `execution: code`. Pure computation units are test-first; native scheduling/background units are smoke-verified on an Android dev client.
 - **Stop conditions:** Stop and surface — do not guess — if (a) any design would require a push server, FCM tokens, or any remote relay (hard no per todos/007), (b) `expo-background-task`/`expo-notifications` turn out incompatible with Expo SDK 57 as installed, (c) provider reads cannot run headless outside React (they can today — `traktDeps()`/`anilistDeps()` are module-level), or (d) the change would touch the Worker proxies or provider registry write semantics.

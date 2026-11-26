@@ -18,22 +18,11 @@ import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchl
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import {
-  isReadIntent,
-  isWatchlistCtaSettled,
-  watchlistCtaCopy,
-  watchlistResultView,
-} from './copy';
+import { isReadIntent, isWatchlistCtaSettled, watchlistCtaCopy, watchlistResultView } from './copy';
 import { useWriteTargetsSplit } from './targets';
-import {
-  WatchlistAddPickerSheet,
-  WatchlistRemovePickerSheet,
-} from './watchlist-picker-sheet';
+import { WatchlistAddPickerSheet, WatchlistRemovePickerSheet } from './watchlist-picker-sheet';
 import { useWatchlistAddStillOffered } from './use-watchlist-add-offered';
-import {
-  useIsWatchlistWritePending,
-  useLatestWatchlistResult,
-} from './use-watchlist-media';
+import { useIsWatchlistWritePending, useLatestWatchlistResult } from './use-watchlist-media';
 
 export function WatchlistMediaButton({
   item,
@@ -60,10 +49,9 @@ export function WatchlistMediaButton({
   const settled = isWatchlistCtaSettled(onList, view, stillOffered);
 
   function openRemovePicker() {
-    const data = queryClient.getQueryData<WatchlistInputs>(
-      watchlistQueryKeys.inputs(),
-    );
-    const target = data == null ? null : findWatchlistRemoval(data, item, cachedMangaList(queryClient));
+    const data = queryClient.getQueryData<WatchlistInputs>(watchlistQueryKeys.inputs());
+    const target =
+      data == null ? null : findWatchlistRemoval(data, item, cachedMangaList(queryClient));
     if (target == null) return;
     haptics.selection();
     setRemoval(target);

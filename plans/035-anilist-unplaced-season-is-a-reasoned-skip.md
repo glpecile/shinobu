@@ -55,32 +55,35 @@ is not written, and reports a skip with a reason and its link.
 `src/features/log-media/use-log-media.ts:467-492` (inside `resolveLogPlan`):
 
 ```ts
-  const targets = resolveWriteTargets(item, connected, {
-    capability: 'log',
-    // Only a *canonical*-domain batch can drop AniList (plan 0011 / R6): that
-    // guard exists because a canonical season 2 has no place on a season-1
-    // AniList entry. An entry-domain batch is already in AniList's own
-    // numbering, so it stays a target whatever season it maps to.
-    nonSeasonOneEpisodes:
-      cour == null &&
-      entryInput == null &&
-      canonicalInput != null &&
-      canonicalInput.some((episode) => episode.season !== 1),
-    onlyProviders: variables.providers,
-    platform: currentPlatform(),
-    letterboxdUserscript: hasLetterboxdUserscript(),
-  });
-
-  const mappingSkips = new Map<ProviderId, string>();
-  if (
-    targets.includes(Provider.Simkl) &&
+const targets = resolveWriteTargets(item, connected, {
+  capability: 'log',
+  // Only a *canonical*-domain batch can drop AniList (plan 0011 / R6): that
+  // guard exists because a canonical season 2 has no place on a season-1
+  // AniList entry. An entry-domain batch is already in AniList's own
+  // numbering, so it stays a target whatever season it maps to.
+  nonSeasonOneEpisodes:
+    cour == null &&
     entryInput == null &&
-    item.externalIds.anilist != null &&
-    canonicalInput?.some((episode) => episode.season !== 1) === true &&
-    ((item.type === 'TV' && cour == null) || (cour != null && cour.mal == null))
-  ) {
-    mappingSkips.set(Provider.Simkl, 'Could not resolve a cour-specific Simkl identity for these episodes');
-  }
+    canonicalInput != null &&
+    canonicalInput.some((episode) => episode.season !== 1),
+  onlyProviders: variables.providers,
+  platform: currentPlatform(),
+  letterboxdUserscript: hasLetterboxdUserscript(),
+});
+
+const mappingSkips = new Map<ProviderId, string>();
+if (
+  targets.includes(Provider.Simkl) &&
+  entryInput == null &&
+  item.externalIds.anilist != null &&
+  canonicalInput?.some((episode) => episode.season !== 1) === true &&
+  ((item.type === 'TV' && cour == null) || (cour != null && cour.mal == null))
+) {
+  mappingSkips.set(
+    Provider.Simkl,
+    'Could not resolve a cour-specific Simkl identity for these episodes',
+  );
+}
 ```
 
 How a `mappingSkips` entry flows (already built, do not change):
@@ -98,10 +101,10 @@ How a `mappingSkips` entry flows (already built, do not change):
 its use in `resolveWriteTargets`:
 
 ```ts
-  let targets = providersForWrite(item, connected, options.capability);
-  if (options.nonSeasonOneEpisodes === true) {
-    targets = targets.filter((provider) => provider !== Provider.AniList);
-  }
+let targets = providersForWrite(item, connected, options.capability);
+if (options.nonSeasonOneEpisodes === true) {
+  targets = targets.filter((provider) => provider !== Provider.AniList);
+}
 ```
 
 `resolveLogPlan` is the only caller that sets the option
@@ -170,17 +173,18 @@ silent drop):
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Install | `bun install --frozen-lockfile` | exit 0 |
-| Typecheck | `bun typecheck` | exit 0, no errors |
-| Lint | `bun lint` | exit 0 |
-| Focused tests | `bun test --isolate src/features/log-media/use-log-media.test.ts src/lib/providers/routing.test.ts` | all pass |
-| Full tests | `bun run test` | all pass |
+| Purpose       | Command                                                                                             | Expected on success |
+| ------------- | --------------------------------------------------------------------------------------------------- | ------------------- |
+| Install       | `bun install --frozen-lockfile`                                                                     | exit 0              |
+| Typecheck     | `bun typecheck`                                                                                     | exit 0, no errors   |
+| Lint          | `bun lint`                                                                                          | exit 0              |
+| Focused tests | `bun test --isolate src/features/log-media/use-log-media.test.ts src/lib/providers/routing.test.ts` | all pass            |
+| Full tests    | `bun run test`                                                                                      | all pass            |
 
 ## Scope
 
 **In scope** (the only files you should modify):
+
 - `src/features/log-media/use-log-media.ts` (`resolveLogPlan` only)
 - `src/features/log-media/use-log-media.test.ts`
 - `src/lib/providers/routing.ts` (`WriteTargetOptions`, `resolveWriteTargets`)
@@ -188,6 +192,7 @@ silent drop):
 - `plans/README.md` (status row)
 
 **Out of scope** (do NOT touch, even though they look related):
+
 - `canonicalCourEntry`. Do not try to find more cours in this plan.
 - The Simkl skip condition and its reason string. Tests match that string.
 - `withMappingSkips`, `planLogWrite`, `fanOutLog`, the report components.
@@ -237,10 +242,10 @@ In `src/lib/providers/routing.ts`:
 1. Delete the `nonSeasonOneEpisodes?: boolean;` field and its docblock from
    `WriteTargetOptions`.
 2. In `resolveWriteTargets`, delete the three-line `if
-   (options.nonSeasonOneEpisodes === true) { … }` block. If `targets` is then
+(options.nonSeasonOneEpisodes === true) { … }` block. If `targets` is then
    never reassigned before the `onlyProviders` filter reassigns it, keep `let`.
 3. In the docblock above `resolveWriteTargets`, remove the words "minus
-   AniList for a non-season-1 *canonical* batch,".
+   AniList for a non-season-1 _canonical_ batch,".
 
 **Verify**: `grep -rn "nonSeasonOneEpisodes" src --include="*.ts" --include="*.tsx" | grep -v "\.test\."` → no matches. `bun typecheck` → reports errors only in `routing.test.ts` (fixed in step 3).
 
@@ -250,24 +255,23 @@ In `src/lib/providers/routing.test.ts`:
 
 - Delete the test `drops AniList for a non-season-1 canonical episode batch`.
 - Delete the test `keeps AniList when the caller does not raise the
-  canonical-season flag` and the four-line comment above it. Another test in
+canonical-season flag` and the four-line comment above it. Another test in
   the file already covers an anime item with both ids routing to both
   providers; if `grep -n "'trakt', 'anilist'\]" src/lib/providers/routing.test.ts`
   finds no remaining `toEqual(['trakt', 'anilist'])` expectation, keep this
   test instead and only rename it to `routes an anime with movie/TV ids to
-  both`.
+both`.
 
-In `src/features/log-media/use-log-media.test.ts`, change the test at line
-394. New name and expectations:
+In `src/features/log-media/use-log-media.test.ts`, change the test at line 394. New name and expectations:
 
 ```ts
-  test('a canonical later season with no AniList cour skips AniList with a reason', async () => {
-    // (fixture and planLogWrite call unchanged)
+test('a canonical later season with no AniList cour skips AniList with a reason', async () => {
+  // (fixture and planLogWrite call unchanged)
 
-    expect(plan.targets).toEqual(['trakt', 'anilist']);
-    expect(plan.mappingSkips.get('anilist')).toBe('Could not find the AniList entry for this season');
-    expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
-  });
+  expect(plan.targets).toEqual(['trakt', 'anilist']);
+  expect(plan.mappingSkips.get('anilist')).toBe('Could not find the AniList entry for this season');
+  expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
+});
 ```
 
 Remove the old line `expect(mappingCalls).toEqual([]);` only if it fails; if

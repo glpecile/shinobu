@@ -24,7 +24,10 @@ export function mediaLinkRoute(path: string): string | null {
     if (host === 'anilist.co') {
       const id = /^\/(?:anime|manga)\/([1-9][0-9]*)(?:\/[^/]+)?\/?$/.exec(url.pathname)?.[1];
       if (id == null || !Number.isSafeInteger(Number(id))) return null;
-      return routes.details(`anilist-${id}`, url.pathname.startsWith('/manga/') ? 'MANGA' : undefined);
+      return routes.details(
+        `anilist-${id}`,
+        url.pathname.startsWith('/manga/') ? 'MANGA' : undefined,
+      );
     }
     if (host === 'hardcover.app') {
       const author = /^\/authors\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/.exec(url.pathname)?.[1];
@@ -56,5 +59,7 @@ export function mediaLinkUrl(id: string, mediaType?: string): string | null {
   const hardcover = /^hardcover-([1-9][0-9]*)$/.exec(id)?.[1];
   if (hardcover != null) return `https://hardcover.app/id/book/${hardcover}`;
   const anilist = /^anilist-([1-9][0-9]*)$/.exec(id)?.[1];
-  return anilist == null ? null : `https://anilist.co/${mediaType === 'MANGA' ? 'manga' : 'anime'}/${anilist}`;
+  return anilist == null
+    ? null
+    : `https://anilist.co/${mediaType === 'MANGA' ? 'manga' : 'anime'}/${anilist}`;
 }

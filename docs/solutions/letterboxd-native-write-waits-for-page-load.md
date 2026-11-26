@@ -17,12 +17,12 @@ cache.
 Chrome, same film page, 3G-like link (400 ms, 50 KB/s), until the write's
 response:
 
-| write starts at | time |
-|---|---|
-| `load` (old Android) | 40.8 s |
-| DOMContentLoaded (old iOS) | 24.9 s |
-| `<head>` parsed | 10.7 s |
-| `<head>` parsed, then `window.stop()` | 7.0 s |
+| write starts at                       | time   |
+| ------------------------------------- | ------ |
+| `load` (old Android)                  | 40.8 s |
+| DOMContentLoaded (old iOS)            | 24.9 s |
+| `<head>` parsed                       | 10.7 s |
+| `<head>` parsed, then `window.stop()` | 7.0 s  |
 
 ## Fix
 

@@ -17,5 +17,9 @@ function subscribe(onChange: () => void): () => void {
  * (docs/solutions/web-hydration-error-418.md).
  */
 export function useWindowDimensions(): ScaledSize {
-  return useSyncExternalStore(subscribe, () => Dimensions.get('window'), () => SERVER_WINDOW);
+  return useSyncExternalStore(
+    subscribe,
+    () => Dimensions.get('window'),
+    () => SERVER_WINDOW,
+  );
 }

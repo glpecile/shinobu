@@ -11,18 +11,18 @@ time. Owner report, 2026-08-18.
 ## Cause
 
 `invalidateAfterLog` (`features/log-media/use-log-media.ts`) invalidated
-`upNextQueryKeys.inputs()` in the *middle* of the function — after the Trakt
+`upNextQueryKeys.inputs()` in the _middle_ of the function — after the Trakt
 and AniList branches, before the Simkl and Serializd ones.
 
 That ordering is load-bearing, because `invalidateQueries` is not deferred.
 TanStack Query invalidates and then refetches inside one synchronous
 `notifyManager.batch`, and `query.fetch()` calls the `queryFn` synchronously —
-so the Up Next `queryFn` (`fetchUpNextInputs`) starts running *inside* the
+so the Up Next `queryFn` (`fetchUpNextInputs`) starts running _inside_ the
 `invalidateQueries` call, and reaches its per-provider `queryClient.fetchQuery`
 calls before the next statement of `invalidateAfterLog` executes.
 
 Each of those inner reads is a plain `fetchQuery` with a `staleTime`
-(`SIMKL_WATCHING_STALE_MS` is 15 minutes). Invalidation is the *only* thing
+(`SIMKL_WATCHING_STALE_MS` is 15 minutes). Invalidation is the _only_ thing
 that makes them refetch during that window. So:
 
 ```
@@ -38,7 +38,7 @@ Trakt and AniList escaped only because their branches happened to sit above the
 Up Next line — nothing about them was more correct.
 
 Serializd is not an Up Next input source at all; it appeared in the report
-because a TV show fans out to Serializd *and* Simkl, and Simkl is what sources
+because a TV show fans out to Serializd _and_ Simkl, and Simkl is what sources
 the card.
 
 ## Fix
@@ -47,16 +47,20 @@ Move the Up Next invalidation to the **last** statement of
 `invalidateAfterLog`, after every per-provider branch:
 
 ```ts
-if (succeeded.includes('simkl')) { /* simkl caches */ }
-if (succeeded.includes('serializd')) { /* serializd caches */ }
+if (succeeded.includes('simkl')) {
+  /* simkl caches */
+}
+if (succeeded.includes('serializd')) {
+  /* serializd caches */
+}
 // last: the gather reads every cache above, and reads them synchronously
 if (touched('trakt') || touched('anilist') || touched('simkl')) {
   queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
 }
 ```
 
-Guarded by `invalidate-after-log.test.ts` → *"recomputes Up Next last, after
-every provider cache it reads"*, which asserts `up-next/inputs` is the final
+Guarded by `invalidate-after-log.test.ts` → _"recomputes Up Next last, after
+every provider cache it reads"_, which asserts `up-next/inputs` is the final
 key invalidated.
 
 ## The general rule

@@ -41,10 +41,7 @@ function read(): string[] {
  * storing the casing the user just typed, then capped. Pure and exported so the
  * ordering contract is testable without the store.
  */
-export function mergeRecentTags(
-  existing: readonly string[],
-  tags: readonly string[],
-): string[] {
+export function mergeRecentTags(existing: readonly string[], tags: readonly string[]): string[] {
   const merged: string[] = [];
   const seen = new Set<string>();
   for (const tag of [...tags, ...existing]) {

@@ -8,14 +8,10 @@ export interface UpNextGroup {
 }
 
 function groupKey(entry: UpNextEntry): string {
-  return entry.kind === 'episode'
-    ? `episode:${entry.item.id}`
-    : `release:${entry.id}`;
+  return entry.kind === 'episode' ? `episode:${entry.item.id}` : `release:${entry.id}`;
 }
 
-export function groupDayEntries(
-  entries: readonly UpNextEntry[],
-): UpNextGroup[] {
+export function groupDayEntries(entries: readonly UpNextEntry[]): UpNextGroup[] {
   const groups = new Map<string, UpNextGroup>();
   for (const entry of entries) {
     const key = groupKey(entry);

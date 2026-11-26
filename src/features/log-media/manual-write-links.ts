@@ -7,20 +7,14 @@ export interface ManualLogRow {
   url: string;
 }
 
-export function manualRowsFor(
-  manual: readonly ProviderId[],
-  item: UrlItem,
-): ManualLogRow[] {
+export function manualRowsFor(manual: readonly ProviderId[], item: UrlItem): ManualLogRow[] {
   return manual.map((provider) => ({
     provider,
     url: providerItemUrl(provider, item) ?? providerHomeUrl(provider),
   }));
 }
 
-export function manualLinkForOutcome(
-  outcome: ProviderWriteOutcome,
-  item: UrlItem,
-): string | null {
+export function manualLinkForOutcome(outcome: ProviderWriteOutcome, item: UrlItem): string | null {
   if (outcome.status === 'error') return providerItemUrl(outcome.provider, item);
   if (outcome.status === 'skipped' && outcome.reason != null) {
     return providerItemUrl(outcome.provider, item);
@@ -50,12 +44,9 @@ type ReasonedSkip = Extract<ProviderWriteOutcome, { status: 'skipped' }> & { rea
 
 type ReasonedOk = Extract<ProviderWriteOutcome, { status: 'ok' }> & { reason: string };
 
-export function okReasonOutcomes(
-  outcomes: readonly ProviderWriteOutcome[],
-): ReasonedOk[] {
+export function okReasonOutcomes(outcomes: readonly ProviderWriteOutcome[]): ReasonedOk[] {
   return outcomes.filter(
-    (outcome): outcome is ReasonedOk =>
-      outcome.status === 'ok' && outcome.reason != null,
+    (outcome): outcome is ReasonedOk => outcome.status === 'ok' && outcome.reason != null,
   );
 }
 

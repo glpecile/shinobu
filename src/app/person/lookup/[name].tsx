@@ -1,18 +1,10 @@
-import {
-  useLocalSearchParams,
-  useRouter,
-  type ErrorBoundaryProps,
-} from 'expo-router';
+import { useLocalSearchParams, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import { Suspense } from 'react';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { FloatingShareButton } from '@/components/floating-share-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
-import {
-  PersonDetailsView,
-  PersonNotFound,
-  PersonSkeleton,
-} from '@/features/person';
+import { PersonDetailsView, PersonNotFound, PersonSkeleton } from '@/features/person';
 import { routes } from '@/lib/routes';
 import { useSuspensePersonByNameQuery } from '@/state/queries/person-details';
 
@@ -20,9 +12,7 @@ function LookupContent({ name, onGoBack }: { name: string; onGoBack: () => void 
   const { data } = useSuspensePersonByNameQuery({ name });
 
   if (data == null) {
-    return (
-      <PersonNotFound detail={`No results for “${name}”.`} onGoBack={onGoBack} />
-    );
+    return <PersonNotFound detail={`No results for “${name}”.`} onGoBack={onGoBack} />;
   }
   return <PersonDetailsView {...data} />;
 }
@@ -40,14 +30,19 @@ export default function PersonLookupScreen() {
   }
 
   if (name == null || name === '') {
-    return (
-      <PersonNotFound detail="This person page doesn't exist." onGoBack={goBack} />
-    );
+    return <PersonNotFound detail="This person page doesn't exist." onGoBack={goBack} />;
   }
 
   return (
     <ScrolledTitle>
-      <Suspense fallback={<><PersonSkeleton /><FloatingShareButton href={routes.personLookup(name)} /></>}>
+      <Suspense
+        fallback={
+          <>
+            <PersonSkeleton />
+            <FloatingShareButton href={routes.personLookup(name)} />
+          </>
+        }
+      >
         <LookupContent name={name} onGoBack={goBack} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />
@@ -61,9 +56,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
     <PersonNotFound
       detail="This person couldn't be loaded."
       title="Couldn’t load"
-      onGoBack={() =>
-        router.canGoBack() ? router.back() : router.replace(routes.home)
-      }
+      onGoBack={() => (router.canGoBack() ? router.back() : router.replace(routes.home))}
       onRetry={retry}
     />
   );

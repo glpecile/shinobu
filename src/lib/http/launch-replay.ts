@@ -83,7 +83,13 @@ export function replayFor(input: RequestInfo | URL, init?: RequestInit): Replay 
   const body = init?.body == null ? undefined : typeof init.body === 'string' ? init.body : null;
   if (url == null || body === null || !isReplayable(url, method, body)) return null;
   const headers = Object.fromEntries(new Headers(init?.headers).entries());
-  return { key: `launch:${hash(JSON.stringify([method, url, headers, body]))}`, url, method, headers, ...(body != null ? { body } : {}) };
+  return {
+    key: `launch:${hash(JSON.stringify([method, url, headers, body]))}`,
+    url,
+    method,
+    headers,
+    ...(body != null ? { body } : {}),
+  };
 }
 
 function persist() {
@@ -93,8 +99,14 @@ function persist() {
     if (!recorded.has(key)) void removeFromAutoPrefetch(key);
   }
   for (const { key, url, ...request } of recorded.values()) {
-    void prefetchOnAppStart(url, { ...request, prefetchKey: key, prefetchCacheTtlMs: REPLAY_TTL_MS } as RequestInit)
-      .then(() => { if (ended) return removeFromAutoPrefetch(key); })
+    void prefetchOnAppStart(url, {
+      ...request,
+      prefetchKey: key,
+      prefetchCacheTtlMs: REPLAY_TTL_MS,
+    } as RequestInit)
+      .then(() => {
+        if (ended) return removeFromAutoPrefetch(key);
+      })
       .catch(() => {});
   }
   storage().set(STORED_KEYS, JSON.stringify([...recorded.keys()]));
@@ -108,7 +120,11 @@ function record(replay: Replay) {
   persistTimer ??= setTimeout(persist, remaining);
 }
 
-export function fetchWithLaunchReplay(fetch: HttpFetch, input: RequestInfo | URL, init?: RequestInit) {
+export function fetchWithLaunchReplay(
+  fetch: HttpFetch,
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) {
   const replay = ended || Date.now() - startedAt > REPLAY_TTL_MS ? null : replayFor(input, init);
   if (replay == null) return fetch(input, init);
   const claim = !claimed.has(replay.key);
@@ -116,12 +132,19 @@ export function fetchWithLaunchReplay(fetch: HttpFetch, input: RequestInfo | URL
   const response = fetch(
     input,
     claim
-      ? ({ ...init, headers: { ...replay.headers, prefetchKey: replay.key }, prefetchCacheTtlMs: REPLAY_TTL_MS } as RequestInit)
+      ? ({
+          ...init,
+          headers: { ...replay.headers, prefetchKey: replay.key },
+          prefetchCacheTtlMs: REPLAY_TTL_MS,
+        } as RequestInit)
       : init,
   );
-  void response.then((res) => {
-    if (res.ok) record(replay);
-  }, () => {});
+  void response.then(
+    (res) => {
+      if (res.ok) record(replay);
+    },
+    () => {},
+  );
   return response;
 }
 

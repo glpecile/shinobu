@@ -2,11 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 import type { LetterboxdSession } from '@/lib/providers/letterboxd/deps';
 import { Provider } from '@/lib/providers/types';
-import {
-  getProviderSession,
-  onSessionChange,
-  setProviderSession,
-} from './tokens';
+import { getProviderSession, onSessionChange, setProviderSession } from './tokens';
 
 /**
  * Connect for reads only: a public username, no login (plan 0012 decision 1) —

@@ -34,7 +34,7 @@ holds a `contents: write` token. In the same job it runs third-party code:
   later step can read it.
 - The keystore passwords go into `$GITHUB_ENV` **before** `expo prebuild`, so
   prebuild's plugins and every later step inherit them.
-- `ALL_SECRETS: ${{ toJSON(secrets) }}` exposes *every* repository secret to
+- `ALL_SECRETS: ${{ toJSON(secrets) }}` exposes _every_ repository secret to
   one step just to copy the `EXPO_PUBLIC_*` ones. Any future secret named
   `EXPO_PUBLIC_…` by mistake would ship inside the public APK.
 - Secrets and `github.ref_name` are expanded straight into `run:` shell text.
@@ -132,12 +132,12 @@ Copy that style.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Resolve a tag to a SHA | `git ls-remote https://github.com/<owner>/<repo> 'refs/tags/<tag>' 'refs/tags/<tag>^{}'` | a 40-char SHA; prefer the `^{}` (peeled) line when present |
-| YAML parses | `bunx --bun yaml-lint .github/workflows/*.yml` or `python3 -c "import yaml,sys;[yaml.safe_load(open(f)) for f in sys.argv[1:]]" .github/workflows/*.yml` | exit 0 |
-| Optional lint | `bunx actionlint` if available (download if your environment allows) | no errors |
-| Unit checks | `bun install --frozen-lockfile && bun run test` | all pass (Bun pin sanity) |
+| Purpose                | Command                                                                                                                                                  | Expected on success                                        |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Resolve a tag to a SHA | `git ls-remote https://github.com/<owner>/<repo> 'refs/tags/<tag>' 'refs/tags/<tag>^{}'`                                                                 | a 40-char SHA; prefer the `^{}` (peeled) line when present |
+| YAML parses            | `bunx --bun yaml-lint .github/workflows/*.yml` or `python3 -c "import yaml,sys;[yaml.safe_load(open(f)) for f in sys.argv[1:]]" .github/workflows/*.yml` | exit 0                                                     |
+| Optional lint          | `bunx actionlint` if available (download if your environment allows)                                                                                     | no errors                                                  |
+| Unit checks            | `bun install --frozen-lockfile && bun run test`                                                                                                          | all pass (Bun pin sanity)                                  |
 
 ## Scope
 
@@ -145,6 +145,7 @@ Copy that style.
 `link-health.yml`, `pr-labels.yml` (pin only), and `package.json` (add `packageManager`).
 
 **Out of scope**:
+
 - The build commands, cache keys and ccache settings.
 - `plugins/with-release-signing.js`.
 - Splitting the release job into build and publish jobs (see maintenance notes).
@@ -195,17 +196,17 @@ Replace the "Write provider credentials" step with an explicit list that
 still writes **no line** for a missing secret:
 
 ```yaml
-      - name: Write provider credentials
-        env:
-          EXPO_PUBLIC_SIMKL_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_SIMKL_CLIENT_ID }}
-          EXPO_PUBLIC_ANILIST_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_ANILIST_CLIENT_ID }}
-          EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID }}
-          EXPO_PUBLIC_TMDB_TOKEN: ${{ secrets.EXPO_PUBLIC_TMDB_TOKEN }}
-        run: |
-          : > .env.local
-          for name in EXPO_PUBLIC_SIMKL_CLIENT_ID EXPO_PUBLIC_ANILIST_CLIENT_ID EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID EXPO_PUBLIC_TMDB_TOKEN; do
-            if [ -n "${!name}" ]; then printf '%s=%s\n' "$name" "${!name}" >> .env.local; fi
-          done
+- name: Write provider credentials
+  env:
+    EXPO_PUBLIC_SIMKL_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_SIMKL_CLIENT_ID }}
+    EXPO_PUBLIC_ANILIST_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_ANILIST_CLIENT_ID }}
+    EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID }}
+    EXPO_PUBLIC_TMDB_TOKEN: ${{ secrets.EXPO_PUBLIC_TMDB_TOKEN }}
+  run: |
+    : > .env.local
+    for name in EXPO_PUBLIC_SIMKL_CLIENT_ID EXPO_PUBLIC_ANILIST_CLIENT_ID EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID EXPO_PUBLIC_TMDB_TOKEN; do
+      if [ -n "${!name}" ]; then printf '%s=%s\n' "$name" "${!name}" >> .env.local; fi
+    done
 ```
 
 Update the comment above the step. Shipping a new credential is now a workflow

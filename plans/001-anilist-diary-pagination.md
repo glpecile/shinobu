@@ -125,12 +125,12 @@ Conventions:
 
 ## Commands you will need
 
-| Purpose   | Command                                        | Expected on success |
-|-----------|------------------------------------------------|---------------------|
-| Typecheck | `bun typecheck`                                | exit 0, no errors   |
-| One test  | `bun test src/lib/providers/anilist/reads.test.ts` | all pass        |
-| All tests | `bun run test`                                 | all pass (never plain `bun test`; the script adds `--isolate`) |
-| Lint      | `bun lint`                                     | exit 0              |
+| Purpose   | Command                                            | Expected on success                                            |
+| --------- | -------------------------------------------------- | -------------------------------------------------------------- |
+| Typecheck | `bun typecheck`                                    | exit 0, no errors                                              |
+| One test  | `bun test src/lib/providers/anilist/reads.test.ts` | all pass                                                       |
+| All tests | `bun run test`                                     | all pass (never plain `bun test`; the script adds `--isolate`) |
+| Lint      | `bun lint`                                         | exit 0                                                         |
 
 ## Scope
 

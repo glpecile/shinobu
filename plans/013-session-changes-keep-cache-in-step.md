@@ -89,6 +89,7 @@ export function onSessionChange(listener: (key: string) => void): () => void {
 same-process writes on native and web (`state/session/index.ts`).
 
 The silent clears:
+
 - `src/lib/providers/anilist/http.ts:~228`: `Effect.tapError((error) => error._tag === 'ProviderAuthError' ? Effect.sync(() => deps.tokens.clear()) : Effect.void)`
 - `src/lib/providers/trakt/auth.ts:~87`: `Effect.catchTag('ProviderAuthError', () => Effect.sync(() => deps.tokens.clear()).pipe(...))`
 
@@ -104,10 +105,12 @@ reading both `*QueryKeys.inputs` builders before writing it.
 The root mount point is `src/app/_layout.tsx` (~line 167–170):
 
 ```tsx
-                <NotificationsRuntime />
-                {/* Warms the Up Next slot on launch and on every foreground
-                    transition, so its waterfall overlaps app start. */}
-                <UpNextPrefetch />
+<NotificationsRuntime />;
+{
+  /* Warms the Up Next slot on launch and on every foreground
+                    transition, so its waterfall overlaps app start. */
+}
+<UpNextPrefetch />;
 ```
 
 The exemplar for a render-nothing runtime component that subscribes in an
@@ -117,17 +120,18 @@ React and cleans up."
 
 ## Commands you will need
 
-| Purpose   | Command                                          | Expected on success |
-|-----------|--------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                  | exit 0              |
-| Typecheck | `bun typecheck`                                  | exit 0              |
-| One file  | `bun test src/state/session/disconnect.test.ts`  | all pass            |
-| All tests | `bun run test`                                   | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                       | exit 0              |
+| Purpose   | Command                                         | Expected on success               |
+| --------- | ----------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                 | exit 0                            |
+| Typecheck | `bun typecheck`                                 | exit 0                            |
+| One file  | `bun test src/state/session/disconnect.test.ts` | all pass                          |
+| All tests | `bun run test`                                  | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                      | exit 0                            |
 
 ## Scope
 
 **In scope**:
+
 - `src/state/session/index.ts`
 - `src/state/session/tokens.ts`: export `PROVIDER_KEY_PATTERN` only
 - `src/state/session/disconnect.test.ts`
@@ -135,7 +139,8 @@ React and cleans up."
 - `src/app/_layout.tsx`: one import plus one element next to `<UpNextPrefetch />`
 
 **Out of scope**:
-- Whether AniList *should* clear its token on every auth error (a product question; note it in your report if you think it's wrong).
+
+- Whether AniList _should_ clear its token on every auth error (a product question; note it in your report if you think it's wrong).
 - The provider transport files (`anilist/http.ts`, `trakt/auth.ts`). They keep calling `tokens.clear()`.
 - Adding provider ids to the watchlist and Up Next keys (that would need a persist `BUSTER` bump).
 - `onProviderConnected` and its toast.
@@ -240,6 +245,7 @@ listener with the key inside `set` and `remove`, and have
 `{ remove: () => listeners.delete(listener) }`. Clear `listeners` in `beforeEach`.
 
 Add one `describe('syncQueryCacheWithSessions')` with exactly two cases:
+
 1. **A cleared session purges.** `setProviderSession('anilist', {accessToken:'a'})`,
    seed `['anilist','viewer']` and `[...UP_NEXT_QUERY_ROOT,'inputs']`, start
    `syncQueryCacheWithSessions(queryClient)`, then call `clearProviderSession('anilist')`

@@ -15,10 +15,7 @@ import {
 import { TMDB_API_BASE_URL } from './config';
 import type { TmdbDeps } from './deps';
 
-export function tmdbRequest<A>(
-  deps: TmdbDeps,
-  path: string,
-): Effect.Effect<A, ProviderError> {
+export function tmdbRequest<A>(deps: TmdbDeps, path: string): Effect.Effect<A, ProviderError> {
   const attempt = Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
       try: (signal) =>

@@ -52,9 +52,7 @@ function entryMs(entry: Pick<NormalizedDiaryEntry, 'watchedAt'>): number {
   return parseLocalInstant(entry.watchedAt)?.getTime() ?? 0;
 }
 
-export function mergeDiaryEntries(
-  states: readonly DiaryProviderState[],
-): NormalizedDiaryEntry[] {
+export function mergeDiaryEntries(states: readonly DiaryProviderState[]): NormalizedDiaryEntry[] {
   const byId = new Map<string, NormalizedDiaryEntry>();
   for (const state of states) {
     for (const entry of state.entries) {
@@ -90,16 +88,12 @@ function readFrontiers(
     });
 }
 
-function computeWatermark(
-  states: readonly DiaryProviderState[],
-): number | null {
+function computeWatermark(states: readonly DiaryProviderState[]): number | null {
   const mins = readFrontiers(states).map((frontier) => frontier.min);
   return mins.length > 0 ? Math.max(...mins) : null;
 }
 
-export function watermarkProviders(
-  states: readonly DiaryProviderState[],
-): ProviderId[] {
+export function watermarkProviders(states: readonly DiaryProviderState[]): ProviderId[] {
   const mins = readFrontiers(states);
   if (mins.length === 0) {
     return states.filter((state) => state.hasMore && !state.failed).map((state) => state.provider);
@@ -144,7 +138,12 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
   // A fan-out log numbers one episode twice: TMDB's season/episode and the
   // AniList entry's own. The two schemes can't be joined, so a show counts
   // whichever describes more episodes.
-  type Series = { keys: Set<string>; seasoned: Set<string>; unseasoned: Set<string>; manga: boolean };
+  type Series = {
+    keys: Set<string>;
+    seasoned: Set<string>;
+    unseasoned: Set<string>;
+    manga: boolean;
+  };
   const series = new Set<Series>();
   const byIdentity = new Map<string, Series>();
   for (const entry of entries) {
@@ -175,7 +174,12 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
       }
     }
     if (group == null) {
-      group = { keys: new Set(), seasoned: new Set(), unseasoned: new Set(), manga: item.type === 'MANGA' };
+      group = {
+        keys: new Set(),
+        seasoned: new Set(),
+        unseasoned: new Set(),
+        manga: item.type === 'MANGA',
+      };
       series.add(group);
     }
     for (const key of keys) {
@@ -184,10 +188,14 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
     }
     // Unseasoned anime numbers belong to the AniList/MAL entry, not season 1
     // of its TMDB show. Two cours can both contain episode 1.
-    const anilist = item.externalIds.anilist ?? anilistByMal.get(`${family}:${item.externalIds.mal}`);
-    const animeIdentity = anilist != null
-      ? `anilist:${anilist}`
-      : item.externalIds.mal != null ? `mal:${item.externalIds.mal}` : identityKey(item);
+    const anilist =
+      item.externalIds.anilist ?? anilistByMal.get(`${family}:${item.externalIds.mal}`);
+    const animeIdentity =
+      anilist != null
+        ? `anilist:${anilist}`
+        : item.externalIds.mal != null
+          ? `mal:${item.externalIds.mal}`
+          : identityKey(item);
     for (const episode of entry.episodes) {
       if (entry.season != null) group.seasoned.add(`${entry.season}:${episode}`);
       else group.unseasoned.add(`${animeIdentity}:${episode}`);
@@ -293,10 +301,16 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
   const primary = contributors[0];
   const item = contributors
     .slice(1)
-    .reduce((acc, entry) => (acc.type === 'BOOK' && entry.item.type !== 'BOOK' ? acc : mergeCatalogueMetadata(acc, entry.item)), primary.item);
-  const episodes = [
-    ...new Set(contributors.flatMap((entry) => entry.episodes ?? [])),
-  ].sort((a, b) => a - b);
+    .reduce(
+      (acc, entry) =>
+        acc.type === 'BOOK' && entry.item.type !== 'BOOK'
+          ? acc
+          : mergeCatalogueMetadata(acc, entry.item),
+      primary.item,
+    );
+  const episodes = [...new Set(contributors.flatMap((entry) => entry.episodes ?? []))].sort(
+    (a, b) => a - b,
+  );
   // A season numbers the primary's show only when their ids agree: a bridged
   // Serializd S2E3 is not season 2 of the cour Simkl files as its own show.
   const season = contributors.find(
@@ -306,9 +320,7 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
 
   return {
     id: primary.id,
-    providers: [...bucket.providers].sort(
-      (a, b) => PROVIDER_PRIORITY[a] - PROVIDER_PRIORITY[b],
-    ),
+    providers: [...bucket.providers].sort((a, b) => PROVIDER_PRIORITY[a] - PROVIDER_PRIORITY[b]),
     item,
     sourceIds: [...new Set(contributors.map((entry) => entry.item.id))],
     episodes,
@@ -353,7 +365,10 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
         if (
           bucket != null &&
           !bucket.providers.has(entry.provider) &&
-          !(identity.startsWith('name:') && bucket.entries.some((other) => idsDisagree(entry.item, other.item)))
+          !(
+            identity.startsWith('name:') &&
+            bucket.entries.some((other) => idsDisagree(entry.item, other.item))
+          )
         ) {
           matches.add(index);
         }
@@ -367,10 +382,21 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
       indexBucket(match, key, identities);
       for (const index of bridged) {
         const other = buckets[index];
-        if (other == null || [...other.providers].some((provider) => target.providers.has(provider))) continue;
+        if (
+          other == null ||
+          [...other.providers].some((provider) => target.providers.has(provider))
+        )
+          continue;
         target.entries.push(...other.entries);
         for (const provider of other.providers) target.providers.add(provider);
-        indexBucket(match, key, other.entries.flatMap((joined) => [...identityKeys(joined.item), ...filmNameKeys(joined.item)]));
+        indexBucket(
+          match,
+          key,
+          other.entries.flatMap((joined) => [
+            ...identityKeys(joined.item),
+            ...filmNameKeys(joined.item),
+          ]),
+        );
         buckets[index] = null;
       }
     } else {
@@ -416,9 +442,7 @@ function clusterKey(entry: MergedDiaryEntry): string | null {
   return `${identityKey(entry.item)}::${entry.season ?? ''}`;
 }
 
-export function clusterDayEntries(
-  entries: readonly MergedDiaryEntry[],
-): DiaryCluster[] {
+export function clusterDayEntries(entries: readonly MergedDiaryEntry[]): DiaryCluster[] {
   const clusters: DiaryCluster[] = [];
   const byKey = new Map<string, DiaryCluster>();
   for (const entry of entries) {
@@ -436,12 +460,12 @@ export function clusterDayEntries(
 }
 
 export function summarizeCluster(cluster: DiaryCluster): DiaryClusterSummary {
-  const episodes = [
-    ...new Set(cluster.entries.flatMap((entry) => entry.episodes)),
-  ].sort((a, b) => a - b);
-  const providers = [
-    ...new Set(cluster.entries.flatMap((entry) => entry.providers)),
-  ].sort((a, b) => PROVIDER_PRIORITY[a] - PROVIDER_PRIORITY[b]);
+  const episodes = [...new Set(cluster.entries.flatMap((entry) => entry.episodes))].sort(
+    (a, b) => a - b,
+  );
+  const providers = [...new Set(cluster.entries.flatMap((entry) => entry.providers))].sort(
+    (a, b) => PROVIDER_PRIORITY[a] - PROVIDER_PRIORITY[b],
+  );
   const season = cluster.entries.find((entry) => entry.season != null)?.season;
   return {
     item: cluster.entries[0].item,
@@ -518,7 +542,20 @@ export function formatClusterCount(type: MediaType, count: number): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 export interface DiaryDayParts {
   day: string;

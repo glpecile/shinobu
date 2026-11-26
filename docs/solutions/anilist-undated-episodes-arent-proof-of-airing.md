@@ -2,21 +2,21 @@
 
 ## Symptom
 
-(owner, 2026-09-12.) *Cyberpunk: Edgerunners 2*, 0 of 10 episodes, nothing
+(owner, 2026-09-12.) _Cyberpunk: Edgerunners 2_, 0 of 10 episodes, nothing
 aired: the details CTA offered **Log episode 1** — enabled — directly above a
-seasons accordion that marked all ten episodes *Unaired*. Two surfaces on one
+seasons accordion that marked all ten episodes _Unaired_. Two surfaces on one
 screen, opposite answers, from the same episode list.
 
 ## Cause
 
 `getAnimeEpisodes` builds a row per episode from `Media.episodes` (the count),
 filling `firstAired` only for the episodes AniList has published an
-`airingSchedule` for. An announced season therefore comes back as a *full*
+`airingSchedule` for. An announced season therefore comes back as a _full_
 list with **no dates at all** — ten rows, ten absent `firstAired`.
 
 The accordion reads that strictly (`hasAired(undefined) === false` → Unaired).
 `log-media-button.tsx` read it permissively: "episode in schedule but no air
-date → aired", the catalogue-gap rule. That rule is right for a *gap* — an
+date → aired", the catalogue-gap rule. That rule is right for a _gap_ — an
 episode inside an airing season whose individual date AniList never
 published — and a lie for a season that hasn't started, where every row is a
 gap.
@@ -34,13 +34,13 @@ permissive rule with evidence, either kind sufficient:
 
 Neither present → not aired, so the CTA disables and says so, which is the
 answer the accordion was already giving. Deliberately strict at one edge: a
-season airing *this year* that AniList has published no schedule for reads as
+season airing _this year_ that AniList has published no schedule for reads as
 not started.
 
 ## Rule
 
 An absent provider field is not a fact about the world. Before reading one
 permissively ("no date, assume it happened"), find the evidence that makes the
-assumption safe — and check what the *other* surfaces on the screen conclude
+assumption safe — and check what the _other_ surfaces on the screen conclude
 from the same payload, because a disagreement between two of them is the bug
 the user will report.

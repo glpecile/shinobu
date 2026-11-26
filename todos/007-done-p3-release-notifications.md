@@ -22,7 +22,7 @@ advance, so on app foreground compute upcoming episodes/releases for tracked med
 and schedule local notifications (expo-notifications) for the next ~7–14 days. This
 keeps the app fully serverless. Known degradation: the schedule goes stale if the
 app isn't opened for a while — accepted. **Door left open:** if staleness proves
-painful in practice, a tiny *stateless* push relay is the only acceptable exception
+painful in practice, a tiny _stateless_ push relay is the only acceptable exception
 to the no-backend rule; that is a future decision, not part of this todo.
 
 Web gets no notifications (serverless web push doesn't exist) — the in-app Up Next

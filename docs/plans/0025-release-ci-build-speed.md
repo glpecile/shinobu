@@ -99,7 +99,7 @@ Repo cache quota is 10 GB with ~7-day unused-entry eviction. Expected footprint:
 **Files:** `.github/workflows/android-warm.yml`.
 **Approach:** Mirror `release.yml`'s setup steps (checkout, bun, Temurin 17, `.env.local` write is unnecessary — credentials don't affect compilation, skip it; prebuild) but no signing, no artifact staging, no release. Declare `permissions: contents: read` at the top — the warm build needs no write token, and it executes dependency code (postinstall scripts, gradle plugins) on a schedule. Same gradle flags as U2 so task-output cache keys match. Install/configure ccache before the build and run `ccache -z` right after the cache restore (stats live inside the cache directory, so without a reset `ccache -s` reports prior runs' cumulative hits); print `ccache -s` after the build as the per-run hit-rate log. `concurrency` group so overlapping main pushes cancel. A failed warm build should be visible (it is the canary) but must not block merges — it runs post-merge on `main`.
 **Test scenarios:** Test expectation: none — CI unit; proven by the dispatch matrix in Verification.
-**Verification:** Dispatch run green; `setup-gradle` post-job log shows a cache *write*; `actions/cache` saves the ccache. Second dispatch run shows Gradle cache *restored* (no `Downloading https://services.gradle.org/...` line) and nonzero ccache hits measured after the post-restore stats reset.
+**Verification:** Dispatch run green; `setup-gradle` post-job log shows a cache _write_; `actions/cache` saves the ccache. Second dispatch run shows Gradle cache _restored_ (no `Downloading https://services.gradle.org/...` line) and nonzero ccache hits measured after the post-restore stats reset.
 
 ### U2. Release workflow consumes the caches
 

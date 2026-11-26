@@ -1,11 +1,13 @@
-import { useMutation, useMutationState, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useMutationState,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { enrichExternalIds } from '@/features/log-media/enrich';
-import {
-  runProviderWrites,
-  type WriteAdapter,
-} from '@/features/log-media/fan-out';
+import { runProviderWrites, type WriteAdapter } from '@/features/log-media/fan-out';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
 import { invalidateAfterWatchlist } from '@/features/watchlist-media/invalidate';
@@ -18,7 +20,11 @@ import { setSimklTrackingStatus } from '@/lib/providers/simkl/writes';
 import { Provider, type ProviderId, type TrackingStatus } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
 import { hardcoverDeps } from '@/state/queries/hardcover';
-import { fetchSerializdTrackingState, serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
+import {
+  fetchSerializdTrackingState,
+  serializdDeps,
+  serializdQueryKeys,
+} from '@/state/queries/serializd';
 import { findLibraryEntry, simklDeps } from '@/state/queries/simkl';
 import { useConnectedProviders } from '@/state/session';
 import { getSerializdUsername } from '@/state/session/serializd';
@@ -83,7 +89,11 @@ async function runTrackingStatusWrite(
     throw new Error(`No connected provider can change the status of "${enriched.title}"`);
   }
 
-  const report = await runProviderWrites(TRACKING_ADAPTERS, targets, { item: enriched, status, queryClient });
+  const report = await runProviderWrites(TRACKING_ADAPTERS, targets, {
+    item: enriched,
+    status,
+    queryClient,
+  });
   invalidateAfterWatchlist(queryClient, enriched, report.succeeded);
   const serializdUser = getSerializdUsername();
   if (serializdUser != null && report.succeeded.includes(Provider.Serializd)) {

@@ -5,13 +5,12 @@ date: 2026-07-22
 
 # 0018 — Letterboxd web reads via the Cloudflare Worker proxy
 
-Resurrects the reads quarter of abandoned plan 0015 on the Serializd (plan
-0017) mechanism. Written after implementation; the live spike results are in
+Resurrects the reads quarter of abandoned plan 0015 on the Serializd (plan 0017) mechanism. Written after implementation; the live spike results are in
 `docs/solutions/letterboxd-web-proxy.md` (2026-07-22 section).
 
 ## Context
 
-Plan 0015 wanted *full* web parity (sign-in + reads + writes) via Expo Router
+Plan 0015 wanted _full_ web parity (sign-in + reads + writes) via Expo Router
 `+api` routes on EAS Hosting. Its phase-0 spike killed writes and sign-in
 (Cloudflare client fingerprinting challenges every POST, server-side, from any
 IP), and the owner shelved the rest: a reads-only proxy wasn't worth standing
@@ -33,7 +32,7 @@ the 0015 spike never tried) before locking the scope.
    (junk credentials; the challenge precedes any credential check). Writes and
    sign-in stay native-WebView-only — plan 0012's verdict confirmed a third
    time. The throwaway spike relay (worker/letterboxd-write-spike.ts) stays
-   deployed as the standing test harness: if a *valid* captured session ever
+   deployed as the standing test harness: if a _valid_ captured session ever
    returns `challenged: false`, promote the POST rule into the production
    allowlist and reopen writes.
 3. **Unauthenticated relay, no cookies either direction.** The read surface is
@@ -59,12 +58,12 @@ the 0015 spike never tried) before locking the scope.
   upstream timeout ~30 s → 504; `Set-Cookie` never relayed (responses are
   built with fresh headers); stateless, nothing logged.
 - **Two Letterboxd-specific adaptations:**
-  - The relay *serves* HTML/XML (that's the point — the client scrapes it), so
+  - The relay _serves_ HTML/XML (that's the point — the client scrapes it), so
     the Serializd "never relay foreign HTML" rule becomes a content-type
     allowlist (`text/html`, `application/rss+xml`, `application/atom+xml`,
     `text/xml`, `application/xml`) plus a script-killing CSP
     (`default-src 'none'; frame-ancestors 'none'; base-uri 'none';
-    form-action 'none'`) and `nosniff` on every relayed body. Direct browser
+form-action 'none'`) and `nosniff` on every relayed body. Direct browser
     navigation to a proxy URL can't execute Letterboxd page scripts under the
     app origin (which holds OAuth tokens in localStorage via MMKV's web
     fallback); `fetch().text()` consumers are unaffected by CSP.
@@ -100,7 +99,7 @@ the 0015 spike never tried) before locking the scope.
   the health signal, not `LazyPoster` count).
 - Hardening live: POST to a read path → JSON 405; unlisted path → JSON 404;
   traversal never reaches the Worker (URL normalization); no ACAO header; CSP
-  + nosniff present on relayed markup.
+  - nosniff present on relayed markup.
 - Write spike: `POST /api/letterboxd/spike/production-log-entries` with junk
   credentials → `challenged: true` (403 "Just a moment…").
 - `bun test` (333 pass, incl. the relay + spike security boundary), `tsc`,

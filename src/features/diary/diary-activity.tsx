@@ -113,7 +113,8 @@ function monthStats(keys: readonly string[], props: DiaryMonthProps) {
 }
 
 function currentStreak(props: DiaryMonthProps) {
-  let key = (props.activity.get(props.today)?.units ?? 0) > 0 ? props.today : previousDay(props.today);
+  let key =
+    (props.activity.get(props.today)?.units ?? 0) > 0 ? props.today : previousDay(props.today);
   let streak = 0;
   let since = '';
   while (key >= props.oldest && (props.activity.get(key)?.units ?? 0) > 0) {
@@ -141,9 +142,18 @@ function Stat({
   tooltip: string;
   stacked: boolean;
 }) {
-  const color = useThemeColor(accent && value != null && value > 0 ? '--color-accent' : '--color-muted');
+  const color = useThemeColor(
+    accent && value != null && value > 0 ? '--color-accent' : '--color-muted',
+  );
   const stat = (
-    <View accessible accessibilityLabel={value == null ? label : `${atLeast ? 'at least ' : ''}${value} ${label}`} className={cn('gap-1', stacked ? 'flex-row items-center gap-2' : 'sm:flex-row sm:items-center sm:gap-2')}>
+    <View
+      accessible
+      accessibilityLabel={value == null ? label : `${atLeast ? 'at least ' : ''}${value} ${label}`}
+      className={cn(
+        'gap-1',
+        stacked ? 'flex-row items-center gap-2' : 'sm:flex-row sm:items-center sm:gap-2',
+      )}
+    >
       <View className="flex-row items-center gap-2">
         <Ionicons color={color} name={icon} size={22} />
         {value == null ? (
@@ -152,28 +162,44 @@ function Stat({
           <MorphText className="text-foreground font-sans-semibold text-xl">{`${formatCount(value)}${atLeast ? '+' : ''}`}</MorphText>
         )}
       </View>
-      <Text className="shrink text-muted font-sans text-xs" numberOfLines={2}>{label}</Text>
+      <Text className="shrink text-muted font-sans text-xs" numberOfLines={2}>
+        {label}
+      </Text>
     </View>
   );
   return value == null ? stat : <Tooltip label={tooltip}>{stat}</Tooltip>;
 }
 
 const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 const WEEKDAY_INITIALS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function monthGrid(month: string) {
   const first = keyDate(month);
-  const length = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  const length = new Date(
+    Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0),
+  ).getUTCDate();
   const keys = Array.from({ length }, (_, day) => `${month}-${`${day + 1}`.padStart(2, '0')}`);
   const cells: Array<string | null> = [
     ...Array.from({ length: (first.getUTCDay() + 6) % 7 }, () => null),
     ...keys,
   ];
   while (cells.length % 7 !== 0) cells.push(null);
-  const weeks = Array.from({ length: cells.length / 7 }, (_, week) => cells.slice(week * 7, week * 7 + 7));
+  const weeks = Array.from({ length: cells.length / 7 }, (_, week) =>
+    cells.slice(week * 7, week * 7 + 7),
+  );
   return { keys, weeks };
 }
 
@@ -208,12 +234,13 @@ export function DiaryMonth({
     <View className={cn('pt-1 pb-2', tight ? 'px-0' : 'px-6', className)}>
       <Eyebrow className={cn('mb-3', tight && 'mx-6')}>{title}</Eyebrow>
       <View className={cn('gap-5', !stacked && 'sm:flex-row sm:gap-10')}>
-        <View
-          className={cn('w-full max-w-96', !tight && 'gap-1')}
-        >
+        <View className={cn('w-full max-w-96', !tight && 'gap-1')}>
           <View className={cn('flex-row', !tight && 'gap-1')}>
             {WEEKDAY_INITIALS.map((initial, index) => (
-              <Text className="flex-1 text-center text-muted font-sans text-[10px] leading-3" key={index}>
+              <Text
+                className="flex-1 text-center text-muted font-sans text-[10px] leading-3"
+                key={index}
+              >
                 {initial}
               </Text>
             ))}
@@ -238,9 +265,13 @@ export function DiaryMonth({
                     <Text
                       className={cn(
                         'font-sans text-[11px]',
-                        shade === 4 ? 'text-accent-foreground'
-                          : shade === 3 ? 'text-foreground dark:text-accent-foreground'
-                          : shade != null && shade > 0 ? 'text-foreground' : 'text-muted',
+                        shade === 4
+                          ? 'text-accent-foreground'
+                          : shade === 3
+                            ? 'text-foreground dark:text-accent-foreground'
+                            : shade != null && shade > 0
+                              ? 'text-foreground'
+                              : 'text-muted',
                         units == null && !loading && 'opacity-40',
                       )}
                     >
@@ -248,7 +279,12 @@ export function DiaryMonth({
                     </Text>
                   </AnimatedView>
                 );
-                if (future || loading) return <View className={CELL} key={key}>{cell}</View>;
+                if (future || loading)
+                  return (
+                    <View className={CELL} key={key}>
+                      {cell}
+                    </View>
+                  );
                 const label = dayTooltip(key, units, props);
                 const onSelectDay = props.onSelectDay;
                 return (
@@ -264,7 +300,9 @@ export function DiaryMonth({
                           {cell}
                         </PresstableOpacity>
                       ) : (
-                        <View accessible accessibilityLabel={label} className="flex-1">{cell}</View>
+                        <View accessible accessibilityLabel={label} className="flex-1">
+                          {cell}
+                        </View>
                       )}
                     </Tooltip>
                   </View>
@@ -282,7 +320,11 @@ export function DiaryMonth({
                 atLeast={!loading && streak.partial}
                 icon="flame"
                 label="day streak"
-                tooltip={streak.streak > 0 ? `Since ${date(streak.since)}` : 'Log something today to start one'}
+                tooltip={
+                  streak.streak > 0
+                    ? `Since ${date(streak.since)}`
+                    : 'Log something today to start one'
+                }
                 value={loading ? null : streak.streak}
               />
             )}
@@ -292,9 +334,11 @@ export function DiaryMonth({
               icon="trophy"
               label="longest streak"
               tooltip={
-                longest.length === 0 ? `Nothing logged in ${name}`
-                : longest.length === 1 ? date(longest.from)
-                : `${date(longest.from)} – ${date(longest.to)}`
+                longest.length === 0
+                  ? `Nothing logged in ${name}`
+                  : longest.length === 1
+                    ? date(longest.from)
+                    : `${date(longest.from)} – ${date(longest.to)}`
               }
               value={loading ? null : longest.length}
             />

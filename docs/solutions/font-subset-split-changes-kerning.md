@@ -19,11 +19,11 @@ against the original TTFs.
 
 **Measured split options (woff2 bytes, Inter 400 / Space Grotesk 700):**
 
-| Split | Preloaded core | Extended | What changes |
-| --- | --- | --- | --- |
-| None (shipped) | 98,204 / 22,912 | none | nothing |
+| Split                                            | Preloaded core  | Extended       | What changes                                                                  |
+| ------------------------------------------------ | --------------- | -------------- | ----------------------------------------------------------------------------- |
+| None (shipped)                                   | 98,204 / 22,912 | none           | nothing                                                                       |
 | Latin core, Greek, Cyrillic and symbols extended | 52,732 / 21,452 | 53,840 / 2,876 | Greek and Cyrillic next to punctuation or digits, and `−≤≥→™` next to letters |
-| ASCII core | 12,980 / 7,292 | rest | kerning around every accented letter, `1⁄2` |
+| ASCII core                                       | 12,980 / 7,292  | rest           | kerning around every accented letter, `1⁄2`                                   |
 
 Inter Italic and SemiBold come within about 5% of Inter 400.
 

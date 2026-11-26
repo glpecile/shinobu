@@ -33,26 +33,17 @@ describe('releaseStops', () => {
   });
 
   test('a date, not a kind, decides the order', () => {
-    const stops = releaseStops(
-      { theatrical: '2026-03-01', digital: '2025-11-04' },
-      NOW,
-    );
+    const stops = releaseStops({ theatrical: '2026-03-01', digital: '2025-11-04' }, NOW);
     expect(stops.map((stop) => stop.kind)).toEqual(['digital', 'theatrical']);
   });
 
   test('same-day releases fall back to how a film actually rolls out', () => {
-    const stops = releaseStops(
-      { physical: '2024-04-16', digital: '2024-04-16' },
-      NOW,
-    );
+    const stops = releaseStops({ physical: '2024-04-16', digital: '2024-04-16' }, NOW);
     expect(stops.map((stop) => stop.kind)).toEqual(['digital', 'physical']);
   });
 
   test('a future date is upcoming and carries a countdown', () => {
-    const stops = releaseStops(
-      { theatrical: '2026-06-12', digital: '2026-08-08' },
-      NOW,
-    );
+    const stops = releaseStops({ theatrical: '2026-06-12', digital: '2026-08-08' }, NOW);
 
     expect(stops[0]).toEqual({
       kind: 'theatrical',
@@ -76,11 +67,8 @@ describe('releaseStops', () => {
   });
 
   test('a value that is not a calendar day is dropped, not rendered', () => {
-    expect(
-      releaseStops(
-        { theatrical: '2024-02-27T00:00:00.000Z', digital: 'soon' },
-        NOW,
-      ),
-    ).toEqual([]);
+    expect(releaseStops({ theatrical: '2024-02-27T00:00:00.000Z', digital: 'soon' }, NOW)).toEqual(
+      [],
+    );
   });
 });

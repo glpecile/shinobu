@@ -42,13 +42,30 @@ export function ShareButton({
   );
 }
 
-function ShareCapsule({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
+function ShareCapsule({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <View className={cn('flex-row items-center gap-2', className)}>
       <View className="flex-1">{children}</View>
       <Button.Capsule>
         <Tooltip label="Share">
-          <Button icon={<Button.Icon name="share-outline" />} iconOnly label="Share" onPress={() => { haptics.selection(); void shareLink(href); }} variant="ghost" />
+          <Button
+            icon={<Button.Icon name="share-outline" />}
+            iconOnly
+            label="Share"
+            onPress={() => {
+              haptics.selection();
+              void shareLink(href);
+            }}
+            variant="ghost"
+          />
         </Tooltip>
       </Button.Capsule>
     </View>

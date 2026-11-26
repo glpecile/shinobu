@@ -18,9 +18,7 @@ export interface RefreshNotificationsDeps {
   mutedKinds: () => ReadonlySet<NotificationKind>;
   isWeb: () => boolean;
   gatherInputs: () => Promise<UpNextInputs>;
-  schedule: (
-    candidates: ReturnType<typeof computeNotificationSchedule>,
-  ) => Promise<ScheduleResult>;
+  schedule: (candidates: ReturnType<typeof computeNotificationSchedule>) => Promise<ScheduleResult>;
   now: () => Date;
   throttle: {
     isThrottled: (nowMs: number) => boolean;

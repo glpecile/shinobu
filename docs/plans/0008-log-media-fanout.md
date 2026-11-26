@@ -23,7 +23,7 @@ and `web-cors-trakt.md` confirm authed writes work identically on web.
    - `fan-out.ts` — pure fan-out logic, unit-tested without React or network.
    - `log-media-button.tsx` — the shared "Mark as watched" trigger.
 2. **Adapter map, not a switch.** `LOG_ADAPTERS: Partial<Record<ProviderId,
-   LogAdapter>>` maps each provider to a `(variables) => Promise<void>`.
+LogAdapter>>` maps each provider to a `(variables) => Promise<void>`.
    Today only `trakt` has an entry (wrapping `logToTrakt` behind
    `Effect.runPromise` — the Effect containment boundary, same contract as
    `state/queries/*`). AniList (`todos/002`) and Letterboxd (`todos/004`) land
@@ -36,14 +36,14 @@ and `web-cors-trakt.md` confirm authed writes work identically on web.
 4. **Partial failure is the return type.** The mutation resolves with
    `LogMediaResult { outcomes, succeeded, failed }` — one outcome per target
    provider, `{ status: 'ok' } | { status: 'error', message }`. It only
-   *throws* (→ `mutation.isError`) when there is nothing to attempt (no
+   _throws_ (→ `mutation.isError`) when there is nothing to attempt (no
    connected provider applies). UI renders per-provider results from `data`,
    per the AGENTS.md partial-failure contract.
 5. **Cache invalidation on success**: a Trakt success invalidates
    `traktQueryKeys.watchedShows()` so the feed's progress reflects the write.
    Future adapters invalidate their own read keys from the same `onSuccess`.
 6. **UI scope (basic)**: `LogMediaButton` renders on the details screen for
-   *directly loggable* items — movies and anime films (`isFilm`). TV logging
+   _directly loggable_ items — movies and anime films (`isFilm`). TV logging
    requires choosing a season/episode (`logToTrakt` requires `episode` for
    TV); the season picker is **out of scope** here and belongs to the Up Next
    work (`todos/006`), where "next unwatched episode" gives the natural +1
@@ -55,11 +55,11 @@ and `web-cors-trakt.md` confirm authed writes work identically on web.
    the feature (`watched-at-field/`): `@expo/ui/community/datetime-picker`
    natively (SwiftUI/Compose-backed drop-in for the community picker — user
    preference, 2026-07-13; no config plugin), the browser's
-   `<input type="date">` on web. The web input *displays* today while the
+   `<input type="date">` on web. The web input _displays_ today while the
    value is still "just now" (an empty mm/dd/yyyy placeholder reads as
    broken); picking today maps back to "just now" rather than a frozen
    open-time timestamp. Picked days keep the current time-of-day so
-   the stored instant stays inside the chosen *local* date instead of a
+   the stored instant stays inside the chosen _local_ date instead of a
    midnight boundary that shifts a day in UTC.
 8. **Logging is a two-step action behind a confirmation sheet** (user
    re-prioritization, 2026-07-13): the details button only opens a

@@ -20,11 +20,7 @@ export {
 export { getWatchedEpisodeKeys, serializdHasEpisodes } from './progress';
 export { isYearBasedSeason, resolveSeasonId, YEAR_SEASON_THRESHOLD } from './season-id';
 export { logToSerializd, type SerializdLogOptions } from './writes';
-export {
-  normalizeDiaryReview,
-  parseSeasonNumber,
-  type SerializdDiaryReview,
-} from './normalize';
+export { normalizeDiaryReview, parseSeasonNumber, type SerializdDiaryReview } from './normalize';
 export {
   extractSerializdLogin,
   SERIALIZD_TOKEN_COOKIE,

@@ -31,12 +31,12 @@ window's events.
 A read works offline only when it is in the persisted snapshot
 (`PERSISTED_PREFIXES` in `state/queries/persist.ts`) or still in memory.
 
-| Surface | Native | Web |
-| --- | --- | --- |
-| Home: Up Next, watchlist, Continue Reading, trending, seasonal, list rows | Restored before the first render | Restored after mount |
-| Diary | First page restored | Not persisted: `localStorage` is too small |
-| Trakt show progress, watched movies, Letterboxd per-film reads | Restored | Restored |
-| Details, episodes, search, person, studio, list detail | Only if opened in this session | Same |
+| Surface                                                                   | Native                           | Web                                        |
+| ------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------ |
+| Home: Up Next, watchlist, Continue Reading, trending, seasonal, list rows | Restored before the first render | Restored after mount                       |
+| Diary                                                                     | First page restored              | Not persisted: `localStorage` is too small |
+| Trakt show progress, watched movies, Letterboxd per-film reads            | Restored                         | Restored                                   |
+| Details, episodes, search, person, studio, list detail                    | Only if opened in this session   | Same                                       |
 
 - The whole snapshot is dropped after 24 hours (`MAX_AGE_MS`) and on a
   `BUSTER` bump. An app opened offline after a day shows nothing.
@@ -50,17 +50,16 @@ A read works offline only when it is in the persisted snapshot
 `features/log-media/pending-logs.ts` keeps logs that could not be sent, in its
 own MMKV file. `useLogMedia` writes to it, and `PendingLogReplayer` sends it
 again through `useLogMedia` at launch, on reconnect and on foreground. While a
-leg still waits it also sends on a timer, after 1 minute and then doubling to
-15. A log that got no answer on a device that reports a connection has no
+leg still waits it also sends on a timer, after 1 minute and then doubling to 15. A log that got no answer on a device that reports a connection has no
 other trigger.
 
 A leg is one provider's part of one log.
 
-| Leg | Meaning | On replay |
-| --- | --- | --- |
-| `unsent` | Confirmed offline. No request left the device. | Sent, unless a fresh read shows the provider has the watch. |
-| `uncertain` | A request got no answer, or a replay was killed mid-write. | Sent only after a fresh read proves the watch is absent. |
-| `failed` | Stopped. Shown in Diary > Pending with its reason and link. | Never, until the user presses Try again. |
+| Leg         | Meaning                                                     | On replay                                                   |
+| ----------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
+| `unsent`    | Confirmed offline. No request left the device.              | Sent, unless a fresh read shows the provider has the watch. |
+| `uncertain` | A request got no answer, or a replay was killed mid-write.  | Sent only after a fresh read proves the watch is absent.    |
+| `failed`    | Stopped. Shown in Diary > Pending with its reason and link. | Never, until the user presses Try again.                    |
 
 Rules that are easy to break:
 
