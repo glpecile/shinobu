@@ -62,7 +62,7 @@ function Stop({
       <Text
         className={cn(
           'flex-1 font-sans text-sm',
-          stop.upcoming ? 'text-foreground font-sans-semibold' : 'text-foreground/90',
+          stop.upcoming ? 'text-foreground font-sans-semibold' : 'text-foreground',
         )}
         numberOfLines={1}
       >

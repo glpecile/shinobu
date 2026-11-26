@@ -69,7 +69,7 @@ function SheetBody({
 
       {episode.overview != null && (
         <Text
-          className="text-foreground/90 font-sans text-sm leading-relaxed mt-4"
+          className="text-foreground font-sans text-sm leading-relaxed mt-4"
           numberOfLines={4}
         >
           {episode.overview}

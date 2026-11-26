@@ -10,7 +10,7 @@ import { DISCLOSURE_LAYOUT } from '@/lib/motion';
 
 import { ExpandableTextSkeleton } from './skeleton';
 
-const BODY = 'text-foreground/90 font-sans text-base leading-relaxed';
+const BODY = 'text-foreground font-sans text-base leading-relaxed';
 
 export function ExpandableText({
   text,

@@ -65,7 +65,7 @@ export function ExpandableText({
       >
         <View onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}>
           {markdown == null ? (
-            <Text className="text-foreground/90 font-sans text-base leading-relaxed">
+            <Text className="text-foreground font-sans text-base leading-relaxed">
               {text}
             </Text>
           ) : (
