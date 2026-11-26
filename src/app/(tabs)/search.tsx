@@ -21,11 +21,12 @@ import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { List } from '@/components/List';
 import { PickerSheet } from '@/components/picker-sheet';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
-import { PresstableOpacity } from '@/components/presstable';
+import { PresstableScale } from '@/components/presstable';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
 import { Button } from '@/components/button';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SearchField } from '@/components/search-field';
+import { SmallPoster } from '@/components/small-poster';
 import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -126,17 +127,7 @@ function SearchResultRow({
       item={item}
       leading={
         <>
-          {item.coverImage !== '' ? (
-            <Image
-              source={{ uri: item.coverImage }}
-              className="w-12 h-18 rounded bg-surface border border-border/50"
-              contentFit="cover"
-            />
-          ) : (
-            <View className="w-12 h-18 rounded bg-surface border border-border items-center justify-center">
-              <Text className="text-muted font-display text-lg">忍</Text>
-            </View>
-          )}
+          <SmallPoster recyclingKey={item.id} size="md" uri={item.coverImage} />
           <View className="shrink ml-4">
             <Text
               className="text-foreground font-sans-semibold text-base"
@@ -169,7 +160,7 @@ function EntityResultRow({
   onPress: (href: string) => void;
 }) {
   return (
-    <PresstableOpacity
+    <PresstableScale
       accessibilityLabel={row.name}
       accessibilityRole="button"
       className="flex-row items-center px-6 py-2.5"
@@ -197,7 +188,7 @@ function EntityResultRow({
       >
         {row.name}
       </Text>
-    </PresstableOpacity>
+    </PresstableScale>
   );
 }
 
@@ -487,6 +478,12 @@ function SearchScreen() {
           ? 'empty'
           : 'results';
 
+  function retryFailed() {
+    for (const section of sections) {
+      if (section.search.isError) void section.search.refetch();
+    }
+  }
+
   function setScope(next: SearchScope) {
     setSelectedScope(next);
     router.setParams({ scope: next === 'titles' ? undefined : next });
@@ -579,6 +576,11 @@ function SearchScreen() {
                   <CenteredNotice.Body>
                     Search failed. Check your connection and try again.
                   </CenteredNotice.Body>
+                  <CenteredNotice.Action
+                    icon={<Button.Icon name="refresh" />}
+                    label="Try again"
+                    onPress={retryFailed}
+                  />
                 </CenteredNotice>
               ) : state === 'empty' ? (
                 <CenteredNotice className="-mt-16">
@@ -633,9 +635,16 @@ function SearchScreen() {
                       ) : row.kind === 'loading' ? (
                         <RowSkeleton />
                       ) : (
-                        <Text className="text-muted font-sans text-sm px-6 py-3">
-                          Search failed for this source — try again in a moment.
-                        </Text>
+                        <View className="px-6 py-2 flex-row items-center justify-between gap-3">
+                          <Text className="shrink text-muted font-sans text-sm">Search failed for this source.</Text>
+                          <Button
+                            icon={<Button.Icon name="refresh" />}
+                            label="Try again"
+                            onPress={retryFailed}
+                            size="sm"
+                            variant="quiet"
+                          />
+                        </View>
                       )
                     }
                   />
