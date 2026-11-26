@@ -149,7 +149,7 @@ function TagChip({
         >
           <View className="absolute inset-0 rounded-full border border-border bg-surface" />
           <AnimatedView
-            className="absolute inset-0 rounded-full border border-accent bg-accent/10"
+            className="absolute inset-0 rounded-full border border-accent bg-accent-tonal"
             style={{
               opacity: selected ? 1 : 0,
               transitionProperty: 'opacity',
