@@ -12,7 +12,6 @@ import { BackButton } from '@/components/back-button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { LoadMoreFooter } from '@/components/load-more-footer';
 import Head from '@/components/head';
-import { PresstableOpacity } from '@/components/presstable';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -53,20 +52,22 @@ function LegFailureNotice({
 }) {
   if (failures.length === 0) return null;
   return (
-    <View className="mx-3 mb-2 px-4 py-3 rounded border border-border bg-surface">
+    <View className="mx-3 mb-2 px-4 py-3 rounded-lg border border-border bg-surface">
       {failures.map((failure) => (
         <Text
           className="text-muted font-sans text-sm"
           key={failure.provider}
         >{`Couldn’t load your ${PROVIDERS[failure.provider].label} watchlist.`}</Text>
       ))}
-      <PresstableOpacity
+      <Button
         accessibilityLabel="Retry loading your watchlist"
         className="self-start mt-2"
+        icon={<Button.Icon name="refresh" />}
+        label="Try again"
         onPress={onRetry}
-      >
-        <Text className="text-accent font-sans-semibold text-sm">Try again</Text>
-      </PresstableOpacity>
+        size="sm"
+        variant="quiet"
+      />
     </View>
   );
 }
@@ -247,12 +248,14 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
           onPress={retry}
         />
       </CenteredNotice>
-      <PresstableOpacity
+      <Button
         className="self-center mb-12"
+        icon={<Button.Icon name="open-outline" />}
+        label="Go home"
         onPress={() => router.replace(routes.home)}
-      >
-        <Text className="text-muted font-sans">Go home</Text>
-      </PresstableOpacity>
+        size="sm"
+        variant="ghost"
+      />
     </View>
   );
 }

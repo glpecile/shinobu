@@ -15,7 +15,6 @@ import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
 import { LoadMoreFooter } from '@/components/load-more-footer';
 import Head from '@/components/head';
-import { PresstableOpacity } from '@/components/presstable';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -273,12 +272,14 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
           onPress={retry}
         />
       </CenteredNotice>
-      <PresstableOpacity
+      <Button
         className="self-center mb-12"
+        icon={<Button.Icon name="open-outline" />}
+        label="Go home"
         onPress={() => router.replace(routes.home)}
-      >
-        <Text className="text-muted font-sans">Go home</Text>
-      </PresstableOpacity>
+        size="sm"
+        variant="ghost"
+      />
     </View>
   );
 }
