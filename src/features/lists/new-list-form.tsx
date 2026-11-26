@@ -5,6 +5,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Switch, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { FieldLabel } from '@/components/field-label';
 import { CenteredNotice } from '@/components/centered-notice';
 import { GroupedList } from '@/components/grouped-list';
 import Head from '@/components/head';
@@ -89,7 +90,7 @@ function FieldError({ children }: { children: ReactNode }) {
 function Field({ label, note, error, children }: { label: string; note?: string; error?: string; children: ReactNode }) {
   return (
     <View className="gap-2">
-      <Text className="text-foreground font-sans-semibold text-sm">{label}</Text>
+      <FieldLabel>{label}</FieldLabel>
       {children}
       {error != null ? <FieldError>{error}</FieldError> : note != null && <Text className="text-muted font-sans text-xs">{note}</Text>}
     </View>
@@ -103,7 +104,7 @@ function SwitchRow({ label, note, value, onChange, disabled }: { label: string; 
   return (
     <View className="flex-row items-center gap-4">
       <View className="flex-1 min-w-0">
-        <Text className="text-foreground font-sans-semibold text-sm">{label}</Text>
+        <FieldLabel>{label}</FieldLabel>
         <Text className="text-muted font-sans text-xs mt-0.5">{note}</Text>
       </View>
       <Switch

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
+import { Eyebrow } from '@/components/eyebrow';
 import { MorphText } from '@/components/morph-text';
 
 export function StatTile({
@@ -14,9 +15,9 @@ export function StatTile({
 }) {
   return (
     <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
-      <Text className="text-muted text-xs font-sans uppercase">{label}</Text>
+      <Eyebrow>{label}</Eyebrow>
       {typeof value === 'string' || typeof value === 'number' ? (
-        <MorphText className="text-foreground text-2xl font-sans-semibold mt-0.5 self-start">
+        <MorphText className="text-foreground text-2xl font-sans-semibold tabular-nums mt-0.5 self-start">
           {value}
         </MorphText>
       ) : (
