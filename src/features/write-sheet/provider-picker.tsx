@@ -45,7 +45,7 @@ function ProviderToggle({
       onPress={onToggle}
     >
       <AnimatedView
-        className="absolute inset-0 bg-accent/10"
+        className="absolute inset-0 bg-accent-tonal"
         style={[SELECTION_FADE, { opacity: selected ? 1 : 0 }]}
       />
       <View className="flex-row items-center gap-3">
@@ -81,7 +81,7 @@ function NoTargets({ onConnect }: { onConnect?: () => void }) {
   const connected = useConnectedProviders();
   const accent = useThemeColor('--color-accent');
   return (
-    <View className="rounded-full border border-border bg-surface px-4 py-3 flex-row items-center justify-between gap-3">
+    <View className="rounded-3xl border border-border bg-surface px-4 py-3 flex-row items-center justify-between gap-3">
       <Text className="text-muted font-sans text-sm flex-1" numberOfLines={2}>
         {connected.length === 0
           ? 'No trackers connected yet.'
@@ -114,8 +114,11 @@ function ProviderOptions({
   return (
     <View>
       {targets.length > 1 && (
-        <View className="flex-row justify-end gap-3 px-4 py-2 border-b border-border">
+        <View className="flex-row justify-end gap-3 px-4 border-b border-border">
           <PresstableOpacity
+            accessibilityLabel="Select all providers"
+            accessibilityRole="button"
+            className="min-h-11 justify-center"
             onPress={() => {
               if (!allSelected) haptics.selection();
               onSelectAll();
@@ -125,6 +128,8 @@ function ProviderOptions({
           </PresstableOpacity>
           <PresstableOpacity
             accessibilityLabel="Select no providers"
+            accessibilityRole="button"
+            className="min-h-11 justify-center"
             onPress={() => {
               if (anySelected) haptics.selection();
               onSelectNone();

@@ -32,6 +32,9 @@ export function WatchedAtField({ value, onChange, label = 'Watched on', children
           <View className="flex-row items-center gap-2">
             {value != null && (
               <PresstableOpacity
+                accessibilityLabel="Set to now"
+                accessibilityRole="button"
+                className="h-11 justify-center"
                 onPress={() => {
                   haptics.selection();
                   onChange(null);
@@ -44,6 +47,8 @@ export function WatchedAtField({ value, onChange, label = 'Watched on', children
               </PresstableOpacity>
             )}
             <PresstableOpacity
+              accessibilityRole="button"
+              className="h-11 justify-center"
               onPress={() => {
                 haptics.selection();
                 setOpen(!open);
