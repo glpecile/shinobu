@@ -61,8 +61,8 @@ function Stop({
       </View>
       <Text
         className={cn(
-          'flex-1 font-sans text-sm',
-          stop.upcoming ? 'text-foreground font-sans-semibold' : 'text-foreground',
+          'flex-1 text-foreground font-sans text-sm',
+          stop.upcoming && 'font-sans-semibold',
         )}
         numberOfLines={1}
       >
