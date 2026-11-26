@@ -13,7 +13,6 @@ import {
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
-import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
 import { TextField } from '@/components/text-field';
 import { TRAKT_CREATE_APP_URL } from '@/lib/providers/external-urls';
@@ -326,11 +325,13 @@ export function ConnectTraktButton() {
         loadingLabel="Connecting…"
         onPress={() => void connect()}
       />
-      <PresstableOpacity onPress={() => clearCredentials()}>
-        <Text className="text-muted font-sans text-xs">
-          Edit API credentials
-        </Text>
-      </PresstableOpacity>
+      <Button
+        icon={<Button.Icon name="create-outline" />}
+        label="Edit API credentials"
+        onPress={() => clearCredentials()}
+        size="sm"
+        variant="ghost"
+      />
     </View>
   );
 }
