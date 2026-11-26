@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useLocalSearchParams,
   useRouter,
@@ -45,9 +45,11 @@ import {
 
 function LegFailureNotice({
   failures,
+  loading,
   onRetry,
 }: {
   failures: readonly ProviderFailure[];
+  loading: boolean;
   onRetry: () => void;
 }) {
   if (failures.length === 0) return null;
@@ -64,6 +66,7 @@ function LegFailureNotice({
         className="self-start mt-2"
         icon={<Button.Icon name="refresh" />}
         label="Try again"
+        loading={loading}
         onPress={onRetry}
         size="sm"
         variant="quiet"
@@ -81,6 +84,10 @@ function WatchlistGrid({
 }) {
   const pushRoute = usePushRoute();
   const queryClient = useQueryClient();
+  const retry = useMutation({
+    mutationFn: () => refreshWatchlistInputs(queryClient),
+    networkMode: 'always',
+  });
   const { openActions, sheetProps } = useCardActions();
   const [activeEntry, setActiveEntry] = useState<WatchlistEntry | null>(null);
   const { entries, errors, incomplete } = useSuspenseWatchlistQuery();
@@ -178,7 +185,11 @@ function WatchlistGrid({
         sort={sort}
         view={view}
       />
-      <LegFailureNotice failures={errors} onRetry={() => void refresh()} />
+      <LegFailureNotice
+        failures={errors}
+        loading={retry.isPending}
+        onRetry={() => retry.mutate()}
+      />
       {layout}
       <CardActionsSheet
         {...sheetProps}

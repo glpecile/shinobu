@@ -164,6 +164,7 @@ function EntityResultRow({
       accessibilityLabel={row.name}
       accessibilityRole="button"
       className="flex-row items-center px-6 py-2.5"
+      minScale={0.99}
       onPress={() => onPress(row.href)}
     >
       {row.shape === 'face' ? (
@@ -242,11 +243,13 @@ type SearchRow =
       href: string;
     }
   | { kind: 'loading'; key: string }
-  | { kind: 'error'; key: string };
+  | { kind: 'error'; key: string; retrying: boolean; onRetry: () => void };
 
 interface SectionQueryState<Hit> {
   isLoading: boolean;
   isError: boolean;
+  isFetching: boolean;
+  refetch: () => unknown;
   data?: Hit[] | undefined;
 }
 
@@ -270,7 +273,17 @@ function sectionRows<Hit>(
     return [header, { kind: 'loading', key: `${provider}-loading` }];
   }
   if (search.isError) {
-    return [header, { kind: 'error', key: `${provider}-error` }];
+    return [
+      header,
+      {
+        kind: 'error',
+        key: `${provider}-error`,
+        retrying: search.isFetching,
+        onRetry: () => {
+          void search.refetch();
+        },
+      },
+    ];
   }
   const items = search.data ?? [];
   if (items.length === 0) return [];
@@ -579,6 +592,7 @@ function SearchScreen() {
                   <CenteredNotice.Action
                     icon={<Button.Icon name="refresh" />}
                     label="Try again"
+                    loading={fetching}
                     onPress={retryFailed}
                   />
                 </CenteredNotice>
@@ -640,7 +654,8 @@ function SearchScreen() {
                           <Button
                             icon={<Button.Icon name="refresh" />}
                             label="Try again"
-                            onPress={retryFailed}
+                            loading={row.retrying}
+                            onPress={row.onRetry}
                             size="sm"
                             variant="quiet"
                           />
