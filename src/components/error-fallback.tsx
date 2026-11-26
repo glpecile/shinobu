@@ -1,7 +1,8 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import type { FallbackProps } from "react-error-boundary";
 
 import { Button } from "@/components/button";
+import { CenteredNotice } from "@/components/centered-notice";
 import { isStaleBundleError } from "@/lib/stale-bundle";
 
 export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
@@ -11,19 +12,17 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
     : error instanceof Error ? error.message : "Unknown error";
 
   return (
-    <View className="flex-1 bg-background items-center justify-center px-8">
-      <Text className="text-5xl font-display text-foreground mb-4">忍</Text>
-      <Text className="text-2xl font-display text-foreground mb-2">
-        Something broke
-      </Text>
-      <Text className="text-base font-sans text-muted text-center mb-8 max-w-sm">
-        {message}
-      </Text>
-      <Button
-        icon={<Button.Icon name="refresh" />}
-        label={stale ? "Reload" : "Try again"}
-        onPress={stale ? () => window.location.reload() : resetErrorBoundary}
-      />
+    <View className="flex-1 bg-background">
+      <CenteredNotice>
+        <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
+        <CenteredNotice.Title>Something broke</CenteredNotice.Title>
+        <CenteredNotice.Body>{message}</CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="refresh" />}
+          label={stale ? "Reload" : "Try again"}
+          onPress={stale ? () => window.location.reload() : resetErrorBoundary}
+        />
+      </CenteredNotice>
     </View>
   );
 }

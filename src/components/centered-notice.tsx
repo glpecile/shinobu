@@ -51,8 +51,13 @@ function CenteredNoticeAction(props: Omit<ComponentProps<typeof Button>, 'classN
   return <Button {...props} className="mt-6" />;
 }
 
+function CenteredNoticeActions({ children }: { children: ReactNode }) {
+  return <View className="mt-6 flex-row flex-wrap justify-center gap-3">{children}</View>;
+}
+
 CenteredNotice.Glyph = CenteredNoticeGlyph;
 CenteredNotice.Icon = CenteredNoticeIcon;
 CenteredNotice.Title = CenteredNoticeTitle;
 CenteredNotice.Body = CenteredNoticeBody;
 CenteredNotice.Action = CenteredNoticeAction;
+CenteredNotice.Actions = CenteredNoticeActions;
