@@ -192,6 +192,7 @@ export function LogFormFields({
               editable={!pending}
               onChangeText={onTagsChange}
               placeholder="tags, comma separated"
+              returnKeyType="done"
               value={tags ?? ''}
             />
             <TagPicker onChange={onTagsChange} value={tags ?? ''} />
