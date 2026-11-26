@@ -25,7 +25,6 @@ function inputs(partial: Partial<WatchlistInputs> = {}): WatchlistInputs {
 }
 
 describe('findWatchlistRemoval (plan 0033 follow-up)', () => {
-
   test('recognises a details-screen item by shared merge keys, not id', () => {
     const data = inputs({
       inputs: [
@@ -36,10 +35,7 @@ describe('findWatchlistRemoval (plan 0033 follow-up)', () => {
         },
       ],
     });
-    const removal = findWatchlistRemoval(
-      data,
-      film({ id: 'tmdb-77', externalIds: { tmdb: 77 } }),
-    );
+    const removal = findWatchlistRemoval(data, film({ id: 'tmdb-77', externalIds: { tmdb: 77 } }));
     expect(removal?.entry.sources).toEqual(['trakt', 'letterboxd']);
   });
 
@@ -66,16 +62,32 @@ describe('findWatchlistRemoval (plan 0033 follow-up)', () => {
 
   test('removing from the AniList entry’s own screen removes that entry, not the merged volume (plan 0117 B6)', () => {
     const manga = film({
-      id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 },
+      id: 'anilist-143703',
+      title: 'Nisemonogatari',
+      type: 'MANGA',
+      externalIds: { anilist: 143703 },
       readingCredits: { people: ['NISIOISIN'], format: 'NOVEL', volumes: 2 },
     });
     const book = film({
-      id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1 (Light Novel)', type: 'BOOK', externalIds: { hardcover: 61 },
+      id: 'hardcover-61',
+      title: 'NISEMONOGATARI, Part 1 (Light Novel)',
+      type: 'BOOK',
+      externalIds: { hardcover: 61 },
       readingCredits: { people: ['NISIOISIN'] },
     });
-    const data = inputs({ inputs: [{ item: manga, source: 'anilist' }, { item: book, source: 'hardcover' }] });
-    expect(findWatchlistRemoval(data, manga, [manga])?.entry).toMatchObject({ item: { id: 'anilist-143703' }, sources: ['anilist'] });
-    expect(findWatchlistRemoval(data, book, [manga])?.entry).toMatchObject({ item: { id: 'hardcover-61' }, sources: ['anilist', 'hardcover'] });
+    const data = inputs({
+      inputs: [
+        { item: manga, source: 'anilist' },
+        { item: book, source: 'hardcover' },
+      ],
+    });
+    expect(findWatchlistRemoval(data, manga, [manga])?.entry).toMatchObject({
+      item: { id: 'anilist-143703' },
+      sources: ['anilist'],
+    });
+    expect(findWatchlistRemoval(data, book, [manga])?.entry).toMatchObject({
+      item: { id: 'hardcover-61' },
+      sources: ['anilist', 'hardcover'],
+    });
   });
-
 });

@@ -243,8 +243,7 @@ describe('token refresh', () => {
 describe('a refused scope', () => {
   test('a 403 insufficient_scope drops the named scope, keeps the session and refreshes nothing', async () => {
     const { deps, tokenCalls, slot } = makeDeps(
-      () =>
-        Response.json({ error: 'insufficient_scope', scope: 'write:lists' }, { status: 403 }),
+      () => Response.json({ error: 'insufficient_scope', scope: 'write:lists' }, { status: 403 }),
       { session: { ...STORED, scopes: ['read:library', 'read:lists', 'write:lists'] } },
     );
 

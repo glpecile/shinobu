@@ -1,8 +1,4 @@
-import {
-  formatLocalTime,
-  formatRelativeDay,
-  localDayOffset,
-} from '@/lib/time/relative-day';
+import { formatLocalTime, formatRelativeDay, localDayOffset } from '@/lib/time/relative-day';
 
 import { entryInstant } from './entry';
 import type { UpNextEntry } from './types';
@@ -21,16 +17,15 @@ export function isNewEpisode(entry: UpNextEntry, now: Date): boolean {
   return offset != null && offset <= 0 && offset > -NEW_EPISODE_WINDOW_DAYS;
 }
 
-export function continueWatchingBadges(
-  entry: UpNextEntry,
-  now: Date,
-): CardBadge[] {
+export function continueWatchingBadges(entry: UpNextEntry, now: Date): CardBadge[] {
   const badges: CardBadge[] = [];
   const episodeRuntime = entry.kind === 'episode' ? entry.episode.runtime : null;
   const runtime = episodeRuntime ?? entry.item.runtime;
-  if (runtime != null && Number.isFinite(runtime) && runtime > 0) badges.push({ label: `${runtime}m` });
+  if (runtime != null && Number.isFinite(runtime) && runtime > 0)
+    badges.push({ label: `${runtime}m` });
   const behind = entry.kind === 'episode' ? entry.episodesBehind : null;
-  if (behind != null && Number.isFinite(behind) && behind > 1) badges.push({ label: `${behind.toLocaleString()} behind` });
+  if (behind != null && Number.isFinite(behind) && behind > 1)
+    badges.push({ label: `${behind.toLocaleString()} behind` });
   if (isNewEpisode(entry, now)) badges.push({ label: 'New', tone: 'accent' });
   return badges;
 }

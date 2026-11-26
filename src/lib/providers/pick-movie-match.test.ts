@@ -45,16 +45,12 @@ describe('pickMovieMatch', () => {
     const labyrinth2025 = movie('11', 'Labyrinth', 2025);
 
     test('picks the exact-year film even when the classic ranks first', () => {
-      expect(pickMovieMatch([jareth, labyrinth2025], 2025, 'Labyrinth')).toBe(
-        labyrinth2025,
-      );
+      expect(pickMovieMatch([jareth, labyrinth2025], 2025, 'Labyrinth')).toBe(labyrinth2025);
     });
 
     test('an exact title beats a substring title at the same year', () => {
       const partial = movie('12', 'Labyrinth of Cinema', 2025);
-      expect(
-        pickMovieMatch([partial, labyrinth2025], 2025, 'Labyrinth'),
-      ).toBe(labyrinth2025);
+      expect(pickMovieMatch([partial, labyrinth2025], 2025, 'Labyrinth')).toBe(labyrinth2025);
     });
 
     test('matches titles case- and diacritic-insensitively', () => {
@@ -84,12 +80,21 @@ describe('pickMovieMatch', () => {
 
 describe('pickAnimeTmdbMatch', () => {
   // TMDB's names for AniList 141953 and 165933, which ani.zip doesn't map.
-  const show = { ...movie('280564', 'False Memory', 2026), type: 'TV' as const, titles: { native: '记忆管理局' } };
+  const show = {
+    ...movie('280564', 'False Memory', 2026),
+    type: 'TV' as const,
+    titles: { native: '记忆管理局' },
+  };
   const original = { ...movie('874235', 'False Memory', 2020), titles: { native: '记忆管理局' } };
   const box = movie('901323', 'Undetectable Box', 2019);
 
   test('matches a series to its show, past the year suffix and the same-name film', () => {
-    const entry = { title: 'False Memory (2026)', titles: { native: '记忆管理局 (2026)' }, year: 2026, totalEpisodes: 7 };
+    const entry = {
+      title: 'False Memory (2026)',
+      titles: { native: '记忆管理局 (2026)' },
+      year: 2026,
+      totalEpisodes: 7,
+    };
     expect(pickAnimeTmdbMatch([show, original], entry)).toBe(show);
     expect(pickAnimeTmdbMatch([original], { ...entry, year: 2020 })).toBeNull();
   });
@@ -101,7 +106,11 @@ describe('pickAnimeTmdbMatch', () => {
   });
 
   test('finds the AniList entry behind a TMDB record, the same rule reversed', () => {
-    const entry = { ...movie('141953', 'False Memory (2026)', 2026), type: 'ANIME' as const, totalEpisodes: 7 };
+    const entry = {
+      ...movie('141953', 'False Memory (2026)', 2026),
+      type: 'ANIME' as const,
+      totalEpisodes: 7,
+    };
     const film = { ...entry, title: 'False Memory', year: 2020, isFilm: true };
     expect(pickAniListMatch([entry, film], show)).toBe(entry);
     expect(pickAniListMatch([entry, film], original)).toBe(film);

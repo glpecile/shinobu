@@ -29,14 +29,11 @@ export function NotificationsRuntime(): null {
   useEffect(() => {
     void refreshNotifications(createRefreshDeps(queryClient));
 
-    const subscription = AppState.addEventListener(
-      'change',
-      (state: AppStateStatus) => {
-        if (state === 'active') {
-          void refreshNotifications(createRefreshDeps(queryClient));
-        }
-      },
-    );
+    const subscription = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') {
+        void refreshNotifications(createRefreshDeps(queryClient));
+      }
+    });
     return () => subscription.remove();
   }, [queryClient]);
 

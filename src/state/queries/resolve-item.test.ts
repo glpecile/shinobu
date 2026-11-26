@@ -10,17 +10,22 @@ afterAll(() => GlobalRegistrator.unregister());
 const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
 const { renderHook, waitFor } = await import('@testing-library/react');
 const store = new Map<string, string>();
-mock.module('react-native-mmkv', () => ({ createMMKV: () => ({
-  getString: (key: string) => store.get(key),
-  set: (key: string, value: string) => store.set(key, value),
-  remove: (key: string) => store.delete(key),
-  getAllKeys: () => [...store.keys()],
-  addOnValueChangedListener: () => ({ remove() {} }),
-}) }));
-mock.module('react-native', () => ({ Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web } }));
+mock.module('react-native-mmkv', () => ({
+  createMMKV: () => ({
+    getString: (key: string) => store.get(key),
+    set: (key: string, value: string) => store.set(key, value),
+    remove: (key: string) => store.delete(key),
+    getAllKeys: () => [...store.keys()],
+    addOnValueChangedListener: () => ({ remove() {} }),
+  }),
+}));
+mock.module('react-native', () => ({
+  Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
+}));
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
-  CryptoDigestAlgorithm: { SHA256: 'SHA-256' }, CryptoEncoding: { BASE64: 'base64' },
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
   digestStringAsync: async () => 'unused',
 }));
 let providers: ProviderId[] = [];
@@ -29,11 +34,13 @@ mock.module('@/state/session', () => ({
   currentUsableProviders: () => providers,
 }));
 let urls: string[] = [];
-mock.module('@/lib/http/client', () => ({ httpFetch: (url: string) => {
-  urls.push(String(url));
-  // Cold paths stay pending, so every case is deterministic.
-  return new Promise<Response>(() => {});
-} }));
+mock.module('@/lib/http/client', () => ({
+  httpFetch: (url: string) => {
+    urls.push(String(url));
+    // Cold paths stay pending, so every case is deterministic.
+    return new Promise<Response>(() => {});
+  },
+}));
 
 const { useResolvedMediaItem } = await import('./resolve-item');
 const { UP_NEXT_QUERY_ROOT } = await import('./up-next-cache');
@@ -41,15 +48,29 @@ const { anilistRelationsQuery } = await import('./anilist');
 const { setProviderClientId } = await import('@/state/session/tokens');
 const { clearTmdbToken, saveTmdbToken } = await import('@/state/session/tmdb-token');
 
-const show: NormalizedMediaItem = { id: 'trakt-42', title: 'Frieren', type: 'TV', coverImage: '',
-  currentProgress: 3, progressUnit: 'episode', lastUpdated: '', externalIds: { trakt: 42 } };
+const show: NormalizedMediaItem = {
+  id: 'trakt-42',
+  title: 'Frieren',
+  type: 'TV',
+  coverImage: '',
+  currentProgress: 3,
+  progressUnit: 'episode',
+  lastUpdated: '',
+  externalIds: { trakt: 42 },
+};
 
 // clearTmdbToken also drops the module's resolved-token cache, which store.clear() can't reach.
-beforeEach(() => { store.clear(); clearTmdbToken(); providers = []; urls = []; });
+beforeEach(() => {
+  store.clear();
+  clearTmdbToken();
+  providers = [];
+  urls = [];
+});
 
 function setup() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, children);
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client }, children);
   return { client, wrapper };
 }
 
@@ -69,14 +90,31 @@ test('a card cached by Up Next resolves without a request', () => {
 
 test('a cached Simkl anime takes its synopsis and other titles from its AniList record', () => {
   const { client, wrapper } = setup();
-  const anime: NormalizedMediaItem = { ...show, id: 'simkl-7', title: 'Seitokai', type: 'ANIME',
-    externalIds: { simkl: 7, anilist: 9 } };
+  const anime: NormalizedMediaItem = {
+    ...show,
+    id: 'simkl-7',
+    title: 'Seitokai',
+    type: 'ANIME',
+    externalIds: { simkl: 7, anilist: 9 },
+  };
   client.setQueryData([...UP_NEXT_QUERY_ROOT, 'inputs'], { progress: [{ item: anime }] });
-  client.setQueryData(anilistRelationsQuery(client, { mediaId: 9, type: 'ANIME' }).queryKey, { item: { ...anime, id: 'anilist-9',
-    title: 'Student Council', titles: { english: 'Student Council' }, overview: 'A council.', isFilm: true } });
+  client.setQueryData(anilistRelationsQuery(client, { mediaId: 9, type: 'ANIME' }).queryKey, {
+    item: {
+      ...anime,
+      id: 'anilist-9',
+      title: 'Student Council',
+      titles: { english: 'Student Council' },
+      overview: 'A council.',
+      isFilm: true,
+    },
+  });
   const { result } = renderHook(() => useResolvedMediaItem('simkl-7'), { wrapper });
-  expect(result.current.item).toMatchObject({ id: 'simkl-7', title: 'Seitokai',
-    titles: { english: 'Student Council' }, overview: 'A council.' });
+  expect(result.current.item).toMatchObject({
+    id: 'simkl-7',
+    title: 'Seitokai',
+    titles: { english: 'Student Council' },
+    overview: 'A council.',
+  });
   // The tracker's film flag routes writes, so AniList's never replaces it.
   expect(result.current.item?.isFilm).toBeUndefined();
 });
@@ -102,7 +140,9 @@ test('a cold TMDB link loads while its details are in flight', async () => {
   saveTmdbToken('tmdb-token');
   const { wrapper } = setup();
   const { result } = renderHook(() => useResolvedMediaItem('tmdb-movie-603'), { wrapper });
-  await waitFor(() => expect(urls.some((url) => url.includes('themoviedb.org/3/movie/603'))).toBe(true));
+  await waitFor(() =>
+    expect(urls.some((url) => url.includes('themoviedb.org/3/movie/603'))).toBe(true),
+  );
   expect(result.current.item).toBeUndefined();
   expect(result.current.isLoading).toBe(true);
 });

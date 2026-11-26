@@ -6,7 +6,9 @@
  * (docs/solutions/web-stale-route-chunks-after-deploy.md).
  */
 export function isStaleBundleError(error: unknown): boolean {
-  return process.env.EXPO_OS === 'web' && error instanceof Error && error.name === 'AsyncRequireError';
+  return (
+    process.env.EXPO_OS === 'web' && error instanceof Error && error.name === 'AsyncRequireError'
+  );
 }
 
 const RELOADED_AT_KEY = 'shinobu.stale-bundle-reload';

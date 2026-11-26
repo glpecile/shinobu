@@ -53,12 +53,14 @@ export function setLetterboxdWatchlist(
   const session = deps.session;
   const userscriptFetch = deps.userscriptWatchlistFetch;
   const watchlistWebFetch = userscriptFetch ?? deps.watchlistWebFetch;
-  if (watchlistWebFetch == null || (userscriptFetch == null && (session == null || session.cookie === ''))) {
+  if (
+    watchlistWebFetch == null ||
+    (userscriptFetch == null && (session == null || session.cookie === ''))
+  ) {
     return Effect.fail(new ProviderAuthError({ provider, refreshFailed: true }));
   }
 
-  const isMovie =
-    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  const isMovie = item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   if (!isMovie) {
     return Effect.fail(
       new ProviderDecodeError({

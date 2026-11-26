@@ -115,7 +115,10 @@ describe('getWatchlistPage', () => {
   test('page 1 keeps the bare watchlist path', async () => {
     const urls: string[] = [];
     await Effect.runPromise(
-      getWatchlistPage(recordingDeps(() => new Response(PAGE), urls), { page: 1 }),
+      getWatchlistPage(
+        recordingDeps(() => new Response(PAGE), urls),
+        { page: 1 },
+      ),
     );
     expect(urls[0]).toBe('https://letterboxd.com/gian/watchlist/');
   });
@@ -123,7 +126,10 @@ describe('getWatchlistPage', () => {
   test('page 2+ takes the /page/N/ suffix', async () => {
     const urls: string[] = [];
     await Effect.runPromise(
-      getWatchlistPage(recordingDeps(() => new Response(PAGE), urls), { page: 2 }),
+      getWatchlistPage(
+        recordingDeps(() => new Response(PAGE), urls),
+        { page: 2 },
+      ),
     );
     expect(urls[0]).toBe('https://letterboxd.com/gian/watchlist/page/2/');
   });

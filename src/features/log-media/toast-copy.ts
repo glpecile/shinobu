@@ -2,11 +2,12 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import type { LogMediaResult } from './fan-out';
 
-const list = (ids: readonly ProviderId[]) =>
-  ids.map((id) => PROVIDERS[id].label).join(', ');
+const list = (ids: readonly ProviderId[]) => ids.map((id) => PROVIDERS[id].label).join(', ');
 
 export function logToastCopy(
-  report: Pick<LogMediaResult, 'rewatch' | 'succeeded' | 'skipped'> & { queued?: readonly ProviderId[] },
+  report: Pick<LogMediaResult, 'rewatch' | 'succeeded' | 'skipped'> & {
+    queued?: readonly ProviderId[];
+  },
   repeat: 'rewatch' | 'reread' = 'rewatch',
   span?: string,
 ): { title: string; message: string } {
@@ -35,13 +36,13 @@ export function episodeNoticeToastCopy(
     return {
       tone: 'error',
       title: `${code} failed on ${list(report.failed)}`,
-      ...(report.succeeded.length > 0
-        ? { message: `Logged on ${list(report.succeeded)}.` }
-        : {}),
+      ...(report.succeeded.length > 0 ? { message: `Logged on ${list(report.succeeded)}.` } : {}),
     };
   }
   const notes = report.outcomes.flatMap((outcome) =>
-    outcome.status === 'error' || outcome.status === 'queued' || outcome.reason == null ? [] : [`${PROVIDERS[outcome.provider].label}: ${outcome.reason}.`],
+    outcome.status === 'error' || outcome.status === 'queued' || outcome.reason == null
+      ? []
+      : [`${PROVIDERS[outcome.provider].label}: ${outcome.reason}.`],
   );
   return {
     tone: report.succeeded.length > 0 ? 'success' : 'error',

@@ -1,8 +1,5 @@
 import { Provider } from '@/lib/providers/types';
-import type {
-  NormalizedDiaryEntry,
-  NormalizedMediaItem,
-} from '@/types/media';
+import type { NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
 export interface AniListMediaTitle {
   english?: string | null;
@@ -33,7 +30,11 @@ export interface AniListMedia {
   volumes?: number | null;
   staff?: {
     nodes?: Array<{
-      name?: { full?: string | null; native?: string | null; alternative?: Array<string | null> | null } | null;
+      name?: {
+        full?: string | null;
+        native?: string | null;
+        alternative?: Array<string | null> | null;
+      } | null;
     } | null> | null;
   } | null;
   idMal?: number | null;
@@ -100,15 +101,14 @@ export function staffNames(nodes: NonNullable<AniListMedia['staff']>['nodes']): 
   );
 }
 
-export function normalizeAniListMedia(
-  media: AniListMedia,
-  nowIso: string,
-): NormalizedMediaItem {
+export function normalizeAniListMedia(media: AniListMedia, nowIso: string): NormalizedMediaItem {
   const type = media.type === 'MANGA' ? 'MANGA' : 'ANIME';
   const total = type === 'MANGA' ? media.chapters : media.episodes;
   const year = media.seasonYear ?? media.startDate?.year;
   const genres = media.genres?.filter((genre): genre is string => genre != null);
-  const aliases = media.synonyms?.filter((alias): alias is string => alias != null && alias.trim() !== '');
+  const aliases = media.synonyms?.filter(
+    (alias): alias is string => alias != null && alias.trim() !== '',
+  );
   const people = media.staff == null ? undefined : staffNames(media.staff.nodes);
   const titles = {
     ...(media.title?.romaji != null ? { romaji: media.title.romaji } : {}),
@@ -191,7 +191,9 @@ export function normalizeCurrentAnimeEntry(
     status: entry.status === 'PLANNING' ? 'PLANNING' : 'CURRENT',
     ...(entry.id != null ? { entryId: entry.id } : {}),
     hasUnfinishedPrequel: (entry.media.relations?.edges ?? []).some(
-      (edge) => edge?.relationType === 'PREQUEL' && edge.node?.type === 'ANIME' &&
+      (edge) =>
+        edge?.relationType === 'PREQUEL' &&
+        edge.node?.type === 'ANIME' &&
         edge.node.mediaListEntry?.status !== 'COMPLETED',
     ),
     ...(premiere?.episode === 1
@@ -242,9 +244,7 @@ export interface AniListListActivity {
 
 const DIARY_STATUS = /^(watched|rewatched|read|reread|completed)/i;
 
-function parseActivityProgress(
-  progress: string | null | undefined,
-): number[] {
+function parseActivityProgress(progress: string | null | undefined): number[] {
   if (progress == null) return [];
   const cleaned = progress.trim();
   const range = /^(\d+)\s*-\s*(\d+)$/.exec(cleaned);
@@ -259,9 +259,7 @@ function parseActivityProgress(
   return single != null ? [Number(single[1])] : [];
 }
 
-export function normalizeListActivity(
-  raw: AniListListActivity,
-): NormalizedDiaryEntry | null {
+export function normalizeListActivity(raw: AniListListActivity): NormalizedDiaryEntry | null {
   if (raw.media == null) return null;
   if (raw.status == null || !DIARY_STATUS.test(raw.status.trim())) return null;
 

@@ -23,11 +23,7 @@ import {
   usableProviderIds,
 } from './trakt-migration';
 
-export {
-  providerIsUsable,
-  traktNeedsCredentials,
-  usableProviderIds,
-} from './trakt-migration';
+export { providerIsUsable, traktNeedsCredentials, usableProviderIds } from './trakt-migration';
 
 let cachedConnected: ProviderId[] | null = null;
 

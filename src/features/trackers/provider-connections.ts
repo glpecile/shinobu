@@ -6,9 +6,7 @@ export interface ProviderSplit {
   disconnected: ProviderId[];
 }
 
-export function splitProviders(
-  connectedIds: readonly ProviderId[],
-): ProviderSplit {
+export function splitProviders(connectedIds: readonly ProviderId[]): ProviderSplit {
   const split: ProviderSplit = { connected: [], disconnected: [] };
   for (const id of Object.keys(PROVIDERS) as ProviderId[]) {
     if (connectedIds.includes(id)) split.connected.push(id);

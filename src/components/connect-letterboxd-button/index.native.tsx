@@ -2,10 +2,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import {
-  ProviderSigninWebView,
-  type CookiePair,
-} from '@/components/provider-signin-webview';
+import { ProviderSigninWebView, type CookiePair } from '@/components/provider-signin-webview';
 import {
   LETTERBOXD_BASE_URL,
   LETTERBOXD_SIGN_IN_URL,
@@ -34,9 +31,8 @@ export function ConnectLetterboxdButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        Letterboxd has no public API, so Shinobu logs your movies by signing in
-        as you in a secure web view. Your session stays on this device — no
-        password is ever sent to Shinobu.
+        Letterboxd has no public API, so Shinobu logs your movies by signing in as you in a secure
+        web view. Your session stays on this device — no password is ever sent to Shinobu.
       </Text>
       <Button
         icon={<Button.Icon name="link-outline" />}

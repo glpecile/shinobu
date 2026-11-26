@@ -6,13 +6,7 @@ import { httpUrl } from '@/components/markdown-links/http-url';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useThemeColor } from '@/lib/theme-color';
 
-export function MarkdownText({
-  text,
-  numberOfLines,
-}: {
-  text: string;
-  numberOfLines?: number;
-}) {
+export function MarkdownText({ text, numberOfLines }: { text: string; numberOfLines?: number }) {
   const foreground = useThemeColor('--color-foreground');
   const muted = useThemeColor('--color-muted');
   const surface = useThemeColor('--color-surface');

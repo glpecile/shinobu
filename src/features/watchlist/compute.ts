@@ -72,7 +72,10 @@ function bridgeReadingInputs(
   inputs: readonly WatchlistInput[],
   mangaList: readonly NormalizedMediaItem[],
 ): readonly WatchlistInput[] {
-  const bridged = bridgeBooks(inputs.map((input) => input.item), mangaList);
+  const bridged = bridgeBooks(
+    inputs.map((input) => input.item),
+    mangaList,
+  );
   if (bridged.size === 0) return inputs;
   // Hardcover returns list rows in arbitrary order; pick the lowest id deterministically.
   const joined = new Map<number, string>();
@@ -106,8 +109,11 @@ function absorb(entry: MergedEntry, input: WatchlistInput): void {
   }
   const fallback = entry.item === input.item ? previous : input.item;
   for (const field of ['year', 'runtime'] as const) {
-    if (isFilmLike(entry.item) !== isFilmLike(fallback) ||
-      (entry.item.type === 'MANGA') !== (fallback.type === 'MANGA')) continue;
+    if (
+      isFilmLike(entry.item) !== isFilmLike(fallback) ||
+      (entry.item.type === 'MANGA') !== (fallback.type === 'MANGA')
+    )
+      continue;
     const value = mediaSortValue(fallback, field);
     if (mediaSortValue(entry.item, field) == null && value != null) {
       entry.item = { ...entry.item, [field]: value };
@@ -140,7 +146,8 @@ export function computeWatchlist(
 
   for (const input of bridgeReadingInputs(inputs, mangaList)) {
     const work = readingWorkKey(input.item);
-    const keys = work == null ? watchlistMergeKeys(input.item) : [...watchlistMergeKeys(input.item), work];
+    const keys =
+      work == null ? watchlistMergeKeys(input.item) : [...watchlistMergeKeys(input.item), work];
     let entry: MergedEntry | undefined;
     for (const key of keys) {
       entry ??= byKey.get(key);
@@ -152,12 +159,8 @@ export function computeWatchlist(
         sources: new Set([input.source]),
         sourceIds: [input.item.id],
         ...(input.addedAt != null ? { addedAt: input.addedAt } : {}),
-        ...(input.anilistStatus != null
-          ? { anilistStatus: input.anilistStatus }
-          : {}),
-        ...(input.simklWatchedCount != null
-          ? { simklWatchedCount: input.simklWatchedCount }
-          : {}),
+        ...(input.anilistStatus != null ? { anilistStatus: input.anilistStatus } : {}),
+        ...(input.simklWatchedCount != null ? { simklWatchedCount: input.simklWatchedCount } : {}),
       };
       merged.push(entry);
     } else {
@@ -175,12 +178,8 @@ export function computeWatchlist(
       sources: PROVIDER_ORDER.filter((id) => entry.sources.has(id)),
       sourceIds: entry.sourceIds,
       ...(entry.addedAt != null ? { addedAt: entry.addedAt } : {}),
-      ...(entry.anilistStatus != null
-        ? { anilistStatus: entry.anilistStatus }
-        : {}),
-      ...(entry.simklWatchedCount != null
-        ? { simklWatchedCount: entry.simklWatchedCount }
-        : {}),
+      ...(entry.anilistStatus != null ? { anilistStatus: entry.anilistStatus } : {}),
+      ...(entry.simklWatchedCount != null ? { simklWatchedCount: entry.simklWatchedCount } : {}),
     }))
     .sort(byAddedAtDesc);
 }

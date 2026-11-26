@@ -159,7 +159,9 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
         ) : (
           <>
             <Text className="text-muted font-sans text-xs tabular-nums">
-              {inPages ? `${percent}%` : `Page ${page.toLocaleString()} of ${total.toLocaleString()}`}
+              {inPages
+                ? `${percent}%`
+                : `Page ${page.toLocaleString()} of ${total.toLocaleString()}`}
             </Text>
             <Text className="text-muted font-sans text-xs tabular-nums">
               {(total - page).toLocaleString()} {total - page === 1 ? 'page' : 'pages'} left
@@ -174,7 +176,10 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
 function PageField({ value, onChange, pending }: FieldProps) {
   const setFinished = (finished: boolean) => onChange((reading) => ({ ...reading, finished }));
   const setPage = (next: (page: number) => number) =>
-    onChange((reading) => ({ ...reading, page: Math.min(LAST_PAGE, Math.max(0, next(reading.page))) }));
+    onChange((reading) => ({
+      ...reading,
+      page: Math.min(LAST_PAGE, Math.max(0, next(reading.page))),
+    }));
 
   return (
     <View className="mt-5">

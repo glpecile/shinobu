@@ -177,8 +177,7 @@ export function logToSerializd(
  * re-derivation of the guard.
  */
 export type SerializdWatchlistResult =
-  | { status: 'ok'; reason?: string }
-  | { status: 'skipped'; reason: string };
+  { status: 'ok'; reason?: string } | { status: 'skipped'; reason: string };
 
 interface WatchlistSeasons {
   /** Serializd season ids eligible to be watchlisted — never a watched one. */

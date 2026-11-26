@@ -37,7 +37,7 @@ the double log the retry tries to avoid.
 After this plan, a retry carries the original round's `rewatch` decision. If
 the original round was not a rewatch, a retried provider that already has the
 watch is **skipped** ("already logged"), never upgraded to a rewatch. If the
-original round *was* a rewatch, the retry stays a rewatch.
+original round _was_ a rewatch, the retry stays a rewatch.
 
 Revision (#385 review): the retry can't assume a fresh re-read. Reconcile reads
 go through `fetchQuery`, so a retry inside the stale window reused the
@@ -113,17 +113,18 @@ export interface LogMediaVariables {
 
 ## Commands you will need
 
-| Purpose   | Command                                                   | Expected on success |
-|-----------|-----------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                           | exit 0              |
-| Typecheck | `bun typecheck`                                           | exit 0              |
-| One file  | `bun test src/features/log-media/use-log-media.test.ts`   | all pass            |
-| All tests | `bun run test`                                            | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                                | exit 0              |
+| Purpose   | Command                                                 | Expected on success               |
+| --------- | ------------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                         | exit 0                            |
+| Typecheck | `bun typecheck`                                         | exit 0                            |
+| One file  | `bun test src/features/log-media/use-log-media.test.ts` | all pass                          |
+| All tests | `bun run test`                                          | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                              | exit 0                            |
 
 ## Scope
 
 **In scope**:
+
 - `src/features/log-media/fan-out.ts`: `LogMediaVariables` only (one new optional field)
 - `src/features/log-media/use-log-media.ts`: `planLogWrite` only
 - `src/features/log-media/log-confirm-sheet.tsx`: `retry`, `confirm`, plus one `useState`
@@ -160,14 +161,14 @@ In `LogMediaVariables`, after `providers`:
 Replace the `decisions` line with:
 
 ```ts
-  const retryOf = variables.retryOf;
-  const decisions: LogDecision[] =
-    retryOf == null
-      ? reconcileLogTargets(records)
-      : records.map(({ provider, hasIt }) => ({
-          provider,
-          action: retryOf.rewatch ? 'rewatch' : hasIt ? 'skip' : 'log',
-        }));
+const retryOf = variables.retryOf;
+const decisions: LogDecision[] =
+  retryOf == null
+    ? reconcileLogTargets(records)
+    : records.map(({ provider, hasIt }) => ({
+        provider,
+        action: retryOf.rewatch ? 'rewatch' : hasIt ? 'skip' : 'log',
+      }));
 ```
 
 Import the `LogDecision` type from `./reconcile` if it isn't imported yet. The

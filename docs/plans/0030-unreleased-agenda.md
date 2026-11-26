@@ -15,7 +15,7 @@ execution: code
 - **Objective:** A show you have never watched an episode of, and a film that
   is not out yet, can reach the Calendar section and fire a release
   notification. Today neither can, structurally — both halves of Up Next are
-  seeded from *watched* lists.
+  seeded from _watched_ lists.
 - **Authority:** AGENTS.md overrides this plan where they conflict (theme
   tokens, `cn()`, kebab-case, Effect containment, `lib/time` for every
   aired/unaired judgment, React Compiler — no manual memo). Owner decisions
@@ -34,7 +34,7 @@ execution: code
 ### Summary
 
 Calendar (today … today+6) stops being a mirror of what you already watch. It
-gains three new sources of *unreleased* entries — Trakt watchlist, AniList
+gains three new sources of _unreleased_ entries — Trakt watchlist, AniList
 PLANNING, Letterboxd watchlist — and gains a second entry kind: a **film
 release**, which has a date and a release kind but no episode. Release
 notifications cover the widened set through the existing batch and toggle.
@@ -103,18 +103,19 @@ with `isDateOnly` suppressing a bogus `00:00` time badge.
   this accepts). Films come from `/calendars/my/movies` and the
   digital/streaming calendar.
 - R12. AniList: the existing list request widens to `status_in: [CURRENT,
-  PLANNING]`. PLANNING entries reach Calendar **and the cross-provider watchlist
+PLANNING]`. PLANNING entries reach Calendar **and the cross-provider watchlist
   surface**; never Continue Watching and never the "Your Anime" row (KTD-3 —
   this is the regression this feature is most likely to cause).
 
   > **Amendment (2026-07-28, plan 0031 U12).** This requirement originally read
-  > *"PLANNING entries reach Calendar **only**"*. Plan 0031 adds a second
+  > _"PLANNING entries reach Calendar **only**"_. Plan 0031 adds a second
   > consumer of the same cached entries — `fetchPlannedAnime`, the AniList leg
   > of the cross-provider watchlist — as a **third derived selector, not a
   > second request**, so the cost stays at the one call R12 paid for. Nothing
   > else in this plan changes: the "Your Anime" CURRENT filter and
   > `compute.ts`'s PLANNING gate are untouched, and plan 0031 R28 adds a
   > three-way regression test that says so.
+
 - R13. Letterboxd: the existing watchlist scrape, filtered to plausibly
   unreleased films before any resolve happens (KTD-5).
 
@@ -157,10 +158,10 @@ with `isDateOnly` suppressing a bogus `00:00` time badge.
   half.** The endpoint returns episodes for shows "watched **or watchlisted**",
   already minus shows hidden from the user's Trakt calendar, in **one call**,
   max 33 days. This is strictly better than the current path for this section:
-  the 20-show pool cap means shows past the cap *never* reach Calendar today —
+  the 20-show pool cap means shows past the cap _never_ reach Calendar today —
   an admitted limitation (`up-next/compute.ts:29`). Continue Watching keeps the
   pool + `progress/watched` fan untouched (R4), because the calendar endpoint
-  returns only *upcoming* airings and cannot answer "your next unwatched
+  returns only _upcoming_ airings and cannot answer "your next unwatched
   episode that already aired."
   **Accepted behaviour change (owner-confirmed):** Calendar now shows the
   episode airing this week even if the user is several episodes behind, rather
@@ -178,15 +179,15 @@ with `isDateOnly` suppressing a bogus `00:00` time badge.
   (`state/queries/anilist.ts:82`). Widening the query naively causes two
   regressions, the second severe:
   1. the "Your Anime" row lists plan-to-watch titles as currently watching;
-  2. a PLANNING anime that is *already airing* (progress 0 → `next = 1`,
+  2. a PLANNING anime that is _already airing_ (progress 0 → `next = 1`,
      `airing.episode = 5`) takes the `next < airing.episode` branch
      (`compute.ts:133`) and classifies as **`aired`** — pouring the user's
      whole plan-to-watch backlog into Continue Watching.
-  So: carry `status` onto `AniListCurrentEntry`, keep the row filtered to
-  `CURRENT`, and gate `anilistEntry` so a PLANNING entry can only ever produce
-  an `upcoming` entry — a PLANNING series that is mid-run yields *nothing*
-  (you have not started it; it is not "up next", and episode 1 airing weeks ago
-  is not a calendar event).
+     So: carry `status` onto `AniListCurrentEntry`, keep the row filtered to
+     `CURRENT`, and gate `anilistEntry` so a PLANNING entry can only ever produce
+     an `upcoming` entry — a PLANNING series that is mid-run yields _nothing_
+     (you have not started it; it is not "up next", and episode 1 airing weeks ago
+     is not a calendar event).
 
 - **KTD-4. Film dates: Trakt calendars first, TMDB `releaseCalendar` second.**
   `/calendars/my/movies` (theatrical) and the digital/streaming calendar are
@@ -200,15 +201,15 @@ with `isDateOnly` suppressing a bogus `00:00` time badge.
 
 - **KTD-5. Letterboxd resolves a filtered subset, never the whole watchlist.**
   The scrape yields `{ slug, title, year }` and **no dates and no TMDB id**
-  (`letterboxd/watchlist.ts:16`), so each film costs a TMDB `searchMovie` *plus*
+  (`letterboxd/watchlist.ts:16`), so each film costs a TMDB `searchMovie` _plus_
   a `getMediaCatalogue` — 2 calls — to learn its `releaseCalendar`. A 400-film
   watchlist would spend 800 calls to find, typically, zero films releasing in a
   7-day window. Mitigation, in order: filter to `year == null || year >=
-  currentYear` **before** resolving; cap the resolve at 30 films; cache the
+currentYear` **before** resolving; cap the resolve at 30 films; cache the
   title+year → TMDB id mapping indefinitely and the catalogue on the feed's
   existing stale window. Title matching is a known hazard
   (`docs/solutions/trakt-text-search-wrong-movie-match.md`) — the resolve
-  requires an exact-ish title match *and* a year match, and drops the candidate
+  requires an exact-ish title match _and_ a year match, and drops the candidate
   rather than guessing. U6 carries a measurement gate: if a representative
   watchlist still exceeds ~30 resolves after filtering, Letterboxd ships
   degraded (Trakt-watchlist films only) and that is stated in the PR rather
@@ -259,7 +260,7 @@ flowchart LR
 - The Trakt my-calendars endpoints are authed reads counting against the same
   budget as `/sync/*`; three extra calls per Up Next gather is well inside 1000
   per 5 minutes (`docs/solutions/trakt-watched-endpoints-2026-api-changes.md`),
-  and it *removes* nothing from Continue Watching's existing spend.
+  and it _removes_ nothing from Continue Watching's existing spend.
 
 ---
 
@@ -321,7 +322,7 @@ contributes upcoming entries — removing the double-source ambiguity rather tha
 merging two.
 **Test scenarios:** a watchlisted, never-watched show reaches Calendar; a show
 past the 20-show pool cap reaches Calendar (the fixed limitation); an aired
-next episode still reaches Continue Watching and *not* Calendar.
+next episode still reaches Continue Watching and _not_ Calendar.
 
 ### U5. Film release entries
 
@@ -339,7 +340,7 @@ ordering interleaves releases and episodes strictly by instant.
 **Files:** `src/state/queries/letterboxd.ts`, `src/state/queries/up-next.ts`,
 a new resolve module under `src/features/up-next/`.
 **Approach:** filter → cap 30 → `searchMovie` + `getMediaCatalogue`, requiring
-title *and* year agreement, dropping ambiguous matches. **Gate:** measure the
+title _and_ year agreement, dropping ambiguous matches. **Gate:** measure the
 post-filter candidate count on a real watchlist; if it exceeds the cap
 routinely, ship Letterboxd degraded and say so in the PR (KTD-5).
 **Test scenarios:** year filter keeps `null`/current/future and drops past;

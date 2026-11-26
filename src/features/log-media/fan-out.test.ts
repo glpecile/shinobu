@@ -18,7 +18,6 @@ const item: NormalizedMediaItem = {
 const variables: LogMediaVariables = { item };
 
 describe('fanOutLog', () => {
-
   test('one failure surfaces per-provider, never collapsing the others', async () => {
     const result = await fanOutLog(
       {
@@ -71,10 +70,7 @@ describe('fanOutLog', () => {
     );
 
     expect(started).toEqual(['trakt', 'letterboxd']);
-    expect(result.outcomes.map((outcome) => outcome.provider)).toEqual([
-      'trakt',
-      'letterboxd',
-    ]);
+    expect(result.outcomes.map((outcome) => outcome.provider)).toEqual(['trakt', 'letterboxd']);
   });
 
   test('an adapter-reported skip surfaces as a skipped outcome with its reason', async () => {
@@ -123,11 +119,7 @@ describe('fanOutLog', () => {
   });
 
   test('non-Error rejections stringify into the outcome message', async () => {
-    const result = await fanOutLog(
-      { trakt: () => Promise.reject('boom') },
-      ['trakt'],
-      variables,
-    );
+    const result = await fanOutLog({ trakt: () => Promise.reject('boom') }, ['trakt'], variables);
 
     expect(result.outcomes[0]).toEqual({
       provider: 'trakt',

@@ -8,10 +8,14 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { isCleanWriteReport, type WriteReportLike } from './is-clean-report';
 import { WriteSheet } from './write-sheet';
 
-export function useSelectedTargets(targets: readonly ProviderId[], preselected: readonly ProviderId[] = targets) {
+export function useSelectedTargets(
+  targets: readonly ProviderId[],
+  preselected: readonly ProviderId[] = targets,
+) {
   const [toggles, setToggles] = useState<Partial<Record<ProviderId, boolean>>>({});
   const selected = targets.filter((id) => toggles[id] ?? preselected.includes(id));
-  const setAll = (value: boolean) => setToggles(Object.fromEntries(targets.map((id) => [id, value])));
+  const setAll = (value: boolean) =>
+    setToggles(Object.fromEntries(targets.map((id) => [id, value])));
 
   return {
     selected,

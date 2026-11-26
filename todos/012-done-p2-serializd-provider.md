@@ -42,8 +42,8 @@ unified diary.
   button), `connect-serializd-button` (native WebView / web form), and the connect
   screen row.
 - **Fan-out + diary:** `useLogMedia` Serializd adapter with reconcile/invalidation
-  + the anime TMDB-id enrichment gap closed (KTD2); tags applied to the TV/anime
-  log sheets; a fourth unified-diary infinite query + `DIARY_QUERY_ROOTS` entry.
+  - the anime TMDB-id enrichment gap closed (KTD2); tags applied to the TV/anime
+    log sheets; a fourth unified-diary infinite query + `DIARY_QUERY_ROOTS` entry.
 - **Proxy + deploy:** the full-stack Worker (`worker/index.ts` + `wrangler.jsonc`
   `main`, `assets` binding); `wrangler deploy` bundles it (esbuild resolves the
   shared config alias) — static export and Workers Builds pipeline unchanged.

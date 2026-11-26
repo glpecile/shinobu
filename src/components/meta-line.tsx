@@ -17,7 +17,9 @@ export function MetaLine({
   const shown = parts.filter((part) => part != null && part !== false && part !== '');
   if (shown.length === 0) return null;
   return (
-    <Text className={cn('text-muted font-sans text-sm', align === 'center' && 'text-center', className)}>
+    <Text
+      className={cn('text-muted font-sans text-sm', align === 'center' && 'text-center', className)}
+    >
       {shown.map((part, index) => (
         <Fragment key={index}>
           {index > 0 && '\u00A0· '}
@@ -28,7 +30,13 @@ export function MetaLine({
   );
 }
 
-function Part({ icon, children }: { icon: ComponentProps<typeof Ionicons>['name']; children: string }) {
+function Part({
+  icon,
+  children,
+}: {
+  icon: ComponentProps<typeof Ionicons>['name'];
+  children: string;
+}) {
   const muted = useThemeColor('--color-muted');
   return (
     <>

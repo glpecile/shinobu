@@ -70,7 +70,9 @@ export function HiddenItemsSection() {
   if (hidden.length === 0) return null;
 
   const needle = query.trim().toLowerCase();
-  const matches = needle ? hidden.filter((entry) => entry.title.toLowerCase().includes(needle)) : hidden;
+  const matches = needle
+    ? hidden.filter((entry) => entry.title.toLowerCase().includes(needle))
+    : hidden;
   const shown = expanded ? matches : matches.slice(0, PREVIEW);
   const rest = matches.length - shown.length;
   const count = `${hidden.length} ${hidden.length === 1 ? 'item' : 'items'}`;
@@ -103,7 +105,10 @@ export function HiddenItemsSection() {
               nestedScrollEnabled
               renderItem={({ item: entry }) => (
                 <View className="flex-row items-center gap-3 min-h-16">
-                  <SettingsRail.Target accessibilityLabel={`Open ${entry.title}`} onPress={() => pushRoute(entry.href)}>
+                  <SettingsRail.Target
+                    accessibilityLabel={`Open ${entry.title}`}
+                    onPress={() => pushRoute(entry.href)}
+                  >
                     <SettingsRail.Lead>
                       <Ionicons color={muted} name={KIND_ICON[entry.kind]} size={18} />
                     </SettingsRail.Lead>

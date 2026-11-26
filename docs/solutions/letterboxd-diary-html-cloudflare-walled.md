@@ -10,18 +10,18 @@ RSS window only (the documented scope reduction, not a blocker).
 
 ## What was verified (2026-07-21, app-like iOS UA, plain HTTP client)
 
-| URL | Result |
-|---|---|
-| `{username}/rss/` | **200**, ~100 `<item>` entries, real `tmdb:movieId` — the primary source, unchanged from `letterboxd-no-api-fallback.md` |
-| `{username}/films/diary/page/1/` | **302** → `/{username}/diary/` (the `films/diary` path is a redirect alias) |
-| `{username}/diary/` | **200**, 100 `diary-entry-row` nodes — first page parses fine |
-| `{username}/diary/page/2/` | **403** `<title>Just a moment...</title>` — **Cloudflare challenge** |
+| URL                              | Result                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `{username}/rss/`                | **200**, ~100 `<item>` entries, real `tmdb:movieId` — the primary source, unchanged from `letterboxd-no-api-fallback.md` |
+| `{username}/films/diary/page/1/` | **302** → `/{username}/diary/` (the `films/diary` path is a redirect alias)                                              |
+| `{username}/diary/`              | **200**, 100 `diary-entry-row` nodes — first page parses fine                                                            |
+| `{username}/diary/page/2/`       | **403** `<title>Just a moment...</title>` — **Cloudflare challenge**                                                     |
 
-So the *first* diary page is reachable, but **every deeper page is
+So the _first_ diary page is reachable, but **every deeper page is
 Cloudflare-challenged** for a non-browser client — exactly the interstitial that
 walls the per-film AJAX endpoints (`letterboxd-no-api-fallback.md`). Deep history
 is the only reason to scrape HTML at all (RSS already covers the recent window
-with *better* data — real TMDB ids the HTML rows lack), and it is precisely the
+with _better_ data — real TMDB ids the HTML rows lack), and it is precisely the
 paginated path that is blocked.
 
 ## Decision

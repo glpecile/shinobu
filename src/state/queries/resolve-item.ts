@@ -38,7 +38,9 @@ function findItemById(
   mediaType?: MediaType,
 ): NormalizedMediaItem | undefined {
   for (const group of groups) {
-    const found = group.find((item) => item?.id === id && (mediaType == null || item.type === mediaType));
+    const found = group.find(
+      (item) => item?.id === id && (mediaType == null || item.type === mediaType),
+    );
     if (found != null) return found;
   }
   return undefined;
@@ -51,17 +53,18 @@ function findItemById(
  * search cache above; both page shapes expose `rows[].items`). Trakt
  * identity is backfilled separately (`useTraktIdentityQuery`).
  */
-function findInTmdbCache(
-  queryClient: QueryClient,
-  id: string,
-): NormalizedMediaItem | undefined {
-  for (const [, data] of queryClient.getQueriesData<{ rows?: Array<{ items: NormalizedMediaItem[] }> }>({
+function findInTmdbCache(queryClient: QueryClient, id: string): NormalizedMediaItem | undefined {
+  for (const [, data] of queryClient.getQueriesData<{
+    rows?: Array<{ items: NormalizedMediaItem[] }>;
+  }>({
     queryKey: tmdbQueryKeys.all,
   })) {
     // The prefix also matches sibling queries with differently shaped rows. Skip rows without
     // items.
     for (const row of data?.rows ?? []) {
-      const found = Array.isArray(row?.items) ? row.items.find((item) => item?.id === id) : undefined;
+      const found = Array.isArray(row?.items)
+        ? row.items.find((item) => item?.id === id)
+        : undefined;
       if (found != null) return found;
     }
   }
@@ -80,7 +83,9 @@ function findInSeasonalPagesCache(
     queryKey: anilistQueryKeys.seasonalAnimePagesRoot(),
   })) {
     for (const page of data?.pages ?? []) {
-      const found = Array.isArray(page?.items) ? page.items.find((item) => item?.id === id) : undefined;
+      const found = Array.isArray(page?.items)
+        ? page.items.find((item) => item?.id === id)
+        : undefined;
       if (found != null) return found;
     }
   }
@@ -91,22 +96,29 @@ function findInSeasonalPagesCache(
  * Resolve a routed item from cached personal data first, then from the surfaces that can open
  * a card.
  */
-export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
+export function useResolvedMediaItem(
+  id: string,
+  mediaType?: MediaType,
+): {
   item: NormalizedMediaItem | undefined;
   isLoading: boolean;
 } {
   const feed = useUnifiedFeed();
   const queryClient = useQueryClient();
   const cachedItem =
-    findItemById(id, [
-      // Personal feed first: an item can appear in both a personal row and a
-      // public catalogue row, and the personal copy carries real progress.
-      feed.yourWatchlist,
-      feed.trendingMovies,
-      feed.trendingShows,
-      feed.seasonalAnime,
-      feed.animeMovies,
-    ], mediaType) ??
+    findItemById(
+      id,
+      [
+        // Personal feed first: an item can appear in both a personal row and a
+        // public catalogue row, and the personal copy carries real progress.
+        feed.yourWatchlist,
+        feed.trendingMovies,
+        feed.trendingShows,
+        feed.seasonalAnime,
+        feed.animeMovies,
+      ],
+      mediaType,
+    ) ??
     // Up Next can hold a card absent from the personal feed.
     findInUpNextCache(queryClient, id) ??
     findInCurrentMangaCache(queryClient, id) ??
@@ -132,64 +144,83 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   // A `hardcover.app/books/{slug}` link resolves its id first.
   const hardcoverSlug = resolvedItem == null ? parseHardcoverSlugItemId(id) : null;
   const hardcoverSlugId = useHardcoverBookIdBySlugQuery(hardcoverSlug);
-  const hardcoverBook = resolvedItem == null ? parseHardcoverItemId(id) ?? hardcoverSlugId.data ?? null : null;
+  const hardcoverBook =
+    resolvedItem == null ? (parseHardcoverItemId(id) ?? hardcoverSlugId.data ?? null) : null;
   const deepLinkDetails = useMediaDetailsQuery(
-    deepLink != null ? tmdbStub(id, deepLink) : hardcoverBook != null ? normalizeHardcoverBook({ id: hardcoverBook }, new Date(0).toISOString()) : undefined,
+    deepLink != null
+      ? tmdbStub(id, deepLink)
+      : hardcoverBook != null
+        ? normalizeHardcoverBook({ id: hardcoverBook }, new Date(0).toISOString())
+        : undefined,
   );
   // The AniList twin: an AniList-minted id is public data too, and the seasons
   // explorer is reachable signed out, so its links must survive a refresh.
   const anilistDeepLink = parseAniListItemId(id);
   const anilistDeepLinkItem = useAnimeByIdQuery(anilistDeepLink, mediaType ?? resolvedItem?.type);
   const simklDeepLink = resolvedItem == null ? parseSimklItemId(id) : null;
-  const simklLookup = useSimklLookupQuery(
-    simklDeepLink != null ? { simkl: simklDeepLink } : null,
-  );
+  const simklLookup = useSimklLookupQuery(simklDeepLink != null ? { simkl: simklDeepLink } : null);
   const simklAnimeIds = useSimklAnimeIdsQuery(
     simklLookup.data?.type === 'ANIME' ? simklDeepLink : null,
   );
-  const simklDeepLinkItem = simklLookup.data != null && simklAnimeIds.data != null
-    ? { ...simklLookup.data, externalIds: { ...simklAnimeIds.data, ...simklLookup.data.externalIds } }
-    : simklLookup.data ?? undefined;
+  const simklDeepLinkItem =
+    simklLookup.data != null && simklAnimeIds.data != null
+      ? {
+          ...simklLookup.data,
+          externalIds: { ...simklAnimeIds.data, ...simklLookup.data.externalIds },
+        }
+      : (simklLookup.data ?? undefined);
   // A tracker's anime (a Simkl library row) carries art and ids, no synopsis,
   // genres or other titles. Its AniList record describes the same cour, which
   // TMDB's whole-series record does not. `isFilm` stays the tracker's: it routes writes.
   const trackedAnime = resolvedItem ?? simklDeepLinkItem;
   const courRecord = useAnimeByIdQuery(
     anilistDeepLink == null && trackedAnime?.type === 'ANIME'
-      ? trackedAnime.externalIds.anilist ?? null
+      ? (trackedAnime.externalIds.anilist ?? null)
       : null,
   ).data;
-  const withCourRecord = trackedAnime != null && courRecord != null
-    ? mergeCatalogueMetadata(
-        { ...trackedAnime, titles: { ...courRecord.titles, ...trackedAnime.titles } },
-        courRecord,
-      )
-    : undefined;
+  const withCourRecord =
+    trackedAnime != null && courRecord != null
+      ? mergeCatalogueMetadata(
+          { ...trackedAnime, titles: { ...courRecord.titles, ...trackedAnime.titles } },
+          courRecord,
+        )
+      : undefined;
   const traktDeepLink = resolvedItem == null ? /^trakt-([1-9][0-9]*)$/.exec(id)?.[1] : undefined;
-  const traktDeepLinkItem = useTraktItemQuery(traktDeepLink == null ? null : Number(traktDeepLink), mediaType);
+  const traktDeepLinkItem = useTraktItemQuery(
+    traktDeepLink == null ? null : Number(traktDeepLink),
+    mediaType,
+  );
   const imdb = resolvedItem == null ? /^imdb-(tt[0-9]+)$/.exec(id)?.[1] : undefined;
   const letterboxd = /^letterboxd-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1];
   // Serializd media IDs are TMDB TV IDs, not private tracker identities.
   const serializd = resolvedItem == null ? /^serializd-([1-9][0-9]*)$/.exec(id)?.[1] : undefined;
   const film = useLetterboxdFilmQuery(letterboxd ?? null);
   const externalItem = useSimklLookupQuery(
-    imdb != null ? { imdb }
-      : serializd != null ? { tmdb: Number(serializd), type: 'show' } : null,
+    imdb != null ? { imdb } : serializd != null ? { tmdb: Number(serializd), type: 'show' } : null,
   );
-  const external = externalItem.data == null ? undefined : {
-    ...externalItem.data,
-    externalIds: {
-      ...externalItem.data.externalIds,
-      ...(imdb != null ? { imdb } : {}),
-      ...(serializd != null ? { tmdb: Number(serializd) } : {}),
-    },
-  };
+  const external =
+    externalItem.data == null
+      ? undefined
+      : {
+          ...externalItem.data,
+          externalIds: {
+            ...externalItem.data.externalIds,
+            ...(imdb != null ? { imdb } : {}),
+            ...(serializd != null ? { tmdb: Number(serializd) } : {}),
+          },
+        };
   const cachedOrFetched =
     (resolvedItem != null && film.data != null
-      ? { ...mergeCatalogueMetadata(resolvedItem, film.data), tmdbTvVariant: film.data.tmdbTvVariant }
+      ? {
+          ...mergeCatalogueMetadata(resolvedItem, film.data),
+          tmdbTvVariant: film.data.tmdbTvVariant,
+        }
       : resolvedItem != null && anilistDeepLinkItem.data != null
-        ? mergeCatalogueMetadata({ ...anilistDeepLinkItem.data, ...resolvedItem }, anilistDeepLinkItem.data)
-        : withCourRecord ?? resolvedItem) ??
+        ? mergeCatalogueMetadata(
+            { ...anilistDeepLinkItem.data, ...resolvedItem },
+            anilistDeepLinkItem.data,
+          )
+        : (withCourRecord ?? resolvedItem)) ??
     film.data ??
     deepLinkDetails.data?.catalogue ??
     anilistDeepLinkItem.data ??

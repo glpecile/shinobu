@@ -112,7 +112,9 @@ if (clip) await page.locator(clip).first().screenshot({ path: out });
 else await page.screenshot({ path: out });
 
 await browser.close();
-console.log(errors.length ? `CONSOLE ERRORS (${errors.length}):\n${errors.join('\n')}` : 'No console errors.');
+console.log(
+  errors.length ? `CONSOLE ERRORS (${errors.length}):\n${errors.join('\n')}` : 'No console errors.',
+);
 ```
 
 Run it:
@@ -132,7 +134,7 @@ provider-backed surface (home feed, diary, Up Next) renders the logged-out hero.
 The TMDB-keyed routes don't need a session — `EXPO_PUBLIC_TMDB_TOKEN` is a
 builder credential, not a user one — so `/person/<tmdbId>` and
 `/studio/<tmdbId>` render fully populated on a cold visit. Expect 403s in the
-console from the Trakt/AniList calls that *do* need a token; they're the
+console from the Trakt/AniList calls that _do_ need a token; they're the
 unconnected state, not a break.
 
 `/details/<id>` is the exception: it resolves its item out of the feed/search/
@@ -174,8 +176,8 @@ Attach to the PR by uploading both images in a comment (drag-drop in the GitHub 
 or `gh` with an image host). A clean side-by-side in the PR body:
 
 ```md
-| Before (`main`) | After |
-| --- | --- |
+| Before (`main`)       | After        |
+| --------------------- | ------------ |
 | ![before](before-url) | ![after-url) |
 ```
 

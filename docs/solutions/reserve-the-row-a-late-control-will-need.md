@@ -13,7 +13,7 @@ chips that query returned, since "does this wrap past one row" is only knowable
 after the row has been laid out. Mounting it when that answer arrives means
 mounting it two async hops after the surface it lives on is already on screen.
 
-Fading it in doesn't help. The shift is the *mount*, not the appearance — a
+Fading it in doesn't help. The shift is the _mount_, not the appearance — a
 fade just makes a moving button look intentional.
 
 ## Fix
@@ -46,7 +46,7 @@ one line. That band is invisible; the shove was not.
 
 ## The other half: the picker itself arriving late
 
-Same shift, one level up. With no recent tags *and* an empty field there are no
+Same shift, one level up. With no recent tags _and_ an empty field there are no
 suggestions at all, so the picker rendered nothing — and then the whole block
 (chip row + reserved toggle row) mounted when the query landed.
 
@@ -74,14 +74,14 @@ Placeholders are clipped to one row like real chips: four of them wrap on a
 narrow phone, and a two-row skeleton resolving into a one-row list is the same
 shift by another name.
 
-Residual, accepted: if the query returns *no* tags and there were no recents,
+Residual, accepted: if the query returns _no_ tags and there were no recents,
 the block unmounts and the sheet shrinks once. That's the standard skeleton
 contract, it only happens on a Letterboxd account with an empty tag vocabulary,
 and the alternative is a permanent empty band for everyone.
 
 ## Rule
 
-If a control's *existence* depends on an async answer — a query, a measurement,
+If a control's _existence_ depends on an async answer — a query, a measurement,
 a permission check — decide up front whether its space is reserved or its
 absence is load-bearing. Reserve when the surface around it is already
 interactive. Only let it mount late when it appears above the fold of

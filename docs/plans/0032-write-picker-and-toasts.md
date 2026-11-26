@@ -14,9 +14,9 @@ execution: code
 
 Plan 0031 shipped three write verbs — log, watchlist-add, watchlist-remove — and
 two of them report through an **inline block under a button**. The owner's
-verdict on PR A (#41) was blunt: *"this is bad in terms of UI … I want to open a
+verdict on PR A (#41) was blunt: _"this is bad in terms of UI … I want to open a
 modal to pick and choose where I watchlist … Showing details like where it got
-watchlisted is information we will start delegating to a toast library."*
+watchlisted is information we will start delegating to a toast library."_
 
 This plan replaces that surface. It is the **presentation layer of verbs whose
 semantics are settled** (`todos/015`, "Not in scope"): the fan-out, the
@@ -43,7 +43,7 @@ re-opened by a single line here.
 ## Owner decisions
 
 **2026-07-28** (`todos/015`): a target picker modal; icons on both CTAs
-(*shipped*); the watchlist CTA visually distinct from the log CTA (*shipped*);
+(_shipped_); the watchlist CTA visually distinct from the log CTA (_shipped_);
 results move to toasts; library is **`burnt`**; stop showing the persistent
 "Add on …" rows.
 
@@ -75,7 +75,7 @@ no reasoned skips — closes the sheet and fires a success toast. Anything else
 keeps the sheet open and renders the report there, links included.
 
 That split is the whole design, and it follows from one hard constraint:
-**a `burnt` toast can announce an outcome, but it can never *be* the recourse.**
+**a `burnt` toast can announce an outcome, but it can never _be_ the recourse.**
 
 ### Problem Frame
 
@@ -94,7 +94,7 @@ files, with two sets of copy. The picker exists once, inside a component whose
 other half is a `watchedAt` field and a tags input that the watchlist verb has
 no use for.
 
-The *permanence* of surface 1 is the owner's actual complaint: on a details
+The _permanence_ of surface 1 is the owner's actual complaint: on a details
 screen with Letterboxd connected on web, `Add on Letterboxd` renders **before
 any tap and forever**, as a standing apology for a provider that will never
 work there.
@@ -105,10 +105,10 @@ work there.
 
 - R1. Every write verb (log, watchlist-add, watchlist-remove) confirms through a
   sheet listing its applicable connected providers, **all selected by default**;
-  deselecting narrows the write. *This reverses plan 0031 KTD-8 by owner
-  decision.* It is **not** a reversal of the fan-out: the 2026-07-27 decision
-  ("never a per-provider action the user picks a target for") narrows to *never a
-  single-provider action the user must aim*, which a multi-select that starts
+  deselecting narrows the write. _This reverses plan 0031 KTD-8 by owner
+  decision._ It is **not** a reversal of the fan-out: the 2026-07-27 decision
+  ("never a per-provider action the user picks a target for") narrows to _never a
+  single-provider action the user must aim_, which a multi-select that starts
   fully selected preserves.
 - R2. The picker is **one component**, composed by all three verbs, not three
   sheets. `LogConfirmSheet` keeps its verb-specific fields (`WatchedAtField`,
@@ -202,7 +202,7 @@ work there.
   watchlist picker composes the same three plus a confirm pair.
 
   This mirrors plan 0031 KTD-4's argument exactly, and for the same reason: the
-  non-obvious content of these components is not the layout but the *rules* —
+  non-obvious content of these components is not the layout but the _rules_ —
   manual rows never affect `canConfirm`, reconcile-skips and reasoned skips
   render differently, `manualLinkForOutcome` has no home-URL fallback while
   upfront rows do. Re-deriving those in a second file is how a partial-failure
@@ -213,7 +213,7 @@ work there.
   lives.** `src/lib/toast.ts` exports the app's two verbs over `burnt`'s
   `toast()`. Rationale beyond the standing wrapper convention: `burnt`'s
   presentation is genuinely different per platform (iOS `SPIndicator`-style
-  banner, Android a toast, web Emil Kowalski's `sonner`), so the *one* place that
+  banner, Android a toast, web Emil Kowalski's `sonner`), so the _one_ place that
   should know about `preset`, `duration` and `haptic` is this file. Components
   say "this succeeded"; they never say "show a `done` preset from the top for
   2000ms".

@@ -59,7 +59,6 @@ describe('parseAnimeSeasonWindow', () => {
     });
     expect(parseAnimeSeasonWindow({}, fallback)).toEqual(fallback);
   });
-
 });
 
 describe('parseAnimeFormatFilter', () => {

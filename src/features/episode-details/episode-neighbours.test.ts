@@ -5,7 +5,14 @@ import { episodeNeighbours } from './episode-neighbours';
 const seasons = [
   { number: 0, title: 'Specials', episodes: [{ number: 1, title: 'OVA' }] },
   { number: 2, title: 'Season 2', episodes: [{ number: 1, title: '' }] },
-  { number: 1, title: 'Season 1', episodes: [{ number: 2, title: '' }, { number: 1, title: '' }] },
+  {
+    number: 1,
+    title: 'Season 1',
+    episodes: [
+      { number: 2, title: '' },
+      { number: 1, title: '' },
+    ],
+  },
 ];
 
 describe('episodeNeighbours', () => {

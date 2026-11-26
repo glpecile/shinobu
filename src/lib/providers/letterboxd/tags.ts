@@ -68,9 +68,7 @@ export function parseTagsPage(html: string): LetterboxdTag[] {
 
     // The count sits alone inside the detail span, wrapped in heavy \n\t
     // padding — `Number()` on the trimmed text, never a substring index.
-    const detail = /<span\b[^>]*\bclass="[^"]*\bdetail\b[^"]*"[^>]*>([\s\S]*?)<\/span>/.exec(
-      row,
-    );
+    const detail = /<span\b[^>]*\bclass="[^"]*\bdetail\b[^"]*"[^>]*>([\s\S]*?)<\/span>/.exec(row);
     const count = detail == null ? Number.NaN : Number(detail[1].trim());
 
     seen.add(name);
@@ -82,9 +80,7 @@ export function parseTagsPage(html: string): LetterboxdTag[] {
 }
 
 /** The member's public tag vocabulary, most-used first. */
-export function getUserTags(
-  deps: LetterboxdDeps,
-): Effect.Effect<LetterboxdTag[], ProviderError> {
+export function getUserTags(deps: LetterboxdDeps): Effect.Effect<LetterboxdTag[], ProviderError> {
   const username = deps.username;
   if (username == null || username === '') {
     return Effect.fail(

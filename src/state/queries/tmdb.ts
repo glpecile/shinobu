@@ -32,17 +32,14 @@ export const tmdbQueryKeys = {
   all: ['tmdb'] as const,
   personRoot: () => [...tmdbQueryKeys.all, 'person'] as const,
   person: (tmdbId: number) => [...tmdbQueryKeys.personRoot(), tmdbId] as const,
-  personSearch: (name: string) =>
-    [...tmdbQueryKeys.all, 'person-search', name] as const,
+  personSearch: (name: string) => [...tmdbQueryKeys.all, 'person-search', name] as const,
   studioRoot: () => [...tmdbQueryKeys.all, 'studio'] as const,
   studio: (tmdbId: number) => [...tmdbQueryKeys.studioRoot(), tmdbId] as const,
-  studioSearch: (name: string) =>
-    [...tmdbQueryKeys.all, 'studio-search', name] as const,
+  studioSearch: (name: string) => [...tmdbQueryKeys.all, 'studio-search', name] as const,
   /** Keyed by kind and id because TMDB numbers movies and TV in separate id spaces. */
   catalogue: (kind: 'movie' | 'tv', tmdbId: number) =>
     [...tmdbQueryKeys.all, 'catalogue', kind, tmdbId] as const,
-  seasons: (tmdbId: number) =>
-    [...tmdbQueryKeys.all, 'seasons', tmdbId] as const,
+  seasons: (tmdbId: number) => [...tmdbQueryKeys.all, 'seasons', tmdbId] as const,
   creditEpisodes: (creditId: string) =>
     [...tmdbQueryKeys.all, 'credit-episodes', creditId] as const,
   episode: (tmdbId: number, season: number, number: number) =>
@@ -62,10 +59,7 @@ export function useSuspenseTmdbPersonQuery(params: { tmdbId: number }) {
   });
 }
 
-export function useTmdbPersonQuery(params: {
-  tmdbId: number | undefined;
-  enabled?: boolean;
-}) {
+export function useTmdbPersonQuery(params: { tmdbId: number | undefined; enabled?: boolean }) {
   const { tmdbId } = params;
   return useQuery({
     queryKey: tmdbQueryKeys.person(tmdbId ?? 0),
@@ -88,14 +82,11 @@ export function useTmdbCreditEpisodesQuery(params: { creditId: string; enabled: 
   });
 }
 
-function episodeQueryOptions(params: {
-  tmdbId: number;
-  season: number;
-  number: number;
-}) {
+function episodeQueryOptions(params: { tmdbId: number; season: number; number: number }) {
   return {
     queryKey: tmdbQueryKeys.episode(params.tmdbId, params.season, params.number),
-    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getTvEpisode(tmdbDeps(), params), { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(getTvEpisode(tmdbDeps(), params), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
     gcTime: PERSON_STALE_TIME_MS,
   };
@@ -135,25 +126,19 @@ export function useTmdbEpisodeQuery(params: {
   });
 }
 
-export function useTmdbSearchQuery(params: {
-  query: string;
-  enabled?: boolean;
-}) {
+export function useTmdbSearchQuery(params: { query: string; enabled?: boolean }) {
   const query = params.query.trim();
   return useQuery({
     queryKey: tmdbQueryKeys.search(query),
-    queryFn: ({ signal }) => Effect.runPromise(searchTitlesFuzzy(tmdbDeps(), { query }), { signal }),
-    enabled:
-      params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
+    queryFn: ({ signal }) =>
+      Effect.runPromise(searchTitlesFuzzy(tmdbDeps(), { query }), { signal }),
+    enabled: params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
 }
 
-export function useTmdbPersonSearchQuery(params: {
-  query: string;
-  enabled: boolean;
-}) {
+export function useTmdbPersonSearchQuery(params: { query: string; enabled: boolean }) {
   const query = params.query.trim();
   return useQuery({
     queryKey: tmdbQueryKeys.personSearch(query),
@@ -164,10 +149,7 @@ export function useTmdbPersonSearchQuery(params: {
   });
 }
 
-export function useTmdbStudioSearchQuery(params: {
-  query: string;
-  enabled: boolean;
-}) {
+export function useTmdbStudioSearchQuery(params: { query: string; enabled: boolean }) {
   const query = params.query.trim();
   return useQuery({
     queryKey: tmdbQueryKeys.studioSearch(query),

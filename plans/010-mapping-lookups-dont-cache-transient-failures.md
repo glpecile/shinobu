@@ -50,6 +50,7 @@ function mappingMiss(error: unknown, signal: AbortSignal): null {
 
 It is used as `.catch((error) => mappingMiss(error, signal))` in these query
 functions. Run `grep -n "mappingMiss" src/state/queries/mapping.ts` and expect ~10 matches:
+
 - season layout (TMDB and Trakt legs, ~lines 330, 347), 1-hour cache
 - Trakt identity lookup (~427), forever
 - movie text search, Trakt and TMDB legs (~479, ~484), forever
@@ -60,25 +61,25 @@ functions. Run `grep -n "mappingMiss" src/state/queries/mapping.ts` and expect ~
 
 The exported wrappers and whether they already swallow rejections:
 
-| Wrapper | Catches today? |
-|---|---|
-| `cachedAniZipIds` | yes, `.catch(() => null)` (plan 002) |
-| `cachedTraktLookup` | yes, rethrows only `isCancelledError` |
-| `cachedSeasonLayout` | **no** |
-| `cachedTmdbTvIdByTvdb` | **no** |
-| `cachedTraktTextSearch` | **no** |
-| `cachedTmdbMovieIdByTitle` | **no** |
-| `cachedAniListFilmId` | **no** |
-| `cachedAniListPrequel` / `cachedAniListLaterCours` (via `cachedAniListNeighbours`) | **no** |
-| `cachedAniZipEpisodeMap` | **no** (its `queryFn` never rejects today) |
+| Wrapper                                                                            | Catches today?                             |
+| ---------------------------------------------------------------------------------- | ------------------------------------------ |
+| `cachedAniZipIds`                                                                  | yes, `.catch(() => null)` (plan 002)       |
+| `cachedTraktLookup`                                                                | yes, rethrows only `isCancelledError`      |
+| `cachedSeasonLayout`                                                               | **no**                                     |
+| `cachedTmdbTvIdByTvdb`                                                             | **no**                                     |
+| `cachedTraktTextSearch`                                                            | **no**                                     |
+| `cachedTmdbMovieIdByTitle`                                                         | **no**                                     |
+| `cachedAniListFilmId`                                                              | **no**                                     |
+| `cachedAniListPrequel` / `cachedAniListLaterCours` (via `cachedAniListNeighbours`) | **no**                                     |
+| `cachedAniZipEpisodeMap`                                                           | **no** (its `queryFn` never rejects today) |
 
 The exemplar to copy (`cachedTraktLookup`):
 
 ```ts
-  return queryClient.fetchQuery(identityLookupQuery(identityLookupVia(), params)).catch((error) => {
-    if (isCancelledError(error)) throw error;
-    return null;
-  });
+return queryClient.fetchQuery(identityLookupQuery(identityLookupVia(), params)).catch((error) => {
+  if (isCancelledError(error)) throw error;
+  return null;
+});
 ```
 
 Error classes (`src/lib/providers/errors.ts`): `ProviderRateLimitError`;
@@ -107,28 +108,30 @@ an unknown id with **404**. Read `fetchAniZipIds` in the same file and match it.
 
 Decided behaviour you must keep: the episode map and season layout keep their
 **1-hour** windows for real answers, including real misses. The comment above
-`EPISODE_MAP_STALE_MS` records that decision. This plan only stops *failures*
+`EPISODE_MAP_STALE_MS` records that decision. This plan only stops _failures_
 from being cached.
 
 ## Commands you will need
 
-| Purpose   | Command                                                    | Expected on success |
-|-----------|------------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                            | exit 0              |
-| Typecheck | `bun typecheck`                                            | exit 0              |
-| Tests     | `bun test src/state/queries/mapping.test.ts src/lib/providers/mapping/anizip.test.ts` | all pass |
-| All tests | `bun run test`                                             | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                                 | exit 0              |
+| Purpose   | Command                                                                               | Expected on success               |
+| --------- | ------------------------------------------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                                                       | exit 0                            |
+| Typecheck | `bun typecheck`                                                                       | exit 0                            |
+| Tests     | `bun test src/state/queries/mapping.test.ts src/lib/providers/mapping/anizip.test.ts` | all pass                          |
+| All tests | `bun run test`                                                                        | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                                                            | exit 0                            |
 
 ## Scope
 
 **In scope**:
+
 - `src/state/queries/mapping.ts`
 - `src/state/queries/mapping.test.ts`
 - `src/lib/providers/mapping/anizip.ts`: `fetchAniZipEpisodeMap` and its docblock only
 - `src/lib/providers/mapping/anizip.test.ts`: the `fetchAniZipEpisodeMap` describe only
 
 **Out of scope**:
+
 - Callers of the `cached*` wrappers (`features/log-media/enrich.ts`, `use-log-media.ts`, `state/queries/up-next.ts`, `media-details.ts`, …). The wrappers keep their "resolve `null`, reject only on cancel" contract.
 - `simklLookupQuery` and its shared Simkl cache (already rejects on failure).
 - `persist.ts`: no `BUSTER` bump is needed. Only the two ani.zip prefixes are persisted, and the episode map is time-boxed.
@@ -189,6 +192,7 @@ plus one use per wrapper.
 ### Step 3: Episode map — only 404 or "no episodes" is a miss
 
 Rewrite `fetchAniZipEpisodeMap` to match `fetchAniZipIds`:
+
 - remove the outer `try/catch`
 - `if (response.status === 404) return null;`
 - `if (!response.ok) throw new Error(\`ani.zip episodes ${response.status}\`);`

@@ -77,9 +77,7 @@ function personHeadshot(person: AniListPerson): string {
   return anilistImage(person.image);
 }
 
-function normalizeCast(
-  edges: AniListCharacterEdge[] | null,
-): NormalizedCastMember[] {
+function normalizeCast(edges: AniListCharacterEdge[] | null): NormalizedCastMember[] {
   const byPerson = new Map<string, { member: NormalizedCastMember; characters: string[] }>();
   for (const edge of edges ?? []) {
     const character = edge?.node?.name?.full ?? '';
@@ -117,18 +115,18 @@ export function normalizeCharacters(
   return (edges ?? []).flatMap((edge) =>
     edge?.node == null
       ? []
-      : [{
-          id: `anilist-character-${edge.node.id}`,
-          name: edge.node.name?.full ?? '',
-          role: edge.role == null ? '' : humanizeEnum(edge.role),
-          image: anilistImage(edge.node.image),
-        }],
+      : [
+          {
+            id: `anilist-character-${edge.node.id}`,
+            name: edge.node.name?.full ?? '',
+            role: edge.role == null ? '' : humanizeEnum(edge.role),
+            image: anilistImage(edge.node.image),
+          },
+        ],
   );
 }
 
-export function normalizeCrew(
-  edges: AniListStaffEdge[] | null,
-): NormalizedCrewMember[] {
+export function normalizeCrew(edges: AniListStaffEdge[] | null): NormalizedCrewMember[] {
   const byPerson = new Map<string, { member: NormalizedCrewMember; jobs: string[] }>();
   for (const edge of edges ?? []) {
     if (edge == null || edge.node == null) continue;
@@ -159,9 +157,7 @@ export function normalizeCrew(
   }));
 }
 
-function normalizeStudios(
-  nodes: AniListStudio[] | null,
-): NormalizedStudio[] {
+function normalizeStudios(nodes: AniListStudio[] | null): NormalizedStudio[] {
   const studios = new Map<string, NormalizedStudio>();
   for (const studio of nodes ?? []) {
     if (studio == null || studio.name == null || studio.name === '') continue;

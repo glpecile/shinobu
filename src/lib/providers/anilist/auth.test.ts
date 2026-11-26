@@ -17,17 +17,12 @@ describe('sessionFromImplicitRedirect', () => {
   });
 
   test('missing expires_in still yields a session without expiresAt', () => {
-    const session = sessionFromImplicitRedirect(
-      'shinobu://redirect#access_token=abc',
-      NOW,
-    );
+    const session = sessionFromImplicitRedirect('shinobu://redirect#access_token=abc', NOW);
     expect(session).toEqual({ accessToken: 'abc' });
   });
 
   test('a redirect without a fragment (denied) is null', () => {
     expect(sessionFromImplicitRedirect('shinobu://redirect', NOW)).toBeNull();
-    expect(
-      sessionFromImplicitRedirect('shinobu://redirect#error=access_denied', NOW),
-    ).toBeNull();
+    expect(sessionFromImplicitRedirect('shinobu://redirect#error=access_denied', NOW)).toBeNull();
   });
 });

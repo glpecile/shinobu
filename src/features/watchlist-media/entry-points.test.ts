@@ -15,9 +15,7 @@ describe('the want-to-watch row is on by default (plan 0031 R12)', () => {
   });
 
   test('the diary opts out — every row there is already watched', async () => {
-    expect(await source('src/app/(tabs)/diary.tsx')).toContain(
-      'canWatchlist={false}',
-    );
+    expect(await source('src/app/(tabs)/diary.tsx')).toContain('canWatchlist={false}');
   });
 
   test('search, feed, person and studio need no edit to get it', async () => {
@@ -41,9 +39,7 @@ describe('the remove row routes off gathered evidence (plan 0031 R35)', () => {
     expect(sheet).toContain('UnwatchlistMediaButton');
     expect(sheet).toContain('watchlistRemoval = null');
     expect(sheet).toContain('useCachedWatchlistRemoval');
-    const hook = await source(
-      'src/features/watchlist/use-cached-watchlist-removal.ts',
-    );
+    const hook = await source('src/features/watchlist/use-cached-watchlist-removal.ts');
     expect(hook).toContain('findWatchlistRemoval');
     expect(hook).toContain('watchlistQueryKeys.inputs()');
     expect(hook).not.toContain('useQuery(');

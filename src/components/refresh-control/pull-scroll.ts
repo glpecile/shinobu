@@ -12,6 +12,7 @@ export const PullScrollContext = createContext<PullScroll | null>(null);
 
 export function usePullScroll(): PullScroll {
   const scroll = use(PullScrollContext);
-  if (scroll == null) throw new Error('RefreshControl must be the refreshControl of a GestureScrollView or List.');
+  if (scroll == null)
+    throw new Error('RefreshControl must be the refreshControl of a GestureScrollView or List.');
   return scroll;
 }

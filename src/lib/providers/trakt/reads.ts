@@ -12,10 +12,7 @@ import type {
   ReleaseCalendar,
 } from '@/types/media';
 import type { ProviderError } from '@/lib/providers/errors';
-import type {
-  SeasonLayout,
-  SeasonSlot,
-} from '@/lib/providers/mapping/season-layout';
+import type { SeasonLayout, SeasonSlot } from '@/lib/providers/mapping/season-layout';
 import { isDateOnly } from '@/lib/time/has-aired';
 import { traktAuthedRequest, traktRequest } from './api';
 import { decodeSearchResponse } from './search-response';
@@ -80,9 +77,7 @@ export function searchMedia(
     ).pipe(Effect.flatMap(decodeSearchResponse));
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
-    return raw
-      .map((entry) => normalizeSearchResult(entry, nowIso))
-      .filter((item) => item != null);
+    return raw.map((entry) => normalizeSearchResult(entry, nowIso)).filter((item) => item != null);
   });
 }
 
@@ -108,9 +103,7 @@ export function lookupByExternalId(
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
     return (
-      raw
-        .map((entry) => normalizeSearchResult(entry, nowIso))
-        .find((item) => item != null) ?? null
+      raw.map((entry) => normalizeSearchResult(entry, nowIso)).find((item) => item != null) ?? null
     );
   });
 }
@@ -138,9 +131,7 @@ export function getMediaPeople(
     `/${traktSegment(params.type)}/${params.traktId}/people?extended=images`,
   ).pipe(
     Effect.map((response) => ({
-      cast: (response.cast ?? [])
-        .slice(0, params.castLimit ?? 15)
-        .map(normalizeCastEntry),
+      cast: (response.cast ?? []).slice(0, params.castLimit ?? 15).map(normalizeCastEntry),
       crew: normalizeCrew(response.crew, params.type).slice(0, params.crewLimit ?? 20),
     })),
   );
@@ -214,9 +205,7 @@ export interface TraktViewer {
  * the caller degrades to a plain "Connected" line, and a settings-shape change
  * must never take the card down with it.
  */
-export function getViewer(
-  deps: TraktDeps,
-): Effect.Effect<TraktViewer, ProviderError> {
+export function getViewer(deps: TraktDeps): Effect.Effect<TraktViewer, ProviderError> {
   return traktAuthedRequest<TraktSettingsResponse>(deps, '/users/settings').pipe(
     Effect.map((data) => {
       const avatar = data.user?.images?.avatar?.full;
@@ -286,9 +275,7 @@ export function getWatchlist(
     );
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
-    return rows
-      .map((row) => normalizeWatchlistRow(row, nowIso))
-      .filter((item) => item != null);
+    return rows.map((row) => normalizeWatchlistRow(row, nowIso)).filter((item) => item != null);
   });
 }
 
@@ -365,11 +352,7 @@ export function getShowSeasons(
   return traktRequest<TraktShowSeason[]>(
     deps,
     `/shows/${params.traktId}/seasons?extended=full,episodes`,
-  ).pipe(
-    Effect.map((seasons) =>
-      orderSeasons(seasons.map(normalizeSeason)),
-    ),
-  );
+  ).pipe(Effect.map((seasons) => orderSeasons(seasons.map(normalizeSeason))));
 }
 
 /**
@@ -496,9 +479,7 @@ export function getMyShowsCalendar(
       `/calendars/my/shows/${startDate}/${days}?extended=full,images`,
     );
     const nowIso = now.toISOString();
-    return raw
-      .map((row) => normalizeCalendarShowRow(row, nowIso))
-      .filter((entry) => entry != null);
+    return raw.map((row) => normalizeCalendarShowRow(row, nowIso)).filter((entry) => entry != null);
   });
 }
 

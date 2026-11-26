@@ -9,10 +9,7 @@ import {
 import { useMangaListQuery } from '@/state/queries/anilist';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import {
-  findWatchlistRemoval,
-  type WatchlistRemovalTarget,
-} from './find-watchlist-removal';
+import { findWatchlistRemoval, type WatchlistRemovalTarget } from './find-watchlist-removal';
 
 /** Cache-only (never fetches); returns `null` when disabled, cold, or unheld. */
 export function useCachedWatchlistRemoval(

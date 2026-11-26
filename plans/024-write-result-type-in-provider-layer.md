@@ -53,8 +53,7 @@ src/lib/providers/simkl/writes.ts:3:import type { ProviderWriteResult } from '@/
  * (plan 0031 R16): ...
  */
 export type ProviderWriteResult =
-  | { status: 'ok'; reason?: string }
-  | { status: 'skipped'; reason: string };
+  { status: 'ok'; reason?: string } | { status: 'skipped'; reason: string };
 ```
 
 `src/lib/providers/types.ts` already holds `ProviderId`, `WriteSupport` and the
@@ -62,11 +61,11 @@ capability types, so it is the natural home.
 
 ## Commands you will need
 
-| Purpose   | Command                         | Expected on success |
-|-----------|---------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile` | exit 0              |
-| Typecheck | `bun typecheck`                 | exit 0              |
-| Lint      | `bun lint`                      | exit 0              |
+| Purpose   | Command                         | Expected on success               |
+| --------- | ------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile` | exit 0                            |
+| Typecheck | `bun typecheck`                 | exit 0                            |
+| Lint      | `bun lint`                      | exit 0                            |
 | All tests | `bun run test`                  | all pass (never plain `bun test`) |
 
 ## Scope

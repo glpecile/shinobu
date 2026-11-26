@@ -42,17 +42,13 @@ export interface UrlEpisode {
  */
 function isMovieShaped(item: UrlItem): boolean {
   return (
-    item.type === 'MOVIE' ||
-    (item.type === 'ANIME' && animeEffectiveMovieTvType(item) === 'MOVIE')
+    item.type === 'MOVIE' || (item.type === 'ANIME' && animeEffectiveMovieTvType(item) === 'MOVIE')
   );
 }
 
 /** Whether `item` is show-shaped in Trakt's world: TV, or a non-film anime. */
 function isShowShaped(item: UrlItem): boolean {
-  return (
-    item.type === 'TV' ||
-    (item.type === 'ANIME' && animeEffectiveMovieTvType(item) === 'TV')
-  );
+  return item.type === 'TV' || (item.type === 'ANIME' && animeEffectiveMovieTvType(item) === 'TV');
 }
 
 function traktUrl(item: UrlItem, episode?: UrlEpisode): string | null {
@@ -199,9 +195,13 @@ export function ratingUrl(
     case Provider.Hardcover:
       return providerItemUrl(rating.source, item, episode);
     case 'imdb':
-      return item.externalIds.imdb == null ? null : `https://www.imdb.com/title/${item.externalIds.imdb}/`;
+      return item.externalIds.imdb == null
+        ? null
+        : `https://www.imdb.com/title/${item.externalIds.imdb}/`;
     case 'mal':
-      return item.externalIds.mal == null ? null : `https://myanimelist.net/anime/${item.externalIds.mal}`;
+      return item.externalIds.mal == null
+        ? null
+        : `https://myanimelist.net/anime/${item.externalIds.mal}`;
     case 'rottenTomatoes':
       return pageId == null ? null : `https://www.rottentomatoes.com/${pageId}`;
     case 'metacritic':
@@ -215,7 +215,10 @@ export function ratingUrl(
  * resolved staff id (plan 0035 R12), supplied by the caller because resolving
  * it is a network read and this module is pure.
  */
-export type UrlPerson = Pick<NormalizedPerson, 'name' | 'knownForDepartment' | 'hardcoverId' | 'hardcoverSlug'> & {
+export type UrlPerson = Pick<
+  NormalizedPerson,
+  'name' | 'knownForDepartment' | 'hardcoverId' | 'hardcoverSlug'
+> & {
   anilistId?: number;
 };
 
@@ -316,10 +319,7 @@ export function letterboxdStudioUrl(name: string): string | null {
  * react-native import, so `scripts/check-external-urls.ts` keeps loading this
  * module under plain bun.
  */
-export function providerPersonUrl(
-  providerId: ProviderId,
-  person: UrlPerson,
-): string | null {
+export function providerPersonUrl(providerId: ProviderId, person: UrlPerson): string | null {
   switch (providerId) {
     case Provider.Letterboxd:
       return letterboxdPersonUrl(person);
@@ -349,10 +349,7 @@ export interface UrlStudio {
  * resolved id and hides without it, exactly like `providerPersonUrl`. Trakt,
  * Serializd and Simkl have no addressable studio surface at all.
  */
-export function providerStudioUrl(
-  providerId: ProviderId,
-  studio: UrlStudio,
-): string | null {
+export function providerStudioUrl(providerId: ProviderId, studio: UrlStudio): string | null {
   switch (providerId) {
     case Provider.Letterboxd:
       return letterboxdStudioUrl(studio.name);

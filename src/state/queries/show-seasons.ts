@@ -14,8 +14,7 @@ import { tmdbDeps, tmdbQueryKeys } from './tmdb';
 import { traktDeps, traktQueryKeys } from './trakt';
 
 export type ShowSeasonsSource =
-  | { source: typeof Provider.Trakt; traktId: number }
-  | { source: 'tmdb'; tmdbId: number };
+  { source: typeof Provider.Trakt; traktId: number } | { source: 'tmdb'; tmdbId: number };
 
 export function seasonsSourceFor(
   item: Pick<NormalizedMediaItem, 'externalIds'>,
@@ -57,10 +56,7 @@ export function showSeasonsQueryOptions(source: ShowSeasonsSource): {
     ? {
         queryKey: traktQueryKeys.seasons(source.traktId),
         queryFn: ({ signal }): Promise<NormalizedSeason[]> =>
-          Effect.runPromise(
-            getShowSeasons(traktDeps(), { traktId: source.traktId }),
-            { signal },
-          ),
+          Effect.runPromise(getShowSeasons(traktDeps(), { traktId: source.traktId }), { signal }),
         ...cache,
       }
     : {

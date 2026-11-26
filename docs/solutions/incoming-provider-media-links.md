@@ -17,8 +17,7 @@ shinobu://open?url=https%3A%2F%2Fanilist.co%2Fanime%2F1
 
 ## Exact Letterboxd identity
 
-On 2026-10-02, a plain GET of `https://letterboxd.com/film/alien/` returned
-200. The body has `data-tmdb-type="movie" data-tmdb-id="348"`. Use this
+On 2026-10-02, a plain GET of `https://letterboxd.com/film/alien/` returned 200. The body has `data-tmdb-type="movie" data-tmdb-id="348"`. Use this
 identity for Simkl's public lookup. Do not guess the title from the slug or
 call the challenged `/json/` or image endpoints. The web proxy's allowlist
 remains unchanged; cold Letterboxd film resolution is native-only.

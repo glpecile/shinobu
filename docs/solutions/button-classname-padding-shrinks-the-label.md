@@ -19,7 +19,7 @@ in favour of these.
 elements**. `Button` keeps its drawn box on an inner `View` — a border on a
 pressto pressable is never drawn on Android
 (`pressto-border-not-drawn-on-android.md`) — and puts `className` on the outer
-pressable that *wraps* that box:
+pressable that _wraps_ that box:
 
 ```tsx
 <PresstableOpacity className={cn('rounded-md', className)}>   {/* px-8 lands here */}
@@ -31,7 +31,7 @@ each side and takes that width away from everything inside. The paddings add
 (32 + 20 = 52px a side) rather than one winning. Stacked with `EmptyFeed`'s own
 `px-8` and `EmptyStateTile`'s `px-8`, a 390px viewport left the label ~126px to
 lay out in — hence three lines. `tailwind-merge` semantics can't help: it only
-dedupes conflicting classes *within one string*.
+dedupes conflicting classes _within one string_.
 
 The same trap applies to `rounded-*`: a radius passed through `className`
 reaches the pressable, while the visible box keeps its own.

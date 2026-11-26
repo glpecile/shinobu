@@ -69,12 +69,10 @@ export function OverlayActionsButton({
         )}
         onPress={onPress}
       >
-        <View className={cn('items-center justify-center rounded-full', SIZE[size].box, SURFACE[tone])}>
-          <Ionicons
-            color={icon}
-            name="ellipsis-horizontal"
-            size={SIZE[size].icon}
-          />
+        <View
+          className={cn('items-center justify-center rounded-full', SIZE[size].box, SURFACE[tone])}
+        >
+          <Ionicons color={icon} name="ellipsis-horizontal" size={SIZE[size].icon} />
         </View>
       </PresstableOpacity>
     </AnimatedView>

@@ -27,7 +27,10 @@ const KEY_PREFIX = 'hiddenItem.';
 const LIST_PREFIX = 'hiddenList.';
 
 export function hideItem(item: HiddenItem & { type: MediaType }): void {
-  prefsStorage.set(`${KEY_PREFIX}${item.id}`, JSON.stringify({ title: item.title, type: item.type }));
+  prefsStorage.set(
+    `${KEY_PREFIX}${item.id}`,
+    JSON.stringify({ title: item.title, type: item.type }),
+  );
 }
 
 export function unhideItem(id: string): void {
@@ -45,7 +48,12 @@ export function unhideList(href: string): void {
 function parseItem(value: string): Omit<HiddenItem, 'id'> {
   try {
     const parsed: unknown = JSON.parse(value);
-    if (parsed && typeof parsed === 'object' && 'title' in parsed && typeof parsed.title === 'string') {
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'title' in parsed &&
+      typeof parsed.title === 'string'
+    ) {
       if ('type' in parsed) {
         switch (parsed.type) {
           case 'MOVIE':
@@ -142,8 +150,6 @@ export function visibleByIds<T>(
  * suspense-backed feed row applies it to its own query result, so screens
  * never re-filter.
  */
-export function useVisibleItems<T extends { id: string }>(
-  items: readonly T[],
-): readonly T[] {
+export function useVisibleItems<T extends { id: string }>(items: readonly T[]): readonly T[] {
   return visibleItems(items, useHiddenItems());
 }

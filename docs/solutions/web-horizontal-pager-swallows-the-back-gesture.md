@@ -9,7 +9,7 @@ wobble under the finger.
 
 `features/anime-seasons/season-pager.tsx` is a horizontal paging `ScrollView`.
 On web that is a real scroll container, so every horizontal wheel/trackpad delta
-over it is *its* scroll, never the page's — and the back gesture is the page's.
+over it is _its_ scroll, never the page's — and the back gesture is the page's.
 
 Trackpad paging had already been rejected (the browser free-scrolls for as long
 as the OS sends momentum, so a flick lands anywhere), and the pager compensated
@@ -46,8 +46,8 @@ vertical touch scrolling of the wall inside it with it.
 ## Verifying
 
 ```js
-getComputedStyle(pager).overflowX          // 'hidden'
-pager.dispatchEvent(wheelEvent).defaultPrevented  // false → the page gets it
+getComputedStyle(pager).overflowX; // 'hidden'
+pager.dispatchEvent(wheelEvent).defaultPrevented; // false → the page gets it
 // tapping Fall: scrollLeft 2080 → 3120, so programmatic paging still works
 ```
 

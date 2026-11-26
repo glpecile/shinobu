@@ -1,9 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-import {
-  watermarkProviders,
-  type DiaryProviderState,
-} from '@/features/diary/merge';
+import { watermarkProviders, type DiaryProviderState } from '@/features/diary/merge';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
@@ -18,11 +15,7 @@ export const diaryQueryKeys = {
   /** Keyed by the active provider set and the username-scoped sessions, so
    *  connecting a tracker or reconnecting as another account is a new query,
    *  never the prior account's entries. */
-  feed: (
-    providers: readonly ProviderId[],
-    letterboxdUsername: string,
-    serializdUsername: string,
-  ) =>
+  feed: (providers: readonly ProviderId[], letterboxdUsername: string, serializdUsername: string) =>
     [
       ...diaryQueryKeys.feedRoot(),
       providers.join(','),
@@ -133,11 +126,14 @@ export function findInDiaryCache(
   queryClient: QueryClient,
   id: string,
 ): NormalizedDiaryEntry['item'] | undefined {
-  for (const [, data] of queryClient.getQueriesData<{ pages?: DiaryPage[] }>({ queryKey: DIARY_QUERY_ROOT })) {
+  for (const [, data] of queryClient.getQueriesData<{ pages?: DiaryPage[] }>({
+    queryKey: DIARY_QUERY_ROOT,
+  })) {
     for (const page of Array.isArray(data?.pages) ? data.pages : []) {
       for (const slice of Object.values(page?.slices ?? {})) {
         const found = Array.isArray(slice?.entries)
-          ? slice.entries.find((entry) => entry?.item?.id === id) : undefined;
+          ? slice.entries.find((entry) => entry?.item?.id === id)
+          : undefined;
         if (found != null) return found.item;
       }
     }

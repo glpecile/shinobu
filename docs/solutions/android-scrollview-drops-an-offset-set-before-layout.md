@@ -16,14 +16,14 @@ client.
 `scrollTo` once the pages mount. On Android that offset can be lost for good:
 
 1. **View commands jump the mount queue.** `MountItemDispatcher` runs every
-   pending view command *before* the pending mount items
+   pending view command _before_ the pending mount items
    (`disableEarlyViewCommandExecution` defaults to false). A `scrollTo` issued
    while the commit that mounts the pages is still waiting for the UI thread
    executes first, against a content view with width 0.
 2. **The parked offset is only re-applied from the scroll view's own
    `onLayout`.** `ReactHorizontalScrollView.setPendingContentOffsets` stores it,
    but Fabric's `updateLayout` only calls `layout()` on views whose frame
-   changed. Mounting pages changes the *content container's* frame, not the
+   changed. Mounting pages changes the _content container's_ frame, not the
    scroll view's, so `onLayout` never runs again and the view stays at x = 0.
 3. **No JS event fires after the mount.** `onLayout` / `onContentSizeChange`
    are emitted from `ShadowTree::commit`, before the UI thread mounts — so the
@@ -47,11 +47,11 @@ Declare the offset, and create the scroll view together with its pages.
 with its four pages and `contentOffset={{ x: settled * width }}`, in one commit.
 Within a mount transaction the `Differentiator` emits a new subtree
 bottom-up (creates, then the children's mutations, then this level's inserts),
-so the content container is inserted and laid out *before* the scroll view's
+so the content container is inserted and laid out _before_ the scroll view's
 own first `layout()`. The prop, applied at creation, parks the offset; that
 first `onLayout` finds the content ready and applies it. No command, no retry.
 
-`contentOffset` tracks where the pager *rests*, so it only changes where the
+`contentOffset` tracks where the pager _rests_, so it only changes where the
 view already is (a swipe's momentum end, a jump) or on resize, and the prop
 diff never sends it mid-gesture or mid-tap. react-native-web ignores the prop;
 web keeps its layout-effect jump, which has no race there.

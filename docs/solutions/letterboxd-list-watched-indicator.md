@@ -16,14 +16,14 @@ exposes no cross-provider ids. This is stated in `normalize.ts`'s own comment.
 item against a provider snapshot by cross-provider id:
 
 - Trakt (`state/queries/trakt.ts:250`): matches on `entry.externalIds.trakt ===
-  traktId || entry.externalIds.tmdb === tmdbId`. With neither id, it returns
+traktId || entry.externalIds.tmdb === tmdbId`. With neither id, it returns
   null before looking.
 - Simkl (`state/queries/simkl.ts:131` `findLibraryEntry`): matches on
   `externalIds.simkl`, then `externalIds.tmdb` (movies + anime films search
   `movies[]` and the `isFilm` anime entries). With neither id, it returns null.
 
 So a list row can never show the eye as-shipped: the predicate has no id to
-match on. The details page for the *same* film shows "Watched · <date>" because
+match on. The details page for the _same_ film shows "Watched · <date>" because
 `/details/[id]` re-resolves the slug to a full TMDB catalogue record
 (`getMediaDetails`) carrying `tmdb`/`imdb`, and `useWatchedInfo` matches on
 that.
@@ -38,7 +38,7 @@ list-films `queryFn`, via `cachedTmdbMovieIdByTitle`
 1. **`pickMovieMatch` returns null rather than guess.** That is deliberate and
    load-bearing (docs/solutions/trakt-text-search-wrong-movie-match.md): a
    wrong `tmdb` id poisons the log fan-out. A list film that collides with a
-   same-title film gets *no* id, so no eye — correct behavior, indistinguishable
+   same-title film gets _no_ id, so no eye — correct behavior, indistinguishable
    from a bug to the user.
 2. **Recall is popularity-ranked.** TMDB `/search/movie` ranks by popularity;
    an obscure film can fall off page 1 before the year gate ever sees it. The
@@ -47,7 +47,7 @@ list-films `queryFn`, via `cachedTmdbMovieIdByTitle`
 3. **The cache hides both.** The list query is `staleTime: 15min` and the
    mapping is forever-cached in memory, so a miss is sticky for the session.
 
-The concrete case that surfaced this: *Vampire Hunter D* (1985) logged to
+The concrete case that surfaced this: _Vampire Hunter D_ (1985) logged to
 Simkl, showing "Watched" on its details page but no eye on the Horrortober VI
 list. The details page resolves a confident id; the list row's title+year
 search does not reliably produce the same one.

@@ -105,9 +105,7 @@ export function logToTrakt(
     };
   } else if (item.type === 'TV' || item.type === 'ANIME') {
     // Unify single vs batch: a single `episode` is a one-element batch.
-    const batch =
-      options.episodes ??
-      (options.episode != null ? [options.episode] : null);
+    const batch = options.episodes ?? (options.episode != null ? [options.episode] : null);
     if (batch == null || batch.length === 0) {
       return Effect.fail(
         new ProviderDecodeError({
@@ -224,8 +222,7 @@ export function addToTraktWatchlist(
     body,
   }).pipe(
     Effect.flatMap((result): Effect.Effect<ProviderWriteResult, ProviderError> => {
-      const notFound =
-        result.not_found.movies.length + result.not_found.shows.length > 0;
+      const notFound = result.not_found.movies.length + result.not_found.shows.length > 0;
       if (notFound) {
         return Effect.fail(
           new ProviderDecodeError({
@@ -280,14 +277,12 @@ export function removeFromTraktWatchlist(
     );
   }
 
-  return traktAuthedRequest<TraktSyncWatchlistRemoveResponse>(
-    deps,
-    '/sync/watchlist/remove',
-    { method: 'POST', body },
-  ).pipe(
+  return traktAuthedRequest<TraktSyncWatchlistRemoveResponse>(deps, '/sync/watchlist/remove', {
+    method: 'POST',
+    body,
+  }).pipe(
     Effect.flatMap((result): Effect.Effect<ProviderWriteResult, ProviderError> => {
-      const notFound =
-        result.not_found.movies.length + result.not_found.shows.length > 0;
+      const notFound = result.not_found.movies.length + result.not_found.shows.length > 0;
       if (notFound) {
         return Effect.fail(
           new ProviderDecodeError({

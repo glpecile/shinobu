@@ -6,19 +6,25 @@ const ORIGIN = 'https://shinobu.glpecile.xyz';
 
 test('relays only the three public catalogs without client credentials or upstream headers', async () => {
   for (const board of ['a', 'tv', 'co']) {
-    const response = await handleFourchanProxy(new Request(`${ORIGIN}/api/fourchan/${board}/catalog.json`, {
-      headers: { Authorization: 'Bearer secret', Cookie: 'session=secret', 'X-Evil': 'nope' },
-    }), async (url, init) => {
-      expect(url).toBe(`https://api.4chan.org/${board}/catalog.json`);
-      expect(init?.method).toBe('GET');
-      expect(init?.headers).toBeUndefined();
-      expect(init?.body).toBeUndefined();
-      expect(init?.redirect).toBe('manual');
-      expect(init?.signal).toBeInstanceOf(AbortSignal);
-      return Response.json([{ threads: [{ no: 291481805 }] }], { headers: {
-        'Set-Cookie': 'secret=1', 'Access-Control-Allow-Origin': '*',
-      } });
-    });
+    const response = await handleFourchanProxy(
+      new Request(`${ORIGIN}/api/fourchan/${board}/catalog.json`, {
+        headers: { Authorization: 'Bearer secret', Cookie: 'session=secret', 'X-Evil': 'nope' },
+      }),
+      async (url, init) => {
+        expect(url).toBe(`https://api.4chan.org/${board}/catalog.json`);
+        expect(init?.method).toBe('GET');
+        expect(init?.headers).toBeUndefined();
+        expect(init?.body).toBeUndefined();
+        expect(init?.redirect).toBe('manual');
+        expect(init?.signal).toBeInstanceOf(AbortSignal);
+        return Response.json([{ threads: [{ no: 291481805 }] }], {
+          headers: {
+            'Set-Cookie': 'secret=1',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      },
+    );
     expect(await response.json()).toEqual([{ threads: [{ no: 291481805 }] }]);
     expect(response.headers.get('content-type')).toContain('application/json');
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
@@ -43,10 +49,13 @@ test('rejects other paths, queries and methods before contacting upstream', asyn
     ['/api/fourchan/https://evil.test/catalog.json', 'GET', 404],
   ] as const) {
     let calls = 0;
-    const response = await handleFourchanProxy(new Request(`${ORIGIN}${path}`, { method }), async () => {
-      calls++;
-      return Response.json([]);
-    });
+    const response = await handleFourchanProxy(
+      new Request(`${ORIGIN}${path}`, { method }),
+      async () => {
+        calls++;
+        return Response.json([]);
+      },
+    );
     expect(response.status).toBe(status);
     expect(calls).toBe(0);
   }
@@ -60,10 +69,13 @@ test('upstream failures, redirects, HTML and invalid JSON are clean non-cacheabl
     [new Response('not JSON', { headers: { 'Content-Type': 'application/json' } }), 502],
     [null, 504],
   ] as const) {
-    const response = await handleFourchanProxy(new Request(`${ORIGIN}/api/fourchan/co/catalog.json`), async () => {
-      if (upstream == null) throw new Error('network unavailable');
-      return upstream;
-    });
+    const response = await handleFourchanProxy(
+      new Request(`${ORIGIN}/api/fourchan/co/catalog.json`),
+      async () => {
+        if (upstream == null) throw new Error('network unavailable');
+        return upstream;
+      },
+    );
     expect(response.status).toBe(status);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.json()).toHaveProperty('error');

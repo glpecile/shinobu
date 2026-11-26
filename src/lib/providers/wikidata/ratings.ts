@@ -38,7 +38,7 @@ function lookupPattern(lookup: WikidataLookup): string | null {
   }
   const mal = lookup.mal != null ? `?item wdt:P4086 "${lookup.mal}" .` : null;
   const anilist = lookup.anilist != null ? `?item wdt:P8729 "${lookup.anilist}" .` : null;
-  return mal != null && anilist != null ? `{ ${mal} } UNION { ${anilist} }` : mal ?? anilist;
+  return mal != null && anilist != null ? `{ ${mal} } UNION { ${anilist} }` : (mal ?? anilist);
 }
 
 const query = (pattern: string) => `SELECT ?score ?source ?method ?date ?rt ?mc WHERE {
@@ -58,14 +58,16 @@ const Value = Schema.optional(Schema.Struct({ value: Schema.String }));
 
 const SparqlResults = Schema.Struct({
   results: Schema.Struct({
-    bindings: Schema.Array(Schema.Struct({
-      score: Value,
-      source: Value,
-      method: Value,
-      date: Value,
-      rt: Value,
-      mc: Value,
-    })),
+    bindings: Schema.Array(
+      Schema.Struct({
+        score: Value,
+        source: Value,
+        method: Value,
+        date: Value,
+        rt: Value,
+        mc: Value,
+      }),
+    ),
   }),
 });
 
@@ -103,7 +105,8 @@ function normalize(bindings: readonly Binding[]): NormalizedRating[] {
     if (score == null) continue;
     const asOf = binding.date?.value.slice(0, 10);
     const current = newest.get(score.source);
-    if (current != null && (asOf == null || (current.asOf != null && current.asOf >= asOf))) continue;
+    if (current != null && (asOf == null || (current.asOf != null && current.asOf >= asOf)))
+      continue;
     const pageId = score.source === 'rottenTomatoes' ? binding.rt?.value : binding.mc?.value;
     newest.set(score.source, {
       ...score,
@@ -126,22 +129,30 @@ export const getWikidataRatings = Effect.fnUntraced(function* (
   const pattern = lookupPattern(lookup);
   if (pattern == null) return [];
   const response = yield* Effect.tryPromise({
-    try: (signal) => deps.fetch(`${SPARQL_URL}?${new URLSearchParams({ query: query(pattern) }).toString()}`, {
-      signal,
-      headers: { Accept: 'application/sparql-results+json', 'Api-User-Agent': API_USER_AGENT },
-    }),
+    try: (signal) =>
+      deps.fetch(`${SPARQL_URL}?${new URLSearchParams({ query: query(pattern) }).toString()}`, {
+        signal,
+        headers: { Accept: 'application/sparql-results+json', 'Api-User-Agent': API_USER_AGENT },
+      }),
     catch: (cause) => new ProviderNetworkError({ provider: 'wikidata', cause }),
   });
   if (response.status === 429) return yield* new ProviderRateLimitError({ provider: 'wikidata' });
   if (!response.ok) {
-    return yield* new ProviderNetworkError({ provider: 'wikidata', status: response.status, cause: new Error('SPARQL query failed') });
+    return yield* new ProviderNetworkError({
+      provider: 'wikidata',
+      status: response.status,
+      cause: new Error('SPARQL query failed'),
+    });
   }
   const body = yield* Effect.tryPromise({
     try: () => response.json(),
-    catch: () => new ProviderDecodeError({ provider: 'wikidata', detail: 'unreadable SPARQL response' }),
+    catch: () =>
+      new ProviderDecodeError({ provider: 'wikidata', detail: 'unreadable SPARQL response' }),
   });
   const results = yield* Schema.decodeUnknownEffect(SparqlResults)(body).pipe(
-    Effect.mapError(() => new ProviderDecodeError({ provider: 'wikidata', detail: 'unexpected SPARQL response' })),
+    Effect.mapError(
+      () => new ProviderDecodeError({ provider: 'wikidata', detail: 'unexpected SPARQL response' }),
+    ),
   );
   return normalize(results.results.bindings);
 });

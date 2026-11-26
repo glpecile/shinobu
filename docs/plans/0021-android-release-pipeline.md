@@ -166,7 +166,7 @@ Research already gathered (write-up in U6 sources these, verifying against curre
 - `bun test`, `bun typecheck`, `bun lint` — green (bump script covered).
 - Local: double prebuild idempotent; fallback debug-signed `assembleRelease` succeeds.
 - CI: `workflow_dispatch` dry-run green from the PR branch, producing both APKs + checksums as workflow artifacts, without any secret configured.
-- No secret material anywhere in the diff (review grep: `store.*password|keystore` outside docs/plugin property *names*).
+- No secret material anywhere in the diff (review grep: `store.*password|keystore` outside docs/plugin property _names_).
 - The signed path is verified by the owner on the first real tag — the plan is done without it (see Tail ownership).
 
 ## Definition of Done

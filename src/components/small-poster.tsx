@@ -8,7 +8,11 @@ const SIZE = {
   lg: 'w-14 h-21 rounded',
 };
 
-export function SmallPoster({ uri, recyclingKey, size }: {
+export function SmallPoster({
+  uri,
+  recyclingKey,
+  size,
+}: {
   uri: string;
   recyclingKey: string;
   size: keyof typeof SIZE;

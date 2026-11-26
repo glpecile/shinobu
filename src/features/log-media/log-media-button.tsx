@@ -4,14 +4,8 @@ import { Button } from '@/components/button';
 import { useCatchUpControls, useQuickLogBusy } from '@/features/log-media/session/state';
 import { Provider } from '@/lib/providers/types';
 import { hasAired } from '@/lib/time/has-aired';
-import {
-  useAniListEntryStateQuery,
-  useAniListEpisodesQuery,
-} from '@/state/queries/anilist';
-import {
-  useShowSeasonsQuery,
-  useShowSeasonsSource,
-} from '@/state/queries/show-seasons';
+import { useAniListEntryStateQuery, useAniListEpisodesQuery } from '@/state/queries/anilist';
+import { useShowSeasonsQuery, useShowSeasonsSource } from '@/state/queries/show-seasons';
 import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
 import { useFilmPlaysQuery } from '@/state/queries/use-diary-feed';
 import { useWatchedInfo } from '@/state/queries/watched-info';
@@ -33,11 +27,20 @@ import { useSeriesNextEpisode } from './use-series-next-episode';
  * Pass `onOpenRequest` when rendered inside a sheet to swap inline: a second
  * native bottom sheet cannot co-present over an open one.
  */
-export function LogMediaButton(props: { item: NormalizedMediaItem; onOpenRequest?: (request: LogRequest) => void }) {
+export function LogMediaButton(props: {
+  item: NormalizedMediaItem;
+  onOpenRequest?: (request: LogRequest) => void;
+}) {
   return props.item.type === 'BOOK' ? <LogBookButton {...props} /> : <LogWatchButton {...props} />;
 }
 
-function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; onOpenRequest?: (request: LogRequest) => void }) {
+function LogWatchButton({
+  item,
+  onOpenRequest,
+}: {
+  item: NormalizedMediaItem;
+  onOpenRequest?: (request: LogRequest) => void;
+}) {
   const connected = useConnectedProviders();
   const { openLog } = useCatchUpControls();
   const busy = useQuickLogBusy(item.id);
@@ -63,17 +66,14 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
   });
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
 
-  const isFilmLike =
-    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  const isFilmLike = item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const isSeries = item.type === 'TV';
-  const seriesNext =
-    seriesNextState.status === 'ready' ? seriesNextState.episode : null;
+  const seriesNext = seriesNextState.status === 'ready' ? seriesNextState.episode : null;
   // The season layout is the only thing that tells "caught up, more coming"
   // from "finished" (docs/solutions/trackers-cant-tell-caught-up-from-finished.md),
   // so it is read only in the two states whose copy depends on it.
   const seasonsSource = useShowSeasonsSource(item);
-  const upcomingNeeded =
-    isSeries && (seriesNext?.rewatch === true || seriesNext?.unaired === true);
+  const upcomingNeeded = isSeries && (seriesNext?.rewatch === true || seriesNext?.unaired === true);
   const seasons = useShowSeasonsQuery(upcomingNeeded ? seasonsSource : null);
   const upcoming = upcomingNeeded ? firstUnairedEpisode(seasons.data) : null;
   if (
@@ -86,11 +86,7 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
 
   const seriesLabel = seriesNext == null ? '' : seriesEpisodeLabel(seriesNext);
   const seriesAction =
-    seriesNext == null
-      ? 'Log next episode'
-      : seriesNext.rewatch
-        ? 'Rewatch'
-        : `Log ${seriesLabel}`;
+    seriesNext == null ? 'Log next episode' : seriesNext.rewatch ? 'Rewatch' : `Log ${seriesLabel}`;
   const seriesUnaired = seriesNext?.unaired === true;
 
   const anilistStatus = anilistEntry.data?.entry?.status;
@@ -112,9 +108,7 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
       ? { from: nextEpisode, ...(total != null ? { total } : {}) }
       : null;
 
-  const episodeData = anilistEpisodes.data?.episodes.find(
-    (e) => e.number === nextEpisode,
-  );
+  const episodeData = anilistEpisodes.data?.episodes.find((e) => e.number === nextEpisode);
   const nextEpisodeAired =
     !isAnimeSeries ||
     (item.externalIds.anilist == null
@@ -135,8 +129,7 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
 
   const releaseStatus = isFilmLike ? filmReleaseStatus(item) : 'released';
   const released = releaseStatus === 'released';
-  const seriesEpisodeAired =
-    !isSeries || (seriesNext?.aired === true && upcoming == null);
+  const seriesEpisodeAired = !isSeries || (seriesNext?.aired === true && upcoming == null);
   const mangaProgressKnown = !isManga || anilistEntry.data !== undefined;
   const canLog = nextEpisodeAired && released && seriesEpisodeAired && mangaProgressKnown;
 
@@ -167,7 +160,9 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
         ? null
         : unairedEpisodeLabel(`Episode ${nextEpisode}`, episodeData?.firstAired)
       : isManga
-        ? !mangaProgressKnown && anilistEntry.isError ? 'Couldn’t load your progress' : null
+        ? !mangaProgressKnown && anilistEntry.isError
+          ? 'Couldn’t load your progress'
+          : null
         : releaseStatus === 'unknown'
           ? 'No release date yet'
           : releaseStatus === 'unreleased'
@@ -184,8 +179,8 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
             ? `You’ve read every chapter of “${item.title}” — this starts a reread at chapter 1.`
             : `You’ve watched every episode of “${item.title}” — this starts a rewatch at episode 1.`
           : isFilmLike && isRewatch
-          ? `“${item.title}” is already in your history — this logs another watch.`
-          : `“${item.title}”`;
+            ? `“${item.title}” is already in your history — this logs another watch.`
+            : `“${item.title}”`;
 
   return (
     <View className="mb-3">
@@ -198,12 +193,15 @@ function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; on
           seriesNextState.status === 'loading' ||
           (upcomingNeeded && seasons.isLoading) ||
           simklAnimeEntry.isLoading ||
-          (isManga && anilistEntry.isFetching) || busy
+          (isManga && anilistEntry.isFetching) ||
+          busy
         }
         morphLabel
         onPress={() => {
           const request: LogRequest = {
-            item, title: action, description,
+            item,
+            title: action,
+            description,
             ...(isAnimeSeries || isManga ? { entryEpisodes: [nextEpisode] } : {}),
             ...(chapterRange != null ? { chapterRange } : {}),
             ...(isSeries && seriesNext != null

@@ -1,9 +1,6 @@
 import type { ProviderSession } from '@/types/session';
 
-export function sessionFromImplicitRedirect(
-  url: string,
-  nowMs: number,
-): ProviderSession | null {
+export function sessionFromImplicitRedirect(url: string, nowMs: number): ProviderSession | null {
   const hashIndex = url.indexOf('#');
   if (hashIndex === -1) return null;
 
@@ -14,8 +11,6 @@ export function sessionFromImplicitRedirect(
   const expiresIn = Number(params.get('expires_in'));
   return {
     accessToken,
-    ...(Number.isFinite(expiresIn) && expiresIn > 0
-      ? { expiresAt: nowMs + expiresIn * 1000 }
-      : {}),
+    ...(Number.isFinite(expiresIn) && expiresIn > 0 ? { expiresAt: nowMs + expiresIn * 1000 } : {}),
   };
 }

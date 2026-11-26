@@ -47,9 +47,7 @@ function show(
   };
 }
 
-function personResponse(
-  overrides: Partial<TmdbPersonResponse> = {},
-): TmdbPersonResponse {
+function personResponse(overrides: Partial<TmdbPersonResponse> = {}): TmdbPersonResponse {
   return { id: 500, name: 'Tom Cruise', ...overrides };
 }
 
@@ -102,8 +100,18 @@ describe('tvCredits', () => {
         combined_credits: {
           cast: [movie(1, 'Top Gun', '1986-05-16', { credit_id: 'm1' })],
           crew: [
-            show(1396, 'Breaking Bad', '2008-01-20', { job: 'Director', department: 'Directing', credit_id: 'd1', episode_count: 5 }),
-            show(1396, 'Breaking Bad', '2008-01-20', { job: 'Creator', department: 'Creator', credit_id: 'c1', episode_count: null }),
+            show(1396, 'Breaking Bad', '2008-01-20', {
+              job: 'Director',
+              department: 'Directing',
+              credit_id: 'd1',
+              episode_count: 5,
+            }),
+            show(1396, 'Breaking Bad', '2008-01-20', {
+              job: 'Creator',
+              department: 'Creator',
+              credit_id: 'c1',
+              episode_count: null,
+            }),
           ],
         },
       }),
@@ -143,9 +151,7 @@ describe('normalizeCreditRows', () => {
       personResponse({
         combined_credits: {
           cast: [movie(1, 'Top Gun', '1986-05-16')],
-          crew: [
-            movie(2, 'Mission', '1996-05-22', { department: 'Production', job: 'Producer' }),
-          ],
+          crew: [movie(2, 'Mission', '1996-05-22', { department: 'Production', job: 'Producer' })],
         },
       }),
       NOW,
@@ -181,11 +187,7 @@ describe('normalizeCreditRows', () => {
       NOW,
     );
 
-    expect(row.items.map((item) => item.title)).toEqual([
-      'Unscheduled',
-      'New',
-      'Old',
-    ]);
+    expect(row.items.map((item) => item.title)).toEqual(['Unscheduled', 'New', 'Old']);
   });
 
   test('dedupes a show credited once per character within a row', () => {
@@ -216,7 +218,6 @@ describe('normalizeCreditRows', () => {
    * position among the unreleased work.
    */
   describe('release years in the subtitle', () => {
-
     test('an undated credit shows the role alone — no year, no separator', () => {
       const [row] = normalizeCreditRows(
         personResponse({
@@ -296,10 +297,7 @@ describe('normalizeCreditRows', () => {
       personResponse({
         known_for_department: 'Directing',
         combined_credits: {
-          cast: [
-            movie(1, 'Cameo A', '2001-01-01'),
-            movie(2, 'Cameo B', '2002-01-01'),
-          ],
+          cast: [movie(1, 'Cameo A', '2001-01-01'), movie(2, 'Cameo B', '2002-01-01')],
           crew: [movie(3, 'The Film', '2003-01-01', { department: 'Directing', job: 'Director' })],
         },
       }),
@@ -372,11 +370,7 @@ describe('normalizePersonSearch', () => {
   test('drops nameless results and keeps ids', () => {
     expect(
       normalizePersonSearch({
-        results: [
-          { id: 1, name: 'A' },
-          { id: 2, name: '' },
-          { id: 3 },
-        ],
+        results: [{ id: 1, name: 'A' }, { id: 2, name: '' }, { id: 3 }],
       }),
     ).toEqual([{ tmdbId: 1, name: 'A', image: '' }]);
   });
@@ -404,14 +398,23 @@ describe('normalizeMovieCatalogue', () => {
         release_date: '1999-03-30',
         runtime: 136,
         vote_average: 8.2,
-        genres: [{ id: 1, name: 'Action' }, { id: 2, name: '' }],
+        genres: [
+          { id: 1, name: 'Action' },
+          { id: 2, name: '' },
+        ],
         production_companies: [
           { id: 79, name: 'Village Roadshow Pictures', logo_path: '/vr.png' },
           { id: 80, name: '' },
         ],
         credits: {
           cast: [
-            { id: 6384, name: 'Keanu Reeves', character: 'Neo', order: 0, profile_path: '/keanu.jpg' },
+            {
+              id: 6384,
+              name: 'Keanu Reeves',
+              character: 'Neo',
+              order: 0,
+              profile_path: '/keanu.jpg',
+            },
           ],
           crew: [
             { id: 2, name: 'Producer', department: 'Production', job: 'Producer' },
@@ -511,7 +514,12 @@ describe('normalizeTvCatalogue', () => {
             },
           ],
           crew: [
-            { id: 5, name: 'Producer', department: 'Production', jobs: [{ job: 'Executive Producer' }] },
+            {
+              id: 5,
+              name: 'Producer',
+              department: 'Production',
+              jobs: [{ job: 'Executive Producer' }],
+            },
             { id: 6, name: 'Director', department: 'Directing', jobs: [{ job: 'Director' }] },
             { id: 8, name: 'Writer', department: 'Writing', jobs: [{ job: 'Writer' }] },
             { id: 7, name: 'Christian Linke', department: 'Writing', jobs: [{ job: 'Writer' }] },
@@ -652,7 +660,6 @@ const theatrical = (iso: string, date: string) => ({
 });
 
 describe('earliestReleaseDates', () => {
-
   test('picks the earliest digital date across regions', () => {
     expect(
       earliestReleaseDates([
@@ -711,9 +718,7 @@ describe('earliestReleaseDates', () => {
     expect(earliestReleaseDates(undefined)).toBeNull();
     expect(earliestReleaseDates(null)).toBeNull();
     expect(earliestReleaseDates([])).toBeNull();
-    expect(
-      earliestReleaseDates([{ iso_3166_1: 'US', release_dates: null }]),
-    ).toBeNull();
+    expect(earliestReleaseDates([{ iso_3166_1: 'US', release_dates: null }])).toBeNull();
   });
 });
 
@@ -726,8 +731,14 @@ describe('normalizeMovieCatalogue release dates', () => {
         release_date: '2026-01-30',
         release_dates: {
           results: [
-            { iso_3166_1: 'US', release_dates: [{ type: 3, release_date: '2026-01-30T00:00:00.000Z' }] },
-            { iso_3166_1: 'US', release_dates: [{ type: 4, release_date: '2026-03-11T00:00:00.000Z' }] },
+            {
+              iso_3166_1: 'US',
+              release_dates: [{ type: 3, release_date: '2026-01-30T00:00:00.000Z' }],
+            },
+            {
+              iso_3166_1: 'US',
+              release_dates: [{ type: 4, release_date: '2026-03-11T00:00:00.000Z' }],
+            },
           ],
         },
       },

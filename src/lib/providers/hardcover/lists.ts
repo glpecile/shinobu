@@ -70,7 +70,10 @@ export const HardcoverListRow = Schema.Struct({
   previews: Schema.Array(Schema.Struct({ book: HardcoverBook })),
 });
 
-export function normalizeHardcoverList(row: typeof HardcoverListRow.Type, nowIso: string): HardcoverList {
+export function normalizeHardcoverList(
+  row: typeof HardcoverListRow.Type,
+  nowIso: string,
+): HardcoverList {
   return {
     id: String(row.id),
     title: row.name,
@@ -98,7 +101,9 @@ export function hardcoverListsUrl(owner: string): string {
 function decode<S extends Schema.Constraint>(schema: S, detail: string) {
   return (data: unknown) =>
     Schema.decodeUnknownEffect(schema)(data).pipe(
-      Effect.mapError((error) => new ProviderDecodeError({ provider, detail: `${detail}: ${error.message}` })),
+      Effect.mapError(
+        (error) => new ProviderDecodeError({ provider, detail: `${detail}: ${error.message}` }),
+      ),
     );
 }
 
@@ -109,9 +114,11 @@ const createdData = Schema.Struct({
 });
 
 const likedData = Schema.Struct({
-  me: Schema.Array(Schema.Struct({
-    followed_lists: Schema.Array(Schema.Struct({ list: HardcoverListRow })),
-  })),
+  me: Schema.Array(
+    Schema.Struct({
+      followed_lists: Schema.Array(Schema.Struct({ list: HardcoverListRow })),
+    }),
+  ),
 });
 
 const readRows = Effect.fnUntraced(function* (
@@ -148,21 +155,29 @@ export const getHardcoverLists = Effect.fnUntraced(function* (
 const LIST_PAGE_SIZE = 100;
 
 const listData = Schema.Struct({
-  lists: Schema.Array(Schema.Struct({
-    ...HardcoverListRow.fields,
-    list_books: Schema.Array(Schema.Struct({
-      id: Schema.Number,
-      position: optionalNullable(Schema.Number),
-      book: Schema.Struct({
-        ...hardcoverBookFields,
-        contributions: optionalNullable(Schema.Array(Schema.Struct({
-          contribution: optionalNullable(Schema.String),
-          author: optionalNullable(Schema.Struct({ name: Schema.String })),
-        }))),
-        user_books: optionalNullable(Schema.Array(Schema.Struct({ status_id: Schema.Number }))),
-      }),
-    })),
-  })),
+  lists: Schema.Array(
+    Schema.Struct({
+      ...HardcoverListRow.fields,
+      list_books: Schema.Array(
+        Schema.Struct({
+          id: Schema.Number,
+          position: optionalNullable(Schema.Number),
+          book: Schema.Struct({
+            ...hardcoverBookFields,
+            contributions: optionalNullable(
+              Schema.Array(
+                Schema.Struct({
+                  contribution: optionalNullable(Schema.String),
+                  author: optionalNullable(Schema.Struct({ name: Schema.String })),
+                }),
+              ),
+            ),
+            user_books: optionalNullable(Schema.Array(Schema.Struct({ status_id: Schema.Number }))),
+          }),
+        }),
+      ),
+    }),
+  ),
 });
 
 /** `page` is 1-based (100 books/page). Fails with 404 if missing or private. */
@@ -208,16 +223,22 @@ export const getHardcoverList = Effect.fnUntraced(function* (
   return {
     list: normalizeHardcoverList(row, nowIso),
     mine: row.user_id === params.viewerId,
-    entries: row.list_books.map(({ id, position, book: { contributions, user_books, ...book } }) => ({
-      id: String(id),
-      position: position ?? null,
-      item: normalizeHardcoverBook(book, nowIso),
-      // An empty role is the book's author, as on the book page.
-      authors: [...new Set((contributions ?? []).flatMap(({ contribution, author }) =>
-        author != null && (contribution || 'Author') === 'Author' ? [author.name] : [],
-      ))],
-      statusId: user_books?.[0]?.status_id ?? null,
-    })),
+    entries: row.list_books.map(
+      ({ id, position, book: { contributions, user_books, ...book } }) => ({
+        id: String(id),
+        position: position ?? null,
+        item: normalizeHardcoverBook(book, nowIso),
+        // An empty role is the book's author, as on the book page.
+        authors: [
+          ...new Set(
+            (contributions ?? []).flatMap(({ contribution, author }) =>
+              author != null && (contribution || 'Author') === 'Author' ? [author.name] : [],
+            ),
+          ),
+        ],
+        statusId: user_books?.[0]?.status_id ?? null,
+      }),
+    ),
     hasNextPage: row.list_books.length === LIST_PAGE_SIZE,
   };
 });

@@ -286,7 +286,6 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     };
     expect(normalizeCurrentAnimeEntry(entry, NOW_ISO).status).toBe('CURRENT');
   });
-
 });
 
 describe('normalizeCurrentMangaEntry (plan 0117 M3)', () => {
@@ -297,7 +296,10 @@ describe('normalizeCurrentMangaEntry (plan 0117 M3)', () => {
     expect(status('REPEATING')).toBe('REPEATING');
     expect(status('PLANNING')).toBe('PLANNING');
     expect(status(undefined)).toBe('CURRENT');
-    expect(normalizeCurrentMangaEntry({ id: 9002, status: 'CURRENT', progress: 12, media }, NOW_ISO).entryId).toBe(9002);
+    expect(
+      normalizeCurrentMangaEntry({ id: 9002, status: 'CURRENT', progress: 12, media }, NOW_ISO)
+        .entryId,
+    ).toBe(9002);
   });
 });
 

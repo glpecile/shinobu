@@ -6,14 +6,24 @@ GlobalRegistrator.register();
 afterAll(() => GlobalRegistrator.unregister());
 const { act, render } = await import('@testing-library/react');
 
-mock.module('react-native', () => ({ View: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
+mock.module('react-native', () => ({
+  View: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
 mock.module('@/components/animated-view', () => ({
-  AnimatedView: ({ children, onCSSAnimationStart, ...props }: {
+  AnimatedView: ({
+    children,
+    onCSSAnimationStart,
+    ...props
+  }: {
     children?: ReactNode;
     onCSSAnimationStart?: () => void;
   }) => {
-    useLayoutEffect(() => { onCSSAnimationStart?.(); }, []);
-    return <div aria-hidden={(props as { 'aria-hidden'?: boolean })['aria-hidden']}>{children}</div>;
+    useLayoutEffect(() => {
+      onCSSAnimationStart?.();
+    }, []);
+    return (
+      <div aria-hidden={(props as { 'aria-hidden'?: boolean })['aria-hidden']}>{children}</div>
+    );
   },
 }));
 mock.module('@/components/section-enter', () => ({
@@ -27,7 +37,9 @@ const { SuspenseSection } = await import('./suspense-section');
 
 test('interactive fallbacks leave no hidden focus target when content resolves', async () => {
   let resolve!: () => void;
-  const pending = new Promise<void>((done) => { resolve = done; });
+  const pending = new Promise<void>((done) => {
+    resolve = done;
+  });
   let ready = false;
   function Content() {
     if (!ready) throw pending;
@@ -36,7 +48,10 @@ test('interactive fallbacks leave no hidden focus target when content resolves',
   let now = 0;
   const clock = spyOn(performance, 'now').mockImplementation(() => now);
   const view = render(
-    <SuspenseSection animateFallback={false} fallback={<a href="https://example.com">Provider link</a>}>
+    <SuspenseSection
+      animateFallback={false}
+      fallback={<a href="https://example.com">Provider link</a>}
+    >
       <Content />
     </SuspenseSection>,
   );
@@ -44,7 +59,11 @@ test('interactive fallbacks leave no hidden focus target when content resolves',
     view.getByRole('link').focus();
     expect(document.activeElement).toBe(view.getByRole('link'));
     now = 1000;
-    await act(async () => { ready = true; resolve(); await pending; });
+    await act(async () => {
+      ready = true;
+      resolve();
+      await pending;
+    });
     await view.findByText('Score loaded');
     expect(view.container.querySelectorAll('a').length).toBe(0);
   } finally {

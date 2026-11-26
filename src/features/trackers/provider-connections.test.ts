@@ -3,15 +3,11 @@ import { describe, expect, test } from 'bun:test';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 
-import {
-  shouldAutoCloseSheet,
-  splitProviders,
-} from './provider-connections';
+import { shouldAutoCloseSheet, splitProviders } from './provider-connections';
 
 const REGISTRY_ORDER = Object.keys(PROVIDERS) as ProviderId[];
 
 describe('splitProviders', () => {
-
   test('both halves follow registry order, not connection order', () => {
     const split = splitProviders(['anilist', 'trakt']);
     expect(split.connected).toEqual(
@@ -21,7 +17,6 @@ describe('splitProviders', () => {
       REGISTRY_ORDER.filter((id) => id !== 'trakt' && id !== 'anilist'),
     );
   });
-
 });
 
 describe('shouldAutoCloseSheet', () => {
@@ -33,15 +28,11 @@ describe('shouldAutoCloseSheet', () => {
   };
 
   test('closes once the provider it was opened to connect is connected', () => {
-    expect(
-      shouldAutoCloseSheet({ ...base, connectedIds: ['serializd'] }),
-    ).toBe(true);
+    expect(shouldAutoCloseSheet({ ...base, connectedIds: ['serializd'] })).toBe(true);
   });
 
   test('stays open while that provider is still disconnected', () => {
-    expect(shouldAutoCloseSheet({ ...base, connectedIds: ['trakt'] })).toBe(
-      false,
-    );
+    expect(shouldAutoCloseSheet({ ...base, connectedIds: ['trakt'] })).toBe(false);
   });
 
   test('a sheet opened on an already-connected provider never self-closes', () => {

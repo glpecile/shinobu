@@ -18,7 +18,9 @@ export interface PendingLog {
   id: string;
   /** Epoch ms when queued or last retried. */
   queuedAt: number;
-  variables: Omit<LogMediaVariables, 'providers' | 'retryOf' | 'rewatch' | 'replay'> & { watchedAt: string };
+  variables: Omit<LogMediaVariables, 'providers' | 'retryOf' | 'rewatch' | 'replay'> & {
+    watchedAt: string;
+  };
   legs: Partial<Record<ProviderId, PendingLeg>>;
 }
 
@@ -88,7 +90,8 @@ function legEntries(record: PendingLog): [ProviderId, PendingLeg][] {
   return Object.entries(record.legs) as [ProviderId, PendingLeg][];
 }
 
-const episodesOf = (v: LogMediaVariables) => JSON.stringify([v.episode, v.episodes, v.entryEpisodes]);
+const episodesOf = (v: LogMediaVariables) =>
+  JSON.stringify([v.episode, v.episodes, v.entryEpisodes]);
 
 function sameWatch(a: PendingLog['variables'], b: LogMediaVariables): boolean {
   return a.item.id === b.item.id && episodesOf(a) === episodesOf(b);
@@ -106,7 +109,8 @@ export function takePendingLegs(
     if (!sameWatch(record.variables, variables)) continue;
     for (const [provider, leg] of legEntries(record)) {
       if (!providers.includes(provider)) continue;
-      if (leg.state === 'uncertain' || (leg.state === 'failed' && leg.sent)) maybeLanded.push(provider);
+      if (leg.state === 'uncertain' || (leg.state === 'failed' && leg.sent))
+        maybeLanded.push(provider);
       delete record.legs[provider];
       changed = true;
     }
@@ -124,7 +128,13 @@ export function queuePendingLog(
   const maybeLanded = takePendingLegs(variables, providers);
   const records = read();
   if (records.length >= MAX_PENDING_LOGS) return false;
-  const { providers: _providers, retryOf: _retryOf, rewatch: _rewatch, replay: _replay, ...intent } = variables;
+  const {
+    providers: _providers,
+    retryOf: _retryOf,
+    rewatch: _rewatch,
+    replay: _replay,
+    ...intent
+  } = variables;
   records.push({
     id: `${now}-${Math.random().toString(36).slice(2)}`,
     queuedAt: now,
@@ -162,7 +172,10 @@ export function checkLegs(
             : !usable.includes(provider)
               ? `${label} must be connected again before it can log.`
               : null;
-      return [provider, message == null ? leg : { state: 'failed', message, sent: leg.state === 'uncertain' }];
+      return [
+        provider,
+        message == null ? leg : { state: 'failed', message, sent: leg.state === 'uncertain' },
+      ];
     }),
   );
   return { ...record, legs };
@@ -207,7 +220,11 @@ export function settleLeg(
   outcome: ProviderWriteOutcome | undefined,
 ): PendingLeg | undefined {
   if (outcome == null) {
-    return { state: 'failed', message: `${PROVIDERS[provider].label} has no match for this log.`, sent: false };
+    return {
+      state: 'failed',
+      message: `${PROVIDERS[provider].label} has no match for this log.`,
+      sent: false,
+    };
   }
   switch (outcome.status) {
     case 'ok':
@@ -215,10 +232,13 @@ export function settleLeg(
     case 'queued':
       return prior;
     case 'skipped':
-      return outcome.reason == null ? undefined : { state: 'failed', message: outcome.reason, sent: false };
+      return outcome.reason == null
+        ? undefined
+        : { state: 'failed', message: outcome.reason, sent: false };
     case 'error':
       if (outcome.transient === 'rate-limit') return prior;
-      if (outcome.transient === 'network' && logReadProvesAbsence(provider)) return { ...prior, state: 'uncertain' };
+      if (outcome.transient === 'network' && logReadProvesAbsence(provider))
+        return { ...prior, state: 'uncertain' };
       return {
         state: 'failed',
         message: outcome.message,
@@ -235,7 +255,11 @@ export function settleReplay(
   update(id, (record) => {
     const legs = { ...record.legs };
     for (const [provider, leg] of Object.entries(prior) as [ProviderId, WaitingLeg][]) {
-      const next = settleLeg(provider, leg, outcomes.find((outcome) => outcome.provider === provider));
+      const next = settleLeg(
+        provider,
+        leg,
+        outcomes.find((outcome) => outcome.provider === provider),
+      );
       if (next == null) delete legs[provider];
       else legs[provider] = next;
     }

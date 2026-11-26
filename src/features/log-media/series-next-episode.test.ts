@@ -49,9 +49,7 @@ describe('nextEpisodeFromProgress', () => {
   });
 
   test('a fully watched show wraps to S1E1, flagged as a rewatch', () => {
-    expect(
-      nextEpisodeFromProgress({ watchedKeys: NO_WATCHED, aired: 12 }),
-    ).toEqual({
+    expect(nextEpisodeFromProgress({ watchedKeys: NO_WATCHED, aired: 12 })).toEqual({
       season: 1,
       number: 1,
       aired: true,
@@ -63,9 +61,7 @@ describe('nextEpisodeFromProgress', () => {
 
 describe('the zero-aired state (plan 0035 R17/R18)', () => {
   test('no next episode and nothing aired is `unaired`, never a rewatch', () => {
-    expect(
-      nextEpisodeFromProgress({ watchedKeys: NO_WATCHED, aired: 0 }),
-    ).toEqual({
+    expect(nextEpisodeFromProgress({ watchedKeys: NO_WATCHED, aired: 0 })).toEqual({
       season: 1,
       number: 1,
       aired: false,
@@ -142,9 +138,7 @@ describe('nextEpisodeFromSimklEntry', () => {
   });
 
   test('an entry with nothing left wraps to S1E1 as a rewatch', () => {
-    expect(
-      nextEpisodeFromSimklEntry(doneItem, { notAiredEpisodes: 0 }),
-    ).toEqual({
+    expect(nextEpisodeFromSimklEntry(doneItem, { notAiredEpisodes: 0 })).toEqual({
       season: 1,
       number: 1,
       aired: true,
@@ -154,9 +148,7 @@ describe('nextEpisodeFromSimklEntry', () => {
   });
 
   test('a part-way entry with no pointer is unnameable, never a rewatch', () => {
-    expect(
-      nextEpisodeFromSimklEntry(midItem, { notAiredEpisodes: 0 }),
-    ).toBeNull();
+    expect(nextEpisodeFromSimklEntry(midItem, { notAiredEpisodes: 0 })).toBeNull();
   });
 
   test('a show outside the watching list starts fresh at S1E1', () => {
@@ -170,10 +162,7 @@ describe('nextEpisodeFromSimklEntry', () => {
   });
 
   test('a fresh show outside the watching list waits for its premiere', () => {
-    const next = nextEpisodeFromSimklEntry(
-      { ...freshItem, releaseDate: '2999-09-22' },
-      null,
-    );
+    const next = nextEpisodeFromSimklEntry({ ...freshItem, releaseDate: '2999-09-22' }, null);
     expect(next?.aired).toBe(false);
     expect(next?.firstAired).toBe('2999-09-22');
   });
@@ -190,9 +179,12 @@ describe('nextEpisodeFromSimklEntry', () => {
 
   test('an entry whose whole run is unaired is `unaired`, not a rewatch', () => {
     expect(
-      nextEpisodeFromSimklEntry({ currentProgress: 0, totalEpisodes: 8 }, {
-        notAiredEpisodes: 8,
-      }),
+      nextEpisodeFromSimklEntry(
+        { currentProgress: 0, totalEpisodes: 8 },
+        {
+          notAiredEpisodes: 8,
+        },
+      ),
     ).toEqual({
       season: 1,
       number: 1,
@@ -308,23 +300,15 @@ describe('unairedEpisodeLabel', () => {
     expect(unairedEpisodeLabel('S1E5', '2026-09-15T01:00:00.000Z', now)).toBe(
       'S1E5 airs in 3 days',
     );
-    expect(unairedEpisodeLabel('Episode 11', '2026-09-13', now)).toBe(
-      'Episode 11 airs tomorrow',
-    );
-    expect(unairedEpisodeLabel('S1E5', '2026-09-12T23:00:00.000Z', now)).toBe(
-      'S1E5 airs today',
-    );
+    expect(unairedEpisodeLabel('Episode 11', '2026-09-13', now)).toBe('Episode 11 airs tomorrow');
+    expect(unairedEpisodeLabel('S1E5', '2026-09-12T23:00:00.000Z', now)).toBe('S1E5 airs today');
   });
 
   test('falls back to the plain line without a usable date', () => {
-    expect(unairedEpisodeLabel('Episode 11', undefined, now)).toBe(
-      "Episode 11 hasn't aired yet",
-    );
+    expect(unairedEpisodeLabel('Episode 11', undefined, now)).toBe("Episode 11 hasn't aired yet");
     expect(unairedEpisodeLabel('Episode 11', 'not a date', now)).toBe(
       "Episode 11 hasn't aired yet",
     );
-    expect(unairedEpisodeLabel('S1E5', '2026-09-01', now)).toBe(
-      "S1E5 hasn't aired yet",
-    );
+    expect(unairedEpisodeLabel('S1E5', '2026-09-01', now)).toBe("S1E5 hasn't aired yet");
   });
 });

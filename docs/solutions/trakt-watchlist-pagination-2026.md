@@ -23,7 +23,7 @@ the watchlist action still carries the `📄 Pagination Optional` badge. The
 announcement is the authority; the badge is stale. Anyone who checks only the
 blueprint will ship the truncating read.
 
-## This is a *different* announcement from #775
+## This is a _different_ announcement from #775
 
 `docs/solutions/trakt-watched-endpoints-2026-api-changes.md` covers
 [discussion #775](https://github.com/trakt/trakt-api/discussions/775) — the
@@ -70,7 +70,7 @@ account: note whether `images` is present, and on which row types.
 
 If it turns out images are gone here too, the fallback already exists and costs
 nothing new: `useTraktMediaImages` (`src/state/queries/trakt.ts`) recovers
-poster/backdrop per *rendered* artless card from the catalogue endpoint, which
+poster/backdrop per _rendered_ artless card from the catalogue endpoint, which
 is exactly how the watched feed survived #775. No normalization or design change
 would be needed — only the observation recorded here.
 

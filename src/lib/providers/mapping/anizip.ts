@@ -29,10 +29,7 @@ export function aniZipTmdbKind(ids: { tvdb?: number | undefined }): 'movie' | 't
   return ids.tvdb != null ? 'tv' : 'movie';
 }
 
-export type AniZipLookup =
-  | { anilistId: number }
-  | { tvdbId: number }
-  | { tmdbId: number };
+export type AniZipLookup = { anilistId: number } | { tvdbId: number } | { tmdbId: number };
 
 /**
  * One canonical `{season, number}` pair — the numbering Trakt and Serializd
@@ -147,9 +144,7 @@ export async function fetchAniZipEpisodeMap(
     map.set(entryNumber, {
       season,
       number,
-      ...(absolute != null && Number.isInteger(absolute) && absolute > 0
-        ? { absolute }
-        : {}),
+      ...(absolute != null && Number.isInteger(absolute) && absolute > 0 ? { absolute } : {}),
     });
   }
   return map;

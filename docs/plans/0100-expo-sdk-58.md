@@ -61,24 +61,24 @@ real writes (Shinobu has no remove-from-history action):
   `metro.config.js` now routes expo-asset's `react-native` import to the real module
   (`docs/solutions/uniwind-rn-088-missing-asset-registry.md`). After that, Android
   launched without errors.
-- iOS movie: *Paddington in Peru* was logged to Simkl and Letterboxd.
-- Android movie: *Paddington 2* reached Simkl. The Letterboxd WebView write timed
+- iOS movie: _Paddington in Peru_ was logged to Simkl and Letterboxd.
+- Android movie: _Paddington 2_ reached Simkl. The Letterboxd WebView write timed
   out while the emulator was overloaded (load average about 42, 2.5 GB RAM,
   `kcompactd` busy), and the failure showed a "Log on Letterboxd" link. Not
   retried. The same write works on iOS, so the emulator is the likely cause,
   not yet confirmed.
-- iOS TV: *Fawlty Towers* S1E1 was logged to Serializd and Simkl.
-  *Paddington* (1976) S1E1 and S1E2 were logged to Serializd. Simkl returned
+- iOS TV: _Fawlty Towers_ S1E1 was logged to Serializd and Simkl.
+  _Paddington_ (1976) S1E1 and S1E2 were logged to Serializd. Simkl returned
   `not_found` for that series (a gap in Simkl's catalog), and the app reported it
   as skipped.
 - iOS list: the private Letterboxd list "Shinobu SDK58 QA" was created.
-- Web (user): logging *Vision* S01E03 worked. Renaming a list created moments
+- Web (user): logging _Vision_ S01E03 worked. Renaming a list created moments
   earlier showed "Install or update the Letterboxd script" until the page was
   reloaded.
 - Fonts: before the Metro fix, iOS and Android loaded no custom fonts (only
   `Ionicons`) and fell back to system type. After it, Inter and Space Grotesk
   load on both. Web was never affected.
-- Android TV, after a cold reboot of the emulator: *Fawlty Towers* S1E2 went to
+- Android TV, after a cold reboot of the emulator: _Fawlty Towers_ S1E2 went to
   Simkl and Serializd. The catch-up queue took about 2 minutes to load while
   Serializd's progress read returned 404 and retried.
 - Still open: Android list creation and a Letterboxd retry on Android. The host

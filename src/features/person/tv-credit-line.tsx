@@ -92,7 +92,11 @@ function EpisodeLink({
       accessibilityRole="button"
       className="min-h-11 flex-row items-center gap-3 pl-3"
       onPress={() => {
-        prefetchEpisode({ tmdbId: show.externalIds.tmdb, season: episode.season, number: episode.number });
+        prefetchEpisode({
+          tmdbId: show.externalIds.tmdb,
+          season: episode.season,
+          number: episode.number,
+        });
         onNavigate();
         pushRoute(routes.episode(show.id, episode.season, episode.number));
       }}

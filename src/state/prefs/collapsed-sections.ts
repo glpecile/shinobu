@@ -9,10 +9,7 @@ import { isServer, prefsStorage } from './storage';
  */
 const keyFor = (sectionKey: string) => `collapsedSection.${sectionKey}`;
 
-export function setSectionCollapsed(
-  sectionKey: string,
-  collapsed: boolean,
-): void {
+export function setSectionCollapsed(sectionKey: string, collapsed: boolean): void {
   prefsStorage.set(keyFor(sectionKey), collapsed);
 }
 
@@ -27,7 +24,10 @@ export function useSectionCollapsed(sectionKey: string, defaultCollapsed = false
   // the array-snapshot stores in this directory).
   return useSyncExternalStore(
     subscribe,
-    () => (isServer() ? defaultCollapsed : prefsStorage.getBoolean(keyFor(sectionKey)) ?? defaultCollapsed),
+    () =>
+      isServer()
+        ? defaultCollapsed
+        : (prefsStorage.getBoolean(keyFor(sectionKey)) ?? defaultCollapsed),
     () => defaultCollapsed,
   );
 }

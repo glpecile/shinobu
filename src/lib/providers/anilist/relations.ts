@@ -34,21 +34,25 @@ import {
 } from './reads';
 
 interface RelationsResponse {
-  Media: {
-    tags: Array<{ name: string | null; isMediaSpoiler: boolean | null } | null> | null;
-    relations: {
-      edges: Array<{
-        /** MediaRelation enum: PREQUEL, SEQUEL, PARENT, SIDE_STORY, ADAPTATION, SOURCE, … */
-        relationType: string | null;
-        node: AniListMedia | null;
-      } | null> | null;
-    } | null;
-    recommendations: {
-      nodes: Array<{ mediaRecommendation: AniListMedia | null } | null> | null;
-    } | null;
-    characters?: { edges: AniListCharacterRoleEdge[] | null } | null;
-    staff?: { edges: AniListStaffEdge[] | null } | null;
-  } & AniListMedia & Partial<NonNullable<MediaEntryResponse['Media']>> & Partial<NonNullable<AnimeEpisodesResponse['Media']>> | null;
+  Media:
+    | ({
+        tags: Array<{ name: string | null; isMediaSpoiler: boolean | null } | null> | null;
+        relations: {
+          edges: Array<{
+            /** MediaRelation enum: PREQUEL, SEQUEL, PARENT, SIDE_STORY, ADAPTATION, SOURCE, … */
+            relationType: string | null;
+            node: AniListMedia | null;
+          } | null> | null;
+        } | null;
+        recommendations: {
+          nodes: Array<{ mediaRecommendation: AniListMedia | null } | null> | null;
+        } | null;
+        characters?: { edges: AniListCharacterRoleEdge[] | null } | null;
+        staff?: { edges: AniListStaffEdge[] | null } | null;
+      } & AniListMedia &
+        Partial<NonNullable<MediaEntryResponse['Media']>> &
+        Partial<NonNullable<AnimeEpisodesResponse['Media']>>)
+    | null;
 }
 
 export interface AnimeRelation {
@@ -86,9 +90,10 @@ export function getAnimeRelations(
 ): Effect.Effect<AnimeRelations, ProviderError> {
   return Effect.gen(function* () {
     const withEntry = deps.tokens.get() != null;
-    const request = (authenticated: boolean) => (authenticated ? anilistAuthedRequest : anilistRequest)<RelationsResponse>(
-      deps,
-      `query ($id: Int, $withCredits: Boolean!, $withEntry: Boolean!) {
+    const request = (authenticated: boolean) =>
+      (authenticated ? anilistAuthedRequest : anilistRequest)<RelationsResponse>(
+        deps,
+        `query ($id: Int, $withCredits: Boolean!, $withEntry: Boolean!) {
         Media(id: $id) {
           ${MEDIA_FIELDS}
           mediaListEntry @include(if: $withEntry) { ${ENTRY_FIELDS} }
@@ -106,13 +111,21 @@ export function getAnimeRelations(
           }
         }
       }`,
-      { variables: { id: params.mediaId, withCredits: params.withCredits, withEntry: authenticated } },
-    );
+        {
+          variables: {
+            id: params.mediaId,
+            withCredits: params.withCredits,
+            withEntry: authenticated,
+          },
+        },
+      );
     let authenticated = withEntry;
-    const data = yield* request(withEntry).pipe(Effect.catchTag('ProviderAuthError', () => {
-      authenticated = false;
-      return request(false);
-    }));
+    const data = yield* request(withEntry).pipe(
+      Effect.catchTag('ProviderAuthError', () => {
+        authenticated = false;
+        return request(false);
+      }),
+    );
     if (!params.withCredits) yield* completeAiringSchedule(deps, params.mediaId, data.Media);
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
@@ -123,10 +136,12 @@ export function getAnimeRelations(
       relations: (data.Media?.relations?.edges ?? []).flatMap((edge) =>
         edge?.node == null
           ? []
-          : [{
-              relation: humanizeEnum(edge.relationType ?? 'OTHER'),
-              item: normalizeAniListMedia(edge.node, nowIso),
-            }],
+          : [
+              {
+                relation: humanizeEnum(edge.relationType ?? 'OTHER'),
+                item: normalizeAniListMedia(edge.node, nowIso),
+              },
+            ],
       ),
       recommendations: (data.Media?.recommendations?.nodes ?? []).flatMap((node) =>
         node?.mediaRecommendation == null

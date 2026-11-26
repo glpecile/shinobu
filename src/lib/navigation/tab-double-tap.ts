@@ -31,19 +31,14 @@ export function emitTabPress(tab: string, now: number = Date.now()): void {
  * function is what makes the window above testable without React —
  * `useTabDoubleTap` is the only caller in the app.
  */
-export function onTabDoubleTap(
-  onDoubleTap: (tab: string) => void,
-): () => void {
+export function onTabDoubleTap(onDoubleTap: (tab: string) => void): () => void {
   listeners.add(onDoubleTap);
   return () => {
     listeners.delete(onDoubleTap);
   };
 }
 
-export function useTabDoubleTap(
-  tab: string | undefined,
-  onDoubleTap: () => void,
-): void {
+export function useTabDoubleTap(tab: string | undefined, onDoubleTap: () => void): void {
   useEffect(() => {
     if (tab == null) return;
     return onTabDoubleTap((pressed) => {

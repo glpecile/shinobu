@@ -4,11 +4,7 @@ import { ProviderRateLimitError } from '@/lib/providers/errors';
 import type { SimklLogEntry } from '@/lib/providers/simkl/writes';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import {
-  SIMKL_WRITE_LOCK_MS,
-  createSimklLogQueue,
-  type QueueClock,
-} from './simkl-write-lock';
+import { SIMKL_WRITE_LOCK_MS, createSimklLogQueue, type QueueClock } from './simkl-write-lock';
 
 const item: NormalizedMediaItem = {
   id: 'simkl-1',
@@ -59,7 +55,6 @@ const settle = async () => {
 };
 
 describe('createSimklLogQueue', () => {
-
   test('writes inside the lock coalesce into one POST when it lifts', async () => {
     const send = mock(async (_entries: SimklLogEntry[]) => ok);
     const { clock, advance } = fakeClock();
@@ -154,7 +149,9 @@ describe('createSimklLogQueue', () => {
 
   test('a quota response with a reset delay fails without replaying the write', async () => {
     const quota = new ProviderRateLimitError({ provider: 'simkl', retryAfterMs: 45_000_000 });
-    const send = mock(async () => { throw quota; });
+    const send = mock(async () => {
+      throw quota;
+    });
     const { clock, advance } = fakeClock();
     const queue = createSimklLogQueue(send, clock);
     const outcome = queue.log(entry(1)).catch((error: unknown) => error);

@@ -4,15 +4,15 @@
 
 Unauthenticated Bun fetches, both default and fixed browser User-Agent:
 
-| Path | Result |
-| --- | --- |
-| `/jack/lists/`, `/dave/lists/`, `/glptest/lists/` | 200, list-summary articles |
-| `/jack/likes/lists/`, `/dave/likes/lists/` | 403, Cloudflare challenge |
+| Path                                                        | Result                     |
+| ----------------------------------------------------------- | -------------------------- |
+| `/jack/lists/`, `/dave/lists/`, `/glptest/lists/`           | 200, list-summary articles |
+| `/jack/likes/lists/`, `/dave/likes/lists/`                  | 403, Cloudflare challenge  |
 | `/jack/likes/lists/page/1/`, `/glptest/likes/lists/page/1/` | 200, list-summary articles |
-| `/jack/likes/lists/page/2/` | 200, next page |
-| `/jack/lists/page/2/` | 403, Cloudflare challenge |
-| `/jack/list/50-classics-to-rewatch-in-2026/` | 200, film grid |
-| `/jack/list/50-classics-to-rewatch-in-2026/page/2/` | 200, empty film grid |
+| `/jack/likes/lists/page/2/`                                 | 200, next page             |
+| `/jack/lists/page/2/`                                       | 403, Cloudflare challenge  |
+| `/jack/list/50-classics-to-rewatch-in-2026/`                | 200, film grid             |
+| `/jack/list/50-classics-to-rewatch-in-2026/page/2/`         | 200, empty film grid       |
 
 Use the explicit page-1 URL for liked lists. Deeper created-list pages may
 still be challenged: retain the loaded pages and provide retry plus the

@@ -71,7 +71,8 @@ export function normalizeDiaryReview(
       ? `serializd-${reviewId}`
       : `serializd:${raw.showId}:${raw.seasonId ?? ''}:${raw.episodeNumber ?? ''}:${raw.dateAdded}`;
   const loggedSeason = raw.showSeasons?.find((season) => season.id === raw.seasonId);
-  const season = loggedSeason?.seasonNumber ??
+  const season =
+    loggedSeason?.seasonNumber ??
     parseSeasonNumber(raw.seasonName ?? loggedSeason?.name ?? undefined);
 
   return {

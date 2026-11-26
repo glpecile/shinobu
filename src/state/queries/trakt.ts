@@ -79,12 +79,9 @@ export const traktQueryKeys = {
   /** Prefix for every search entry — details/[id] scans this for cache hits.
    *  Shared root so `search-cache.ts`'s scan can't drift from this key. */
   searchRoot: () => [...SEARCH_QUERY_ROOTS.trakt],
-  search: (query: string, limit: number) =>
-    [...traktQueryKeys.searchRoot(), query, limit] as const,
-  seasons: (traktId: number) =>
-    [...traktQueryKeys.all, 'seasons', traktId] as const,
-  showProgress: (traktId: number) =>
-    [...traktQueryKeys.all, 'show-progress', traktId] as const,
+  search: (query: string, limit: number) => [...traktQueryKeys.searchRoot(), query, limit] as const,
+  seasons: (traktId: number) => [...traktQueryKeys.all, 'seasons', traktId] as const,
+  showProgress: (traktId: number) => [...traktQueryKeys.all, 'show-progress', traktId] as const,
   images: (type: MediaType, traktId: number) =>
     [...traktQueryKeys.all, 'images', type, traktId] as const,
   item: (type: 'MOVIE' | 'TV' | undefined, traktId: number | null) =>
@@ -95,11 +92,8 @@ export const traktQueryKeys = {
    * local midnight instead of serving yesterday's week to whoever left the app
    * open overnight. `type` is Trakt's own calendar segment.
    */
-  myCalendar: (
-    type: 'shows' | 'movies' | 'streaming' | 'dvd',
-    startDate: string,
-    days: number,
-  ) => [...traktQueryKeys.myCalendarRoot(), type, startDate, days] as const,
+  myCalendar: (type: 'shows' | 'movies' | 'streaming' | 'dvd', startDate: string, days: number) =>
+    [...traktQueryKeys.myCalendarRoot(), type, startDate, days] as const,
   /**
    * Prefix over every `/calendars/my/*` window (plan 0031 KTD-5). A write path
    * cannot know the `startDate`/`days` the key above carries — they are
@@ -128,9 +122,15 @@ export function useTraktItemQuery(traktId: number | null, type?: MediaType) {
   const enabled = traktId != null && kind != null && getClientIdForProvider(Provider.Trakt) !== '';
   return useQuery({
     queryKey: traktQueryKeys.item(kind, traktId),
-    queryFn: ({ signal }) => Effect.runPromise(lookupByExternalId(traktDeps(), {
-      source: Provider.Trakt, id: traktId ?? 0, kind: kind === 'MOVIE' ? 'movie' : 'show',
-    }), { signal }),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(
+        lookupByExternalId(traktDeps(), {
+          source: Provider.Trakt,
+          id: traktId ?? 0,
+          kind: kind === 'MOVIE' ? 'movie' : 'show',
+        }),
+        { signal },
+      ),
     enabled,
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -154,12 +154,9 @@ export function useTraktMediaImages(
   const { data, isPending } = useQuery({
     // Cards that already have art share one idle entry rather than adding one
     // per title, which every cache-wide invalidation would then scan.
-    queryKey: traktQueryKeys.images(type, missingArt ? traktId ?? -1 : -1),
+    queryKey: traktQueryKeys.images(type, missingArt ? (traktId ?? -1) : -1),
     queryFn: ({ signal }) =>
-      Effect.runPromise(
-        getMediaImages(traktDeps(), { type, traktId: traktId ?? -1 }),
-        { signal },
-      ),
+      Effect.runPromise(getMediaImages(traktDeps(), { type, traktId: traktId ?? -1 }), { signal }),
     enabled: missingArt && traktId != null,
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -168,9 +165,7 @@ export function useTraktMediaImages(
     return {
       coverImage: item?.coverImage ?? '',
       loading: false,
-      ...(item?.backdropImage != null
-        ? { backdropImage: item.backdropImage }
-        : {}),
+      ...(item?.backdropImage != null ? { backdropImage: item.backdropImage } : {}),
     };
   }
   return { ...(data ?? { coverImage: '' }), loading: traktId != null && isPending };
@@ -190,10 +185,9 @@ export function useTraktShowProgressQuery(params: {
   return useQuery({
     queryKey: traktQueryKeys.showProgress(traktId ?? -1),
     queryFn: ({ signal }) =>
-      Effect.runPromise(
-        getShowWatchedProgress(traktDeps(), { traktId: traktId ?? -1 }),
-        { signal },
-      ),
+      Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId: traktId ?? -1 }), {
+        signal,
+      }),
     enabled: enabled && traktId != null,
   });
 }
@@ -242,13 +236,10 @@ export interface TraktWatchedInfo {
  * `null` while Trakt is disconnected, the read is still loading, or the item
  * simply isn't watched.
  */
-export function useTraktWatchedInfo(
-  item: NormalizedMediaItem,
-): TraktWatchedInfo | null {
+export function useTraktWatchedInfo(item: NormalizedMediaItem): TraktWatchedInfo | null {
   const connected = useConnectedProviders();
   const traktConnected = connected.includes(Provider.Trakt);
-  const movieLike =
-    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  const movieLike = item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
 
   const watchedMovies = useWatchedMoviesQuery({
     enabled: traktConnected && movieLike,
@@ -285,18 +276,14 @@ export const SEARCH_MIN_QUERY_LENGTH = 2;
  * reaches the minimum length; `keepPreviousData` keeps the last results on
  * screen between debounced queries instead of flashing an empty list.
  */
-export function useTraktSearchQuery(params: {
-  query: string;
-  limit?: number;
-  enabled?: boolean;
-}) {
+export function useTraktSearchQuery(params: { query: string; limit?: number; enabled?: boolean }) {
   const query = params.query.trim();
   const limit = params.limit ?? 20;
   return useQuery({
     queryKey: traktQueryKeys.search(query, limit),
-    queryFn: ({ signal }) => Effect.runPromise(searchMedia(traktDeps(), { query, limit }), { signal }),
-    enabled:
-      params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
+    queryFn: ({ signal }) =>
+      Effect.runPromise(searchMedia(traktDeps(), { query, limit }), { signal }),
+    enabled: params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   });

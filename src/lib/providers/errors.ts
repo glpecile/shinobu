@@ -24,9 +24,7 @@ export class ProviderAuthError extends Data.TaggedError('ProviderAuthError')<{
   }
 }
 
-export class ProviderRateLimitError extends Data.TaggedError(
-  'ProviderRateLimitError',
-)<{
+export class ProviderRateLimitError extends Data.TaggedError('ProviderRateLimitError')<{
   readonly provider: ErrorSourceId;
   /** From the provider's Retry-After (or equivalent), when it sends one. */
   readonly retryAfterMs?: number;
@@ -36,9 +34,7 @@ export class ProviderRateLimitError extends Data.TaggedError(
   }
 }
 
-export class ProviderNetworkError extends Data.TaggedError(
-  'ProviderNetworkError',
-)<{
+export class ProviderNetworkError extends Data.TaggedError('ProviderNetworkError')<{
   readonly provider: ErrorSourceId;
   readonly cause: unknown;
   /**
@@ -52,8 +48,7 @@ export class ProviderNetworkError extends Data.TaggedError(
   readonly retryable?: boolean;
 }> {
   get message() {
-    const detail =
-      this.cause instanceof Error ? this.cause.message : String(this.cause);
+    const detail = this.cause instanceof Error ? this.cause.message : String(this.cause);
     return `${this.provider}: network error — ${detail}`;
   }
 }
@@ -69,7 +64,4 @@ export class ProviderDecodeError extends Data.TaggedError('ProviderDecodeError')
 }
 
 export type ProviderError =
-  | ProviderAuthError
-  | ProviderRateLimitError
-  | ProviderNetworkError
-  | ProviderDecodeError;
+  ProviderAuthError | ProviderRateLimitError | ProviderNetworkError | ProviderDecodeError;

@@ -28,10 +28,7 @@ export function PersonAvatar({
           className,
         )}
       >
-        <Text
-          className={cn('text-muted font-sans-semibold', textClassName)}
-          numberOfLines={1}
-        >
+        <Text className={cn('text-muted font-sans-semibold', textClassName)} numberOfLines={1}>
           {initials(name)}
         </Text>
       </View>

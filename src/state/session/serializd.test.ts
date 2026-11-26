@@ -13,9 +13,7 @@ mock.module('react-native-mmkv', () => ({
   }),
 }));
 
-const { connectSerializd, getSerializdSession, getSerializdUsername } = await import(
-  './serializd'
-);
+const { connectSerializd, getSerializdSession, getSerializdUsername } = await import('./serializd');
 const { getProviderSession, onProviderConnected } = await import('./tokens');
 
 beforeEach(() => store.clear());

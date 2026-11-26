@@ -58,7 +58,9 @@ export function Pager<T extends string>({
   const driven = useSharedValue(0);
 
   function scrollNode(): HTMLElement | null {
-    return isWeb ? ((scroller.current?.getScrollableNode() ?? null) as unknown as HTMLElement | null) : null;
+    return isWeb
+      ? ((scroller.current?.getScrollableNode() ?? null) as unknown as HTMLElement | null)
+      : null;
   }
 
   function setScrollLeft(x: number) {
@@ -96,13 +98,11 @@ export function Pager<T extends string>({
     }
     node.style.scrollSnapType = 'none';
     driven.set(node.scrollLeft);
-    driven.set(withTiming(
-      x,
-      { duration: DURATION.toggle, easing: TIMING_EASE_IN_OUT },
-      (finished) => {
+    driven.set(
+      withTiming(x, { duration: DURATION.toggle, easing: TIMING_EASE_IN_OUT }, (finished) => {
         if (finished) scheduleOnRN(finishWebTap, index);
-      },
-    ));
+      }),
+    );
   }, [index, size.width, reduceMotion, progress, driven]);
 
   function onLayout(event: LayoutChangeEvent) {

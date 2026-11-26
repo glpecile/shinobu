@@ -10,10 +10,7 @@ import {
 
 import { AnimatedView } from '@/components/animated-view';
 import { MorphText } from '@/components/morph-text';
-import {
-  calendarBadges,
-  continueWatchingBadges,
-} from '@/features/up-next/badges';
+import { calendarBadges, continueWatchingBadges } from '@/features/up-next/badges';
 import { calendarWeek, nextSplitChange } from '@/features/up-next/compute';
 import { groupDayEntries, soloGroup } from '@/features/up-next/group';
 import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
@@ -70,10 +67,7 @@ function newDate(): Date {
   return new Date();
 }
 
-export function UpNextSection({
-  onItemPress,
-  onItemActions,
-}: UpNextSectionProps) {
+export function UpNextSection({ onItemPress, onItemActions }: UpNextSectionProps) {
   // State, not an ambient `new Date()`: React Compiler caches that together
   // with the split computed from it until the query data changes, which froze
   // the sections (and the strip's "today") between refetches.
@@ -85,9 +79,10 @@ export function UpNextSection({
   const reduceMotion = useReducedMotion();
   const { fontScale } = useWindowDimensions();
 
-  const week = calendarWeek([...continueWatching, ...calendar], now).map(
-    (day) => ({ ...day, groups: groupDayEntries(day.entries) }),
-  );
+  const week = calendarWeek([...continueWatching, ...calendar], now).map((day) => ({
+    ...day,
+    groups: groupDayEntries(day.entries),
+  }));
   const [startedEmpty] = useState(continueWatching.length === 0 && calendar.length === 0);
   const [hadContinueWatching] = useState(continueWatching.length > 0);
   const arrivalHistory = useArrivalHistory([
@@ -100,8 +95,7 @@ export function UpNextSection({
   const selected = week.find((day) => day.offset === selectedOffset) ?? week[0];
 
   const Root = startedEmpty ? SectionEnter : View;
-  const ContinueWatchingRise =
-    hadContinueWatching || startedEmpty ? Fragment : SectionEnter;
+  const ContinueWatchingRise = hadContinueWatching || startedEmpty ? Fragment : SectionEnter;
 
   return (
     <Root>
@@ -114,8 +108,14 @@ export function UpNextSection({
               title="Continue Watching"
             >
               <EpisodeCardRail
-                action={(group) => group.lead.kind === 'episode' ? <QuickLogButton entry={group.lead} /> : undefined}
-                arrival={hadContinueWatching ? (group) => ({ id: group.lead.item.id, seen: arrivalHistory }) : undefined}
+                action={(group) =>
+                  group.lead.kind === 'episode' ? <QuickLogButton entry={group.lead} /> : undefined
+                }
+                arrival={
+                  hadContinueWatching
+                    ? (group) => ({ id: group.lead.item.id, seen: arrivalHistory })
+                    : undefined
+                }
                 badges={(group) => continueWatchingBadges(group.lead, now)}
                 groups={continueWatching.map(soloGroup)}
                 onActionsPress={onItemActions}
@@ -162,12 +162,20 @@ export function UpNextSection({
             ) : (
               <EpisodeCardRail
                 action={(group) =>
-                  group.entries.length === 1 && group.lead.status === 'aired' && group.lead.kind === 'episode'
-                    ? <QuickLogButton entry={group.lead} />
-                    : undefined}
-                arrival={!startedEmpty ? (group) => ({ id: group.id, seen: arrivalHistory }) : undefined}
+                  group.entries.length === 1 &&
+                  group.lead.status === 'aired' &&
+                  group.lead.kind === 'episode' ? (
+                    <QuickLogButton entry={group.lead} />
+                  ) : undefined
+                }
+                arrival={
+                  !startedEmpty ? (group) => ({ id: group.id, seen: arrivalHistory }) : undefined
+                }
                 badges={(group) =>
-                  group.lead.status === 'aired' ? continueWatchingBadges(group.lead, now) : calendarBadges(group.lead, now)}
+                  group.lead.status === 'aired'
+                    ? continueWatchingBadges(group.lead, now)
+                    : calendarBadges(group.lead, now)
+                }
                 groups={selected.groups}
                 onActionsPress={onItemActions}
                 onPress={onItemPress}

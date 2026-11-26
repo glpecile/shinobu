@@ -31,14 +31,17 @@ export function seasonRows(
   nextAiring: Readonly<Record<string, NextAiring>>,
   options: { folded: ReadonlySet<SeasonShelf>; columns?: number; now: Date },
 ): SeasonRow[] {
-  const shelves = new Map<SeasonShelf, NormalizedMediaItem[]>(SEASON_SHELVES.map((shelf) => [shelf, []]));
+  const shelves = new Map<SeasonShelf, NormalizedMediaItem[]>(
+    SEASON_SHELVES.map((shelf) => [shelf, []]),
+  );
   for (const item of items) shelves.get(shelfOf(item))?.push(item);
   const upcoming = (item: NormalizedMediaItem) => {
     const next = nextAiring[item.id];
     return next != null && !hasAired(next.airingAt, options.now) ? next : undefined;
   };
   const at = (item: NormalizedMediaItem) => upcoming(item)?.airingAt ?? '￿';
-  for (const shelf of ['watching', 'planned'] as const) shelves.get(shelf)?.sort((a, b) => at(a).localeCompare(at(b)));
+  for (const shelf of ['watching', 'planned'] as const)
+    shelves.get(shelf)?.sort((a, b) => at(a).localeCompare(at(b)));
   const tracked = items.length - (shelves.get('rest')?.length ?? 0) > 0;
 
   const rows: SeasonRow[] = [];
@@ -47,16 +50,28 @@ export function seasonRows(
     const open = !tracked || !options.folded.has(shelf);
     if (tracked) {
       const next = shelf === 'watching' || shelf === 'planned' ? upcoming(group[0]) : undefined;
-      rows.push({ kind: 'head', key: shelf, count: group.length, open, ...(next != null ? { next } : {}) });
+      rows.push({
+        kind: 'head',
+        key: shelf,
+        count: group.length,
+        open,
+        ...(next != null ? { next } : {}),
+      });
     }
     if (!open) continue;
     const { columns } = options;
     if (columns == null) {
-      for (const item of group) rows.push({ kind: 'entry', key: `${shelf}-${item.id}`, shelf, item });
+      for (const item of group)
+        rows.push({ kind: 'entry', key: `${shelf}-${item.id}`, shelf, item });
       continue;
     }
     for (let index = 0; index < group.length; index += columns) {
-      rows.push({ kind: 'posters', key: `${shelf}-posters-${index}`, shelf, items: group.slice(index, index + columns) });
+      rows.push({
+        kind: 'posters',
+        key: `${shelf}-posters-${index}`,
+        shelf,
+        items: group.slice(index, index + columns),
+      });
     }
   }
   return rows;

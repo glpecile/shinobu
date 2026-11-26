@@ -40,7 +40,7 @@ bunx expo start --clear
 ```
 
 No `expo prebuild` / pod install / native rebuild is needed (unless the
-*native* half of the error mentions the native library version — that one
+_native_ half of the error mentions the native library version — that one
 does need a rebuild).
 
 ## Rule of thumb

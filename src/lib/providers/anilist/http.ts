@@ -6,9 +6,7 @@ import * as Schema from 'effect/Schema';
 import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { optionalNullable } from '@/lib/providers/schema';
 
-import {
-  RATE_LIMIT_MAX_RETRY_DELAY_MS,
-} from '@/lib/providers/rate-limits';
+import { RATE_LIMIT_MAX_RETRY_DELAY_MS } from '@/lib/providers/rate-limits';
 import {
   ProviderAuthError,
   ProviderDecodeError,
@@ -38,13 +36,19 @@ export interface AniListGraphQLOptions {
 
 const graphQLResponse = Schema.Struct({
   data: Schema.optional(Schema.Unknown),
-  errors: optionalNullable(Schema.Array(Schema.Struct({
-    message: optionalNullable(Schema.String),
-    status: optionalNullable(Schema.Number),
-  }))),
-  error: optionalNullable(Schema.Struct({
-    messages: optionalNullable(Schema.Array(Schema.String)),
-  })),
+  errors: optionalNullable(
+    Schema.Array(
+      Schema.Struct({
+        message: optionalNullable(Schema.String),
+        status: optionalNullable(Schema.Number),
+      }),
+    ),
+  ),
+  error: optionalNullable(
+    Schema.Struct({
+      messages: optionalNullable(Schema.Array(Schema.String)),
+    }),
+  ),
 });
 
 export function anilistGraphQL<A>(
@@ -55,7 +59,11 @@ export function anilistGraphQL<A>(
   return Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis;
     const remaining = (cooldowns.get(deps.fetch) ?? 0) - now;
-    if (remaining > 0) return yield* new ProviderRateLimitError({ provider: Provider.AniList, retryAfterMs: remaining });
+    if (remaining > 0)
+      return yield* new ProviderRateLimitError({
+        provider: Provider.AniList,
+        retryAfterMs: remaining,
+      });
     const response = yield* Effect.tryPromise({
       try: (signal) =>
         deps.fetch(ANILIST_GRAPHQL_URL, {
@@ -65,9 +73,7 @@ export function anilistGraphQL<A>(
             'Content-Type': 'application/json',
             Accept: 'application/json',
             Referer: ANILIST_REFERER,
-            ...(options.accessToken
-              ? { Authorization: `Bearer ${options.accessToken}` }
-              : {}),
+            ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
           },
           body: JSON.stringify({
             query,
@@ -83,10 +89,13 @@ export function anilistGraphQL<A>(
     const rateLimitError = () => {
       const retryAfterSeconds = Number(response.headers.get('Retry-After'));
       const reset = Number(response.headers.get('X-RateLimit-Reset')) * 1000;
-      const retryAfterMs = Math.max(
-        Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? retryAfterSeconds * 1000 : 0,
-        Number.isFinite(reset) && reset > now ? reset - now : 0,
-      ) || 60_000;
+      const retryAfterMs =
+        Math.max(
+          Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+            ? retryAfterSeconds * 1000
+            : 0,
+          Number.isFinite(reset) && reset > now ? reset - now : 0,
+        ) || 60_000;
       cooldowns.set(deps.fetch, Math.max(cooldowns.get(deps.fetch) ?? 0, now + retryAfterMs));
       return new ProviderRateLimitError({
         provider: Provider.AniList,
@@ -116,9 +125,10 @@ export function anilistGraphQL<A>(
 
     // An explicit API-disabled response describes a refusal, even if an edge
     // returns 429. Without that evidence, 429 remains a rate limit.
-    const apiDisabled = body.errors?.some((error) =>
-      /AniList API has been temporarily disabled/i.test(error.message ?? ''),
-    ) === true;
+    const apiDisabled =
+      body.errors?.some((error) =>
+        /AniList API has been temporarily disabled/i.test(error.message ?? ''),
+      ) === true;
     if (response.status === 429 && !apiDisabled) {
       return yield* rateLimitError();
     }
@@ -130,7 +140,9 @@ export function anilistGraphQL<A>(
         provider: Provider.AniList,
         status: response.status,
         retryable: false,
-        cause: new Error(`AniList rejected the query (HTTP ${response.status}): ${body.error.messages.join('; ')}`),
+        cause: new Error(
+          `AniList rejected the query (HTTP ${response.status}): ${body.error.messages.join('; ')}`,
+        ),
       });
     }
 
@@ -138,7 +150,10 @@ export function anilistGraphQL<A>(
       const messages = body.errors.map((e) => e.message ?? 'unknown').join('; ');
       // AniList reports a dead/invalid bearer token as a GraphQL error
       // ("Invalid token"), not always as a bare 401.
-      if (!apiDisabled && body.errors.some((e) => e.status === 401 || /invalid token/i.test(e.message ?? ''))) {
+      if (
+        !apiDisabled &&
+        body.errors.some((e) => e.status === 401 || /invalid token/i.test(e.message ?? ''))
+      ) {
         return yield* new ProviderAuthError({ provider: Provider.AniList, refreshFailed: true });
       }
       return yield* new ProviderNetworkError({
@@ -195,14 +210,10 @@ export function anilistAuthedRequest<A>(
         new ProviderAuthError({ provider: Provider.AniList, refreshFailed: true }),
       );
     }
-    return withRateLimitRetry(
-      anilistGraphQL<A>(deps, query, { ...options, accessToken }),
-    );
+    return withRateLimitRetry(anilistGraphQL<A>(deps, query, { ...options, accessToken }));
   }).pipe(
     Effect.tapError((error) =>
-      error._tag === 'ProviderAuthError'
-        ? Effect.sync(() => deps.tokens.clear())
-        : Effect.void,
+      error._tag === 'ProviderAuthError' ? Effect.sync(() => deps.tokens.clear()) : Effect.void,
     ),
   );
 }

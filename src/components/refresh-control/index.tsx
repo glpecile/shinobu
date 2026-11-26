@@ -8,7 +8,10 @@ import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { usePullScroll } from './pull-scroll';
 import { MARK_BOX, RefreshMark } from './refresh-mark';
 
-type RefreshControlProps = Omit<ComponentProps<typeof GestureRefreshControl>, 'onRefresh' | 'refreshing'> & {
+type RefreshControlProps = Omit<
+  ComponentProps<typeof GestureRefreshControl>,
+  'onRefresh' | 'refreshing'
+> & {
   onRefresh: () => Promise<unknown>;
   /** Double-tapping this tab runs the same refresh, mark included. */
   tab?: string;
@@ -33,7 +36,12 @@ export function RefreshControl({ onRefresh, tab, ...rest }: RefreshControlProps)
 
   return (
     <>
-      <GestureRefreshControl {...rest} onRefresh={refresh} refreshing={refreshing} tintColor="transparent" />
+      <GestureRefreshControl
+        {...rest}
+        onRefresh={refresh}
+        refreshing={refreshing}
+        tintColor="transparent"
+      />
       <AnimatedView
         className="pointer-events-none absolute inset-x-0 top-0 items-center justify-center"
         style={[{ height: MARK_BOX }, position]}

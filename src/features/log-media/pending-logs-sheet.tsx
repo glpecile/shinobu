@@ -16,13 +16,19 @@ import {
   type PendingLog,
 } from './pending-logs';
 
-function watchLabel({ item, episode, episodes, entryEpisodes }: PendingLog['variables']): string | null {
+function watchLabel({
+  item,
+  episode,
+  episodes,
+  entryEpisodes,
+}: PendingLog['variables']): string | null {
   const unit = isReadIntent(item) ? 'chapter' : 'episode';
   const seasoned = episodes ?? (episode != null ? [episode] : []);
   const count = seasoned.length + (entryEpisodes?.length ?? 0);
   if (count > 1) return `${count} ${unit}s`;
   if (seasoned.length === 1) return episodeCode(seasoned[0].season, seasoned[0].number);
-  if (entryEpisodes?.length === 1) return `${unit === 'chapter' ? 'Chapter' : 'Episode'} ${entryEpisodes[0]}`;
+  if (entryEpisodes?.length === 1)
+    return `${unit === 'chapter' ? 'Chapter' : 'Episode'} ${entryEpisodes[0]}`;
   return null;
 }
 
@@ -49,7 +55,8 @@ export function PendingLogs() {
           <WriteSheet.Title>Pending logs</WriteSheet.Title>
         </Sheet.Header>
         <WriteSheet.Description>
-          Saved on this device. Shinobu sends them when you are online. A log that stopped waits for Try again.
+          Saved on this device. Shinobu sends them when you are online. A log that stopped waits for
+          Try again.
         </WriteSheet.Description>
         {/* ponytail: at most MAX_PENDING_LOGS cards in the sheet's scroller. Use List if the cap grows. */}
         {records.map((record) => {
@@ -58,7 +65,9 @@ export function PendingLogs() {
           return (
             <View className="mt-5 border-t border-border pt-4" key={record.id}>
               <Text className="text-foreground font-sans-semibold text-sm">
-                {label == null ? record.variables.item.title : `${record.variables.item.title} · ${label}`}
+                {label == null
+                  ? record.variables.item.title
+                  : `${record.variables.item.title} · ${label}`}
               </Text>
               <WriteResultReport item={record.variables.item} outcomes={pendingOutcomes(record)} />
               <View className="mt-3 flex-row gap-2">

@@ -15,15 +15,14 @@ import type { NormalizedPerson } from '@/types/media';
 import { personMetaLine } from './meta-line';
 import { PersonAvatar } from './person-avatar';
 
-export function creditRoleLine(credit: {
-  role: string;
-  kind: 'cast' | 'crew';
-}): string {
+export function creditRoleLine(credit: { role: string; kind: 'cast' | 'crew' }): string {
   if (credit.role === '') return credit.kind === 'cast' ? 'Cast' : 'Crew';
   return credit.kind === 'cast' ? `as ${credit.role}` : credit.role;
 }
 
-export function creditRoute(credit: Pick<PersonCredit, 'name' | 'tmdbId' | 'anilistId' | 'hardcoverId'>) {
+export function creditRoute(
+  credit: Pick<PersonCredit, 'name' | 'tmdbId' | 'anilistId' | 'hardcoverId'>,
+) {
   if (credit.tmdbId != null) return routes.person(credit.tmdbId);
   if (credit.anilistId != null) return routes.anilistPerson(credit.anilistId);
   if (credit.hardcoverId != null) return routes.hardcoverAuthor(credit.hardcoverId);
@@ -69,11 +68,7 @@ interface PersonCreditSheetProps {
   onClose: () => void;
 }
 
-export function PersonCreditSheet({
-  credit,
-  open,
-  onClose,
-}: PersonCreditSheetProps) {
+export function PersonCreditSheet({ credit, open, onClose }: PersonCreditSheetProps) {
   const pushRoute = usePushRoute();
   const hasTmdb = useTmdbToken() !== '';
   const personQuery = useTmdbPersonQuery({

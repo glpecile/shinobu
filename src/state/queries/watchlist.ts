@@ -34,10 +34,7 @@ export const watchlistQueryKeys = {
 };
 
 /** Listen only for changes to the gathered inputs, not query creation elsewhere during render. */
-export function subscribeWatchlistInputs(
-  queryClient: QueryClient,
-  onStoreChange: () => void,
-) {
+export function subscribeWatchlistInputs(queryClient: QueryClient, onStoreChange: () => void) {
   const inputsHash = hashKey(watchlistQueryKeys.inputs());
   return queryClient.getQueryCache().subscribe((event) => {
     if (
@@ -68,12 +65,8 @@ const WATCHLIST_READ_PROVIDERS: readonly ProviderId[] = [
   Provider.Hardcover,
 ];
 
-export function watchlistReadProviders(
-  connected: readonly ProviderId[],
-): ProviderId[] {
-  return providersForFeed(connected).filter((id) =>
-    WATCHLIST_READ_PROVIDERS.includes(id),
-  );
+export function watchlistReadProviders(connected: readonly ProviderId[]): ProviderId[] {
+  return providersForFeed(connected).filter((id) => WATCHLIST_READ_PROVIDERS.includes(id));
 }
 
 /** Trakt's type=all read covers movies and shows in one call. */
@@ -161,9 +154,7 @@ async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
   return entries.map((entry) => ({
     item: entry.item,
     source: Provider.Simkl,
-    ...(entry.addedToWatchlistAt != null
-      ? { addedAt: entry.addedToWatchlistAt }
-      : {}),
+    ...(entry.addedToWatchlistAt != null ? { addedAt: entry.addedToWatchlistAt } : {}),
     // Keep a zero history count as positive evidence for the destructive removal warning.
     simklWatchedCount: entry.item.currentProgress,
   }));
@@ -171,7 +162,11 @@ async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
 
 async function hardcoverInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
   const entries = await fetchHardcoverWantToRead(queryClient);
-  return entries.map((entry) => ({ item: entry.item, source: Provider.Hardcover, addedAt: entry.addedAt }));
+  return entries.map((entry) => ({
+    item: entry.item,
+    source: Provider.Hardcover,
+    addedAt: entry.addedAt,
+  }));
 }
 
 /** Gather each eligible watchlist in parallel and settle failures independently. */
@@ -203,12 +198,13 @@ function streamWatchlistInputs(
       const settled = legs.map((leg) => leg ?? none<WatchlistInput>());
       // A pending leg or unread Letterboxd page means membership is incomplete. Failures are
       // reported through errors.
-      const incomplete = WATCHLIST_READ_PROVIDERS.filter((provider, index) =>
-        feedProviders.includes(provider) &&
-        (legs[index] == null ||
-          (provider === Provider.Letterboxd &&
-            settled[index].errors.length === 0 &&
-            !letterboxdLegIsComplete(queryClient))),
+      const incomplete = WATCHLIST_READ_PROVIDERS.filter(
+        (provider, index) =>
+          feedProviders.includes(provider) &&
+          (legs[index] == null ||
+            (provider === Provider.Letterboxd &&
+              settled[index].errors.length === 0 &&
+              !letterboxdLegIsComplete(queryClient))),
       );
       return {
         inputs: settled.flatMap((leg) => leg.inputs),
@@ -253,9 +249,7 @@ export function watchlistOptions(queryClient: QueryClient) {
 }
 
 /** Mark the provider entries stale before refetching the gather, including on retry. */
-export async function refreshWatchlistInputs(
-  queryClient: QueryClient,
-): Promise<void> {
+export async function refreshWatchlistInputs(queryClient: QueryClient): Promise<void> {
   const username = getLetterboxdUsername();
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() }),

@@ -3,7 +3,7 @@
 **Context (2026-07-27, plan 0030 U6 / KTD-5).** Calendar wants unreleased films
 from the Letterboxd watchlist. Every other release source arrives pre-dated —
 Trakt's `/calendars/my/*` already know when a watchlisted film comes out. The
-Letterboxd watchlist is a *scrape* (`lib/providers/letterboxd/watchlist.ts`)
+Letterboxd watchlist is a _scrape_ (`lib/providers/letterboxd/watchlist.ts`)
 yielding `{ slug, title, year }`: no dates, no TMDB id. So each candidate costs
 two requests — a TMDB `searchMovie` to learn its id, then `getMediaCatalogue`
 whose `release_dates` append carries `releaseCalendar`.
@@ -16,18 +16,18 @@ Seven real public watchlists, scraped in full with the app's own
 `parseWatchlistPage`, then filtered exactly as `selectReleaseCandidates` does
 (`year == null || year >= 2026`):
 
-| watchlist | films | candidates, whole list | candidates, page 1 |
-| --- | ---: | ---: | ---: |
-| A (new-release heavy) | 601 | **43** | 22 |
-| B | 840 | 9 | 8 |
-| C | 558 | 15 | 3 |
-| D | 840 | 1 | 1 |
-| E | 63 | 0 | 0 |
-| F | 58 | 0 | 0 |
-| G | 6 | 0 | 0 |
+| watchlist             | films | candidates, whole list | candidates, page 1 |
+| --------------------- | ----: | ---------------------: | -----------------: |
+| A (new-release heavy) |   601 |                 **43** |                 22 |
+| B                     |   840 |                      9 |                  8 |
+| C                     |   558 |                     15 |                  3 |
+| D                     |   840 |                      1 |                  1 |
+| E                     |    63 |                      0 |                  0 |
+| F                     |    58 |                      0 |                  0 |
+| G                     |     6 |                      0 |                  0 |
 
 Median candidates: 1. Only the most new-release-focused account exceeded the
-30-film resolve cap, and only from the *whole* list.
+30-film resolve cap, and only from the _whole_ list.
 
 ## Two findings, one of them the plan didn't budget for
 
@@ -36,7 +36,7 @@ Median candidates: 1. Only the most new-release-focused account exceeded the
    practice rather than load-bearing; it stands as the guard that stops a wider
    future source turning into an unbounded fan.
 
-2. **Reading the whole watchlist is itself the fan.** KTD-5 costed the *resolve*
+2. **Reading the whole watchlist is itself the fan.** KTD-5 costed the _resolve_
    (2 calls/film) but not the scrape. Letterboxd pages the watchlist 28 films at
    a time, so watchlist A is 22 sequential HTML fetches at ~120 KB each — ~2.6 MB
    per gather — to find a median of one candidate. That is squarely the
@@ -60,12 +60,12 @@ paged query), for three reasons:
 **Recall this costs:** candidates outside page 1 are invisible (watchlist A: 22
 of 43; watchlist C: 3 of 15). A user who adds films faster than ~28 between
 gathers can push a near-release film off page 1. The mitigation if that ever
-bites is a bounded *few* pages, not the whole list.
+bites is a bounded _few_ pages, not the whole list.
 
 ## The matching hazard is the real risk, not the cost
 
 `title + year → TMDB id` is the same fuzzy resolve that once rendered Kubrick's
-*2001: A Space Odyssey* for Nolan's *The Odyssey*
+_2001: A Space Odyssey_ for Nolan's _The Odyssey_
 (`trakt-text-search-wrong-movie-match.md`). On the details screen a wrong match
 degrades metadata; here it would put a **different film on the user's calendar
 with an unrelated date**. So the resolve goes through `cachedTmdbMovieIdByTitle`

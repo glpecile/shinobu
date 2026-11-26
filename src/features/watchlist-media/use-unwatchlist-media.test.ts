@@ -49,9 +49,7 @@ mock.module('@/state/queries/mapping', () => ({
   cachedTmdbTvIdByTvdb: () => Promise.resolve(null),
 }));
 
-const { runWatchlistRemove, WATCHLIST_REMOVE_ADAPTERS } = await import(
-  './use-unwatchlist-media'
-);
+const { runWatchlistRemove, WATCHLIST_REMOVE_ADAPTERS } = await import('./use-unwatchlist-media');
 
 const adapterCalls: ProviderId[] = [];
 
@@ -185,18 +183,9 @@ describe('runWatchlistRemove — invalidation, and no optimistic patch (KTD-5)',
     const { watchlistQueryKeys } = await import('@/state/queries/watchlist');
     client.setQueryData(watchlistQueryKeys.inputs(), { inputs, errors: [] });
 
-    await runWatchlistRemove(
-      client,
-      entryFor(item, ['trakt']),
-      ['trakt'],
-      [],
-      {},
-      fakeDeps(),
-    );
+    await runWatchlistRemove(client, entryFor(item, ['trakt']), ['trakt'], [], {}, fakeDeps());
 
-    const cached = client.getQueryData<{ inputs: WatchlistInput[] }>(
-      watchlistQueryKeys.inputs(),
-    );
+    const cached = client.getQueryData<{ inputs: WatchlistInput[] }>(watchlistQueryKeys.inputs());
     expect(cached?.inputs).toHaveLength(2);
     expect(keys).toContain('watchlist/inputs');
   });

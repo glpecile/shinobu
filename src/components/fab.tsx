@@ -75,13 +75,15 @@ export function Fab({
     >
       {/* Not flattened: on a card's cover, Fabric mounted the icon under this
           fill on iOS, leaving a blank red button. */}
-      <View collapsable={false} className={cn(
-        'items-center justify-center',
-        SIZE[size].box,
-        radius,
-        VARIANT[variant].box,
-      )}>
-        {loading ? <Spinner color={color} /> : <Ionicons color={color} name={icon} size={iconSize} />}
+      <View
+        collapsable={false}
+        className={cn('items-center justify-center', SIZE[size].box, radius, VARIANT[variant].box)}
+      >
+        {loading ? (
+          <Spinner color={color} />
+        ) : (
+          <Ionicons color={color} name={icon} size={iconSize} />
+        )}
       </View>
     </PresstableScale>
   );

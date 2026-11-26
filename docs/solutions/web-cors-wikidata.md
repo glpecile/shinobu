@@ -13,8 +13,8 @@ per title. [Wikidata Query Service API](https://www.wikidata.org/wiki/Wikidata:S
 
 ## Findings
 
-| Probe | Result |
-| --- | --- |
+| Probe                                                                           | Result                                           |
+| ------------------------------------------------------------------------------- | ------------------------------------------------ |
 | Browser GET with `Accept: application/sparql-results+json` and `Api-User-Agent` | 200, readable response from the local web origin |
 
 - No key and no account. `Accept` is CORS-safelisted, so a plain GET needs no

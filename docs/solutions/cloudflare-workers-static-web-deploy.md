@@ -59,9 +59,9 @@ build step. See `docs/solutions/web-cors-serializd.md` for the proxy contract.
   "assets": {
     "directory": "./dist",
     "html_handling": "drop-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
   },
-  "routes": [{ "pattern": "shinobu.glpecile.xyz", "custom_domain": true }]
+  "routes": [{ "pattern": "shinobu.glpecile.xyz", "custom_domain": true }],
 }
 ```
 
@@ -96,8 +96,8 @@ needed for this static-only deploy.
 
 **Set up 2026-07-20.** The `shinobu` Worker is connected to the
 `glpecile/shinobu` GitHub repo via **Workers Builds** (dashboard: Worker →
-Settings → Build → Connect Git repository). This is *not* GitHub Actions and
-*not* in any repo file — the connection, build commands, and env vars all
+Settings → Build → Connect Git repository). This is _not_ GitHub Actions and
+_not_ in any repo file — the connection, build commands, and env vars all
 live in the Cloudflare dashboard. Push to `main` → production deploy to
 `shinobu.glpecile.xyz`; pushes to non-production branches → preview versions
 (`wrangler versions upload`), not the production domain.
@@ -135,7 +135,7 @@ Durable fix now in the repo (2026-07-20): `package.json` has a
 `build:web` script (and `deploy:web` chains it:
 `bun run build:web && wrangler deploy`).
 Point the dashboard **Build command** at `bun run build:web` instead of the
-inline `bunx expo …` — inside a bun/npm script `node_modules/.bin` *is* on
+inline `bunx expo …` — inside a bun/npm script `node_modules/.bin` _is_ on
 `PATH`, so bare `expo` resolves, and the build recipe stays version-controlled
 in one place rather than duplicated in the dashboard.
 
@@ -171,18 +171,18 @@ The `EXPO_PUBLIC_*` vars the web build inlines at export time
 (`EXPO_PUBLIC_TMDB_TOKEN`, `EXPO_PUBLIC_TRAKT_CLIENT_ID`,
 `EXPO_PUBLIC_TRAKT_CLIENT_SECRET`, `EXPO_PUBLIC_ANILIST_CLIENT_ID`,
 `EXPO_PUBLIC_HARDCOVER_CLIENT_ID`, `EXPO_PUBLIC_SIMKL_CLIENT_ID` — v0.2.0 shipped without the Simkl id on both
-web and the release APKs because it was missing here *and* from release.yml's
+web and the release APKs because it was missing here _and_ from release.yml's
 `.env.local` heredoc; every new bundled credential must be added in both
 places) live in
 `.env.local`, which is **gitignored** — so Cloudflare's build container never
 sees them. They must be re-entered under Workers Builds → **Variables and
-secrets**. Miss this and the build still *succeeds* (nothing errors on a
+secrets**. Miss this and the build still _succeeds_ (nothing errors on a
 missing `EXPO_PUBLIC_*`), but the shipped bundle has them undefined: TMDB
 detail/person/studio screens go dark and Trakt/AniList connect break.
 
 Because `EXPO_PUBLIC_*` values are inlined into the client JS at export, the
 `Variable` vs `Secret` type choice in the dashboard only controls encryption
-at rest in Cloudflare — it does *not* hide them at runtime; they're public in
+at rest in Cloudflare — it does _not_ hide them at runtime; they're public in
 the shipped bundle either way. (The Trakt client-secret-in-bundle exposure is
 a pre-existing property of the BYO-client design, not introduced by this
 deploy path.)

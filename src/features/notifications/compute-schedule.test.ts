@@ -115,10 +115,7 @@ function inputs(
 
 describe('computeNotificationSchedule', () => {
   test('episode airing in 3 days is included with its exact instant', () => {
-    const result = computeNotificationSchedule(
-      inputs([traktInput('a', isoOffset(72))], []),
-      NOW,
-    );
+    const result = computeNotificationSchedule(inputs([traktInput('a', isoOffset(72))], []), NOW);
     expect(result).toHaveLength(1);
     expect(result[0].fireInstant).toBe(isoOffset(72));
   });
@@ -325,9 +322,7 @@ describe('computeNotificationSchedule — watchlisted episodes (R9)', () => {
       source: 'trakt',
       episode: { season: 1, number: 1, firstAired: null },
     };
-    expect(
-      computeNotificationSchedule(inputs([], [], [], [bare]), NOW),
-    ).toHaveLength(0);
+    expect(computeNotificationSchedule(inputs([], [], [], [bare]), NOW)).toHaveLength(0);
   });
 });
 
@@ -336,11 +331,7 @@ describe('computeNotificationSchedule — season drops', () => {
   const dropDay = localDay(now, 4);
 
   // Staggered by 1 minute because Trakt often spreads a season drop's first_aired timestamps.
-  function seasonDrop(
-    id: string,
-    count: number,
-    season = 2,
-  ): CalendarUpNextInput[] {
+  function seasonDrop(id: string, count: number, season = 2): CalendarUpNextInput[] {
     return Array.from({ length: count }, (_, index) =>
       calendarInput(id, localTime(dropDay, 4, index).toISOString(), {
         season,
@@ -350,10 +341,7 @@ describe('computeNotificationSchedule — season drops', () => {
   }
 
   test('a whole season landing at once is one notification', () => {
-    const result = computeNotificationSchedule(
-      inputs([], [], [], seasonDrop('bat', 10)),
-      now,
-    );
+    const result = computeNotificationSchedule(inputs([], [], [], seasonDrop('bat', 10)), now);
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
@@ -367,10 +355,7 @@ describe('computeNotificationSchedule — season drops', () => {
   });
 
   test('a lone episode carries no count at all', () => {
-    const result = computeNotificationSchedule(
-      inputs([], [], [], seasonDrop('bat', 1)),
-      now,
-    );
+    const result = computeNotificationSchedule(inputs([], [], [], seasonDrop('bat', 1)), now);
 
     expect(result).toHaveLength(1);
     expect(result[0]).not.toHaveProperty('count');
@@ -477,9 +462,7 @@ describe('hashSchedule', () => {
       fireInstant: '2026-07-31T04:00:00.000Z',
     };
 
-    expect(hashSchedule([{ ...base, count: 10 }])).not.toBe(
-      hashSchedule([{ ...base, count: 11 }]),
-    );
+    expect(hashSchedule([{ ...base, count: 10 }])).not.toBe(hashSchedule([{ ...base, count: 11 }]));
     expect(hashSchedule([{ ...base, count: 10 }])).not.toBe(hashSchedule([base]));
   });
 });

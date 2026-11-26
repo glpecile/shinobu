@@ -1,8 +1,8 @@
 # ani.zip's TMDB index is TV-oriented — anime films reverse-map to nothing
 
-**Symptom (2026-07-25):** *ChaO* (2025) opened from its details page offered
+**Symptom (2026-07-25):** _ChaO_ (2025) opened from its details page offered
 Trakt + Letterboxd in the log sheet but **not AniList**, even with AniList
-connected. Anime *series* opened the same way did include AniList.
+connected. Anime _series_ opened the same way did include AniList.
 
 ## Cause
 
@@ -20,7 +20,7 @@ TMDB entry, and no ani.zip row joining them. The lookup returns `null`, no
 widens the MOVIE to also be an ANIME. Nothing errors; AniList just silently
 isn't a target — for exactly the kind of item an AniList user cares about.
 
-Note the asymmetry: an *AniList-origin* anime film maps fine, because that
+Note the asymmetry: an _AniList-origin_ anime film maps fine, because that
 direction goes AniList id → ani.zip → TMDB, and ani.zip does hold the AniList
 id it is keyed by. Only the reverse (TMDB id → AniList id) has the hole.
 

@@ -6,10 +6,7 @@ import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { RailHead } from '@/components/rail-head';
-import {
-  homeHeaderClassName,
-  homeHeaderTitleSize,
-} from '@/components/screen-header-spacing';
+import { homeHeaderClassName, homeHeaderTitleSize } from '@/components/screen-header-spacing';
 import { AppIconSection } from '@/features/settings/app-icon-section';
 import { NotificationsSettingsSection } from '@/features/notifications/notifications-settings';
 import { HiddenItemsSection } from '@/features/settings/hidden-items-section';
@@ -82,7 +79,9 @@ function SettingsScreen() {
               </SettingsRail.Head>
               <SettingsRail.Row>
                 <SettingsRail.Target
-                  accessibilityLabel={process.env.EXPO_OS === 'web' ? 'View Shinobu code' : 'View Shinobu releases'}
+                  accessibilityLabel={
+                    process.env.EXPO_OS === 'web' ? 'View Shinobu code' : 'View Shinobu releases'
+                  }
                   onPress={() => {
                     void openExternalUrl(
                       process.env.EXPO_OS === 'web'

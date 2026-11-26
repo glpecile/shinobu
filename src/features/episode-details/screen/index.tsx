@@ -69,9 +69,7 @@ function EpisodePager({
   const { width } = window;
   // A horizontal scroll view does not stretch its pages' height on every platform.
   const [height, setHeight] = useState(window.height);
-  const found = fullOrder.findIndex(
-    (entry) => entry.season === season && entry.number === number,
-  );
+  const found = fullOrder.findIndex((entry) => entry.season === season && entry.number === number);
   const order = found === -1 ? [{ season, number }] : fullOrder;
   const index = Math.max(found, 0);
   const [settledEpisode, setSettledEpisode] = useState<EpisodeRef>({ season, number });
@@ -132,7 +130,9 @@ function EpisodePager({
           {order.slice(first, last + 1).map((entry) => (
             <View
               accessibilityElementsHidden={entry.season !== season || entry.number !== number}
-              importantForAccessibility={entry.season === season && entry.number === number ? 'auto' : 'no-hide-descendants'}
+              importantForAccessibility={
+                entry.season === season && entry.number === number ? 'auto' : 'no-hide-descendants'
+              }
               key={`${entry.season}-${entry.number}`}
               style={{ width, height }}
             >
@@ -141,7 +141,13 @@ function EpisodePager({
           ))}
           <View style={{ width: (order.length - 1 - last) * width }} />
         </GestureScrollView>
-        <EpisodeNavigation id={item.id} next={order[index + 1]} number={number} prev={order[index - 1]} season={season} />
+        <EpisodeNavigation
+          id={item.id}
+          next={order[index + 1]}
+          number={number}
+          prev={order[index - 1]}
+          season={season}
+        />
       </EpisodeStep>
       <FloatingBackButton onPress={onBack} />
     </View>
@@ -163,8 +169,7 @@ function EpisodePage({
   // `useCSSVariable`, not `useThemeColor`: composed into `${background}00`; web's `var(--token)` cannot be concatenated.
   // Fallback handles prerender with no DOM (docs/solutions/web-prerender-bakes-js-resolved-colors.md).
   const backgroundVariable = useCSSVariable('--color-background');
-  const background =
-    typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
+  const background = typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   const hero = view.still || item.backdropImage || '';
 
   return (

@@ -31,9 +31,7 @@ const UNAIRED: SeriesNextEpisode = {
   unaired: true,
 };
 
-export function nextEpisodeFromProgress(
-  progress: TraktShowProgressResult,
-): SeriesNextEpisode {
+export function nextEpisodeFromProgress(progress: TraktShowProgressResult): SeriesNextEpisode {
   const next = progress.nextEpisode;
   // Trakt sends next_episode: null for both announced (aired === 0) and finished (aired > 0) shows.
   if (next == null) return progress.aired === 0 ? UNAIRED : REWATCH_WRAP;
@@ -90,10 +88,7 @@ export function nextEpisodeFromSimklEntry(
       unaired: false,
     };
   }
-  if (
-    item.totalEpisodes != null &&
-    item.currentProgress >= item.totalEpisodes
-  ) {
+  if (item.totalEpisodes != null && item.currentProgress >= item.totalEpisodes) {
     return REWATCH_WRAP;
   }
   return null;
@@ -122,10 +117,7 @@ export function simklAnimeEpisodeAired(
   return next?.episode === number && (next.date == null || hasAired(next.date, now));
 }
 
-export function seriesEpisodeLabel(episode: {
-  season: number;
-  number: number;
-}): string {
+export function seriesEpisodeLabel(episode: { season: number; number: number }): string {
   return episodeCode(episode.season, episode.number);
 }
 

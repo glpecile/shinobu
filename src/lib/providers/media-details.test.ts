@@ -12,7 +12,11 @@ mock.module('react-native-mmkv', () => ({
 const { getMediaDetails, tmdbKindFor } = await import('./media-details');
 
 const tokens: TokenStore = { get: () => null, set: () => {}, clear: () => {} };
-const hardcoverTokens: TokenStore = { get: () => ({ accessToken: 'at' }), set: () => {}, clear: () => {} };
+const hardcoverTokens: TokenStore = {
+  get: () => ({ accessToken: 'at' }),
+  set: () => {},
+  clear: () => {},
+};
 
 function fakeFetch(routes: Array<[match: string, body: unknown, status?: number]>) {
   return (input: RequestInfo | URL): Promise<Response> => {
@@ -36,9 +40,7 @@ function deps(
   return {
     tmdb: options.tmdb === false ? null : { fetch, token: 'test-token' },
     trakt:
-      options.trakt === false
-        ? null
-        : { fetch, tokens, clientId: 'cid', clientSecret: 'secret' },
+      options.trakt === false ? null : { fetch, tokens, clientId: 'cid', clientSecret: 'secret' },
     anilist: { fetch, tokens },
     hardcover: { fetch, tokens: hardcoverTokens, clientId: 'cid', refreshLock: (run) => run() },
   };
@@ -101,10 +103,26 @@ describe('tmdbKindFor', () => {
 
 describe('getMediaDetails', () => {
   test('a Letterboxd TV variant supplies credits without movie write IDs or episode totals', async () => {
-    const result = await Effect.runPromise(getMediaDetails(deps([
-      ['/tv/228880', { id: 228880, name: 'Beast Boy: Lone Wolf', overview: 'Solo adventures', number_of_episodes: 10,
-        external_ids: { imdb_id: 'tt123' }, aggregate_credits: { cast: [{ id: 1, name: 'Greg Cipes', roles: [{ character: 'Beast Boy' }] }] } }],
-    ]), { type: 'MOVIE', tmdbTvVariant: 228880 }));
+    const result = await Effect.runPromise(
+      getMediaDetails(
+        deps([
+          [
+            '/tv/228880',
+            {
+              id: 228880,
+              name: 'Beast Boy: Lone Wolf',
+              overview: 'Solo adventures',
+              number_of_episodes: 10,
+              external_ids: { imdb_id: 'tt123' },
+              aggregate_credits: {
+                cast: [{ id: 1, name: 'Greg Cipes', roles: [{ character: 'Beast Boy' }] }],
+              },
+            },
+          ],
+        ]),
+        { type: 'MOVIE', tmdbTvVariant: 228880 },
+      ),
+    );
     expect(result.catalogue?.overview).toBe('Solo adventures');
     expect(result.catalogue?.externalIds).toEqual({});
     expect(result.catalogue?.totalEpisodes).toBeUndefined();
@@ -123,10 +141,11 @@ describe('getMediaDetails', () => {
 
   test('falls over to Trakt when the TMDB request fails', async () => {
     const result = await Effect.runPromise(
-      getMediaDetails(
-        deps([['/movie/603', { error: 'boom' }, 500], TRAKT_PEOPLE, TRAKT_STUDIOS]),
-        { type: 'MOVIE', tmdbId: 603, traktId: 1 },
-      ),
+      getMediaDetails(deps([['/movie/603', { error: 'boom' }, 500], TRAKT_PEOPLE, TRAKT_STUDIOS]), {
+        type: 'MOVIE',
+        tmdbId: 603,
+        traktId: 1,
+      }),
     );
 
     expect(result.source).toBe('trakt');
@@ -208,26 +227,33 @@ describe('getMediaDetails', () => {
 
   test('a book reads its Hardcover record and performs no TMDB request', async () => {
     const requested: string[] = [];
-    const book = fakeFetch([[
-      'api.hardcover.app',
-      {
-        data: {
-          books_by_pk: {
-            id: 4521,
-            title: 'Hard-Boiled Wonderland and the End of the World',
-            pages: 400,
-            release_year: 1985,
-            image: { url: 'https://assets.hardcover.app/hbw.jpg' },
-            contributions: [
-              { contribution: null, author: { id: 7, name: 'Haruki Murakami', image: null } },
-              { contribution: 'Translator', author: { id: 8, name: 'Alfred Birnbaum', image: null } },
-            ],
-            featured_book_series: null,
-            book_characters: [{ only_mentioned: false, character: { id: 90, name: 'The Calcutec' } }],
+    const book = fakeFetch([
+      [
+        'api.hardcover.app',
+        {
+          data: {
+            books_by_pk: {
+              id: 4521,
+              title: 'Hard-Boiled Wonderland and the End of the World',
+              pages: 400,
+              release_year: 1985,
+              image: { url: 'https://assets.hardcover.app/hbw.jpg' },
+              contributions: [
+                { contribution: null, author: { id: 7, name: 'Haruki Murakami', image: null } },
+                {
+                  contribution: 'Translator',
+                  author: { id: 8, name: 'Alfred Birnbaum', image: null },
+                },
+              ],
+              featured_book_series: null,
+              book_characters: [
+                { only_mentioned: false, character: { id: 90, name: 'The Calcutec' } },
+              ],
+            },
           },
         },
-      },
-    ]]);
+      ],
+    ]);
     const fetch = (input: RequestInfo | URL) => {
       requested.push(String(input));
       return book(input);
@@ -239,7 +265,12 @@ describe('getMediaDetails', () => {
           tmdb: { fetch, token: 'test-token' },
           trakt: null,
           anilist: { fetch, tokens },
-          hardcover: { fetch, tokens: hardcoverTokens, clientId: 'cid', refreshLock: (run) => run() },
+          hardcover: {
+            fetch,
+            tokens: hardcoverTokens,
+            clientId: 'cid',
+            refreshLock: (run) => run(),
+          },
         },
         { type: 'BOOK', hardcoverId: 4521, tmdbId: 603 },
       ),

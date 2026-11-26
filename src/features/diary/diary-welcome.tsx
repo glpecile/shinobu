@@ -82,7 +82,10 @@ export function DiaryWelcome({ timeZone }: { timeZone: string }) {
           style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
         />
       )}
-      <GestureScrollView className="flex-1" contentContainerClassName="grow justify-end md:justify-center">
+      <GestureScrollView
+        className="flex-1"
+        contentContainerClassName="grow justify-end md:justify-center"
+      >
         <View className="w-full max-w-2xl px-6 pt-4 pb-8 ios:pb-28 md:px-16 md:pb-0">
           <HeroEnter className="mb-5">
             <HeroProviders />
@@ -121,27 +124,128 @@ interface SampleLog {
   liked?: boolean;
 }
 
-const BEBOP = { tmdb: 30991, type: 'TV', title: 'Cowboy Bebop', poster: '/xDiXDfZwC6XYC6fxHI1jl3A3Ill.jpg', providers: [Provider.Simkl, Provider.Trakt], season: 1 } as const;
+const BEBOP = {
+  tmdb: 30991,
+  type: 'TV',
+  title: 'Cowboy Bebop',
+  poster: '/xDiXDfZwC6XYC6fxHI1jl3A3Ill.jpg',
+  providers: [Provider.Simkl, Provider.Trakt],
+  season: 1,
+} as const;
 
-const bebop = (episode: number): SampleLog => ({ ...BEBOP, providers: [...BEBOP.providers], episode });
+const bebop = (episode: number): SampleLog => ({
+  ...BEBOP,
+  providers: [...BEBOP.providers],
+  episode,
+});
 
 const LIVE: SampleLog[] = [
-  { tmdb: 78, type: 'MOVIE', title: 'Blade Runner', poster: '/63N9uy8nd9j7Eog2axPQ8lbr3Wj.jpg', providers: [Provider.Letterboxd, Provider.Trakt], liked: true },
+  {
+    tmdb: 78,
+    type: 'MOVIE',
+    title: 'Blade Runner',
+    poster: '/63N9uy8nd9j7Eog2axPQ8lbr3Wj.jpg',
+    providers: [Provider.Letterboxd, Provider.Trakt],
+    liked: true,
+  },
   ...Array.from({ length: 13 }, (_, index) => bebop(index + 1)),
-  { tmdb: 603, type: 'MOVIE', title: 'The Matrix', poster: '/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg', providers: [Provider.Letterboxd, Provider.Trakt] },
+  {
+    tmdb: 603,
+    type: 'MOVIE',
+    title: 'The Matrix',
+    poster: '/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg',
+    providers: [Provider.Letterboxd, Provider.Trakt],
+  },
   ...Array.from({ length: 13 }, (_, index) => bebop(index + 14)),
 ];
 
 const HISTORY: (SampleLog & { daysAgo: number; hour: number })[] = [
-  { daysAgo: 2, hour: 20, tmdb: 129, type: 'MOVIE', title: 'Spirited Away', poster: '/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg', providers: [Provider.Letterboxd, Provider.Simkl], liked: true },
-  { daysAgo: 2, hour: 1, tmdb: 890, type: 'TV', title: 'Neon Genesis Evangelion', poster: '/y2ah9t0navXyIvoHg1uIbIHO3tt.jpg', providers: [Provider.AniList], season: 1, episode: 26 },
-  { daysAgo: 4, hour: 22, tmdb: 149, type: 'MOVIE', title: 'Akira', poster: '/neZ0ykEsPqxamsX6o5QNUFILQrz.jpg', providers: [Provider.Letterboxd] },
-  { daysAgo: 6, hour: 21, tmdb: 10494, type: 'MOVIE', title: 'Perfect Blue', poster: '/6WTiOCfDPP8XV4jqfloiVWf7KHq.jpg', providers: [Provider.Trakt, Provider.Simkl] },
-  { daysAgo: 9, hour: 20, tmdb: 8392, type: 'MOVIE', title: 'My Neighbor Totoro', poster: '/rtGDOeG9LzoerkDGZF9dnVeLppL.jpg', providers: [Provider.Letterboxd], liked: true },
-  { daysAgo: 12, hour: 23, tmdb: 9323, type: 'MOVIE', title: 'Ghost in the Shell', poster: '/9gC88zYUBARRSThcG93MvW14sqx.jpg', providers: [Provider.Trakt] },
-  { daysAgo: 15, hour: 22, tmdb: 128, type: 'MOVIE', title: 'Princess Mononoke', poster: '/cMYCDADoLKLbB83g4WnJegaZimC.jpg', providers: [Provider.Letterboxd, Provider.Simkl] },
-  { daysAgo: 18, hour: 21, tmdb: 603, type: 'MOVIE', title: 'The Matrix', poster: '/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg', providers: [Provider.Trakt] },
-  { daysAgo: 21, hour: 20, tmdb: 238, type: 'MOVIE', title: 'The Godfather', poster: '/3bhkrj58Vtu7enYsRolD1fZdja1.jpg', providers: [Provider.Letterboxd], liked: true },
+  {
+    daysAgo: 2,
+    hour: 20,
+    tmdb: 129,
+    type: 'MOVIE',
+    title: 'Spirited Away',
+    poster: '/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg',
+    providers: [Provider.Letterboxd, Provider.Simkl],
+    liked: true,
+  },
+  {
+    daysAgo: 2,
+    hour: 1,
+    tmdb: 890,
+    type: 'TV',
+    title: 'Neon Genesis Evangelion',
+    poster: '/y2ah9t0navXyIvoHg1uIbIHO3tt.jpg',
+    providers: [Provider.AniList],
+    season: 1,
+    episode: 26,
+  },
+  {
+    daysAgo: 4,
+    hour: 22,
+    tmdb: 149,
+    type: 'MOVIE',
+    title: 'Akira',
+    poster: '/neZ0ykEsPqxamsX6o5QNUFILQrz.jpg',
+    providers: [Provider.Letterboxd],
+  },
+  {
+    daysAgo: 6,
+    hour: 21,
+    tmdb: 10494,
+    type: 'MOVIE',
+    title: 'Perfect Blue',
+    poster: '/6WTiOCfDPP8XV4jqfloiVWf7KHq.jpg',
+    providers: [Provider.Trakt, Provider.Simkl],
+  },
+  {
+    daysAgo: 9,
+    hour: 20,
+    tmdb: 8392,
+    type: 'MOVIE',
+    title: 'My Neighbor Totoro',
+    poster: '/rtGDOeG9LzoerkDGZF9dnVeLppL.jpg',
+    providers: [Provider.Letterboxd],
+    liked: true,
+  },
+  {
+    daysAgo: 12,
+    hour: 23,
+    tmdb: 9323,
+    type: 'MOVIE',
+    title: 'Ghost in the Shell',
+    poster: '/9gC88zYUBARRSThcG93MvW14sqx.jpg',
+    providers: [Provider.Trakt],
+  },
+  {
+    daysAgo: 15,
+    hour: 22,
+    tmdb: 128,
+    type: 'MOVIE',
+    title: 'Princess Mononoke',
+    poster: '/cMYCDADoLKLbB83g4WnJegaZimC.jpg',
+    providers: [Provider.Letterboxd, Provider.Simkl],
+  },
+  {
+    daysAgo: 18,
+    hour: 21,
+    tmdb: 603,
+    type: 'MOVIE',
+    title: 'The Matrix',
+    poster: '/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg',
+    providers: [Provider.Trakt],
+  },
+  {
+    daysAgo: 21,
+    hour: 20,
+    tmdb: 238,
+    type: 'MOVIE',
+    title: 'The Godfather',
+    poster: '/3bhkrj58Vtu7enYsRolD1fZdja1.jpg',
+    providers: [Provider.Letterboxd],
+    liked: true,
+  },
 ];
 
 function sampleEntry(log: SampleLog, id: string, at: Date): MergedDiaryEntry {
@@ -171,7 +275,9 @@ function sampleEntry(log: SampleLog, id: string, at: Date): MergedDiaryEntry {
 
 function sampleDiaryDays(now: Date, timeZone: string, landed: number): DiaryDay[] {
   const tonight = LIVE.slice(0, landed)
-    .map((log, index) => sampleEntry(log, `live-${index}`, new Date(now.getTime() - (landed - index) * 5 * 60_000)))
+    .map((log, index) =>
+      sampleEntry(log, `live-${index}`, new Date(now.getTime() - (landed - index) * 5 * 60_000)),
+    )
     .toReversed();
   const days = new Map<string, MergedDiaryEntry[]>();
   for (const entry of tonight) {

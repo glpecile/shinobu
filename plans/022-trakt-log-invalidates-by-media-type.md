@@ -36,17 +36,17 @@ plan, film-like logs refresh `watchedMovies` and everything else refreshes `watc
 `src/features/log-media/use-log-media.ts`, `invalidateAfterLog` (~line 652):
 
 ```ts
-  if (succeeded.includes('trakt')) {
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedShows() });
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedMovies() });
-    // Trakt removes a watched item from the watchlist server-side — ...
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
-    const traktId = item.externalIds.trakt;
-    if (traktId != null) {
-      // TV logs also change this show's seasons/progress views (plan 0010).
-      queryClient.invalidateQueries({ queryKey: traktQueryKeys.showProgress(traktId) });
-    }
+if (succeeded.includes('trakt')) {
+  queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedShows() });
+  queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedMovies() });
+  // Trakt removes a watched item from the watchlist server-side — ...
+  queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
+  const traktId = item.externalIds.trakt;
+  if (traktId != null) {
+    // TV logs also change this show's seasons/progress views (plan 0010).
+    queryClient.invalidateQueries({ queryKey: traktQueryKeys.showProgress(traktId) });
   }
+}
 ```
 
 The film-like rule used elsewhere in the codebase (e.g. `letterboxdFilmWatchQuery`
@@ -59,13 +59,13 @@ records invalidated keys as `'a/b/c'` strings. `ITEM` is a `TV` item with
 
 ## Commands you will need
 
-| Purpose   | Command                                                         | Expected on success |
-|-----------|-----------------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                                 | exit 0              |
-| Typecheck | `bun typecheck`                                                 | exit 0              |
-| One file  | `bun test src/features/log-media/invalidate-after-log.test.ts`  | all pass            |
-| All tests | `bun run test`                                                  | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                                      | exit 0              |
+| Purpose   | Command                                                        | Expected on success               |
+| --------- | -------------------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                                | exit 0                            |
+| Typecheck | `bun typecheck`                                                | exit 0                            |
+| One file  | `bun test src/features/log-media/invalidate-after-log.test.ts` | all pass                          |
+| All tests | `bun run test`                                                 | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                                     | exit 0                            |
 
 ## Scope
 

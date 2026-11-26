@@ -111,12 +111,12 @@ Facts this plan relies on (verified 2026-10-26):
 
 ## Commands you will need
 
-| Purpose   | Command                                              | Expected on success |
-|-----------|------------------------------------------------------|---------------------|
-| Typecheck | `bun typecheck`                                      | exit 0              |
-| One file  | `bun test src/lib/providers/mapping/anizip.test.ts`  | all pass            |
-| All tests | `bun run test`                                       | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                           | exit 0              |
+| Purpose   | Command                                             | Expected on success               |
+| --------- | --------------------------------------------------- | --------------------------------- |
+| Typecheck | `bun typecheck`                                     | exit 0                            |
+| One file  | `bun test src/lib/providers/mapping/anizip.test.ts` | all pass                          |
+| All tests | `bun run test`                                      | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                          | exit 0                            |
 
 ## Scope
 

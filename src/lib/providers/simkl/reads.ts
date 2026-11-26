@@ -108,9 +108,7 @@ export function getAllItems(
  * `/sync/activities` — the cache-invalidation signal (KTD-5). Poll this
  * cheaply; refetch `getAllItems` only when a bucket's timestamp moved.
  */
-export function getLastActivities(
-  deps: SimklDeps,
-): Effect.Effect<SimklActivities, ProviderError> {
+export function getLastActivities(deps: SimklDeps): Effect.Effect<SimklActivities, ProviderError> {
   return simklHttp<SimklActivitiesRaw>(deps, '/sync/activities', {
     accessToken: accessToken(deps),
   }).pipe(Effect.map(normalizeActivities));
@@ -147,11 +145,9 @@ export function getMonthlyCalendar(
   month: number,
 ): Effect.Effect<SimklCalendarEntry[], ProviderError> {
   const paddedMonth = String(month).padStart(2, '0');
-  return simklHttp<SimklCalendarFile>(
-    deps,
-    `/calendar/v2/${year}/${paddedMonth}/${kind}.json`,
-    { baseUrl: SIMKL_CDN_BASE_URL },
-  ).pipe(Effect.map(normalizeCalendarFile));
+  return simklHttp<SimklCalendarFile>(deps, `/calendar/v2/${year}/${paddedMonth}/${kind}.json`, {
+    baseUrl: SIMKL_CDN_BASE_URL,
+  }).pipe(Effect.map(normalizeCalendarFile));
 }
 
 export interface SimklTrendingParams {
@@ -192,9 +188,7 @@ export function getTrending(
  * (api.simkl.org get-user-settings, verified 2026-07-31), so the queryFn
  * wiring in U5 must not assume GET.
  */
-export function getUserSettings(
-  deps: SimklDeps,
-): Effect.Effect<SimklUserSettings, ProviderError> {
+export function getUserSettings(deps: SimklDeps): Effect.Effect<SimklUserSettings, ProviderError> {
   return simklHttp<SimklUserSettingsRaw>(deps, '/users/settings', {
     method: 'POST',
     accessToken: accessToken(deps),
@@ -242,7 +236,8 @@ export function ratingsLookup(
   const { simkl, imdb, mal, anilist, tmdb } = item.externalIds;
   if (item.type === 'ANIME' && mal != null) return { mal };
   if (item.type === 'ANIME' && anilist != null) return { anilist };
-  if (tmdb != null) return { tmdb, type: item.type === 'MOVIE' || item.isFilm === true ? 'movie' : 'show' };
+  if (tmdb != null)
+    return { tmdb, type: item.type === 'MOVIE' || item.isFilm === true ? 'movie' : 'show' };
   if (simkl != null) return { simkl };
   if (imdb != null) return { imdb };
   return null;
@@ -270,10 +265,7 @@ export function lookupByExternalId(
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   const query = lookupQuery(params);
   return Effect.gen(function* () {
-    const raw = yield* simklHttp<SimklSearchIdMatch[]>(
-      deps,
-      `/search/id?${query.toString()}`,
-    );
+    const raw = yield* simklHttp<SimklSearchIdMatch[]>(deps, `/search/id?${query.toString()}`);
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
     return raw

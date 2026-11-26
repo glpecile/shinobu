@@ -41,7 +41,7 @@ the season checkmarks and the "Watching · 10 episodes logged" line.
 read an entry with no `next_to_watch` as "everything aired is watched" whenever
 the aired count was non-zero, and wrapped to a S1E1 **rewatch**. That is only
 true if the user has actually caught up. It now returns `null` (unnameable →
-season picker) when a *known* aired count exceeds `currentProgress`; an
+season picker) when a _known_ aired count exceeds `currentProgress`; an
 **unknown** count keeps the rewatch path it always had, deliberately unchanged.
 
 Without fix 2, fix 1 would have been worse than the bug: a 10-of-20 show would
@@ -49,8 +49,8 @@ have offered "Log rewatch" of S1E1.
 
 ## The rule this generalizes to
 
-A provider snapshot filtered by status is a filter over *which items are listed*,
-not over *which facts are true*. Reading one status bucket and treating an
+A provider snapshot filtered by status is a filter over _which items are listed_,
+not over _which facts are true_. Reading one status bucket and treating an
 absence as "we know nothing about this show" is how a screen ends up contradicting
 the number it is already displaying. Widen the read, or state the narrowness in
 what you render — don't silently drop the affordance.

@@ -115,9 +115,7 @@ describe('normalizeLibraryEntry', () => {
     expect(entry.notAiredEpisodes).toBe(3);
     // Absent upstream stays absent — never a fabricated zero (unknown is not
     // "everything aired").
-    expect(
-      normalizeLibraryEntry(showEntry, 'shows', NOW)!.notAiredEpisodes,
-    ).toBeUndefined();
+    expect(normalizeLibraryEntry(showEntry, 'shows', NOW)!.notAiredEpisodes).toBeUndefined();
   });
 
   test('falls back to parsing the S##E## pointer when info is absent', () => {
@@ -229,11 +227,7 @@ describe('normalizeLibraryEntry', () => {
       ),
     ).toBeNull();
     expect(
-      normalizeLibraryEntry(
-        { status: 'watching', show: { ids: { simkl: 1 } } },
-        'shows',
-        NOW,
-      ),
+      normalizeLibraryEntry({ status: 'watching', show: { ids: { simkl: 1 } } }, 'shows', NOW),
     ).toBeNull();
     expect(normalizeLibraryEntry({ status: 'watching' }, 'shows', NOW)).toBeNull();
   });

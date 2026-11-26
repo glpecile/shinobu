@@ -1,5 +1,8 @@
 import { LETTERBOXD_BASE_URL } from '@/lib/providers/letterboxd/config';
-import { SERIALIZD_APP_HEADERS, SERIALIZD_UPSTREAM_BASE_URL } from '@/lib/providers/serializd/config';
+import {
+  SERIALIZD_APP_HEADERS,
+  SERIALIZD_UPSTREAM_BASE_URL,
+} from '@/lib/providers/serializd/config';
 import { SIMKL_API_BASE_URL } from '@/lib/providers/simkl/config';
 import { TMDB_API_BASE_URL, tmdbImageUrl } from '@/lib/providers/tmdb/config';
 
@@ -43,10 +46,16 @@ const MEDIA_ID: Record<MediaProvider, RegExp> = {
   trakt: NUMBER,
 };
 
-function mediaSource(provider: string | undefined, id: string | undefined, episode?: string): CardSource | null {
+function mediaSource(
+  provider: string | undefined,
+  id: string | undefined,
+  episode?: string,
+): CardSource | null {
   if (provider == null || id == null || !Object.hasOwn(MEDIA_ID, provider)) return null;
   const typed = provider as MediaProvider;
-  return MEDIA_ID[typed].test(id) ? { kind: 'media', provider: typed, id, ...(episode ? { episode } : {}) } : null;
+  return MEDIA_ID[typed].test(id)
+    ? { kind: 'media', provider: typed, id, ...(episode ? { episode } : {}) }
+    : null;
 }
 
 function nameSource(eyebrow: 'Person' | 'Studio', name: string | undefined): CardSource | null {
@@ -68,20 +77,37 @@ export function parseCardPath(pathname: string): CardSource | null {
       return parts.length <= 4 ? mediaSource(a, b) : null;
     case 'episode': {
       const numbers = parts.slice(3);
-      if (numbers.length === 0 || numbers.length > 2 || !numbers.every((n) => /^[0-9]{1,4}$/.test(n))) return null;
-      return mediaSource(a, b, numbers.length === 2 ? `Season ${c} · Episode ${d}` : `Episode ${c}`);
+      if (
+        numbers.length === 0 ||
+        numbers.length > 2 ||
+        !numbers.every((n) => /^[0-9]{1,4}$/.test(n))
+      )
+        return null;
+      return mediaSource(
+        a,
+        b,
+        numbers.length === 2 ? `Season ${c} · Episode ${d}` : `Episode ${c}`,
+      );
     }
     case 'person':
       if (parts.length !== 3) return null;
       if (a === 'lookup') return nameSource('Person', b);
-      return (a === 'tmdb' || a === 'anilist') && NUMBER.test(b) ? { kind: 'person', provider: a, id: b } : null;
+      return (a === 'tmdb' || a === 'anilist') && NUMBER.test(b)
+        ? { kind: 'person', provider: a, id: b }
+        : null;
     case 'studio':
       if (parts.length !== 3) return null;
       if (a === 'lookup') return nameSource('Studio', b);
       return a === 'tmdb' && NUMBER.test(b) ? { kind: 'studio', id: b } : null;
     case 'lists':
-      if (a === 'serializd' && parts.length === 3 && NUMBER.test(b)) return { kind: 'serializdList', id: b };
-      if (a === 'letterboxd' && parts.length === 4 && /^[A-Za-z0-9_-]{1,39}$/.test(b) && /^[a-z0-9-]{1,200}$/.test(c)) {
+      if (a === 'serializd' && parts.length === 3 && NUMBER.test(b))
+        return { kind: 'serializdList', id: b };
+      if (
+        a === 'letterboxd' &&
+        parts.length === 4 &&
+        /^[A-Za-z0-9_-]{1,39}$/.test(b) &&
+        /^[a-z0-9-]{1,200}$/.test(c)
+      ) {
         return { kind: 'letterboxdList', owner: b, slug: c };
       }
       return null;
@@ -103,21 +129,31 @@ async function read<T>(url: string, init: RequestInit, as: 'json' | 'text'): Pro
 function tmdb<T>(env: OgEnv, path: string): Promise<T | null> {
   const token = env.EXPO_PUBLIC_TMDB_TOKEN;
   if (!token) return Promise.resolve(null);
-  return read<T>(`${TMDB_API_BASE_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } }, 'json');
+  return read<T>(
+    `${TMDB_API_BASE_URL}${path}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+    'json',
+  );
 }
 
 async function anilist<T>(query: string, id: string): Promise<T | null> {
   const body = JSON.stringify({ query, variables: { id: Number(id) } });
   const result = await read<{ data?: T }>(
     ANILIST_GRAPHQL_URL,
-    { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body },
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body,
+    },
     'json',
   );
   return result?.data ?? null;
 }
 
-const compact = (values: Array<string | number | null | undefined>) => values.filter((v) => v != null && v !== '');
-const join = (values: Array<string | number | null | undefined>) => compact(values).join(' · ') || undefined;
+const compact = (values: Array<string | number | null | undefined>) =>
+  values.filter((v) => v != null && v !== '');
+const join = (values: Array<string | number | null | undefined>) =>
+  compact(values).join(' · ') || undefined;
 /**
  * AniList descriptions mix HTML with markdown. Staff bios also open with
  * `__Label:__ value` facts, `__Heading__` lines, and `[Site](url) | …` link rows,
@@ -147,7 +183,10 @@ interface TmdbMedia {
 function tmdbMediaCard(raw: TmdbMedia, kind: 'movie' | 'tv'): Card {
   return {
     title: raw.title ?? raw.name ?? '',
-    eyebrow: join([kind === 'movie' ? 'Movie' : 'TV', (raw.release_date ?? raw.first_air_date)?.slice(0, 4)]),
+    eyebrow: join([
+      kind === 'movie' ? 'Movie' : 'TV',
+      (raw.release_date ?? raw.first_air_date)?.slice(0, 4),
+    ]),
     description: raw.overview || undefined,
     posters: compact([tmdbImageUrl(raw.poster_path, 'w342')]) as string[],
   };
@@ -159,18 +198,29 @@ async function tmdbMedia(env: OgEnv, kind: 'movie' | 'tv', id: string): Promise<
 }
 
 const decodeEntities = (text: string) =>
-  text.replace(/&(?:#(\d+)|#x([0-9a-f]+)|(amp|quot|lt|gt|apos));/gi, (_, dec, hex, named: string | undefined) => {
-    if (dec) return String.fromCodePoint(Number(dec));
-    if (hex) return String.fromCodePoint(parseInt(hex, 16));
-    return { amp: '&', quot: '"', lt: '<', gt: '>', apos: "'" }[named!.toLowerCase()] ?? '';
-  });
+  text.replace(
+    /&(?:#(\d+)|#x([0-9a-f]+)|(amp|quot|lt|gt|apos));/gi,
+    (_, dec, hex, named: string | undefined) => {
+      if (dec) return String.fromCodePoint(Number(dec));
+      if (hex) return String.fromCodePoint(parseInt(hex, 16));
+      return { amp: '&', quot: '"', lt: '<', gt: '>', apos: "'" }[named!.toLowerCase()] ?? '';
+    },
+  );
 
-async function letterboxdHtml(path: string): Promise<{ html: string; og: (key: string) => string | undefined } | null> {
-  const html = await read<string>(`${LETTERBOXD_BASE_URL}/${path}/`, { headers: { 'User-Agent': 'Mozilla/5.0' } }, 'text');
+async function letterboxdHtml(
+  path: string,
+): Promise<{ html: string; og: (key: string) => string | undefined } | null> {
+  const html = await read<string>(
+    `${LETTERBOXD_BASE_URL}/${path}/`,
+    { headers: { 'User-Agent': 'Mozilla/5.0' } },
+    'text',
+  );
   if (html == null) return null;
   const og = (key: string) => {
     const match = html.match(new RegExp(`<meta property="og:${key}" content="([^"]*)"`));
-    return match ? decodeEntities(match[1]).replace(/‎/g, '').replace(/\s+/g, ' ').trim() : undefined;
+    return match
+      ? decodeEntities(match[1]).replace(/‎/g, '').replace(/\s+/g, ' ').trim()
+      : undefined;
   };
   return { html, og };
 }
@@ -181,15 +231,28 @@ async function letterboxdFilm(slug: string): Promise<Card | null> {
   const ogTitle = page?.og('title');
   if (page == null || ogTitle == null) return null;
   const [, title = ogTitle, year] = ogTitle.match(/^(.*) \((\d{4})\)$/) ?? [];
-  const poster = page.html.match(/"image":"(https:\/\/a\.ltrbxd\.com\/resized\/film-poster\/[^"]+)"/)?.[1];
-  return { title, eyebrow: join(['Movie', year]), description: page.og('description'), posters: poster ? [poster] : [] };
+  const poster = page.html.match(
+    /"image":"(https:\/\/a\.ltrbxd\.com\/resized\/film-poster\/[^"]+)"/,
+  )?.[1];
+  return {
+    title,
+    eyebrow: join(['Movie', year]),
+    description: page.og('description'),
+    posters: poster ? [poster] : [],
+  };
 }
 
 async function letterboxdList(owner: string, slug: string): Promise<Card | null> {
   const page = await letterboxdHtml(`${owner}/list/${slug}`);
   const title = page?.og('title');
   return page && title
-    ? { title, eyebrow: 'Letterboxd list', description: page.og('description'), posters: [], backdrop: page.og('image') }
+    ? {
+        title,
+        eyebrow: 'Letterboxd list',
+        description: page.og('description'),
+        posters: [],
+        backdrop: page.og('image'),
+      }
     : null;
 }
 
@@ -202,7 +265,10 @@ async function resolveMedia(env: OgEnv, provider: MediaProvider, id: string): Pr
     case 'serializd':
       return tmdbMedia(env, 'tv', id);
     case 'imdb': {
-      const found = await tmdb<{ movie_results: TmdbMedia[]; tv_results: TmdbMedia[] }>(env, `/find/${id}?external_source=imdb_id`);
+      const found = await tmdb<{ movie_results: TmdbMedia[]; tv_results: TmdbMedia[] }>(
+        env,
+        `/find/${id}?external_source=imdb_id`,
+      );
       if (found?.movie_results[0]) return tmdbMediaCard(found.movie_results[0], 'movie');
       return found?.tv_results[0] ? tmdbMediaCard(found.tv_results[0], 'tv') : null;
     }
@@ -233,14 +299,28 @@ async function resolveMedia(env: OgEnv, provider: MediaProvider, id: string): Pr
       if (!clientId) return null;
       const query = `client_id=${encodeURIComponent(clientId)}`;
       // A bare Simkl id carries no type, and only the typed detail read has the overview.
-      const [hit] = (await read<Array<{ type: string }>>(`${SIMKL_API_BASE_URL}/search/id?simkl=${id}&${query}`, {}, 'json')) ?? [];
-      const path = hit?.type === 'movie' ? 'movies' : hit?.type === 'anime' ? 'anime' : hit?.type === 'tv' ? 'tv' : null;
+      const [hit] =
+        (await read<Array<{ type: string }>>(
+          `${SIMKL_API_BASE_URL}/search/id?simkl=${id}&${query}`,
+          {},
+          'json',
+        )) ?? [];
+      const path =
+        hit?.type === 'movie'
+          ? 'movies'
+          : hit?.type === 'anime'
+            ? 'anime'
+            : hit?.type === 'tv'
+              ? 'tv'
+              : null;
       if (path == null) return null;
-      const item = await read<{ title: string; en_title?: string | null; year?: number; poster?: string; overview?: string }>(
-        `${SIMKL_API_BASE_URL}/${path}/${id}?extended=full&${query}`,
-        {},
-        'json',
-      );
+      const item = await read<{
+        title: string;
+        en_title?: string | null;
+        year?: number;
+        poster?: string;
+        overview?: string;
+      }>(`${SIMKL_API_BASE_URL}/${path}/${id}?extended=full&${query}`, {}, 'json');
       if (!item) return null;
       return {
         title: item.en_title || item.title,
@@ -265,10 +345,12 @@ export async function resolveCard(source: CardSource, env: OgEnv): Promise<Card 
     }
     case 'person': {
       if (source.provider === 'tmdb') {
-        const raw = await tmdb<{ name: string; biography?: string; profile_path?: string | null; known_for_department?: string }>(
-          env,
-          `/person/${source.id}`,
-        );
+        const raw = await tmdb<{
+          name: string;
+          biography?: string;
+          profile_path?: string | null;
+          known_for_department?: string;
+        }>(env, `/person/${source.id}`);
         if (!raw) return null;
         return {
           title: raw.name,
@@ -278,8 +360,16 @@ export async function resolveCard(source: CardSource, env: OgEnv): Promise<Card 
         };
       }
       const data = await anilist<{
-        Staff: { name: { full: string }; description: string | null; image: { large: string | null }; primaryOccupations: string[] } | null;
-      }>('query($id:Int){Staff(id:$id){name{full}description(asHtml:false)image{large}primaryOccupations}}', source.id);
+        Staff: {
+          name: { full: string };
+          description: string | null;
+          image: { large: string | null };
+          primaryOccupations: string[];
+        } | null;
+      }>(
+        'query($id:Int){Staff(id:$id){name{full}description(asHtml:false)image{large}primaryOccupations}}',
+        source.id,
+      );
       if (!data?.Staff) return null;
       return {
         title: data.Staff.name.full,
@@ -290,7 +380,14 @@ export async function resolveCard(source: CardSource, env: OgEnv): Promise<Card 
     }
     case 'studio': {
       const raw = await tmdb<{ name: string; description?: string }>(env, `/company/${source.id}`);
-      return raw ? { title: raw.name, eyebrow: 'Studio', description: raw.description || undefined, posters: [] } : null;
+      return raw
+        ? {
+            title: raw.name,
+            eyebrow: 'Studio',
+            description: raw.description || undefined,
+            posters: [],
+          }
+        : null;
     }
     case 'name':
       return { title: source.name, eyebrow: source.eyebrow, posters: [] };
@@ -302,12 +399,23 @@ export async function resolveCard(source: CardSource, env: OgEnv): Promise<Card 
         listDescription?: string | null;
         owner: { username: string };
         numberOfItems: number;
-        listItems: Array<{ bannerImage?: string | null; season?: { posterPath?: string | null } | null }>;
-      }>(`${SERIALIZD_UPSTREAM_BASE_URL}/list/${source.id}`, { headers: SERIALIZD_APP_HEADERS }, 'json');
+        listItems: Array<{
+          bannerImage?: string | null;
+          season?: { posterPath?: string | null } | null;
+        }>;
+      }>(
+        `${SERIALIZD_UPSTREAM_BASE_URL}/list/${source.id}`,
+        { headers: SERIALIZD_APP_HEADERS },
+        'json',
+      );
       if (!raw) return null;
       return {
         title: raw.listName,
-        eyebrow: join(['Serializd list', `${raw.numberOfItems} ${raw.numberOfItems === 1 ? 'show' : 'shows'}`, `by ${raw.owner.username}`]),
+        eyebrow: join([
+          'Serializd list',
+          `${raw.numberOfItems} ${raw.numberOfItems === 1 ? 'show' : 'shows'}`,
+          `by ${raw.owner.username}`,
+        ]),
         description: raw.listDescription || undefined,
         posters: raw.listItems
           .map((item) => tmdbImageUrl(item.season?.posterPath || item.bannerImage, 'w342'))
@@ -344,12 +452,23 @@ export function cardMetaTags(card: Card, url: URL): string {
 }
 
 /** Resolved metadata for a page, cached a day so a preview and its image share one upstream read. */
-export async function cachedCard(source: CardSource, url: URL, env: OgEnv, ctx: ExecutionContext): Promise<Card | null> {
+export async function cachedCard(
+  source: CardSource,
+  url: URL,
+  env: OgEnv,
+  ctx: ExecutionContext,
+): Promise<Card | null> {
   const key = new Request(`${url.origin}/og-card${url.pathname}`);
   const hit = await caches.default.match(key);
   if (hit) return hit.json();
   const card = await resolveCard(source, env);
-  if (card) ctx.waitUntil(caches.default.put(key, Response.json(card, { headers: { 'Cache-Control': 'public, max-age=86400' } })));
+  if (card)
+    ctx.waitUntil(
+      caches.default.put(
+        key,
+        Response.json(card, { headers: { 'Cache-Control': 'public, max-age=86400' } }),
+      ),
+    );
   return card;
 }
 
@@ -357,18 +476,40 @@ export async function cachedCard(source: CardSource, url: URL, env: OgEnv, ctx: 
  * A dynamic route's shell comes back from the assets router as the 404 page,
  * which crawlers skip; a recognized route is served with 200 and its own tags.
  */
-export async function withPageMeta(request: Request, page: Response, env: OgEnv, ctx: ExecutionContext): Promise<Response> {
+export async function withPageMeta(
+  request: Request,
+  page: Response,
+  env: OgEnv,
+  ctx: ExecutionContext,
+): Promise<Response> {
   const url = new URL(request.url);
-  const source = page.status === 404 && (request.method === 'GET' || request.method === 'HEAD') ? parseCardPath(url.pathname) : null;
+  const source =
+    page.status === 404 && (request.method === 'GET' || request.method === 'HEAD')
+      ? parseCardPath(url.pathname)
+      : null;
   if (source == null) return page;
   const found = new Response(page.body, { status: 200, headers: page.headers });
   const card = await cachedCard(source, url, env, ctx);
   // The shell has no <title>, and some apps (Telegram) drop a preview without one,
   // so an unresolved item still previews as the site card under the app's name.
-  const tags = card == null ? '<title>Shinobu</title><meta property="og:title" content="Shinobu" />' : cardMetaTags(card, url);
-  const replaced = card == null ? 'title' : 'title, meta[property^="og:"], meta[name^="twitter:"], meta[name="description"]';
+  const tags =
+    card == null
+      ? '<title>Shinobu</title><meta property="og:title" content="Shinobu" />'
+      : cardMetaTags(card, url);
+  const replaced =
+    card == null
+      ? 'title'
+      : 'title, meta[property^="og:"], meta[name^="twitter:"], meta[name="description"]';
   return new HTMLRewriter()
-    .on(replaced, { element: (element) => { element.remove(); } })
-    .on('head', { element: (element) => { element.append(tags, { html: true }); } })
+    .on(replaced, {
+      element: (element) => {
+        element.remove();
+      },
+    })
+    .on('head', {
+      element: (element) => {
+        element.append(tags, { html: true });
+      },
+    })
     .transform(found);
 }

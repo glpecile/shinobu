@@ -31,8 +31,7 @@ export function localDayOffset(
   if (instant == null || instant === '') return null;
   const parsed = parseLocalInstant(instant);
   if (parsed == null) return null;
-  const diff =
-    startOfLocalDay(parsed).getTime() - startOfLocalDay(now).getTime();
+  const diff = startOfLocalDay(parsed).getTime() - startOfLocalDay(now).getTime();
   return Math.round(diff / MS_PER_DAY);
 }
 
@@ -68,9 +67,7 @@ export function formatRelativeDay(
  * provider field parses to local midnight, and rendering that would assert a
  * 00:00 airing nobody stated.
  */
-export function formatLocalTime(
-  instant: string | null | undefined,
-): string | null {
+export function formatLocalTime(instant: string | null | undefined): string | null {
   if (instant == null || instant === '' || isDateOnly(instant)) return null;
   const parsed = parseLocalInstant(instant);
   if (parsed == null) return null;
@@ -81,15 +78,7 @@ export function formatLocalTime(
 
 // Hardcoded rather than Intl-formatted, for the same reason the diary hardcodes
 // its month names: identical output on every platform and locale.
-const WEEKDAYS = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /** Full local weekday name ("Saturday") — agenda day headers. */
 export function weekdayName(date: Date): string {

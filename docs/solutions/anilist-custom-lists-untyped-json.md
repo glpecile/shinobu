@@ -1,4 +1,4 @@
-# AniList `MediaList.customLists` is an untyped `Json` map of *every* list
+# AniList `MediaList.customLists` is an untyped `Json` map of _every_ list
 
 **Found:** 2026-07-29, building the watchlist removal guard (plan 0031 U16 / R36).
 
@@ -12,7 +12,7 @@ The obvious read is `mediaListEntry { customLists }` and then "does it have any
 keys?" That is wrong, and wrong in the direction that breaks the feature
 silently: `customLists` is declared `Json` in AniList's schema (no shape, no
 list type), and what it returns for **every** entry is an object with one key
-per custom list the *viewer* has ever defined, with the membership boolean in
+per custom list the _viewer_ has ever defined, with the membership boolean in
 the value:
 
 ```json

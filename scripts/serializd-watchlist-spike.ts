@@ -64,9 +64,7 @@ async function exclusivityCheck(username: string) {
     if (seen == null) continue;
     const shared = listed.seasonIds.filter((id) => seen.seasonIds.includes(id));
     if (shared.length === 0) continue;
-    overlaps.push(
-      `| ${listed.showId} | ${listed.showName} | ${shared.join(', ')} |`,
-    );
+    overlaps.push(`| ${listed.showId} | ${listed.showName} | ${shared.join(', ')} |`);
   }
 
   console.log(
@@ -130,8 +128,7 @@ async function call(
 
 function watchedShape(progress: unknown): Record<string, number> {
   const seasons =
-    (progress as { watchedSeasons?: Array<Record<string, unknown>> } | null)
-      ?.watchedSeasons ?? [];
+    (progress as { watchedSeasons?: Array<Record<string, unknown>> } | null)?.watchedSeasons ?? [];
   const shape: Record<string, number> = {};
   for (const season of seasons) {
     const number = season.seasonNumber;
@@ -186,8 +183,11 @@ async function main() {
   record(`Step 0 — \`GET show/${args.tmdb}\` (verbatim)`, show);
 
   const seasons =
-    (show.body as { seasons?: Array<{ id?: number; seasonNumber?: number; episodeCount?: number }> })
-      ?.seasons ?? [];
+    (
+      show.body as {
+        seasons?: Array<{ id?: number; seasonNumber?: number; episodeCount?: number }>;
+      }
+    )?.seasons ?? [];
   const regular = seasons.filter(
     (season) =>
       typeof season.seasonNumber === 'number' &&
@@ -294,14 +294,20 @@ async function main() {
     body: JSON.stringify({ showId: args.tmdb, season_ids: [s1.id] }),
   });
   record(`Step 5 — \`POST watchlist/remove_v2\` with **S1 included** (\`${s1.id}\`)`, remove);
-  record('Step 5b — progress after the remove', watchedShape((await call(progressPath, token)).body));
+  record(
+    'Step 5b — progress after the remove',
+    watchedShape((await call(progressPath, token)).body),
+  );
 
   if (specials?.id != null) {
     const specialsAdd = await call('watchlist_v2', token, {
       method: 'POST',
       body: JSON.stringify({ showId: args.tmdb, season_ids: [specials.id] }),
     });
-    record(`Step 6 — \`POST watchlist_v2\` with the **specials** id (\`${specials.id}\`)`, specialsAdd);
+    record(
+      `Step 6 — \`POST watchlist_v2\` with the **specials** id (\`${specials.id}\`)`,
+      specialsAdd,
+    );
   } else {
     log.push('### Step 6 — specials\n\nThis show has no season 0; probe it on one that does.\n');
   }
@@ -314,7 +320,7 @@ function report(args: Args, body: string[]): string {
     '# Serializd: does a watchlist write clear watched state?',
     '',
     `Probe: \`scripts/serializd-watchlist-spike.ts --tmdb ${args.tmdb}${args.write ? ' --write' : ''}${args.destructive ? ' --destructive' : ''}\`.`,
-    'Plan 0031 U10, discharging KTD-10\'s named risk and stop-condition (c).',
+    "Plan 0031 U10, discharging KTD-10's named risk and stop-condition (c).",
     '',
     '> Re-run this harness whenever the Serializd endpoints move (`_v2` → `_v3`)',
     '> or the season-id join stops matching — the finding below is dated, not eternal.',

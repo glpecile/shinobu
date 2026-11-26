@@ -12,7 +12,10 @@ const ALLOWED_FILES = [
 export default defineRule({
   meta: {
     type: 'problem',
-    docs: { description: 'Effect stays in lib/providers, lib/http, state/queries and the feature write hooks.' },
+    docs: {
+      description:
+        'Effect stays in lib/providers, lib/http, state/queries and the feature write hooks.',
+    },
     schema: [],
   },
   create(context) {

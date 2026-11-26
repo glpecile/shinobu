@@ -42,7 +42,10 @@ async function drain(
       replay: id,
     });
     trackBusy(record.variables.item.id, write);
-    trackLog(loggedWatch(record.variables), write.then((result) => result.settled));
+    trackLog(
+      loggedWatch(record.variables),
+      write.then((result) => result.settled),
+    );
     let result: LogMediaResult;
     try {
       result = await write;

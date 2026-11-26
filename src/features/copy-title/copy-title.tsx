@@ -27,14 +27,17 @@ export function alternateTitles(item: NormalizedMediaItem): string[] {
 }
 
 function copyChoices({ alternates = [], title, tmdbId, year }: CopySubject) {
-  const plainTitle = title.replace(/[^\p{L}\p{M}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+  const plainTitle = title
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return [
-    ...[title, ...(year != null ? [`${title} (${year})`, `${plainTitle} ${year}`] : []), ...alternates].map(
-      (text) => ({ label: `Copy “${text}”`, text }),
-    ),
-    ...(tmdbId != null
-      ? [{ label: `Copy TMDB ID (${tmdbId})`, text: String(tmdbId) }]
-      : []),
+    ...[
+      title,
+      ...(year != null ? [`${title} (${year})`, `${plainTitle} ${year}`] : []),
+      ...alternates,
+    ].map((text) => ({ label: `Copy “${text}”`, text })),
+    ...(tmdbId != null ? [{ label: `Copy TMDB ID (${tmdbId})`, text: String(tmdbId) }] : []),
   ];
 }
 
@@ -43,7 +46,11 @@ async function copy(text: string) {
   else toast.error('Couldn’t copy', 'Your browser blocked clipboard access.');
 }
 
-export function CopyTitleOptions({ onClose, onCopied, ...subject }: CopySubject & {
+export function CopyTitleOptions({
+  onClose,
+  onCopied,
+  ...subject
+}: CopySubject & {
   onClose?: () => void;
   onCopied: () => void;
 }) {

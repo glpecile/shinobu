@@ -76,13 +76,9 @@ export function ToastCard({
         </Svg>
       </AnimatedView>
       <View className={cn('min-w-0 flex-1 gap-0.5')}>
-        <Text className={cn('font-sans-semibold text-sm leading-5 text-foreground')}>
-          {title}
-        </Text>
+        <Text className={cn('font-sans-semibold text-sm leading-5 text-foreground')}>{title}</Text>
         {message ? (
-          <Text className={cn('font-sans text-sm leading-5 text-muted')}>
-            {message}
-          </Text>
+          <Text className={cn('font-sans text-sm leading-5 text-muted')}>{message}</Text>
         ) : null}
       </View>
     </View>

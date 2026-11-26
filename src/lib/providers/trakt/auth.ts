@@ -54,9 +54,7 @@ export function exchangeCodeForSession(
  * "reconnect Trakt". Transient failures (network, rate limit) propagate
  * unchanged and leave the session intact: a blip must not log the user out.
  */
-export function refreshSession(
-  deps: TraktDeps,
-): Effect.Effect<ProviderSession, ProviderError> {
+export function refreshSession(deps: TraktDeps): Effect.Effect<ProviderSession, ProviderError> {
   const refreshToken = deps.tokens.get()?.refreshToken;
   const dead = new ProviderAuthError({ provider: Provider.Trakt, refreshFailed: true });
 
@@ -112,8 +110,8 @@ export function coalescedRefreshSession(
   return Effect.promise(() => {
     let inflight = inflightRefreshes.get(deps.tokens);
     if (inflight == null) {
-      inflight = Effect.runPromise(Effect.result(refreshSession(deps))).finally(
-        () => inflightRefreshes.delete(deps.tokens),
+      inflight = Effect.runPromise(Effect.result(refreshSession(deps))).finally(() =>
+        inflightRefreshes.delete(deps.tokens),
       );
       inflightRefreshes.set(deps.tokens, inflight);
     }

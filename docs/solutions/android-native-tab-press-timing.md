@@ -25,7 +25,7 @@ being held back and the worst case is one extra refresh.
 ## 2. Re-tapping the search tab bounced the keyboard
 
 `app/(tabs)/search.tsx` blurs the field before re-focusing it, because Android
-keeps a `TextInput` *focused* after the keyboard is dismissed (back gesture,
+keeps a `TextInput` _focused_ after the keyboard is dismissed (back gesture,
 scroll-away) and `.focus()` on an already-focused input is a no-op. But
 `tabPress` fires on every tap of the search tab, so the steady state after any
 tap — focused, keyboard up — hit that same blur: the keyboard slid out and back
@@ -36,7 +36,7 @@ in, reading as "the keyboard comes up twice" on a double tap.
 ```ts
 if (process.env.EXPO_OS === 'android' && field.isFocused()) {
   if (Keyboard.isVisible()) return; // already where the request wants it
-  field.blur();                     // focused but dismissed — force a transition
+  field.blur(); // focused but dismissed — force a transition
 }
 ```
 

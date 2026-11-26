@@ -1,9 +1,4 @@
-import {
-  Redirect,
-  useLocalSearchParams,
-  useRouter,
-  type ErrorBoundaryProps,
-} from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter, type ErrorBoundaryProps } from 'expo-router';
 
 import { EpisodeScreen, EpisodeScreenSkeleton } from '@/features/episode-details';
 import { PersonNotFound } from '@/features/person';
@@ -16,7 +11,11 @@ import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 
 export default function EpisodeRoute() {
-  const { provider, id: resourceId, episode } = useLocalSearchParams<{
+  const {
+    provider,
+    id: resourceId,
+    episode,
+  } = useLocalSearchParams<{
     provider: string;
     id: string;
     episode: string[];
@@ -26,7 +25,10 @@ export default function EpisodeRoute() {
   const [season, number] = parts.length === 1 ? [undefined, parts[0]] : parts;
   const detailsHref = id == null ? routes.home : routes.details(id, 'TV');
   const router = useRouter();
-  const { item: resolved, isLoading } = useResolvedMediaItem(id ?? '', provider === Provider.Trakt ? 'TV' : undefined);
+  const { item: resolved, isLoading } = useResolvedMediaItem(
+    id ?? '',
+    provider === Provider.Trakt ? 'TV' : undefined,
+  );
   const mediaDetails = useMediaDetailsQuery(resolved);
   const item =
     resolved == null ? undefined : applyPrimaryMetadata(resolved, mediaDetails.data?.catalogue);
@@ -48,7 +50,8 @@ export default function EpisodeRoute() {
       (anilistId != null && episodeMap.isPending) ||
       (tmdbId != null && layout.isPending));
   const pointerValid =
-    parts.length > 0 && parts.length <= 2 &&
+    parts.length > 0 &&
+    parts.length <= 2 &&
     pointer != null &&
     Number.isInteger(pointer.season) &&
     pointer.season >= 0 &&
@@ -72,12 +75,7 @@ export default function EpisodeRoute() {
   }
 
   return (
-    <EpisodeScreen
-      item={item}
-      number={pointer.number}
-      onBack={goBack}
-      season={pointer.season}
-    />
+    <EpisodeScreen item={item} number={pointer.number} onBack={goBack} season={pointer.season} />
   );
 }
 
@@ -87,9 +85,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
     <PersonNotFound
       detail="This episode couldn’t be loaded."
       title="Couldn’t load"
-      onGoBack={() =>
-        router.canGoBack() ? router.back() : router.replace(routes.home)
-      }
+      onGoBack={() => (router.canGoBack() ? router.back() : router.replace(routes.home))}
       onRetry={retry}
     />
   );

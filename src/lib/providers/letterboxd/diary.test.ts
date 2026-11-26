@@ -118,10 +118,15 @@ describe('getDiary', () => {
   });
 
   test('an explicit No in RSS is not a like', async () => {
-    const entries = await Effect.runPromise(getDiary(
-      deps(async () => new Response(RSS.replace('<letterboxd:memberLike>Yes', '<letterboxd:memberLike>No'))),
-      { page: 1 },
-    ));
+    const entries = await Effect.runPromise(
+      getDiary(
+        deps(
+          async () =>
+            new Response(RSS.replace('<letterboxd:memberLike>Yes', '<letterboxd:memberLike>No')),
+        ),
+        { page: 1 },
+      ),
+    );
     expect(entries[0].liked).toBe(false);
   });
 
@@ -166,7 +171,12 @@ describe('getDiary', () => {
 
   test('a missing username fails as a dead session, never empty-success', async () => {
     const error = await Effect.runPromise(
-      Effect.flip(getDiary(deps(async () => new Response(RSS), ''), { page: 1 })),
+      Effect.flip(
+        getDiary(
+          deps(async () => new Response(RSS), ''),
+          { page: 1 },
+        ),
+      ),
     );
     expect(error._tag).toBe('ProviderAuthError');
   });

@@ -119,7 +119,10 @@ function hardcoverGraphQL<A>(
     const body = yield* Schema.decodeUnknownEffect(graphQLResponse)(json).pipe(
       Effect.mapError(
         (error) =>
-          new ProviderDecodeError({ provider, detail: `invalid GraphQL response: ${error.message}` }),
+          new ProviderDecodeError({
+            provider,
+            detail: `invalid GraphQL response: ${error.message}`,
+          }),
       ),
     );
     if (body.errors != null && body.errors.length > 0) {

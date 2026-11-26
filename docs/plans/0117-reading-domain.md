@@ -15,20 +15,20 @@ decisions and the units, one sub-issue of #209 each.
 
 Every unit shipped by 2026-11-19, and #209 closed.
 
-| Unit | Issue | PR |
-| --- | --- | --- |
-| M1. Log the next chapter | #392 | #402 |
-| M2. Log several chapters in one write | #393 | #408 |
-| M3. Continue reading rail and manga want-to-read | #394 | #403 |
-| M4. Diary Reading filter | #395 | #473, fixes in #475 |
-| B0. Register Hardcover OAuth apps | #396 | #444 |
-| B1. Connect Hardcover | #397 | #445 |
-| B2. Read the Hardcover library | #398 | #448 |
-| B3. Log to Hardcover | #399 | #446 |
-| B4. Find books and open book details | #400 | #447 |
-| B5. Bridge Hardcover volumes to AniList entries | #470 | #474, fixes in #475 |
-| B6. Show a bridged work once | #471 | #476 |
-| C0. Choose a comics tracker | #401 | dropped |
+| Unit                                             | Issue | PR                  |
+| ------------------------------------------------ | ----- | ------------------- |
+| M1. Log the next chapter                         | #392  | #402                |
+| M2. Log several chapters in one write            | #393  | #408                |
+| M3. Continue reading rail and manga want-to-read | #394  | #403                |
+| M4. Diary Reading filter                         | #395  | #473, fixes in #475 |
+| B0. Register Hardcover OAuth apps                | #396  | #444                |
+| B1. Connect Hardcover                            | #397  | #445                |
+| B2. Read the Hardcover library                   | #398  | #448                |
+| B3. Log to Hardcover                             | #399  | #446                |
+| B4. Find books and open book details             | #400  | #447                |
+| B5. Bridge Hardcover volumes to AniList entries  | #470  | #474, fixes in #475 |
+| B6. Show a bridged work once                     | #471  | #476                |
+| C0. Choose a comics tracker                      | #401  | dropped             |
 
 ## Decisions
 
@@ -91,20 +91,20 @@ Every unit shipped by 2026-11-19, and #209 closed.
 Each unit is one sub-issue of #209. M-units need no new provider and can run in
 parallel; M3 owns the one new AniList read that the reading list also uses.
 
-| Unit | Issue | Title | Depends on |
-| --- | --- | --- | --- |
-| M1 | #392 | Log the next chapter from details and the card sheet | — |
-| M2 | #393 | Log several chapters in one write | M1 |
-| M3 | #394 | Continue reading rail and manga want-to-read read-back | — |
-| M4 | #395 | Diary Reading filter | — |
-| B0 | #396 | Register Hardcover OAuth apps and probe browser access | owner: Hardcover account |
-| B1 | #397 | Connect Hardcover as the book provider | B0 |
-| B2 | #398 | Read the Hardcover library into rails, reading list and diary | B1, M3 (M4 if it ships) |
-| B3 | #399 | Log page progress, finishes and want-to-read to Hardcover | B1 |
-| B4 | #400 | Find books in search and open book details | B1 |
-| B5 | #470 | Bridge Hardcover volumes to AniList entries | B3, M1 |
-| B6 | #471 | Show a bridged work once | B5, B2, M3 |
-| C0 | #401 | Choose a comics tracker (dropped) | — |
+| Unit | Issue | Title                                                         | Depends on               |
+| ---- | ----- | ------------------------------------------------------------- | ------------------------ |
+| M1   | #392  | Log the next chapter from details and the card sheet          | —                        |
+| M2   | #393  | Log several chapters in one write                             | M1                       |
+| M3   | #394  | Continue reading rail and manga want-to-read read-back        | —                        |
+| M4   | #395  | Diary Reading filter                                          | —                        |
+| B0   | #396  | Register Hardcover OAuth apps and probe browser access        | owner: Hardcover account |
+| B1   | #397  | Connect Hardcover as the book provider                        | B0                       |
+| B2   | #398  | Read the Hardcover library into rails, reading list and diary | B1, M3 (M4 if it ships)  |
+| B3   | #399  | Log page progress, finishes and want-to-read to Hardcover     | B1                       |
+| B4   | #400  | Find books in search and open book details                    | B1                       |
+| B5   | #470  | Bridge Hardcover volumes to AniList entries                   | B3, M1                   |
+| B6   | #471  | Show a bridged work once                                      | B5, B2, M3               |
+| C0   | #401  | Choose a comics tracker (dropped)                             | —                        |
 
 ### M1. Log the next chapter
 

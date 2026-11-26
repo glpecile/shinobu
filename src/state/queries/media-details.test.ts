@@ -36,9 +36,7 @@ mock.module('expo-crypto', () => ({
 }));
 
 const { buildMediaDetailsDeps } = await import('./media-details');
-const { setProviderClientId, clearProviderClientId } = await import(
-  '@/state/session/tokens'
-);
+const { setProviderClientId, clearProviderClientId } = await import('@/state/session/tokens');
 
 beforeEach(() => {
   store.clear();

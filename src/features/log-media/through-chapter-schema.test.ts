@@ -1,11 +1,20 @@
 import { expect, test } from 'bun:test';
 
-import { chaptersThrough, stepThroughChapter, throughChapterSchema, throughChapterText } from './through-chapter-schema';
+import {
+  chaptersThrough,
+  stepThroughChapter,
+  throughChapterSchema,
+  throughChapterText,
+} from './through-chapter-schema';
 
 test('a range runs from the next chapter, and a lower one is refused', () => {
   expect(throughChapterSchema(6).safeParse({ through: '9' }).success).toBe(true);
   expect(chaptersThrough(6, 9)).toEqual([6, 7, 8, 9]);
-  expect(throughChapterSchema(6).safeParse({ through: '5' }).error?.issues.map((issue) => issue.message)).toEqual(['Enter chapter 6 or later.']);
+  expect(
+    throughChapterSchema(6)
+      .safeParse({ through: '5' })
+      .error?.issues.map((issue) => issue.message),
+  ).toEqual(['Enter chapter 6 or later.']);
 });
 
 test('typing and stepping stay within the total', () => {

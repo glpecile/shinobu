@@ -1,7 +1,7 @@
 # Trakt title search resolves to the wrong film without a year gate
 
-**Symptom (2026-07-17):** the details page for Nolan's *The Odyssey* (2026,
-Letterboxd watchlist item) rendered Kubrick's *2001: A Space Odyssey*
+**Symptom (2026-07-17):** the details page for Nolan's _The Odyssey_ (2026,
+Letterboxd watchlist item) rendered Kubrick's _2001: A Space Odyssey_
 metadata — 149 min runtime, the monolith overview, Keir Dullea in the cast.
 
 **Cause:** cross-provider identity/metadata enrichment resolves
@@ -9,7 +9,7 @@ slug-title-year-only items (Letterboxd) through Trakt text search
 (`/search/movie?query=<title>`). The original picker preferred an exact-year
 match but **fell back to the top result** when no year matched. Trakt ranks
 by popularity, so any upcoming/obscure film sharing a title with a classic
-resolves to the classic: *The Odyssey* (2026) → *2001: A Space Odyssey*.
+resolves to the classic: _The Odyssey_ (2026) → _2001: A Space Odyssey_.
 An unreleased film can also rank below `limit=5` entirely, guaranteeing the
 fallback fires. This poisoned both the details-screen metadata merge **and
 the log fan-out** — a "mark as watched" could have written the wrong film to
@@ -24,9 +24,9 @@ sees low-ranked upcoming films.
 
 ## Extension (2026-07-25): year gate wasn't enough — plan 0024 U5
 
-**Symptom:** *Labyrinth* (2025) rendered Jim Henson's *Labyrinth* (1986);
-*Motor City* (2025) rendered an unrelated older film. Both arrived with a
-correct year from their origin provider, so the year gate above *should* have
+**Symptom:** _Labyrinth_ (2025) rendered Jim Henson's _Labyrinth_ (1986);
+_Motor City_ (2025) rendered an unrelated older film. Both arrived with a
+correct year from their origin provider, so the year gate above _should_ have
 caught them.
 
 **Two causes, both upstream of the gate:**
@@ -35,7 +35,7 @@ caught them.
    page 1. A brand-new film sharing its title with a classic can be absent
    from the candidate list entirely — the gate then correctly returns `null`,
    but the item silently loses its metadata, and on the Trakt leg the
-   near-year rows that *were* returned could still win.
+   near-year rows that _were_ returned could still win.
 2. **Tolerance abused as a fallback.** With no exact-year candidate, the ±1
    window took the first in-window film without asking whether anything else
    was equally close. Two same-title films either side of the target year
@@ -50,7 +50,7 @@ caught them.
   punctuation collapsed (`titleKey`).
 - `searchMovie` (TMDB) accepts `year` and sends `primary_release_year` — a
   recall fix so the true film is on page 1 at all.
-- Because `primary_release_year` filters *exactly*, it would have deleted the
+- Because `primary_release_year` filters _exactly_, it would have deleted the
   ±1 tolerance. `state/queries/mapping.ts`'s `searchTmdbMovieId` therefore
   retries **unfiltered** when the constrained search yields no confident match,
   and re-runs the same gate. The second request only fires on a miss.

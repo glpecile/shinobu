@@ -20,8 +20,7 @@ export function findWatchlistRemoval(
   const match = data.inputs.find(
     (input) =>
       input.item.id === item.id ||
-      (keys.size > 0 &&
-        watchlistMergeKeys(input.item).some((key) => keys.has(key))),
+      (keys.size > 0 && watchlistMergeKeys(input.item).some((key) => keys.has(key))),
   );
   if (match == null) return null;
 
@@ -31,7 +30,13 @@ export function findWatchlistRemoval(
   if (merged == null) return null;
   const entry: WatchlistEntry =
     merged.item.type === 'BOOK' && match.item.type === 'MANGA'
-      ? { ...merged, id: match.item.id, item: match.item, sources: [match.source], sourceIds: [match.item.id] }
+      ? {
+          ...merged,
+          id: match.item.id,
+          item: match.item,
+          sources: [match.source],
+          sourceIds: [match.item.id],
+        }
       : merged;
 
   return { entry, errors: data.errors, incomplete: data.incomplete };

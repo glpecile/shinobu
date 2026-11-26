@@ -41,7 +41,8 @@ const { anilistQueryKeys } = await import('./anilist');
 const { diaryQueryKeys } = await import('./diary-pages');
 const { hardcoverQueryKeys } = await import('./hardcover');
 const { letterboxdQueryKeys } = await import('./letterboxd');
-const { createQueryPersister, deserialize, isPersistedQueryKey, serialize, shouldPersistQuery } = await import('./persist');
+const { createQueryPersister, deserialize, isPersistedQueryKey, serialize, shouldPersistQuery } =
+  await import('./persist');
 const { PersistQueryClientProvider } = await import('./persist-provider');
 const { traktQueryKeys } = await import('./trakt');
 const { simklQueryKeys } = await import('./simkl');
@@ -77,7 +78,10 @@ test('a corrupt snapshot is discarded and queries resume without an unhandled re
   const warning = spyOn(console, 'warn').mockImplementation(() => {});
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(PersistQueryClientProvider, { client, persister, children });
-  const read = renderHook(() => useQuery({ queryKey: ['restore-recovery'], queryFn: async () => 'fresh' }), { wrapper });
+  const read = renderHook(
+    () => useQuery({ queryKey: ['restore-recovery'], queryFn: async () => 'fresh' }),
+    { wrapper },
+  );
   try {
     await waitFor(() => expect(read.result.current.data).toBe('fresh'));
     expect(store.size).toBe(0);
@@ -114,7 +118,9 @@ test('batches completed refetches into one current snapshot and flushes pending 
     jest.useFakeTimers();
     act(() => {
       client.setQueryData(['media-details', 'unpersisted'], 'ignored');
-      fetching = keys.map((queryKey, index) => client.fetchQuery({ queryKey, queryFn: () => responses[index]!.promise }));
+      fetching = keys.map((queryKey, index) =>
+        client.fetchQuery({ queryKey, queryFn: () => responses[index]!.promise }),
+      );
     });
     act(() => jest.advanceTimersByTime(2_000));
     expect(persistClient).not.toHaveBeenCalled();
@@ -133,9 +139,11 @@ test('batches completed refetches into one current snapshot and flushes pending 
     expect(getAll).toHaveBeenCalledTimes(1);
     expect(visits).toBe(21);
     act(() => jest.advanceTimersByTime(1));
-    expect(deserialize(store.get('shinobu.query-cache')!).clientState.queries.map((query) => query.state.data)).toEqual(
-      keys.map((_, index) => `fresh-${index}`),
-    );
+    expect(
+      deserialize(store.get('shinobu.query-cache')!).clientState.queries.map(
+        (query) => query.state.data,
+      ),
+    ).toEqual(keys.map((_, index) => `fresh-${index}`));
 
     act(() => client.setQueryData(keys[0]!, 'latest'));
     act(() => jest.advanceTimersByTime(1_999));
@@ -146,7 +154,9 @@ test('batches completed refetches into one current snapshot and flushes pending 
     const saved = persistClient.mock.calls[1]?.[0].clientState.queries;
     expect(saved).toHaveLength(19);
     expect(saved?.[0]?.state.data).toBe('latest');
-    expect(saved?.some((query) => JSON.stringify(query.queryKey) === JSON.stringify(keys[1]))).toBe(false);
+    expect(saved?.some((query) => JSON.stringify(query.queryKey) === JSON.stringify(keys[1]))).toBe(
+      false,
+    );
 
     for (let tick = 0; tick < 5; tick += 1) {
       act(() => client.setQueryData(keys[2]!, `trickle-${tick}`));
@@ -197,8 +207,11 @@ describe('serialize / deserialize', () => {
   });
 
   // A persisted ani.zip map used to restore as an object and crash episode placement.
-  test('writes only an infinite query\'s first page', () => {
-    const data = { pages: [{ slices: {} }, { slices: {} }], pageParams: [{ simkl: 1 }, { simkl: 2 }] };
+  test("writes only an infinite query's first page", () => {
+    const data = {
+      pages: [{ slices: {} }, { slices: {} }],
+      pageParams: [{ simkl: 1 }, { simkl: 2 }],
+    };
     expect(restoredData(clientWith(diaryQueryKeys.feed(['simkl'], '', ''), data))).toEqual({
       pages: [{ slices: {} }],
       pageParams: [{ simkl: 1 }],
@@ -210,9 +223,10 @@ describe('serialize / deserialize', () => {
       [1, { season: 1, number: 1 }],
       [2, { season: 1, number: 2 }],
     ]);
-    const restored = restoredData(
-      clientWith(['mapping', 'anizip-episodes', 154587], data),
-    ) as Map<number, { season: number; number: number }>;
+    const restored = restoredData(clientWith(['mapping', 'anizip-episodes', 154587], data)) as Map<
+      number,
+      { season: number; number: number }
+    >;
 
     expect(restored).toBeInstanceOf(Map);
     expect(restored.size).toBe(2);
@@ -226,9 +240,7 @@ describe('serialize / deserialize', () => {
       c: new Map<string, number>(),
       d: new Set(['x']),
     };
-    const restored = restoredData(
-      clientWith(['mapping', 'anizip-episodes', 1], data),
-    ) as {
+    const restored = restoredData(clientWith(['mapping', 'anizip-episodes', 1], data)) as {
       a: { b: Map<string, number> };
       c: Map<string, number>;
       d: Set<string>;
@@ -261,7 +273,9 @@ describe('isPersistedQueryKey', () => {
     expect(isPersistedQueryKey(letterboxdQueryKeys.lists('gian', 'liked'))).toBe(true);
     expect(isPersistedQueryKey(letterboxdQueryKeys.slug(27205))).toBe(true);
     expect(isPersistedQueryKey([...letterboxdQueryKeys.film('inception'), true])).toBe(true);
-    expect(isPersistedQueryKey([...letterboxdQueryKeys.filmWatchesRoot(), 'gian', 'inception', null])).toBe(true);
+    expect(
+      isPersistedQueryKey([...letterboxdQueryKeys.filmWatchesRoot(), 'gian', 'inception', null]),
+    ).toBe(true);
   });
 
   // The allowlist exists to keep the unbounded caches off disk — web's
@@ -288,7 +302,9 @@ describe('isPersistedQueryKey', () => {
 test('partial streamed gathers persist only after their final provider settles', async () => {
   const client = new QueryClient();
   for (const queryKey of [upNextQueryKeys.inputs(), watchlistQueryKeys.inputs()]) {
-    const query = client.getQueryCache().build<unknown, Error, unknown, readonly unknown[]>(client, { queryKey });
+    const query = client
+      .getQueryCache()
+      .build<unknown, Error, unknown, readonly unknown[]>(client, { queryKey });
     query.setState({ status: 'success', fetchStatus: 'fetching', data: { inputs: [] } });
     expect(shouldPersistQuery(query)).toBe(false);
     query.setState({ fetchStatus: 'idle' });

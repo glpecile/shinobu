@@ -38,13 +38,13 @@ preserve velocity/geometry for profiling, not element-seeking navigation.
 
 React session `20261005-220012`:
 
-| Metric | Result |
-| --- | --- |
-| Recording duration | 21.34 s |
-| React commits | 21 |
-| Captured fiber renders | 684 |
-| Commits at least 16 ms | 4 |
-| Slowest commit | 30.09 ms |
+| Metric                 | Result   |
+| ---------------------- | -------- |
+| Recording duration     | 21.34 s  |
+| React commits          | 21       |
+| Captured fiber renders | 684      |
+| Commits at least 16 ms | 4        |
+| Slowest commit         | 30.09 ms |
 
 Slow work included `RefreshableScrollView`, catalogue rows, Legend List cells,
 and gesture-backed cards. This run also triggered pull-to-refresh when the
@@ -69,31 +69,31 @@ React durations and independent native stack samples remain useful.
 Search was initially blocked by an unresponsive dev-client/runtime. The owner
 authorized a movie deep link instead. On dedicated Metro, the executed path
 was Home → `shinobu://details/tmdb-movie-27205` (Inception) → Leonardo DiCaprio
-→ *Learning, Studying… Always Perfecting: The Making of One Battle After Another*.
+→ _Learning, Studying… Always Perfecting: The Making of One Battle After Another_.
 The second movie rendered its header/actions, but its credits remained loading.
 UI-tree reads and JS evaluation then timed out; Back could not be verified.
 This attempt did **not** complete the requested return-to-Home comparison.
 
 At Inception, a read-only React fiber walk found:
 
-| Metric | Result |
-| --- | --- |
-| Mounted fibers | 9,773 |
-| `DetailsScreen` / `FeedScreen` instances | 1 / 1 |
-| Mounted `PersonCard` instances | 35 |
-| Cached queries / active queries | 57 / 18 |
-| Query observers (including disabled observers) | 124 |
+| Metric                                         | Result  |
+| ---------------------------------------------- | ------- |
+| Mounted fibers                                 | 9,773   |
+| `DetailsScreen` / `FeedScreen` instances       | 1 / 1   |
+| Mounted `PersonCard` instances                 | 35      |
+| Cached queries / active queries                | 57 / 18 |
+| Query observers (including disabled observers) | 124     |
 
 This is a single snapshot, not a leak trend or a before/after measurement.
 
 While stalled at the second movie, `dumpsys meminfo --local` reported:
 
-| App metric | KiB | MiB |
-| --- | ---: | ---: |
-| Total RSS | 477,476 | 466.3 |
-| Total swap PSS | 764,042 | 746.1 |
+| App metric               |     KiB |   MiB |
+| ------------------------ | ------: | ----: |
+| Total RSS                | 477,476 | 466.3 |
+| Total swap PSS           | 764,042 | 746.1 |
 | Native heap resident PSS | 165,424 | 161.5 |
-| Native heap swap PSS | 647,349 | 632.2 |
+| Native heap swap PSS     | 647,349 | 632.2 |
 
 The reported total PSS (1,159,263 KiB) includes swap in this output; do not
 mislabel it as resident RAM. The regular non-local meminfo request timed out.
@@ -171,14 +171,14 @@ before the owner requested this checkpoint.
 
 Before the higher-RAM Home profile:
 
-| Metric | Result |
-| --- | ---: |
-| Mounted fibers | 6,464 |
-| `FeedScreen` / `DetailsScreen` | 1 / 0 |
-| Queries / active queries / observers | 35 / 10 / 79 |
-| App RSS | 1,106,676 KiB (~1,080.7 MiB) |
-| App swap PSS | 34,784 KiB (~34.0 MiB) |
-| Native heap resident PSS | 628,426 KiB (~613.7 MiB) |
+| Metric                               |                       Result |
+| ------------------------------------ | ---------------------------: |
+| Mounted fibers                       |                        6,464 |
+| `FeedScreen` / `DetailsScreen`       |                        1 / 0 |
+| Queries / active queries / observers |                 35 / 10 / 79 |
+| App RSS                              | 1,106,676 KiB (~1,080.7 MiB) |
+| App swap PSS                         |       34,784 KiB (~34.0 MiB) |
+| Native heap resident PSS             |     628,426 KiB (~613.7 MiB) |
 
 The dev app's footprint is already substantial on shallow Home. The smaller
 swap count is consistent with the increased guest memory, but these are
@@ -272,11 +272,11 @@ scale. Explicit credit labels preserve a target when the image is otherwise
 the smallest unlabeled accessible child. No cache, provider, dependency, or
 navigation policy changed. Plan: [0049](../plans/0049-virtualized-credit-rails.md).
 
-| Loaded state | Eager rail | Virtualized rail | Change |
-| --- | ---: | ---: | ---: |
-| Inception mounted credit cards | 35 | 14 | −60% |
-| Two movies mounted credit cards (after cast swipe out/back) | 56 | 30 | −46% |
-| Two movies mounted fibers | 14,116 | 13,483 | −4.5% |
+| Loaded state                                                | Eager rail | Virtualized rail | Change |
+| ----------------------------------------------------------- | ---------: | ---------------: | -----: |
+| Inception mounted credit cards                              |         35 |               14 |   −60% |
+| Two movies mounted credit cards (after cast swipe out/back) |         56 |               30 |   −46% |
+| Two movies mounted fibers                                   |     14,116 |           13,483 |  −4.5% |
 
 The same two titles still supplied Cast/Crew counts of 15/20 and 13/8. The
 smaller mounted tree is not a smaller provider response or hidden credit data.
@@ -292,11 +292,11 @@ flow times were 46.8/47.8/47.0/47.6 seconds and are dominated by explicit checks
 not navigation latency.
 
 | Variant / React session | Worst React commit | React commits | Native jank intervals / worst |
-| --- | ---: | ---: | ---: |
-| B `20261006-001134` | 470.15 ms | 66 | 33 / 84 ms |
-| A `20261006-001336` | 580.67 ms | 75 | 26 / 87 ms |
-| A `20261006-001512` | 531.42 ms | 56 | 23 / 94 ms |
-| B `20261006-001649` | 413.31 ms | 68 | 37 / 74 ms |
+| ----------------------- | -----------------: | ------------: | ----------------------------: |
+| B `20261006-001134`     |          470.15 ms |            66 |                    33 / 84 ms |
+| A `20261006-001336`     |          580.67 ms |            75 |                    26 / 87 ms |
+| A `20261006-001512`     |          531.42 ms |            56 |                    23 / 94 ms |
+| B `20261006-001649`     |          413.31 ms |            68 |                    37 / 74 ms |
 
 Median of per-run worst React commits: **556.04 → 441.73 ms (−20.6%)**.
 All worst commits were during initial Inception mounting. Virtualization splits

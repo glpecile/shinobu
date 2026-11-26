@@ -14,11 +14,7 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 
-import {
-  formatWatchlistCount,
-  watchlistFilterOptions,
-  watchlistTotal,
-} from './filter';
+import { formatWatchlistCount, watchlistFilterOptions, watchlistTotal } from './filter';
 import type { WatchlistEntry } from './types';
 import type { WatchlistView } from '@/state/prefs/watchlist-view';
 
@@ -39,7 +35,12 @@ function FilterPill({
 
   if (active == null) {
     return (
-      <NativePickerMenu onSelect={onSelect} options={options} title="Show titles from" value={active}>
+      <NativePickerMenu
+        onSelect={onSelect}
+        options={options}
+        title="Show titles from"
+        value={active}
+      >
         <Button
           accessibilityLabel="Filter: all trackers"
           icon={<Button.Icon name="filter-outline" />}
@@ -56,7 +57,12 @@ function FilterPill({
 
   return (
     <View className="flex-row items-center rounded-full bg-surface border border-border">
-      <NativePickerMenu onSelect={onSelect} options={options} title="Show titles from" value={active}>
+      <NativePickerMenu
+        onSelect={onSelect}
+        options={options}
+        title="Show titles from"
+        value={active}
+      >
         <PresstableOpacity
           accessibilityHint="Choose a different tracker"
           accessibilityLabel={`Filter: ${PROVIDERS[active].label}`}
@@ -76,11 +82,7 @@ function FilterPill({
         className="pl-1 pr-2.5 py-2"
         onPress={onClear}
       >
-        <Ionicons
-          color={foreground}
-          name="close"
-          size={14}
-        />
+        <Ionicons color={foreground} name="close" size={14} />
       </PresstableOpacity>
     </View>
   );
@@ -137,7 +139,10 @@ export function WatchlistToolbar({
 
   return (
     <>
-      <MediaToolbar notice={sort !== 'default' && partial ? <SortingLoadedNotice /> : undefined} view={view}>
+      <MediaToolbar
+        notice={sort !== 'default' && partial ? <SortingLoadedNotice /> : undefined}
+        view={view}
+      >
         <FilterPill
           active={provider}
           onClear={() => onProviderChange(null)}

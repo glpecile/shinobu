@@ -54,15 +54,22 @@ beforeEach(() => {
 describe('trending (plan 0034 R11/KTD-8)', () => {
   test('cancelling a query aborts its provider transport', async () => {
     let notifyStarted!: () => void;
-    const started = new Promise<void>((resolve) => { notifyStarted = resolve; });
-    let aborted = false;
-    fetchOverride = (_input, init) => new Promise((_resolve, reject) => {
-      init?.signal?.addEventListener('abort', () => {
-        aborted = true;
-        reject(new DOMException('Cancelled', 'AbortError'));
-      }, { once: true });
-      notifyStarted();
+    const started = new Promise<void>((resolve) => {
+      notifyStarted = resolve;
     });
+    let aborted = false;
+    fetchOverride = (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          'abort',
+          () => {
+            aborted = true;
+            reject(new DOMException('Cancelled', 'AbortError'));
+          },
+          { once: true },
+        );
+        notifyStarted();
+      });
     const client = new QueryClient();
     const options = feedOptions.trendingMovies();
     const pending = client.fetchQuery(options).catch(() => null);

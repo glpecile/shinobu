@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "uniwind";
+@import 'tailwindcss';
+@import 'uniwind';
 
 /* React Native won't synthesize weights for custom fonts; each token names one loaded family. */
 @theme {

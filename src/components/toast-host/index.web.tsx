@@ -15,11 +15,13 @@ export function ToastHost() {
       mobileOffset={{ bottom: 'var(--toast-bottom, 32px)' }}
       position="bottom-right"
       theme={theme}
-      style={{
-        '--toast-enter': `${DURATION.enter}ms`,
-        '--toast-exit': `${DURATION.exit}ms`,
-        '--toast-ease': CSS_EASE_OUT,
-      } as CSSProperties}
+      style={
+        {
+          '--toast-enter': `${DURATION.enter}ms`,
+          '--toast-exit': `${DURATION.exit}ms`,
+          '--toast-ease': CSS_EASE_OUT,
+        } as CSSProperties
+      }
     />
   );
 }

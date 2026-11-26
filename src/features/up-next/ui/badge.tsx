@@ -3,13 +3,7 @@ import { Text, View } from 'react-native';
 import type { BadgeTone } from '@/features/up-next/badges';
 import { cn } from '@/lib/cn';
 
-export function Badge({
-  label,
-  tone = 'neutral',
-}: {
-  label: string;
-  tone?: BadgeTone;
-}) {
+export function Badge({ label, tone = 'neutral' }: { label: string; tone?: BadgeTone }) {
   const accent = tone === 'accent';
   return (
     <View
@@ -18,7 +12,13 @@ export function Badge({
         accent ? 'bg-accent-tonal' : 'bg-black/60 border border-border/60',
       )}
     >
-      <Text className={cn('font-sans text-xs', accent ? 'text-accent-on-tonal' : 'text-accent-foreground')} numberOfLines={1}>
+      <Text
+        className={cn(
+          'font-sans text-xs',
+          accent ? 'text-accent-on-tonal' : 'text-accent-foreground',
+        )}
+        numberOfLines={1}
+      >
         {label}
       </Text>
     </View>

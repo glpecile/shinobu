@@ -13,7 +13,11 @@ import { PosterStack } from './poster-stack';
 
 export const LIST_CARD_TEXT_HEIGHT = 50;
 
-export function ListCard({ list, onPress, onActions }: {
+export function ListCard({
+  list,
+  onPress,
+  onActions,
+}: {
   list: ListSummary;
   onPress: () => void;
   onActions: (list: ListSummary) => void;
@@ -22,16 +26,24 @@ export function ListCard({ list, onPress, onActions }: {
   // JS hover, as the person card's: uniwind has no `group-hover:`.
   const [hovered, setHovered] = useState(false);
   return (
-    <View onPointerDown={newTab.onPointerDown} onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
+    <View
+      onPointerDown={newTab.onPointerDown}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+    >
       <PresstableScale
         accessibilityLabel={`${list.title}. ${listMeta(list)}`}
         accessibilityRole="button"
         minScale={0.98}
         onLongPress={() => onActions(list)}
-        onPress={() => { if (!newTab.opened()) onPress(); }}
+        onPress={() => {
+          if (!newTab.opened()) onPress();
+        }}
       >
         <PosterStack previews={list.previews} />
-        <Text className="text-foreground font-sans-semibold text-sm mt-2.5" numberOfLines={1}>{list.title}</Text>
+        <Text className="text-foreground font-sans-semibold text-sm mt-2.5" numberOfLines={1}>
+          {list.title}
+        </Text>
         <View className="flex-row items-center gap-2 mt-1">
           <Text className="text-muted font-sans text-xs flex-1" numberOfLines={1}>
             {list.count === '' ? 'by ' : `${list.count} · by `}
@@ -41,7 +53,13 @@ export function ListCard({ list, onPress, onActions }: {
         </View>
       </PresstableScale>
       {process.env.EXPO_OS === 'web' && (
-        <OverlayActionsButton className="absolute top-1.5 right-1.5" label={`More about ${list.title}`} onPress={() => onActions(list)} size="lg" visible={hovered} />
+        <OverlayActionsButton
+          className="absolute top-1.5 right-1.5"
+          label={`More about ${list.title}`}
+          onPress={() => onActions(list)}
+          size="lg"
+          visible={hovered}
+        />
       )}
     </View>
   );
@@ -58,18 +76,33 @@ function newListNote(provider: ListSummary['provider']) {
   }
 }
 
-export function NewListCard({ provider, onPress }: { provider: ListSummary['provider']; onPress: () => void }) {
+export function NewListCard({
+  provider,
+  onPress,
+}: {
+  provider: ListSummary['provider'];
+  onPress: () => void;
+}) {
   const muted = useThemeColor('--color-muted');
   return (
-    <PresstableScale accessibilityLabel="New list" accessibilityRole="button" minScale={0.98} onPress={onPress}>
+    <PresstableScale
+      accessibilityLabel="New list"
+      accessibilityRole="button"
+      minScale={0.98}
+      onPress={onPress}
+    >
       <PosterStack previews={[]}>
         <View className="w-12 h-12 rounded-full bg-background border border-border items-center justify-center">
           <Ionicons color={muted} name="add" size={26} />
         </View>
       </PosterStack>
-      <Text className="text-foreground font-sans-semibold text-sm mt-2.5" numberOfLines={1}>New list</Text>
+      <Text className="text-foreground font-sans-semibold text-sm mt-2.5" numberOfLines={1}>
+        New list
+      </Text>
       <View className="flex-row items-center gap-2 mt-1">
-        <Text className="text-muted font-sans text-xs flex-1" numberOfLines={1}>{newListNote(provider)}</Text>
+        <Text className="text-muted font-sans text-xs flex-1" numberOfLines={1}>
+          {newListNote(provider)}
+        </Text>
         <ProviderIcon id={provider} size={12} />
       </View>
     </PresstableScale>

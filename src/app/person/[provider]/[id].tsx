@@ -1,19 +1,11 @@
 import { useQueryErrorResetBoundary } from '@tanstack/react-query';
-import {
-  useLocalSearchParams,
-  useRouter,
-  type ErrorBoundaryProps,
-} from 'expo-router';
+import { useLocalSearchParams, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import { Suspense } from 'react';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { FloatingShareButton } from '@/components/floating-share-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
-import {
-  PersonDetailsView,
-  PersonNotFound,
-  PersonSkeleton,
-} from '@/features/person';
+import { PersonDetailsView, PersonNotFound, PersonSkeleton } from '@/features/person';
 import { usePushRoute } from '@/lib/navigation';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -41,7 +33,13 @@ function HardcoverAuthorDetails({ author }: { author: HardcoverAuthorKey }) {
   return <PersonDetailsView {...data} />;
 }
 
-function HardcoverAuthorContent({ author, onGoBack }: { author: HardcoverAuthorKey; onGoBack: () => void }) {
+function HardcoverAuthorContent({
+  author,
+  onGoBack,
+}: {
+  author: HardcoverAuthorKey;
+  onGoBack: () => void;
+}) {
   const connected = useConnectedProviders();
   const pushRoute = usePushRoute();
   if (connected === SERVER_CONNECTED_PROVIDERS) return <PersonSkeleton print />;
@@ -74,27 +72,41 @@ function personPage(provider: string, id: string, onGoBack: () => void) {
   switch (provider) {
     case 'tmdb': {
       const tmdbId = positiveId(id);
-      return tmdbId == null ? null : { content: <PersonContent tmdbId={tmdbId} />, href: routes.person(tmdbId) };
+      return tmdbId == null
+        ? null
+        : { content: <PersonContent tmdbId={tmdbId} />, href: routes.person(tmdbId) };
     }
     case 'imdb':
       return /^nm[0-9]+$/.test(id)
-        ? { content: <ImdbPersonContent imdbId={id} onGoBack={onGoBack} />, href: routes.imdbPerson(id) }
+        ? {
+            content: <ImdbPersonContent imdbId={id} onGoBack={onGoBack} />,
+            href: routes.imdbPerson(id),
+          }
         : null;
     case Provider.AniList: {
       const anilistId = positiveId(id);
       return anilistId == null
         ? null
-        : { content: <AniListPersonContent anilistId={anilistId} />, href: routes.anilistPerson(anilistId) };
+        : {
+            content: <AniListPersonContent anilistId={anilistId} />,
+            href: routes.anilistPerson(anilistId),
+          };
     }
     case Provider.Hardcover: {
       const authorId = positiveId(id);
       if (authorId != null) {
-        return { content: <HardcoverAuthorContent author={{ id: authorId }} onGoBack={onGoBack} />, href: routes.hardcoverAuthor(authorId) };
+        return {
+          content: <HardcoverAuthorContent author={{ id: authorId }} onGoBack={onGoBack} />,
+          href: routes.hardcoverAuthor(authorId),
+        };
       }
       const slug = /^authors-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1];
       return slug == null
         ? null
-        : { content: <HardcoverAuthorContent author={{ slug }} onGoBack={onGoBack} />, href: routes.hardcoverAuthorBySlug(slug) };
+        : {
+            content: <HardcoverAuthorContent author={{ slug }} onGoBack={onGoBack} />,
+            href: routes.hardcoverAuthorBySlug(slug),
+          };
     }
     default:
       return null;
@@ -115,9 +127,7 @@ export default function PersonScreen() {
 
   const page = personPage(provider, id, goBack);
   if (page == null) {
-    return (
-      <PersonNotFound detail="This person page doesn't exist." onGoBack={goBack} />
-    );
+    return <PersonNotFound detail="This person page doesn't exist." onGoBack={goBack} />;
   }
 
   return (
@@ -144,9 +154,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
     <PersonNotFound
       detail="This person couldn't be loaded."
       title="Couldn’t load"
-      onGoBack={() =>
-        router.canGoBack() ? router.back() : router.replace(routes.home)
-      }
+      onGoBack={() => (router.canGoBack() ? router.back() : router.replace(routes.home))}
       onRetry={() => {
         reset();
         void retry();

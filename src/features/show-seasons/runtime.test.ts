@@ -1,11 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedSeason } from '@/types/media';
-import {
-  formatRuntime,
-  seasonRuntimeMinutes,
-  seriesRuntimeMinutes,
-} from './runtime';
+import { formatRuntime, seasonRuntimeMinutes, seriesRuntimeMinutes } from './runtime';
 
 describe('formatRuntime', () => {
   test('surfaces days past 24h', () => {

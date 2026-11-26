@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import {
-  emitTabPress,
-  onTabDoubleTap,
-  TAB_DOUBLE_TAP_MS,
-} from './tab-double-tap';
+import { emitTabPress, onTabDoubleTap, TAB_DOUBLE_TAP_MS } from './tab-double-tap';
 
 /**
  * Each test uses its own tab name: the press window is module state (one

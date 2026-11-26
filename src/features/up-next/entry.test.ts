@@ -51,9 +51,7 @@ function releaseEntry(release: Partial<UpNextRelease> = {}): UpNextEntry {
 
 describe('entryLabel', () => {
   test('an episode with a canonical season reads S1E4 · Title', () => {
-    expect(entryLabel(episodeEntry({ title: 'The Fourth' }))).toBe(
-      'S1E4 · The Fourth',
-    );
+    expect(entryLabel(episodeEntry({ title: 'The Fourth' }))).toBe('S1E4 · The Fourth');
   });
 
   test('an untitled episode is just its code', () => {

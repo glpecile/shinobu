@@ -15,7 +15,7 @@ instead of the card advancing on its own.
 
 2. **Passive settle observation with a hard timeout.** The button watched
    `useIsFetching` for the refetch, and declared `settle-failed` after 10s
-   *even while a refetch was still in flight*. A post-write Simkl read can sit
+   _even while a refetch was still in flight_. A post-write Simkl read can sit
    in the ~20s per-user write-lock/429-retry window
    (`docs/solutions/simkl-rate-limits-and-write-lock.md`), so a perfectly
    healthy slow refetch produced the failure UI — and then landed anyway,
@@ -24,13 +24,13 @@ instead of the card advancing on its own.
 ## Fix
 
 - `invalidateAfterLog` takes the skipped providers too and includes them in
-  the Up Next gate. A reconcile-skip means the provider's state is *ahead* of
+  the Up Next gate. A reconcile-skip means the provider's state is _ahead_ of
   the computed sections — exactly what a recompute exists for. Per-provider
   caches stay untouched on skips (reconcile just read them fresh).
 - The quick-log sheet (since plan 0037, `features/log-media/session`; the
   button before that) owns its settle signal: after a successful write it
   awaits `queryClient.invalidateQueries({queryKey: upNextQueryKeys.inputs()},
-  {cancelRefetch: false})` — joining the mutation's in-flight refetch rather
+{cancelRefetch: false})` — joining the mutation's in-flight refetch rather
   than restarting it — and returns to `idle` when the promise resolves (or is
   unmounted by the advancing data). The `settle-failed` phase, the
   `settleTransition` watcher, and `useUpNextSettling` are deleted; the 10s

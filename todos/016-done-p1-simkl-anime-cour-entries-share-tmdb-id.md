@@ -10,24 +10,24 @@ watched state. Renamed the stale `pending` filename to match `status: done`.
 The separate Link Click follow-up still lacks live verification; see the
 [backlog index](README.md) for remaining QA.
 
-Owner report 2026-09-16: the episode screen for *Saga of Tanya the Evil* S2E11
+Owner report 2026-09-16: the episode screen for _Saga of Tanya the Evil_ S2E11
 read "Logged on Simkl" with a Rewatch button while Simkl's own page showed the
 episode unwatched.
 
 ## Cause (verified against Simkl's public catalog and API docs)
 
 - Simkl files each broadcast cour as its own anime entry, and every cour carries
-  the parent show's ids: *Youjo Senki* (555226), *Youjo Senki II* (1670325) and
+  the parent show's ids: _Youjo Senki_ (555226), _Youjo Senki II_ (1670325) and
   a 2021 ONA all state `tmdb: 69346`. Episodes in each entry start at 1.
 - The original `findLibraryEntry` (`state/queries/simkl.ts`) accepted a Simkl id
-  *or* a TMDB id per entry, so season 1 could win on TMDB id before the loop
+  _or_ a TMDB id per entry, so season 1 could win on TMDB id before the loop
   reached season 2's exact Simkl id. The current code disables TMDB fallback
   for non-film anime. This prevents that particular cross-cour false positive,
   but an item without a Simkl id now cannot resolve a cour through TMDB at all.
 - The season 1 entry is `completed`; Simkl sends no `seasons[]` for those
   (`docs/solutions/simkl-completed-shows-have-no-episode-detail.md`), and both
   `use-episode-logs.ts` and the seasons accordion read an empty key set on a
-  completed entry as "every aired episode" — for the *whole* TMDB layout.
+  completed entry as "every aired episode" — for the _whole_ TMDB layout.
 - Even the right entry keys wrong: its per-entry episodes 1..n land as
   `"1-n"` against TMDB's season 2.
 

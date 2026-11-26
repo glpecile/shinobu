@@ -11,13 +11,9 @@ import {
 } from './parse-tags';
 
 describe('parseTags', () => {
-
   test('trims each tag', () => {
     expect(parseTags('xgimi, shinobu')).toEqual(['xgimi', 'shinobu']);
-    expect(parseTags('  imax  ,rewatch-night')).toEqual([
-      'imax',
-      'rewatch-night',
-    ]);
+    expect(parseTags('  imax  ,rewatch-night')).toEqual(['imax', 'rewatch-night']);
   });
 
   test('empty and separator-only input parse to no tags', () => {
@@ -36,7 +32,6 @@ describe('committedTags', () => {
     expect(committedTags('shinobu, netflix, ')).toEqual(['shinobu', 'netflix']);
     expect(committedTags('shinobu, netflix,')).toEqual(['shinobu', 'netflix']);
   });
-
 });
 
 describe('isTagSelected', () => {
@@ -49,11 +44,9 @@ describe('isTagSelected', () => {
     expect(isTagSelected('shinobu, horror-night, ', 'horror')).toBe(false);
     expect(isTagSelected('', 'horror')).toBe(false);
   });
-
 });
 
 describe('toggleTag', () => {
-
   test('always leaves a trailing separator, so the picker filter resets', () => {
     for (const input of ['', 'imax', 'imax, rewatch-night', 'shinobu, ']) {
       expect(activeTagFragment(toggleTag(input, 'horror'))).toBe('');
@@ -105,7 +98,6 @@ describe('activeTagFragment', () => {
     expect(activeTagFragment('shinobu, ')).toBe('');
     expect(activeTagFragment('')).toBe('');
   });
-
 });
 
 describe('filterTagSuggestions', () => {
@@ -117,22 +109,13 @@ describe('filterTagSuggestions', () => {
   });
 
   test('prefix matches rank above mere substring matches', () => {
-    expect(filterTagSuggestions(all, 'p')).toEqual([
-      'p',
-      'cinepolis-recoleta',
-      'sped up',
-    ]);
+    expect(filterTagSuggestions(all, 'p')).toEqual(['p', 'cinepolis-recoleta', 'sped up']);
   });
 
   test('matches case-insensitively and preserves source order within a rank', () => {
     expect(filterTagSuggestions(all, 'NET')).toEqual(['netflix']);
-    expect(filterTagSuggestions(['ab', 'ac', 'xa'], 'a')).toEqual([
-      'ab',
-      'ac',
-      'xa',
-    ]);
+    expect(filterTagSuggestions(['ab', 'ac', 'xa'], 'a')).toEqual(['ab', 'ac', 'xa']);
   });
-
 });
 
 describe('pinSelectedTags', () => {

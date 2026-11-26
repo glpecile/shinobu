@@ -7,10 +7,9 @@ const ids = (externalIds: Record<string, number | string> = {}) => ({ externalId
 describe('providerLinksFor', () => {
   it('still includes the source provider first even when disconnected', () => {
     expect(
-      providerLinksFor(
-        { id: 'trakt-1', type: 'MOVIE', ...ids({ trakt: 1, letterboxd: 'heat' }) },
-        ['letterboxd'],
-      ),
+      providerLinksFor({ id: 'trakt-1', type: 'MOVIE', ...ids({ trakt: 1, letterboxd: 'heat' }) }, [
+        'letterboxd',
+      ]),
     ).toEqual([
       { provider: 'trakt', url: 'https://trakt.tv/movies/1' },
       { provider: 'letterboxd', url: 'https://letterboxd.com/film/heat/' },
@@ -31,19 +30,16 @@ describe('providerLinksFor', () => {
 
   it('excludes a connected provider with no buildable URL (TV + Letterboxd)', () => {
     expect(
-      providerLinksFor(
-        { id: 'trakt-1', type: 'TV', ...ids({ trakt: 1 }) },
-        ['trakt', 'letterboxd'],
-      ),
+      providerLinksFor({ id: 'trakt-1', type: 'TV', ...ids({ trakt: 1 }) }, [
+        'trakt',
+        'letterboxd',
+      ]),
     ).toEqual([{ provider: 'trakt', url: 'https://trakt.tv/shows/1' }]);
   });
 
   it('falls back to connected-only links when the source prefix is unknown', () => {
     expect(
-      providerLinksFor(
-        { id: 'tmdb-123', type: 'MOVIE', ...ids({ trakt: 1 }) },
-        ['trakt'],
-      ),
+      providerLinksFor({ id: 'tmdb-123', type: 'MOVIE', ...ids({ trakt: 1 }) }, ['trakt']),
     ).toEqual([{ provider: 'trakt', url: 'https://trakt.tv/movies/1' }]);
   });
 });

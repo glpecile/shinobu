@@ -49,14 +49,14 @@ Found on 2026-11-23. The API is unofficial, so the three sources below are the
 ones `serializd-watchlist-endpoints.md` describes. Run them again if a path
 moves.
 
-| Path | Method | Body or query |
-|---|---|---|
-| `paused_shows`, `dropped_shows` | POST | `{ show_id }` (the TMDB id) |
-| `paused_shows/remove`, `dropped_shows/remove` | POST | `{ show_id }` |
-| `currently_watching`, `currently_watching/remove` | POST | `{ show_id }` |
-| `user/{username}/paused_shows_page/{page}` | GET | `?sort_by=date_added_desc` |
-| `user/{username}/dropped_shows_page/{page}` | GET | same |
-| `user/{username}/currently_watching_page/{page}` | GET | same |
+| Path                                              | Method | Body or query               |
+| ------------------------------------------------- | ------ | --------------------------- |
+| `paused_shows`, `dropped_shows`                   | POST   | `{ show_id }` (the TMDB id) |
+| `paused_shows/remove`, `dropped_shows/remove`     | POST   | `{ show_id }`               |
+| `currently_watching`, `currently_watching/remove` | POST   | `{ show_id }`               |
+| `user/{username}/paused_shows_page/{page}`        | GET    | `?sort_by=date_added_desc`  |
+| `user/{username}/dropped_shows_page/{page}`       | GET    | same                        |
+| `user/{username}/currently_watching_page/{page}`  | GET    | same                        |
 
 - The site bundle has the payloads:
   `e3=A=>{let e="/api/paused_shows";return c.post(e,{show_id:A})}`, and the

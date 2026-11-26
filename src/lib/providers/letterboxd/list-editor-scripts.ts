@@ -1,4 +1,8 @@
-import type { LetterboxdListCreateRequest, LetterboxdListMembershipRequest, LetterboxdListRenameRequest } from './deps';
+import type {
+  LetterboxdListCreateRequest,
+  LetterboxdListMembershipRequest,
+  LetterboxdListRenameRequest,
+} from './deps';
 
 /**
  * Resolves a `/film/…/` or `/tmdb/…/` path to its LID and canonical slug in the

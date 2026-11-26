@@ -27,7 +27,7 @@
 a reconnect (possibly as a different account) never shows the old account's
 data. It already handles the two merged caches whose keys don't name a provider
 (Up Next and the watchlist). The unified diary is a third such cache and is
-missed. Its key holds the provider *set* plus the Letterboxd and Serializd
+missed. Its key holds the provider _set_ plus the Letterboxd and Serializd
 usernames, but not the Trakt, AniList or Simkl account. So "disconnect Trakt,
 connect a different Trakt account" restores the first account's diary from
 memory, and on native from disk (it is persisted for 24 h). The stale entries
@@ -71,21 +71,23 @@ in `disconnect.test.ts` seeds `watchlistKey` and `upNextKey` and asserts they ar
 
 ## Commands you will need
 
-| Purpose   | Command                                           | Expected on success |
-|-----------|---------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                   | exit 0              |
-| Typecheck | `bun typecheck`                                   | exit 0              |
-| One file  | `bun test src/state/session/disconnect.test.ts`   | all pass            |
-| All tests | `bun run test`                                    | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                        | exit 0              |
+| Purpose   | Command                                         | Expected on success               |
+| --------- | ----------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                 | exit 0                            |
+| Typecheck | `bun typecheck`                                 | exit 0                            |
+| One file  | `bun test src/state/session/disconnect.test.ts` | all pass                          |
+| All tests | `bun run test`                                  | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                      | exit 0                            |
 
 ## Scope
 
 **In scope**:
+
 - `src/state/session/index.ts`
 - `src/state/session/disconnect.test.ts`
 
 **Out of scope**:
+
 - Changing the diary query key shape (adding account ids). That would also need
   a persist `BUSTER` bump; the purge is enough.
 - Purging on automatic session loss (a 401 that clears the token). That is
@@ -108,10 +110,10 @@ In `src/state/session/index.ts`:
 - After the watchlist purge, add:
 
 ```ts
-  // The third exception: the unified diary's key names the provider set and
-  // two usernames, not the Trakt/AniList/Simkl account, and it is persisted
-  // on native. Reconnecting as another account must not restore it.
-  queryClient.removeQueries({ queryKey: [...DIARY_QUERY_ROOT] });
+// The third exception: the unified diary's key names the provider set and
+// two usernames, not the Trakt/AniList/Simkl account, and it is persisted
+// on native. Reconnecting as another account must not restore it.
+queryClient.removeQueries({ queryKey: [...DIARY_QUERY_ROOT] });
 ```
 
 **Verify**: `bun typecheck` → exit 0.

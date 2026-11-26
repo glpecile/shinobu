@@ -13,9 +13,7 @@ export interface LogDecision {
   action: LogAction;
 }
 
-export function reconcileLogTargets(
-  records: readonly ProviderWatchRecord[],
-): LogDecision[] {
+export function reconcileLogTargets(records: readonly ProviderWatchRecord[]): LogDecision[] {
   const anyMissing = records.some((record) => !record.hasIt);
   return records.map((record) => ({
     provider: record.provider,
@@ -42,9 +40,7 @@ export function traktHasEpisodes(
   completedKeys: ReadonlySet<string>,
   episodes: readonly { season: number; number: number }[],
 ): boolean {
-  return episodes.every((episode) =>
-    completedKeys.has(`${episode.season}-${episode.number}`),
-  );
+  return episodes.every((episode) => completedKeys.has(`${episode.season}-${episode.number}`));
 }
 
 export interface AniListEntrySnapshot {

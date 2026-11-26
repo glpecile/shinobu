@@ -40,7 +40,8 @@ export async function cachedReadingBridge(
       results.push(
         ...(await queryClient.fetchQuery({
           queryKey: readingBridgeQueryKeys.search(query),
-          queryFn: ({ signal }) => Effect.runPromise(searchReadingWorks(anilistDeps(), { query }), { signal }),
+          queryFn: ({ signal }) =>
+            Effect.runPromise(searchReadingWorks(anilistDeps(), { query }), { signal }),
           staleTime: Number.POSITIVE_INFINITY,
           gcTime: Number.POSITIVE_INFINITY,
           retry: false,

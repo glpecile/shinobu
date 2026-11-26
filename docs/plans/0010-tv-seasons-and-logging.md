@@ -55,7 +55,7 @@ studios — components fetch them as a detail-screen-only section.
 2. **`/shows/:id/progress/watched`** (authenticated) — per-episode
    `completed` booleans grouped by season, only fetched when Trakt is
    connected. Normalize into a `ReadonlySet<string>` of `"${season}-${number}"`
-   watched keys. This is a *targeted* call (one show) rather than rescanning
+   watched keys. This is a _targeted_ call (one show) rather than rescanning
    the full `/sync/watched/shows` payload — the feed's flat contract stays.
 
 ## Write path: batch episodes

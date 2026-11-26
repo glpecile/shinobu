@@ -16,11 +16,11 @@ simply never called.
 
 `@legendapp/list` 3.3.3 added a shared "edge reached" gate so
 `onStartReached` and `onEndReached` don't bounce between edges during one
-gesture (its CHANGELOG). The gate closes whenever *either* edge crosses its
+gesture (its CHANGELOG). The gate closes whenever _either_ edge crosses its
 threshold, **whether or not a handler for that edge exists**. Every list
 mounts at scroll 0, inside the default `onStartReachedThreshold` (0.5 of the
 viewport), so the gate closed on mount. It reopens only while the scroll
-position is outside *both* edges' hysteresis bands (1.3× threshold), or on the
+position is outside _both_ edges' hysteresis bands (1.3× threshold), or on the
 first user scroll after a scroll-end. A single fast jump from the top straight
 into the bottom band skips the reopening region, and once the list sits at the
 bottom no further scroll events arrive, so nothing ever reopens it.

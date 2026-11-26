@@ -1,14 +1,13 @@
-import { ScrollViewStyleReset, useServerDocumentContext } from "expo-router/html";
+import { ScrollViewStyleReset, useServerDocumentContext } from 'expo-router/html';
 
-import { SHINOBU_WEB_DOMAIN } from "@/lib/config";
-import { fontFaceCss, preloadedFonts } from "@/lib/fonts/web-faces";
+import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
+import { fontFaceCss, preloadedFonts } from '@/lib/fonts/web-faces';
 
 const SITE_DESCRIPTION =
   "Log a movie, show, anime, or manga once, and Shinobu writes it to every tracker you've connected.";
 
 export default function Root({ children }: { children: React.ReactNode }) {
-  const { bodyAttributes, bodyNodes, htmlAttributes, headNodes } =
-    useServerDocumentContext();
+  const { bodyAttributes, bodyNodes, htmlAttributes, headNodes } = useServerDocumentContext();
 
   return (
     <html lang="en" {...htmlAttributes}>
@@ -105,12 +104,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
           id="boot-loader"
           aria-hidden="true"
           style={{
-            position: "fixed",
+            position: 'fixed',
             inset: 0,
             zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <img

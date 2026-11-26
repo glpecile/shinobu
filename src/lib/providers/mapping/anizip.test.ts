@@ -133,9 +133,7 @@ describe('fetchAniZipEpisodeMap', () => {
       LOOKUP,
     );
 
-    expect([...(map ?? [])].map(([key]) => key).sort((a, b) => a - b)).toEqual([
-      1, 2, 12,
-    ]);
+    expect([...(map ?? [])].map(([key]) => key).sort((a, b) => a - b)).toEqual([1, 2, 12]);
   });
 
   test('a document with no episodes block is a miss, not an empty map', async () => {
@@ -170,9 +168,7 @@ describe('fetchAniZipIds (unchanged by the episode-map sibling)', () => {
   });
 
   test('no mappings block → null', async () => {
-    expect(
-      await fetchAniZipIds(jsonFetch({ episodes: DANDADAN_S2.episodes }), LOOKUP),
-    ).toBeNull();
+    expect(await fetchAniZipIds(jsonFetch({ episodes: DANDADAN_S2.episodes }), LOOKUP)).toBeNull();
   });
 
   test('an unknown id returns null', async () => {

@@ -27,10 +27,10 @@ Four permits were a guess. On 2026-11-08 a Pixel 8 Pro read the same 35 public
 film pages (about 160 KB each) at three widths, back to back:
 
 | Parallel reads | Wall time | Mean request |
-| --- | --- | --- |
-| 4 | 5.8 s | 639 ms |
-| 8 | 3.1 s | 670 ms |
-| 12 | 2.3 s | 697 ms |
+| -------------- | --------- | ------------ |
+| 4              | 5.8 s     | 639 ms       |
+| 8              | 3.1 s     | 670 ms       |
+| 12             | 2.3 s     | 697 ms       |
 
 Request latency stayed flat and no read returned 429, so Letterboxd did not
 throttle the wider fan. Eight keeps most of the gain with headroom below the

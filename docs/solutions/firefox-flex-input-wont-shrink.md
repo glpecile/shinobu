@@ -1,7 +1,7 @@
 # Firefox: an `<input>` in a flex row won't shrink, so its siblings leave the screen
 
 **Found 2026-09-13** on Firefox for Android: the search field's clear (X) button
-rendered *outside* the field's pill, half off the right edge of the viewport.
+rendered _outside_ the field's pill, half off the right edge of the viewport.
 Chrome, Safari and both native platforms laid it out correctly.
 
 ## Symptom
@@ -17,7 +17,7 @@ border at device x=997, X glyph at x=1067–1079 of a 1080-wide viewport.
 
 Not overflow of the wrapper — the wrapper is `flex-1` over react-native-web's
 `View` base style, which sets `min-width: 0`, so it got exactly the available
-width. Its *children* overflowed it.
+width. Its _children_ overflowed it.
 
 `flex-1` is `flex: 1 1 0%`, and flex items refuse to shrink below their
 **automatic minimum size** (`min-width: auto`). For a form control that size is
@@ -27,7 +27,7 @@ appearance, border, padding and font, but **not** `min-width`, so nothing clamps
 it. Firefox honours that automatic minimum size on form controls; Blink and
 WebKit clamp it away, which is why only Firefox showed it.
 
-The clear button is the *last* child, so the overflow lands entirely on it.
+The clear button is the _last_ child, so the overflow lands entirely on it.
 
 ## Fix
 

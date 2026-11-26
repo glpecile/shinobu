@@ -39,12 +39,12 @@ base64 -i shinobu-upload-key.jks | tr -d '\n' > shinobu-upload-key.b64
 
 In the repo's **Settings → Secrets and variables → Actions**, create:
 
-| Secret name | Value |
-| --- | --- |
-| `SHINOBU_KEYSTORE_BASE64` | contents of `shinobu-upload-key.b64` |
-| `SHINOBU_UPLOAD_STORE_PASSWORD` | the keystore's store password |
-| `SHINOBU_UPLOAD_KEY_ALIAS` | `shinobu-upload` (or whatever alias you used) |
-| `SHINOBU_UPLOAD_KEY_PASSWORD` | the key password |
+| Secret name                     | Value                                         |
+| ------------------------------- | --------------------------------------------- |
+| `SHINOBU_KEYSTORE_BASE64`       | contents of `shinobu-upload-key.b64`          |
+| `SHINOBU_UPLOAD_STORE_PASSWORD` | the keystore's store password                 |
+| `SHINOBU_UPLOAD_KEY_ALIAS`      | `shinobu-upload` (or whatever alias you used) |
+| `SHINOBU_UPLOAD_KEY_PASSWORD`   | the key password                              |
 
 These are consumed by `.github/workflows/release.yml`, which decodes
 `SHINOBU_KEYSTORE_BASE64` to a file at build time and exposes all four as
@@ -76,13 +76,13 @@ Unlike the signing key, these are inherently extractable from a public
 APK once shipped — that's expected for embedded OAuth client credentials
 (same threat model as any "public client" mobile app), not a leak.
 
-| Secret name | Value |
-| --- | --- |
-| `EXPO_PUBLIC_TRAKT_CLIENT_ID` | your Trakt app's client id |
-| `EXPO_PUBLIC_TRAKT_CLIENT_SECRET` | your Trakt app's client secret |
-| `EXPO_PUBLIC_ANILIST_CLIENT_ID` | AniList **web** client id — no-op for Android, included for parity with local `.env.local` |
-| `EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID` | AniList client registered to `shinobu://redirect` — the one Android actually uses |
-| `EXPO_PUBLIC_TMDB_TOKEN` | TMDB v4 read token |
+| Secret name                            | Value                                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `EXPO_PUBLIC_TRAKT_CLIENT_ID`          | your Trakt app's client id                                                                 |
+| `EXPO_PUBLIC_TRAKT_CLIENT_SECRET`      | your Trakt app's client secret                                                             |
+| `EXPO_PUBLIC_ANILIST_CLIENT_ID`        | AniList **web** client id — no-op for Android, included for parity with local `.env.local` |
+| `EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID` | AniList client registered to `shinobu://redirect` — the one Android actually uses          |
+| `EXPO_PUBLIC_TMDB_TOKEN`               | TMDB v4 read token                                                                         |
 
 `release.yml`'s "Write provider credentials" step writes these into a
 `.env.local` file before `expo prebuild`, exactly mirroring local dev. Any

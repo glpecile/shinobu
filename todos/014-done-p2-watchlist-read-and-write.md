@@ -41,7 +41,7 @@ Plan: `docs/plans/0031-watchlist-read-and-write.md`.
 > your watchlist, and it was absent from `/watchlist` entirely. This is a **fourth
 > selector** (`fetchWatchlistAnime`) — `fetchCurrentAnime`, `fetchPlannedAnime` and Up
 > Next's PLANNING gate are unchanged, so the hard constraint below still holds and the
-> gate doc's amendment says why (the gate restricts what PLANNING may *reach*; CURRENT
+> gate doc's amendment says why (the gate restricts what PLANNING may _reach_; CURRENT
 > was never the restricted status).
 >
 > Removal follows: a CURRENT entry has to be removable, and AniList still has no
@@ -95,8 +95,8 @@ gates it on `letterboxdUsername != null`).
 ## Owner decisions (2026-07-28)
 
 - **Read + write.** The cross-provider watchlist read surface ships alongside the verb.
-  AniList's contribution is the **PLANNING** list *(widened to CURRENT ∪ PLANNING on
-  2026-08-01 — see the amendment above)*. **Hard constraint:** this must not
+  AniList's contribution is the **PLANNING** list _(widened to CURRENT ∪ PLANNING on
+  2026-08-01 — see the amendment above)_. **Hard constraint:** this must not
   re-open plan 0030's hole — Continue Watching, the "Your Anime" row and Calendar are
   behaviourally untouched, and the PLANNING gate (`features/up-next/compute.ts:229-235`)
   and the `CURRENT` selector filter (`state/queries/anilist.ts:153-160`) stay exactly as
@@ -139,7 +139,7 @@ gates it on `letterboxdUsername != null`).
       `useIsWatchlisted`.
 - [x] A Serializd watchlist write **never clears watched state**: only eligible, unwatched
       season ids are sent (specials and year-based seasons excluded), a show with none is a
-      reasoned skip, a *partial* filter is reported with its reason rather than a bare
+      reasoned skip, a _partial_ filter is reported with its reason rather than a bare
       `ok`, and a failed progress read is a fail-closed `error` with **no POST issued**.
       "Unwatched" is read from the **raw** `/progress` body — a season present in
       `watchedSeasons` counts as watched even with an empty `watchedEpisodes` array, which
@@ -151,9 +151,9 @@ gates it on `letterboxdUsername != null`).
       in-effect read** immediately before the delete (never the cached watchlist surface,
       whose 15-minute snapshot would authorize destroying an entry the user has since
       started elsewhere), and the delete uses the id that fresh read returned.
-      *(Amended 2026-08-01, plan 0035 R3: the refusal — and nothing else — is lifted by
+      _(Amended 2026-08-01, plan 0035 R3: the refusal — and nothing else — is lifted by
       an explicit `allowDestructive` opt-in, which the picker earns with a destructive
-      warning and a second press. The fresh read and the fresh id are unconditional.)*
+      warning and a second press. The fresh read and the fresh id are unconditional.)_
 - [x] A mid-run AniList PLANNING entry created by this feature appears **nowhere** in Up
       Next — in particular never in Continue Watching — and **does** appear in the new
       watchlist surface. One **four-way** test (plan 0035 U1) asserts all of it and names
@@ -219,7 +219,7 @@ gates it on `letterboxdUsername != null`).
       watchlist surface for the full 15-minute stale window.
 - [x] A 1997 film added successfully changes nothing in the computed agenda and triggers
       no notification regather, but **does** appear in `/watchlist`. A
-      theatrically-released film with a digital date next week legitimately *does* reach
+      theatrically-released film with a digital date next week legitimately _does_ reach
       Calendar — that is plan 0030 working, not a leak.
 - [x] The Trakt watchlist read is **never** a second Calendar source: Calendar's Trakt
       half stays `/calendars/my/*`, `computeWatchlist` never returns `UpNextEntry`, and
@@ -241,7 +241,7 @@ gates it on `letterboxdUsername != null`).
       fully cold open. Never quoted as an unqualified "zero" or "3".
 - [x] The merged surface is **not** a `feedOptions` slot: the slot contract is
       `NormalizedMediaItem[]` and `useUnifiedFeed` is also mounted by the details screen,
-      so a slot would break the type *and* run the gather on every details open. It is
+      so a slot would break the type _and_ run the gather on every details open. It is
       registered in `activeSectionKeys` for pull-to-refresh (with that function's
       trakt/anilist early return dropped so Letterboxd-only users are covered), and
       details-screen resolution goes through a new `findInWatchlistCache` that matches
@@ -263,7 +263,7 @@ gates it on `letterboxdUsername != null`).
       it is not a per-provider toggle.
 - [x] Hidden-items filtering runs over **every contributing id**, via a shared
       `visibleByIds` in `hidden-items.ts` that preserves the identity contract in its
-      stronger form — the same array reference back whenever the filter removed *nothing*,
+      stronger form — the same array reference back whenever the filter removed _nothing_,
       not merely when the hidden set is empty, or Up Next's Continue Watching and Calendar
       lose their plan-0024 memoization as soon as one unrelated item is hidden. So a film
       hidden from the Letterboxd row cannot reappear as its Trakt twin, and
@@ -271,7 +271,7 @@ gates it on `letterboxdUsername != null`).
       one **global** provider-scoped set: hiding from `/watchlist` also suppresses that
       item elsewhere — accepted, and asserted in a test.
 - [x] Plan 0030 R12 and `anilist-shared-list-query-status-gate.md` are **amended** —
-      both currently say PLANNING reaches Calendar *only*, which the read surface makes
+      both currently say PLANNING reaches Calendar _only_, which the read surface makes
       false, and tests cite that doc by name.
 
 **Surfaces and copy**
@@ -298,7 +298,7 @@ gates it on `letterboxdUsername != null`).
 ## Risks
 
 - **Serializd watched/watchlisted mutual exclusivity — data loss.** Serializd's own copy:
-  *"You can't mark a show / season as 'Watched' and 'Watchlisted' at the same time"*.
+  _"You can't mark a show / season as 'Watched' and 'Watchlisted' at the same time"_.
   `season_ids` is required and show-level means all seasons, so writing them on a
   partly-watched show plausibly **clears those seasons' watched flags** — the Serializd
   analogue of the AniList status clobber. Guarded by a fail-closed progress read that
@@ -326,7 +326,7 @@ gates it on `letterboxdUsername != null`).
   otherwise Letterboxd ships degraded to a manual target on all platforms, stated in the
   PR.
 - **Letterboxd toggle semantics — gates both verbs.** Unverified, and the site's control
-  is a *toggle* ("Add to watchlist" / "In watchlist"), so a second tap may **remove** the
+  is a _toggle_ ("Add to watchlist" / "In watchlist"), so a second tap may **remove** the
   film while Shinobu reports success. The capture must classify the endpoint (add-only /
   toggle / separate remove) and how the response says which happened. Toggle → **both**
   Letterboxd verbs stay `'manual'` by default; one narrow exception (toggle invoked from
@@ -338,7 +338,7 @@ gates it on `letterboxdUsername != null`).
   discovery routes can vanish. The `_v2`/`_v3` suffix pattern is direct evidence Serializd
   versions by renaming and retiring; a `_v3` is the likeliest future breakage. Mitigated
   by recording everything now, plus the one-token registry rollback.
-- **Serializd `items[]` element shape is unverified**, which is why the Serializd *read*
+- **Serializd `items[]` element shape is unverified**, which is why the Serializd _read_
   is deferred — the envelope is confirmed live but every reachable profile returned an
   empty list. Consequence: Shinobu will write to a Serializd watchlist it cannot show
   back, the only remaining read/write asymmetry, named in the PR body. Second consequence:
@@ -347,7 +347,7 @@ gates it on `letterboxdUsername != null`).
   unreachable adapter.
 - **Trakt pagination drift.** Discussion #681 makes `/sync/watchlist` pagination required
   (default 100, max limit 250 from 2026-06-15) while the blueprint still badges it
-  Optional — a *different* announcement from the #775 one the repo already documents.
+  Optional — a _different_ announcement from the #775 one the repo already documents.
   Always paginate explicitly, or the read silently truncates at 100. `extended=full,images`
   on watchlist rows is unverified; the existing `useTraktMediaImages` per-card recovery is
   the free fallback.
@@ -365,6 +365,6 @@ gates it on `letterboxdUsername != null`).
   mutation and a Serializd add is 3 requests, from every entry point including the card
   sheet where nothing is warm. No guard is ever sourced from the query cache to make it
   look free: a stale guard is a silent clobber, on the remove path as much as the add. The
-  *read* surface is the opposite — 0 warm from home, up to 4 on a fully cold open — and
+  _read_ surface is the opposite — 0 warm from home, up to 4 on a fully cold open — and
   that difference in order of magnitude is why the surface is affordable where a per-item
   membership toggle was not.

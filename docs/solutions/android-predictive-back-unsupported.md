@@ -28,10 +28,11 @@ enabled callback is RN's plain one. Mid-gesture screenshots show Settings
 scaling into a card while Shinobu doesn't move a pixel.
 
 **The flag was worse than useless.** On Android 16 it's ignored — targetSdk 36
-enforces predictive back regardless. On Android 13–15 it *is* honoured, and
+enforces predictive back regardless. On Android 13–15 it _is_ honoured, and
 there RN's callback is never registered (its gate is `SDK_INT >= 36 && targetSdk
->= 36`), so the back dispatcher is empty, the OS default fires, and **back exits
-the app from any screen** instead of popping the stack.
+
+> = 36`), so the back dispatcher is empty, the OS default fires, and **back exits
+> the app from any screen** instead of popping the stack.
 
 Reproduced by pinning `targetSdkVersion: 35` via `expo-build-properties`, which
 puts RN on the same branch a real Android 13–15 device takes. Same build, one
@@ -40,6 +41,6 @@ flag flipped: `true` → back from a detail screen landed on the launcher;
 
 **Fix:** `predictiveBackGestureEnabled: false` in `app.json`.
 
-**Revisit when** react-native-screens ships predictive back (v5+) *and* RN makes
+**Revisit when** react-native-screens ships predictive back (v5+) _and_ RN makes
 `ReactActivity`'s callback an `OnBackAnimationCallback`. Both are needed; the
 flag alone does nothing.

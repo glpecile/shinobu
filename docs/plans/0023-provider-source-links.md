@@ -12,7 +12,7 @@ execution: code
 
 ## Goal Capsule
 
-- **Objective:** Let users jump from Shinobu to the item's page on its providers: the card-actions sheet gains a "View on {source provider}" row, and the details page gains a closing "View on" section with a link pill for the source provider plus every *connected* provider we can build a URL for.
+- **Objective:** Let users jump from Shinobu to the item's page on its providers: the card-actions sheet gains a "View on {source provider}" row, and the details page gains a closing "View on" section with a link pill for the source provider plus every _connected_ provider we can build a URL for.
 - **Authority:** AGENTS.md conventions override this plan; this plan overrides implementer preference; the owner's live decisions override both.
 - **Execution profile:** `execution: code`. Pure selection/URL units test-first; UI smoke-verified web + dev client.
 - **Stop conditions:** Stop and surface — do not guess — if (a) plan 0022 has landed a conflicting `external-urls`/`open-external-url` helper shape (reuse, don't fork — KTD-1), or (b) the work would add provider conditionals in components instead of pure helpers.
@@ -43,7 +43,7 @@ An item's card modal and details page are dead ends toward the providers that ow
 **Deferred to Follow-Up Work**
 
 - A TMDB link (metadata source, not a tracker — including it would blur the registry's "TMDB is not a provider" line; revisit if users ask).
-- Links for *non-connected, non-source* providers (discovery use case).
+- Links for _non-connected, non-source_ providers (discovery use case).
 - Episode/season-level deep links.
 
 **Out of scope**

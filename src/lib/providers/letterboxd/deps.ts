@@ -56,9 +56,7 @@ export interface LetterboxdWebResponse {
   body: string;
 }
 
-export type LetterboxdWebFetch = (
-  request: LetterboxdWebRequest,
-) => Promise<LetterboxdWebResponse>;
+export type LetterboxdWebFetch = (request: LetterboxdWebRequest) => Promise<LetterboxdWebResponse>;
 
 /**
  * Watchlist write via `PATCH /api/v0/me/watchlist/{lid}` with a fresh CSRF

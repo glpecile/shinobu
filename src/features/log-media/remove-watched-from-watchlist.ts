@@ -16,13 +16,10 @@ export async function removeWatchedFromWatchlist(
   connected: readonly ProviderId[],
   deps: WatchlistRemoveDeps = watchlistRemoveDeps(),
 ): Promise<void> {
-  const isFilmLike =
-    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  const isFilmLike = item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   if (!isFilmLike) return;
 
-  const data = queryClient.getQueryData<WatchlistInputs>(
-    watchlistQueryKeys.inputs(),
-  );
+  const data = queryClient.getQueryData<WatchlistInputs>(watchlistQueryKeys.inputs());
   if (data == null) return;
   const removal = findWatchlistRemoval(data, item);
   if (removal == null) return;
@@ -43,6 +40,5 @@ export async function removeWatchedFromWatchlist(
       deps,
       removal.incomplete,
     );
-  } catch {
-  }
+  } catch {}
 }

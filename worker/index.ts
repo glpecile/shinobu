@@ -1,7 +1,4 @@
-import {
-  handleLetterboxdProxy,
-  isLetterboxdProxyRequest,
-} from './letterboxd-proxy';
+import { handleLetterboxdProxy, isLetterboxdProxyRequest } from './letterboxd-proxy';
 import {
   handleLetterboxdWriteSpike,
   isLetterboxdWriteSpikeRequest,

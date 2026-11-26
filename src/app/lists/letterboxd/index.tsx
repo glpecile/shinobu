@@ -11,12 +11,23 @@ import { getLetterboxdUsername } from '@/state/session/letterboxd';
 export default function LetterboxdListsScreen() {
   const params = useLocalSearchParams<{ kind?: string | string[] }>();
   const kind = params.kind ?? 'created';
-  const username = useConnectedProviders().includes(Provider.Letterboxd) ? getLetterboxdUsername() : null;
+  const username = useConnectedProviders().includes(Provider.Letterboxd)
+    ? getLetterboxdUsername()
+    : null;
   const validKind = kind === 'created' || kind === 'liked';
   const url = validKind ? letterboxdListsUrl(username ?? '', kind) : null;
   return (
-    <ListsPage contentKey={username ?? ''} index provider={Provider.Letterboxd} title={validKind ? listsTitle(kind) : 'Lists'} unavailable={validKind && username == null ? 'connect' : 'invalid'} url={url}>
-      {url != null && username != null && validKind && <ProviderListsPager kind={kind} provider={Provider.Letterboxd} username={username} />}
+    <ListsPage
+      contentKey={username ?? ''}
+      index
+      provider={Provider.Letterboxd}
+      title={validKind ? listsTitle(kind) : 'Lists'}
+      unavailable={validKind && username == null ? 'connect' : 'invalid'}
+      url={url}
+    >
+      {url != null && username != null && validKind && (
+        <ProviderListsPager kind={kind} provider={Provider.Letterboxd} username={username} />
+      )}
     </ListsPage>
   );
 }

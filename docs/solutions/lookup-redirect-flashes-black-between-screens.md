@@ -7,7 +7,7 @@ Tapping an AniList cast/crew card on a detail screen pushed
 
 1. the detail screen cross-faded into the lookup route's `PersonSkeleton`,
 2. **one or two fully black frames** — no back button, no content,
-3. the *same* skeleton again, from the top,
+3. the _same_ skeleton again, from the top,
 4. the person page.
 
 Not reproducible on web.

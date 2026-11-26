@@ -24,7 +24,13 @@ const ids = (externalIds: Record<string, number | string> = {}) => ({ externalId
 // alongside Trakt.
 describe("providersForWrite('log')", () => {
   it('a Letterboxd TV entry cannot become a movie write on another provider', () => {
-    expect(providersForWrite({ type: 'MOVIE', tmdbTvVariant: 228880, ...ids({ letterboxd: 'beast-boy-lone-wolf' }) }, ALL5, 'log')).toEqual(['letterboxd']);
+    expect(
+      providersForWrite(
+        { type: 'MOVIE', tmdbTvVariant: 228880, ...ids({ letterboxd: 'beast-boy-lone-wolf' }) },
+        ALL5,
+        'log',
+      ),
+    ).toEqual(['letterboxd']);
   });
   it('an unmapped anime film stays AniList-only (no movie-side id)', () => {
     expect(
@@ -33,9 +39,9 @@ describe("providersForWrite('log')", () => {
   });
 
   it('a TV show reverse-mapped to AniList also routes there', () => {
-    expect(
-      providersForWrite({ type: 'TV', ...ids({ trakt: 1, anilist: 2 }) }, ALL, 'log'),
-    ).toEqual(['trakt', 'anilist']);
+    expect(providersForWrite({ type: 'TV', ...ids({ trakt: 1, anilist: 2 }) }, ALL, 'log')).toEqual(
+      ['trakt', 'anilist'],
+    );
   });
 
   it('a movie with isFilm set routes the same as a plain movie', () => {
@@ -63,7 +69,9 @@ describe('reading items route by the id they carry', () => {
   const connected: readonly ProviderId[] = [...ALL5, 'hardcover'];
 
   it('a book with a Hardcover id routes to Hardcover only', () => {
-    expect(providersForWrite({ type: 'BOOK', ...ids({ hardcover: 1 }) }, connected, 'log')).toEqual(['hardcover']);
+    expect(providersForWrite({ type: 'BOOK', ...ids({ hardcover: 1 }) }, connected, 'log')).toEqual(
+      ['hardcover'],
+    );
   });
 
   it('a bridged book with its volume number also routes to AniList', () => {
@@ -81,7 +89,10 @@ describe('reading items route by the id they carry', () => {
     const searched = { type: 'BOOK' as const, ...ids({ hardcover: 1, anilist: 2 }) };
     expect(providersForWrite(searched, connected, 'watchlist-remove')).toEqual(['hardcover']);
     const card = { ...searched, bridgedAniList: { id: 2, title: 'Nisemonogatari' } };
-    expect(providersForWrite(card, connected, 'watchlist-remove')).toEqual(['anilist', 'hardcover']);
+    expect(providersForWrite(card, connected, 'watchlist-remove')).toEqual([
+      'anilist',
+      'hardcover',
+    ]);
   });
 
   it('a book without a Hardcover id routes nowhere', () => {
@@ -96,12 +107,39 @@ describe('reading items route by the id they carry', () => {
 describe("splitWriteTargets('log')", () => {
   it('allows supported userscript-backed web logs and watchlist writes', () => {
     const item = { type: 'MOVIE' as const, ...ids({ tmdb: 348 }) };
-    expect(splitWriteTargets(item, ['letterboxd'], 'web', 'log', true)).toEqual({ writable: ['letterboxd'], manual: [] });
-    expect(resolveWriteTargets(item, ['letterboxd'], { platform: 'web', capability: 'log', letterboxdUserscript: true })).toEqual(['letterboxd']);
-    expect(splitWriteTargets(item, ['letterboxd'], 'web', 'watchlist', true)).toEqual({ writable: ['letterboxd'], manual: [] });
-    expect(resolveWriteTargets(item, ['letterboxd'], { platform: 'web', capability: 'watchlist', letterboxdUserscript: true })).toEqual(['letterboxd']);
-    expect(splitWriteTargets(item, ['letterboxd'], 'web', 'watchlist-remove', true)).toEqual({ writable: ['letterboxd'], manual: [] });
-    expect(resolveWriteTargets(item, ['letterboxd'], { platform: 'web', capability: 'watchlist-remove', letterboxdUserscript: true })).toEqual(['letterboxd']);
+    expect(splitWriteTargets(item, ['letterboxd'], 'web', 'log', true)).toEqual({
+      writable: ['letterboxd'],
+      manual: [],
+    });
+    expect(
+      resolveWriteTargets(item, ['letterboxd'], {
+        platform: 'web',
+        capability: 'log',
+        letterboxdUserscript: true,
+      }),
+    ).toEqual(['letterboxd']);
+    expect(splitWriteTargets(item, ['letterboxd'], 'web', 'watchlist', true)).toEqual({
+      writable: ['letterboxd'],
+      manual: [],
+    });
+    expect(
+      resolveWriteTargets(item, ['letterboxd'], {
+        platform: 'web',
+        capability: 'watchlist',
+        letterboxdUserscript: true,
+      }),
+    ).toEqual(['letterboxd']);
+    expect(splitWriteTargets(item, ['letterboxd'], 'web', 'watchlist-remove', true)).toEqual({
+      writable: ['letterboxd'],
+      manual: [],
+    });
+    expect(
+      resolveWriteTargets(item, ['letterboxd'], {
+        platform: 'web',
+        capability: 'watchlist-remove',
+        letterboxdUserscript: true,
+      }),
+    ).toEqual(['letterboxd']);
   });
   it('routes Letterboxd to manual on web, Trakt stays writable', () => {
     expect(
@@ -158,9 +196,10 @@ describe("splitWriteTargets('watchlist')", () => {
       expect(
         splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL4, 'ios', 'watchlist'),
       ).toEqual({ writable: ['trakt'], manual: [] });
-      expect(
-        splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL4, 'ios', 'log'),
-      ).toEqual({ writable: ['trakt', 'serializd'], manual: [] });
+      expect(splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL4, 'ios', 'log')).toEqual({
+        writable: ['trakt', 'serializd'],
+        manual: [],
+      });
     } finally {
       serializd.watchlistWrite = original;
     }
@@ -175,8 +214,16 @@ describe("splitWriteTargets('tracking')", () => {
   });
 
   it('a film and a standalone manga have nothing to pause', () => {
-    expect(providersForWrite({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) }, ALL5, 'tracking')).toEqual([]);
-    expect(providersForWrite({ type: 'MANGA', ...ids({ anilist: 1 }) }, ALL5, 'tracking')).toEqual([]);
+    expect(
+      providersForWrite(
+        { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
+        ALL5,
+        'tracking',
+      ),
+    ).toEqual([]);
+    expect(providersForWrite({ type: 'MANGA', ...ids({ anilist: 1 }) }, ALL5, 'tracking')).toEqual(
+      [],
+    );
   });
 });
 
@@ -210,32 +257,35 @@ describe("splitWriteTargets('watchlist-remove')", () => {
 // provider is always in exactly one bucket. A provider in neither is the silent
 // drop AGENTS.md's no-dead-end rule forbids.
 describe('every applicable provider lands in exactly one bucket', () => {
-  const fixtures: { name: string; item: Parameters<typeof splitWriteTargets>[0]; types: MediaType[] }[] =
-    [
-      { name: 'movie', item: { type: 'MOVIE', ...ids({ trakt: 1 }) }, types: ['MOVIE'] },
-      { name: 'tv', item: { type: 'TV', ...ids({ trakt: 1 }) }, types: ['TV'] },
-      { name: 'manga', item: { type: 'MANGA', ...ids({ anilist: 1 }) }, types: ['MANGA'] },
-      {
-        name: 'unmapped anime series',
-        item: { type: 'ANIME', ...ids({ anilist: 1 }) },
-        types: ['ANIME'],
-      },
-      {
-        name: 'mapped anime series',
-        item: { type: 'ANIME', ...ids({ anilist: 1, tvdb: 2 }) },
-        types: ['ANIME', 'TV'],
-      },
-      {
-        name: 'mapped anime film',
-        item: { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
-        types: ['ANIME', 'MOVIE'],
-      },
-      {
-        name: 'movie reverse-mapped to AniList',
-        item: { type: 'MOVIE', ...ids({ trakt: 1, anilist: 2 }) },
-        types: ['MOVIE', 'ANIME'],
-      },
-    ];
+  const fixtures: {
+    name: string;
+    item: Parameters<typeof splitWriteTargets>[0];
+    types: MediaType[];
+  }[] = [
+    { name: 'movie', item: { type: 'MOVIE', ...ids({ trakt: 1 }) }, types: ['MOVIE'] },
+    { name: 'tv', item: { type: 'TV', ...ids({ trakt: 1 }) }, types: ['TV'] },
+    { name: 'manga', item: { type: 'MANGA', ...ids({ anilist: 1 }) }, types: ['MANGA'] },
+    {
+      name: 'unmapped anime series',
+      item: { type: 'ANIME', ...ids({ anilist: 1 }) },
+      types: ['ANIME'],
+    },
+    {
+      name: 'mapped anime series',
+      item: { type: 'ANIME', ...ids({ anilist: 1, tvdb: 2 }) },
+      types: ['ANIME', 'TV'],
+    },
+    {
+      name: 'mapped anime film',
+      item: { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
+      types: ['ANIME', 'MOVIE'],
+    },
+    {
+      name: 'movie reverse-mapped to AniList',
+      item: { type: 'MOVIE', ...ids({ trakt: 1, anilist: 2 }) },
+      types: ['MOVIE', 'ANIME'],
+    },
+  ];
 
   const capabilities: WriteCapability[] = ['log', 'watchlist', 'watchlist-remove'];
 
@@ -322,7 +372,7 @@ describe('Simkl write + read fan-out (plan 0034 U6/U7)', () => {
     ).toEqual({ writable: ['trakt', 'simkl'], manual: ['serializd'] });
   });
 
-  it("reverting canWrite is the standing rollback — the gated state comes straight back", () => {
+  it('reverting canWrite is the standing rollback — the gated state comes straight back', () => {
     const simkl = PROVIDERS.simkl;
     const original = simkl.canWrite;
     simkl.canWrite = false;
@@ -393,7 +443,9 @@ describe('listProviderFor', () => {
   });
 
   it('sends a book to Hardcover only when it carries a Hardcover id', () => {
-    expect(listProviderFor({ type: 'BOOK', ...ids({ hardcover: 1 }) }, ['hardcover'])).toBe('hardcover');
+    expect(listProviderFor({ type: 'BOOK', ...ids({ hardcover: 1 }) }, ['hardcover'])).toBe(
+      'hardcover',
+    );
     expect(listProviderFor({ type: 'BOOK', ...ids({}) }, ['hardcover'])).toBeNull();
     expect(listProviderFor({ type: 'BOOK', ...ids({ hardcover: 1 }) }, ALL4)).toBeNull();
   });
@@ -401,13 +453,14 @@ describe('listProviderFor', () => {
 
 describe('unmatchedWriteTargets', () => {
   it('lists the movie trackers for an anime film no id reaches', () => {
-    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1 }) }, ALL5)).toEqual([
-      'trakt',
-      'letterboxd',
-    ]);
+    expect(
+      unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1 }) }, ALL5),
+    ).toEqual(['trakt', 'letterboxd']);
   });
 
   it('is empty once a movie or TV id is known', () => {
-    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) }, ALL5)).toEqual([]);
+    expect(
+      unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) }, ALL5),
+    ).toEqual([]);
   });
 });

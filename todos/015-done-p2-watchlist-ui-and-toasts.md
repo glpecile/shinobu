@@ -5,19 +5,20 @@ priority: P2
 
 # Watchlist CTA UI, a target picker, and toasts for write results
 
-Owner feedback on plan 0031 PR A (#41), 2026-07-28: *"this is bad in terms of UI …
+Owner feedback on plan 0031 PR A (#41), 2026-07-28: _"this is bad in terms of UI …
 I want to open a modal to pick and choose where I watchlist. I'd like to have icons
 next to the log/watch and watchlist, the button should be different than the watch
 one … Showing details like where it got watchlisted is information we will start
-delegating to a toast library."*
+delegating to a toast library."_
 
 Sequencing is decided: **finish plan 0031 first** (PRs B, C1, C2), then plan this.
 The write verb, the read surface and removal all land against today's inline result
 block; this todo replaces that surface afterwards rather than racing it.
 
 > **Superseded 2026-08-03 (#60):** `burnt` was replaced by `sonner-native` (native)
-> + `sonner` (web) behind `lib/toast/`. Wherever this todo says `burnt`, read the
-> toast wrapper; the no-tap-in-a-toast constraint still holds.
+>
+> - `sonner` (web) behind `lib/toast/`. Wherever this todo says `burnt`, read the
+>   toast wrapper; the no-tap-in-a-toast constraint still holds.
 
 > **Built 2026-07-29** — plan 0032's four units all landed (the `burnt` wrapper,
 > the shared `features/write-sheet` picker, the watchlist add/remove picker sheet,
@@ -51,8 +52,8 @@ block; this todo replaces that surface afterwards rather than racing it.
    (owner, 2026-07-28, replacing the earlier `sonner-native` idea — see the analysis
    below; burnt wins on every axis that matters here).
 5. **Stop showing "Add on Serializd" / "Add on Letterboxd" rows** (owner, 2026-07-28):
-   *"I still don't like having the add on serializd/letterboxd thing. We could remove
-   it maybe… If we are going to try the spike I'd much prefer complete support."*
+   _"I still don't like having the add on serializd/letterboxd thing. We could remove
+   it maybe… If we are going to try the spike I'd much prefer complete support."_
    See "The manual rows" below — most of this resolves itself, and the residue has a
    better home than deletion.
 
@@ -60,22 +61,22 @@ block; this todo replaces that surface afterwards rather than racing it.
 
 - **Plan 0031 KTD-8 rejected a confirm sheet** for watchlisting ("the payload is the
   item and nothing else … one tap plus an inline result line"). Item 1 reverses that.
-  It is *not* a reversal of the fan-out itself: the log path already pairs a fan-out
+  It is _not_ a reversal of the fan-out itself: the log path already pairs a fan-out
   with an opt-out picker inside `LogConfirmSheet`, so watchlisting adopting the same
   shape is consistent — default to every applicable connected tracker, let the user
   deselect. Say so in the plan; do not re-litigate the fan-out.
 - **The 2026-07-27 settled decision** ("never a per-provider action the user picks a
-  target for") narrows to: never a *single*-provider action the user must aim. A
+  target for") narrows to: never a _single_-provider action the user must aim. A
   multi-select that starts fully selected preserves the original intent.
 - **Plan 0031 U8's three-family result surface** (upfront manual rows, failed
   outcomes, reasoned skips) exists because dropping the confirm sheet dropped two of
   plan 0022's renderers. Re-introducing a sheet plus toasts changes which of those
-  three still need an inline home. The *contract* must survive the move: plan 0022's
+  three still need an inline home. The _contract_ must survive the move: plan 0022's
   never-a-dead-end rule is not negotiable, so a manual target and a reasoned skip
   still have to reach the user with their `providerItemUrl` link — a toast that
   auto-dismisses is a weaker carrier than a persistent row, and that tradeoff needs
   an explicit answer, not an assumption.
-- **U8's "the card sheet stays mounted through the write"** was argued *because* the
+- **U8's "the card sheet stays mounted through the write"** was argued _because_ the
   app had no toast component. A toast retires that argument and the row can close on
   tap like the hide row does. Check this when it lands.
 
@@ -84,13 +85,13 @@ block; this todo replaces that surface afterwards rather than racing it.
 Owner picked `burnt`. Verified 2026-07-28; it is the better fit here, and the
 comparison is worth keeping because the deciding factor also constrains the design.
 
-| | **burnt** | `sonner-native` |
-|---|---|---|
-| Web | **Supported, same API** — wraps Emil Kowalski's `sonner` under the hood | Works but its README says *"not recommended… use the original Sonner"*, via a hand-written `.web.ts` split |
-| Implementations to maintain | **One** | **Two**, kept in agreement by hand |
-| New native deps | **None** beyond itself | `react-native-svg` **and** `react-native-screens`, neither installed |
-| Rebuild | Yes (`expo prebuild`; no Expo Go) | Yes |
-| Precedent in this repo | **`@nandorojo/galeria` is already a dependency** — same author, already trusted by AGENTS.md | none |
+|                             | **burnt**                                                                                    | `sonner-native`                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Web                         | **Supported, same API** — wraps Emil Kowalski's `sonner` under the hood                      | Works but its README says _"not recommended… use the original Sonner"_, via a hand-written `.web.ts` split |
+| Implementations to maintain | **One**                                                                                      | **Two**, kept in agreement by hand                                                                         |
+| New native deps             | **None** beyond itself                                                                       | `react-native-svg` **and** `react-native-screens`, neither installed                                       |
+| Rebuild                     | Yes (`expo prebuild`; no Expo Go)                                                            | Yes                                                                                                        |
+| Precedent in this repo      | **`@nandorojo/galeria` is already a dependency** — same author, already trusted by AGENTS.md | none                                                                                                       |
 
 The rebuild is a non-issue: Shinobu already cannot run in Expo Go (nitro modules), so
 a dev client is the standing workflow. It still needs stating in the PR per AGENTS.md's
@@ -101,7 +102,7 @@ options are `title`, `message`, `preset`, `icon`, `haptic`, `duration`,
 `shouldDismissByDrag`, `from`, `layout`. **There is no `onPress`, no action, no
 button, no tappable handler**, and custom React content is web-only (`icon.web`).
 
-So: **a burnt toast can announce an outcome, but it can never *be* the recourse.**
+So: **a burnt toast can announce an outcome, but it can never _be_ the recourse.**
 Anything carrying a `providerItemUrl` link — a failed provider, a reasoned skip —
 needs a surface the user can actually tap. That is not a reason to reject burnt; it is
 the boundary the design has to respect:
@@ -125,13 +126,13 @@ wearing one costume:
 `'manual'` only because its endpoints are not wired yet (plan 0031 U9/PR B), and
 Letterboxd only because its endpoint is uncaptured (U6). **If the spikes land, both
 become `'write'`, `manual` is empty, and the rows vanish with no code change.** The
-owner's "I'd much prefer complete support" *is* the fix for this half — it is
+owner's "I'd much prefer complete support" _is_ the fix for this half — it is
 already the plan, and nothing here should pre-empt it by deleting the affordance that
 covers the interim.
 
 **(b) Letterboxd on web — structurally permanent.** Three spike rounds, four
 transports, all fingerprint-walled (`docs/solutions/letterboxd-web-proxy.md`). No
-spike will fix this one. So *something* has to happen when a web user watchlists a
+spike will fix this one. So _something_ has to happen when a web user watchlists a
 film with Letterboxd connected.
 
 **Recommendation: move it, don't delete it.** Deleting outright reverses AGENTS.md's
@@ -143,7 +144,7 @@ silently never receives anything.
 The picker modal makes a better answer available: show Letterboxd there as a
 **disabled row with its reason** ("can't be added from the web"), with the link on
 that row. The user learns it at the moment they are choosing targets, the details
-screen stays clean, and the no-dead-end contract survives in a place that is *more*
+screen stays clean, and the no-dead-end contract survives in a place that is _more_
 discoverable than a permanent link nobody reads. If the owner still wants it gone
 entirely after that, the change is one line in the picker — but the AGENTS.md policy
 sentence has to be amended in the same PR rather than quietly contradicted.
@@ -153,7 +154,7 @@ sentence has to be amended in the same PR rather than quietly contradicted.
 - ~~**Does the log path adopt toasts too?**~~ resolved 2026-07-29 — **yes**, one
   result idiom. `LogMediaButton` and `LogConfirmSheet` change in the same PR
   (plan 0032 R9/U4).
-- ~~**What does the picker do on a *failure* after it has closed?**~~ resolved
+- ~~**What does the picker do on a _failure_ after it has closed?**~~ resolved
   2026-07-29 — **it does not close**. The picker stays mounted until the report
   settles and closes only on a clean report, which is the same argument plan 0031 U8
   made for the card sheet. Rejected: close-on-confirm with failures reopening it — a
@@ -167,9 +168,9 @@ sentence has to be amended in the same PR rather than quietly contradicted.
 ## Acceptance criteria
 
 - [x] The watchlist CTA is visually distinct from the log CTA at a glance — different
-      variant/affordance, not just different label text. *(2026-07-28)*
+      variant/affordance, not just different label text. _(2026-07-28)_
 - [x] Both CTAs carry an icon, from the existing icon set, sized and aligned per the
-      `components/button` contract rather than hand-placed. *(2026-07-28 — `Button.Icon`)*
+      `components/button` contract rather than hand-placed. _(2026-07-28 — `Button.Icon`)_
 - [x] Watchlisting opens a picker; every applicable connected provider starts
       selected; deselecting narrows the write; the confirm label names what will
       happen without naming providers in a tagline.
@@ -187,7 +188,7 @@ sentence has to be amended in the same PR rather than quietly contradicted.
 - [x] The log path and the watchlist path use one result idiom, not two.
 - [x] `components/button`'s API absorbs the icon rather than call sites hand-rolling
       it (AGENTS.md: buttons are `components/button`, `className` is layout only).
-      *(2026-07-28 — `icon` prop + `Button.Icon`)*
+      _(2026-07-28 — `icon` prop + `Button.Icon`)_
 
 ## Not in scope
 

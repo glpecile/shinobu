@@ -41,7 +41,7 @@ e.g. film id `1234878`, slug `tuner` →
 
 - The `?v=` cache-busting key is **optional** (200 without it).
 - The CDN **validates the slug**: a wrong slug 403s. Some films' poster
-  filenames use a *variant* slug (e.g. poster `obsession-2025-2` for film slug
+  filenames use a _variant_ slug (e.g. poster `obsession-2025-2` for film slug
   `obsession-2025`, an alternate-poster edition) — those constructed URLs 403.
   Recover a failed constructed URL from public film-page Movie JSON-LD;
   see `letterboxd-constructed-poster-403.md`. Do not retry the guessed URL.
@@ -67,17 +67,17 @@ write channel is the signed-in web session below.
 on-device rounds, two hard findings killed it:
 
 1. **Replayed cookies don't authenticate.** Harvesting the login cookies and
-   sending them from a *separate* HTTP client (nitro-fetch) lands as
-   *signed-out* at Letterboxd's origin — an authenticated GET with the exact
+   sending them from a _separate_ HTTP client (nitro-fetch) lands as
+   _signed-out_ at Letterboxd's origin — an authenticated GET with the exact
    captured cookies returns the logged-out page (no `data-viewingable-identifier`,
    no `js-nav-account`). The real session (httpOnly + Cloudflare `cf_clearance`,
    UA/session-bound) can't be reconstituted outside the WebView that made it. So
-   the write must run *inside* the authenticated WebView regardless of endpoint.
+   the write must run _inside_ the authenticated WebView regardless of endpoint.
 2. **`/s/save-diary-entry` is a DEAD endpoint — that is the 404 (corrected
    2026-07-17, round 2).** The earlier CSRF-mismatch theory was wrong. Even
    posting that page's own `<form.js-diary-entry-form>` from inside the
    authenticated WebView, with `__csrf = window.supermodelCSRF`, still returned
-   `404 Letterboxd - Not Found`. Reason, read from the site's *current* bundle
+   `404 Letterboxd - Not Found`. Reason, read from the site's _current_ bundle
    (`static/js/es/…`): **the diary form no longer submits to `/s/save-diary-entry`
    at all.** Its `<form action>` is a legacy no-op the site overrides. On submit,
    the site's own JS (`_composeCreateLogEntryRequest` → `_doSubmission`) calls a
@@ -114,14 +114,15 @@ WebView per in-flight write (it shares the login's WKWebView cookie store, so
 it's genuinely signed in) and unmounts it when the write settles. Two writes
 used to share one WebView, so a second write (a log's derived watchlist removal)
 navigated the first away and left it to time out. Each WebView:
+
 - loads the film page (`/film/{slug}/` or `/tmdb/{id}/`) with a document-end
   script. Imperative `evaluateJavaScript` crashes WebKit on iOS,
 - reads the film LID from the `production:identifier` meta and `window.supermodelCSRF`.
   Writes don't pre-fetch the ~285 KB page over nitro-fetch for the LID, because
   that doubled the download before every write,
 - `fetch('/api/v0/production-log-entries', { method:'POST', credentials:'include',
-  headers:{ 'Content-Type':'application/json; charset=UTF-8', 'X-CSRF-TOKEN': csrf },
-  body: JSON.stringify({ productionId, diaryDetails, tags, like:false }) })`,
+headers:{ 'Content-Type':'application/json; charset=UTF-8', 'X-CSRF-TOKEN': csrf },
+body: JSON.stringify({ productionId, diaryDetails, tags, like:false }) })`,
 - relays `{status, body}` back over `window.ReactNativeWebView.postMessage` →
   the WebView's `onMessage`, matched by request id.
 
@@ -147,6 +148,7 @@ github.com/dado3212/letterboxd-scripts), **not** from account access — so the
 shapes below are best-known, to be confirmed on-device.
 
 **Session cookies** (from a completed browser login):
+
 - `letterboxd.signed.in.as` — value **is the signed-in username** (derive it
   from here; no scrape needed).
 - `com.xk72.webparts.csrf` — CSRF token; its value must be echoed as the
@@ -158,13 +160,13 @@ plain server-side Python (no browser), so once we hold the cookies, writes can
 go over native nitro-fetch (real device IP/UA). Only the `/film/{slug}/json/`
 AJAX endpoints above are challenged; `/s/…` form posts and full pages are not.
 
-| Action | Method | Endpoint | Key body fields |
-|--------|--------|----------|-----------------|
-| Log in | POST | `/user/login.do` | `__csrf`, `username`, `password` (we let the WebView do this; we don't POST it ourselves) |
-| Save diary entry | POST | `/s/save-diary-entry` | `viewingableUid` (`film:{id}`), `viewingId` (empty=new), `viewingDateStr` (YYYY-MM-DD), `specifiedDate`, `rewatch`, `liked` (checkboxes: presence only), `tags` (comma-separated), `rating` (0=unrated), `review`, `__csrf` |
-| Mark watched | POST | `/film/{slug}/mark-as-watched/` | `__csrf` |
-| Add to watchlist | POST | `/film/{slug}/add-to-watchlist/` | `__csrf` |
-| Rate | POST | `/film/{slug}/rate/` | `rating`, `__csrf` |
+| Action           | Method | Endpoint                         | Key body fields                                                                                                                                                                                                             |
+| ---------------- | ------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Log in           | POST   | `/user/login.do`                 | `__csrf`, `username`, `password` (we let the WebView do this; we don't POST it ourselves)                                                                                                                                   |
+| Save diary entry | POST   | `/s/save-diary-entry`            | `viewingableUid` (`film:{id}`), `viewingId` (empty=new), `viewingDateStr` (YYYY-MM-DD), `specifiedDate`, `rewatch`, `liked` (checkboxes: presence only), `tags` (comma-separated), `rating` (0=unrated), `review`, `__csrf` |
+| Mark watched     | POST   | `/film/{slug}/mark-as-watched/`  | `__csrf`                                                                                                                                                                                                                    |
+| Add to watchlist | POST   | `/film/{slug}/add-to-watchlist/` | `__csrf`                                                                                                                                                                                                                    |
+| Rate             | POST   | `/film/{slug}/rate/`             | `rating`, `__csrf`                                                                                                                                                                                                          |
 
 ### save-diary-entry body — corrected from the live form (2026-07-16)
 
@@ -185,7 +187,7 @@ existed but rejected our body shape, not the URL.
   `film:(\d+)`. Resolve for any movie via `GET /film/{slug}/` or the external-id
   redirect `GET /tmdb/{tmdbId}/` (302 → the film page).
 - **Tags = one comma-separated `tags` text field** (confirmed: `<input
-  name="tags">` + a `/s/autocompletetags` endpoint), NOT repeatable `tag`
+name="tags">` + a `/s/autocompletetags` endpoint), NOT repeatable `tag`
   params. `writes.ts` joins with `, `.
 - **Checkboxes submit by presence.** `rewatch`, `liked`, `specifiedDate`,
   `containsSpoilers` are `<input type="checkbox" value="true">` — a false one

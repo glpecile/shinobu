@@ -4,19 +4,14 @@ import * as Effect from 'effect/Effect';
 import type { HttpFetch } from '@/lib/http/types';
 import { getPersonByName } from './person-details';
 
-function mockFetch(
-  respond: (url: string, body: unknown) => unknown,
-): HttpFetch {
+function mockFetch(respond: (url: string, body: unknown) => unknown): HttpFetch {
   return async (url, init) =>
     ({
       ok: true,
       status: 200,
       headers: new Headers(),
       json: async () =>
-        respond(
-          String(url),
-          init?.body == null ? null : JSON.parse(String(init.body)),
-        ),
+        respond(String(url), init?.body == null ? null : JSON.parse(String(init.body))),
     }) as Awaited<ReturnType<HttpFetch>>;
 }
 
@@ -53,7 +48,12 @@ describe('getPersonByName', () => {
         deps((url) =>
           url.includes('themoviedb')
             ? { results: [] }
-            : { data: { Page: { staff: [{ id: 386738, name: { full: 'Hoshigaki' } }] }, Staff: ANILIST_STAFF } },
+            : {
+                data: {
+                  Page: { staff: [{ id: 386738, name: { full: 'Hoshigaki' } }] },
+                  Staff: ANILIST_STAFF,
+                },
+              },
         ),
         { name: 'Hoshigaki' },
       ),
@@ -64,9 +64,7 @@ describe('getPersonByName', () => {
     expect(details?.person.biography).toBe('A composer.\nSecond line.');
     expect(details?.person.birthday).toBe('1990-03-04');
     expect(details?.rows[0]?.role).toBe('Musician');
-    expect(details?.rows[0]?.details['anilist-1']).toBe(
-      '2026 · Theme Song Performance (OP)',
-    );
+    expect(details?.rows[0]?.details['anilist-1']).toBe('2026 · Theme Song Performance (OP)');
   });
 
   test('prefers TMDB when it has a match, without touching AniList', async () => {
@@ -94,9 +92,7 @@ describe('getPersonByName', () => {
     const details = await Effect.runPromise(
       getPersonByName(
         deps((url) =>
-          url.includes('themoviedb')
-            ? { results: [] }
-            : { data: { Page: { staff: [] } } },
+          url.includes('themoviedb') ? { results: [] } : { data: { Page: { staff: [] } } },
         ),
         { name: 'Nobody At All' },
       ),

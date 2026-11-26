@@ -19,7 +19,7 @@ the calendar type**, so `/calendars/my/<anything>` returns `401 Unauthorized` â€
 without a user token, and no user token exists in the repo (they live in MMKV
 at runtime).
 
-Its unauthenticated twin *can* be: `/calendars/all/{type}` shares the same type
+Its unauthenticated twin _can_ be: `/calendars/all/{type}` shares the same type
 namespace and needs only the client id.
 
 ```

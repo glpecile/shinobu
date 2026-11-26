@@ -11,12 +11,7 @@ export function ExpandableTextSkeleton({
   className?: string;
 }) {
   return (
-    <View
-      className={cn(
-        'bg-surface border border-border rounded-lg px-4 py-3 mb-6',
-        className,
-      )}
-    >
+    <View className={cn('bg-surface border border-border rounded-lg px-4 py-3 mb-6', className)}>
       <View className="flex-row items-center justify-between h-6 mb-1.5">
         <Skeleton className="h-4 w-24 rounded" delay={staggerDelay(2)} />
         <Skeleton className="h-4 w-4 rounded" delay={staggerDelay(2)} />

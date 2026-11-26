@@ -10,21 +10,24 @@ describe('logToastCopy (plan 0032 R9)', () => {
   });
 
   test('a rewatch, a reread or a chapter range says so', () => {
-    expect(
-      logToastCopy({ rewatch: true, succeeded: ['trakt'], skipped: [] }).title,
-    ).toBe('Logged rewatch');
+    expect(logToastCopy({ rewatch: true, succeeded: ['trakt'], skipped: [] }).title).toBe(
+      'Logged rewatch',
+    );
     expect(
       logToastCopy({ rewatch: true, succeeded: ['anilist'], skipped: [] }, 'reread').title,
     ).toBe('Logged reread');
     expect(
-      logToastCopy({ rewatch: false, succeeded: ['anilist'], skipped: [] }, 'reread', 'chapters 6–12').title,
+      logToastCopy(
+        { rewatch: false, succeeded: ['anilist'], skipped: [] },
+        'reread',
+        'chapters 6–12',
+      ).title,
     ).toBe('Logged chapters 6–12');
   });
 
   test('a reconcile skip is the one extra fact a clean toast carries', () => {
     expect(
-      logToastCopy({ rewatch: false, succeeded: ['trakt'], skipped: ['anilist'] })
-        .message,
+      logToastCopy({ rewatch: false, succeeded: ['trakt'], skipped: ['anilist'] }).message,
     ).toBe('Trakt — AniList already had it');
   });
 
@@ -42,7 +45,11 @@ describe('episodeNoticeToastCopy', () => {
         succeeded: [],
         failed: [],
         outcomes: [
-          { provider: 'simkl', status: 'skipped', reason: 'Simkl could not match any submitted item (not_found)' },
+          {
+            provider: 'simkl',
+            status: 'skipped',
+            reason: 'Simkl could not match any submitted item (not_found)',
+          },
         ],
       }),
     ).toEqual({
@@ -59,7 +66,11 @@ describe('episodeNoticeToastCopy', () => {
         failed: ['simkl'],
         outcomes: [],
       }),
-    ).toEqual({ tone: 'error', title: 'Episode 118 failed on Simkl', message: 'Logged on AniList.' });
+    ).toEqual({
+      tone: 'error',
+      title: 'Episode 118 failed on Simkl',
+      message: 'Logged on AniList.',
+    });
   });
 
   test('without a failure it reports the log and carries the note', () => {
@@ -68,7 +79,11 @@ describe('episodeNoticeToastCopy', () => {
         succeeded: ['simkl', 'anilist'],
         failed: [],
         outcomes: [
-          { provider: 'simkl', status: 'ok', reason: 'Simkl could not match 1 of 2 submitted items' },
+          {
+            provider: 'simkl',
+            status: 'ok',
+            reason: 'Simkl could not match 1 of 2 submitted items',
+          },
           { provider: 'anilist', status: 'ok' },
         ],
       }),

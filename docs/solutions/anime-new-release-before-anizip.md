@@ -1,6 +1,6 @@
 # A new anime release logged before ani.zip mapped it
 
-**Symptom (2026-11-07).** *Demons' Crest* (AniList 203275) premiered on
+**Symptom (2026-11-07).** _Demons' Crest_ (AniList 203275) premiered on
 2026-11-06. Episodes 1 and 2 skipped Serializd with "ani.zip has no episode
 mapping for this entry yet".
 

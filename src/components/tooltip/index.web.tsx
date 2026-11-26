@@ -30,20 +30,29 @@ export function Tooltip({
   return (
     <div
       aria-describedby={id}
-      onPointerEnter={(event) => { if (event.pointerType !== 'touch') show(event.currentTarget); }}
+      onPointerEnter={(event) => {
+        if (event.pointerType !== 'touch') show(event.currentTarget);
+      }}
       onPointerLeave={(event) => {
         if (!event.currentTarget.contains(document.activeElement)) bubble.current?.hidePopover();
       }}
       onFocus={(event) => {
-        if (event.target instanceof HTMLElement && event.target.matches(':focus-visible')) show(event.currentTarget);
+        if (event.target instanceof HTMLElement && event.target.matches(':focus-visible'))
+          show(event.currentTarget);
       }}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) bubble.current?.hidePopover();
       }}
-      onKeyDown={(event) => { if (event.key === 'Escape') bubble.current?.hidePopover(); }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') bubble.current?.hidePopover();
+      }}
       // A column like RN's View: in a row, RN Web's unshrinkable child would
       // take its one-line width and spill past a narrow parent.
-      style={{ display: fill ? 'flex' : 'inline-flex', flexDirection: 'column', flex: fill ? 1 : undefined }}
+      style={{
+        display: fill ? 'flex' : 'inline-flex',
+        flexDirection: 'column',
+        flex: fill ? 1 : undefined,
+      }}
     >
       {children}
       <div
@@ -64,7 +73,9 @@ export function Tooltip({
         }}
       >
         <View className="bg-toast-surface border border-border rounded-lg px-2.5 py-1.5 shadow-md">
-          <Text className="text-foreground font-sans text-xs" numberOfLines={1}>{label}</Text>
+          <Text className="text-foreground font-sans text-xs" numberOfLines={1}>
+            {label}
+          </Text>
         </View>
       </div>
     </div>

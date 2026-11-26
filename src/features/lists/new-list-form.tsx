@@ -24,7 +24,10 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { hardcoverListsUrl } from '@/lib/providers/hardcover/lists';
 import type { LetterboxdListSharing } from '@/lib/providers/letterboxd/deps';
 import { letterboxdListUrl } from '@/lib/providers/letterboxd/lists';
-import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
+import {
+  useLetterboxdUserscript,
+  useLetterboxdUserscriptUntrusted,
+} from '@/lib/providers/letterboxd/userscript-bridge';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -35,7 +38,12 @@ import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 import { ListsHeader } from './list-header';
 import { ListSearch } from './list-membership-form';
-import { fitsProvider, newListSchema, type ListProvider, type NewListForm as NewListFormValues } from './new-list-schema';
+import {
+  fitsProvider,
+  newListSchema,
+  type ListProvider,
+  type NewListForm as NewListFormValues,
+} from './new-list-schema';
 
 export type { ListProvider };
 
@@ -84,20 +92,52 @@ const HARDCOVER_SHARING_NOTE: Record<LetterboxdListSharing, string> = {
 };
 
 function FieldError({ children }: { children: ReactNode }) {
-  return <SectionEnter><Text className="text-accent font-sans text-xs" role="alert">{children}</Text></SectionEnter>;
+  return (
+    <SectionEnter>
+      <Text className="text-accent font-sans text-xs" role="alert">
+        {children}
+      </Text>
+    </SectionEnter>
+  );
 }
 
-function Field({ label, note, error, children }: { label: string; note?: string; error?: string; children: ReactNode }) {
+function Field({
+  label,
+  note,
+  error,
+  children,
+}: {
+  label: string;
+  note?: string;
+  error?: string;
+  children: ReactNode;
+}) {
   return (
     <View className="gap-2">
       <FieldLabel>{label}</FieldLabel>
       {children}
-      {error != null ? <FieldError>{error}</FieldError> : note != null && <Text className="text-muted font-sans text-xs">{note}</Text>}
+      {error != null ? (
+        <FieldError>{error}</FieldError>
+      ) : (
+        note != null && <Text className="text-muted font-sans text-xs">{note}</Text>
+      )}
     </View>
   );
 }
 
-function SwitchRow({ label, note, value, onChange, disabled }: { label: string; note: string; value: boolean; onChange: (value: boolean) => void; disabled: boolean }) {
+function SwitchRow({
+  label,
+  note,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  note: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  disabled: boolean;
+}) {
   const accent = useThemeColor('--color-accent');
   const border = useThemeColor('--color-border');
   const accentForeground = useThemeColor('--color-accent-foreground');
@@ -112,7 +152,10 @@ function SwitchRow({ label, note, value, onChange, disabled }: { label: string; 
         // react-native-web paints the on thumb teal unless this web-only prop is set.
         {...{ activeThumbColor: accentForeground }}
         disabled={disabled}
-        onValueChange={(next) => { haptics.selection(); onChange(next); }}
+        onValueChange={(next) => {
+          haptics.selection();
+          onChange(next);
+        }}
         thumbColor={process.env.EXPO_OS === 'android' ? (value ? accent : undefined) : undefined}
         trackColor={{ false: border, true: accent }}
         value={value}
@@ -121,17 +164,40 @@ function SwitchRow({ label, note, value, onChange, disabled }: { label: string; 
   );
 }
 
-export function NewListForm({ providers, initialProvider, initialItems }: {
+export function NewListForm({
+  providers,
+  initialProvider,
+  initialItems,
+}: {
   providers: readonly { provider: ListProvider; username: string }[];
   initialProvider: ListProvider;
   initialItems: NormalizedMediaItem[];
 }) {
   const router = useRouter();
-  const { control, handleSubmit, getValues, setValue, formState: { errors, isSubmitted } } = useForm<NewListFormValues, unknown, NewList>({
-    defaultValues: { provider: initialProvider, name: '', description: '', tags: 'shinobu, ', sharing: 'Public', isPrivate: false, ranked: false, allowsComments: false, items: initialItems },
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    setValue,
+    formState: { errors, isSubmitted },
+  } = useForm<NewListFormValues, unknown, NewList>({
+    defaultValues: {
+      provider: initialProvider,
+      name: '',
+      description: '',
+      tags: 'shinobu, ',
+      sharing: 'Public',
+      isPrivate: false,
+      ranked: false,
+      allowsComments: false,
+      items: initialItems,
+    },
     resolver: zodResolver(newListSchema),
   });
-  const [provider, sharing, isPrivate, ranked, name, picked] = useWatch({ control, name: ['provider', 'sharing', 'isPrivate', 'ranked', 'name', 'items'] });
+  const [provider, sharing, isPrivate, ranked, name, picked] = useWatch({
+    control,
+    name: ['provider', 'sharing', 'isPrivate', 'ranked', 'name', 'items'],
+  });
   const [searching, setSearching] = useState(false);
   const [unlisted, setUnlisted] = useState<{ name: string; url: string } | null>(null);
   const username = providers.find((entry) => entry.provider === provider)!.username;
@@ -143,8 +209,11 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
   const recoveryUrl = editorUrl(provider, username);
   const items = picked.filter((item) => fitsProvider(provider, item));
   const scriptUntrusted = useLetterboxdUserscriptUntrusted();
-  const needsScript = process.env.EXPO_OS === 'web' && provider === Provider.Letterboxd && !hasLetterboxdScript;
-  const writable = provider !== Provider.Letterboxd || (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
+  const needsScript =
+    process.env.EXPO_OS === 'web' && provider === Provider.Letterboxd && !hasLetterboxdScript;
+  const writable =
+    provider !== Provider.Letterboxd ||
+    (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
   const busy = mutation.isPending;
 
   function setItems(next: (current: NormalizedMediaItem[]) => NormalizedMediaItem[]) {
@@ -156,19 +225,68 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
       case Provider.Letterboxd:
         return (
           <Field label="Who can see it" note={SHARING_NOTE[sharing]}>
-            <Controller control={control} name="sharing" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-md" onChange={field.onChange} options={SHARING_OPTIONS} size="sm" value={field.value} />} />
+            <Controller
+              control={control}
+              name="sharing"
+              render={({ field }) => (
+                <NativeSegmentedControl
+                  accessibilityLabel="Who can see it"
+                  className="max-w-md"
+                  onChange={field.onChange}
+                  options={SHARING_OPTIONS}
+                  size="sm"
+                  value={field.value}
+                />
+              )}
+            />
           </Field>
         );
       case Provider.Serializd:
         return (
-          <Field label="Who can see it" note={isPrivate ? 'Only you can see it.' : 'Anyone can find it on your profile.'}>
-            <Controller control={control} name="isPrivate" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-72" onChange={(value) => field.onChange(value === 'private')} options={[{ value: 'public', label: 'Public' }, { value: 'private', label: 'Private' }]} size="sm" value={field.value ? 'private' : 'public'} />} />
+          <Field
+            label="Who can see it"
+            note={isPrivate ? 'Only you can see it.' : 'Anyone can find it on your profile.'}
+          >
+            <Controller
+              control={control}
+              name="isPrivate"
+              render={({ field }) => (
+                <NativeSegmentedControl
+                  accessibilityLabel="Who can see it"
+                  className="max-w-72"
+                  onChange={(value) => field.onChange(value === 'private')}
+                  options={[
+                    { value: 'public', label: 'Public' },
+                    { value: 'private', label: 'Private' },
+                  ]}
+                  size="sm"
+                  value={field.value ? 'private' : 'public'}
+                />
+              )}
+            />
           </Field>
         );
       case Provider.Hardcover:
         return (
-          <Field error={errors.sharing?.message} label="Who can see it" note={HARDCOVER_SHARING_NOTE[sharing]}>
-            <Controller control={control} name="sharing" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-md" onChange={field.onChange} options={HARDCOVER_SHARING_OPTIONS} size="sm" value={field.value} />} />
+          <Field
+            error={errors.sharing?.message}
+            label="Who can see it"
+            note={HARDCOVER_SHARING_NOTE[sharing]}
+          >
+            <Controller
+              control={control}
+              name="sharing"
+              render={({ field }) => (
+                <NativeSegmentedControl
+                  accessibilityLabel="Who can see it"
+                  className="max-w-md"
+                  onChange={field.onChange}
+                  options={HARDCOVER_SHARING_OPTIONS}
+                  size="sm"
+                  value={field.value}
+                />
+              )}
+            />
           </Field>
         );
     }
@@ -177,7 +295,9 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
   function emptyNote() {
     switch (provider) {
       case Provider.Letterboxd:
-        return sharing === 'Public' ? 'Add the first film to start the list.' : 'Optional. Add films now or from the list later.';
+        return sharing === 'Public'
+          ? 'Add the first film to start the list.'
+          : 'Optional. Add films now or from the list later.';
       case Provider.Serializd:
         return 'Add the first show to start the list.';
       case Provider.Hardcover:
@@ -188,97 +308,209 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
   if (unlisted != null) {
     return (
       <>
-      <ListsHeader provider={Provider.Letterboxd} title="New list" />
-      <CenteredNotice>
-        <CenteredNotice.Icon name="checkmark-circle-outline" />
-        <CenteredNotice.Title>List created</CenteredNotice.Title>
-        <CenteredNotice.Body>{`"${unlisted.name}" isn’t public, so it opens on Letterboxd rather than here.`}</CenteredNotice.Body>
-        <View className="mt-6 items-center gap-3">
-          <Button icon={<Button.Icon name="open-outline" />} label="View on Letterboxd" onPress={() => void openExternalUrl(unlisted.url)} />
-          <Button icon={<Button.Icon name="checkmark" />} label="Done" onPress={() => router.canGoBack() ? router.back() : router.replace(routes.letterboxdLists('created'))} variant="quiet" />
-        </View>
-      </CenteredNotice>
+        <ListsHeader provider={Provider.Letterboxd} title="New list" />
+        <CenteredNotice>
+          <CenteredNotice.Icon name="checkmark-circle-outline" />
+          <CenteredNotice.Title>List created</CenteredNotice.Title>
+          <CenteredNotice.Body>{`"${unlisted.name}" isn’t public, so it opens on Letterboxd rather than here.`}</CenteredNotice.Body>
+          <View className="mt-6 items-center gap-3">
+            <Button
+              icon={<Button.Icon name="open-outline" />}
+              label="View on Letterboxd"
+              onPress={() => void openExternalUrl(unlisted.url)}
+            />
+            <Button
+              icon={<Button.Icon name="checkmark" />}
+              label="Done"
+              onPress={() =>
+                router.canGoBack()
+                  ? router.back()
+                  : router.replace(routes.letterboxdLists('created'))
+              }
+              variant="quiet"
+            />
+          </View>
+        </CenteredNotice>
       </>
     );
   }
 
-  const create = handleSubmit((list) => {
-    haptics.confirm();
-    mutation.mutate(list, {
-      onSuccess: (result) => {
-        const failed = result.provider === Provider.Hardcover ? result.failed : [];
-        if (failed.length > 0) toast.error('List created, but some books were not added', failed.join(', '));
-        else toast.success('List created', list.draft.name);
-        switch (result.provider) {
-          case Provider.Letterboxd:
-            if (list.provider === Provider.Letterboxd && list.draft.sharing !== 'Public') {
-              setUnlisted({ name: list.draft.name, url: letterboxdListUrl(result.owner, result.slug) ?? `https://letterboxd.com/${result.owner}/lists/` });
+  const create = handleSubmit(
+    (list) => {
+      haptics.confirm();
+      mutation.mutate(list, {
+        onSuccess: (result) => {
+          const failed = result.provider === Provider.Hardcover ? result.failed : [];
+          if (failed.length > 0)
+            toast.error('List created, but some books were not added', failed.join(', '));
+          else toast.success('List created', list.draft.name);
+          switch (result.provider) {
+            case Provider.Letterboxd:
+              if (list.provider === Provider.Letterboxd && list.draft.sharing !== 'Public') {
+                setUnlisted({
+                  name: list.draft.name,
+                  url:
+                    letterboxdListUrl(result.owner, result.slug) ??
+                    `https://letterboxd.com/${result.owner}/lists/`,
+                });
+                return;
+              }
+              router.replace(routes.letterboxdList(result.owner, result.slug));
               return;
-            }
-            router.replace(routes.letterboxdList(result.owner, result.slug));
-            return;
-          case Provider.Serializd:
-            router.replace(routes.serializdList(result.id));
-            return;
-          case Provider.Hardcover:
-            router.replace(routes.hardcoverList(result.id));
-        }
-      },
-      onError: () => haptics.error(),
-    });
-  }, () => haptics.error());
+            case Provider.Serializd:
+              router.replace(routes.serializdList(result.id));
+              return;
+            case Provider.Hardcover:
+              router.replace(routes.hardcoverList(result.id));
+          }
+        },
+        onError: () => haptics.error(),
+      });
+    },
+    () => haptics.error(),
+  );
 
   return (
     <>
       <ListsHeader provider={provider} title="New list" />
-      <KeyboardAwareScrollView className="flex-1" contentContainerClassName="w-full max-w-2xl self-center px-6 pb-12 gap-6" keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView
+        className="flex-1"
+        contentContainerClassName="w-full max-w-2xl self-center px-6 pb-12 gap-6"
+        keyboardShouldPersistTaps="handled"
+      >
         {providers.length > 1 && (
-          <Controller control={control} name="provider" render={({ field }) => (
-            <NativeSegmentedControl
-              accessibilityLabel="Save to"
-              className="w-full max-w-72 self-center"
-              onChange={(next) => { if (busy) return; field.onChange(next); router.setParams({ provider: next }); }}
-              options={providers.map((entry) => ({ value: entry.provider, label: PROVIDERS[entry.provider].label }))}
-              size="sm"
-              value={field.value}
-            />
-          )} />
+          <Controller
+            control={control}
+            name="provider"
+            render={({ field }) => (
+              <NativeSegmentedControl
+                accessibilityLabel="Save to"
+                className="w-full max-w-72 self-center"
+                onChange={(next) => {
+                  if (busy) return;
+                  field.onChange(next);
+                  router.setParams({ provider: next });
+                }}
+                options={providers.map((entry) => ({
+                  value: entry.provider,
+                  label: PROVIDERS[entry.provider].label,
+                }))}
+                size="sm"
+                value={field.value}
+              />
+            )}
+          />
         )}
         <Field error={errors.name?.message} label="Name">
-          <Controller control={control} name="name" render={({ field }) => (
-            <TextField accessibilityLabel="Name" autoCapitalize="sentences" autoCorrect editable={!busy} onBlur={field.onBlur} onChangeText={field.onChange} placeholder={namePlaceholder} returnKeyType="next" value={field.value} />
-          )} />
+          <Controller
+            control={control}
+            name="name"
+            render={({ field }) => (
+              <TextField
+                accessibilityLabel="Name"
+                autoCapitalize="sentences"
+                autoCorrect
+                editable={!busy}
+                onBlur={field.onBlur}
+                onChangeText={field.onChange}
+                placeholder={namePlaceholder}
+                returnKeyType="next"
+                value={field.value}
+              />
+            )}
+          />
         </Field>
         <Field error={errors.description?.message} label="Description">
-          <Controller control={control} name="description" render={({ field }) => (
-            <TextField accessibilityLabel="Description" autoCapitalize="sentences" autoCorrect editable={!busy} multiline onBlur={field.onBlur} onChangeText={field.onChange} placeholder="What ties it together?" value={field.value} />
-          )} />
+          <Controller
+            control={control}
+            name="description"
+            render={({ field }) => (
+              <TextField
+                accessibilityLabel="Description"
+                autoCapitalize="sentences"
+                autoCorrect
+                editable={!busy}
+                multiline
+                onBlur={field.onBlur}
+                onChangeText={field.onChange}
+                placeholder="What ties it together?"
+                value={field.value}
+              />
+            )}
+          />
         </Field>
         {provider === Provider.Letterboxd && (
           <Field error={errors.tags?.message} label="Tags">
-            <Controller control={control} name="tags" render={({ field }) => (
-              <>
-                <TextField accessibilityLabel="Tags" editable={!busy} onBlur={field.onBlur} onChangeText={field.onChange} placeholder="tags, comma separated" value={field.value} />
-                <TagPicker onChange={field.onChange} value={field.value} />
-              </>
-            )} />
+            <Controller
+              control={control}
+              name="tags"
+              render={({ field }) => (
+                <>
+                  <TextField
+                    accessibilityLabel="Tags"
+                    editable={!busy}
+                    onBlur={field.onBlur}
+                    onChangeText={field.onChange}
+                    placeholder="tags, comma separated"
+                    value={field.value}
+                  />
+                  <TagPicker onChange={field.onChange} value={field.value} />
+                </>
+              )}
+            />
           </Field>
         )}
         {sharingField()}
         <GroupedList>
           <GroupedList.Item>
-            <Controller control={control} name="ranked" render={({ field }) => <SwitchRow disabled={busy} label="Ranked" note={`Number each ${noun} by its position.`} onChange={field.onChange} value={field.value} />} />
+            <Controller
+              control={control}
+              name="ranked"
+              render={({ field }) => (
+                <SwitchRow
+                  disabled={busy}
+                  label="Ranked"
+                  note={`Number each ${noun} by its position.`}
+                  onChange={field.onChange}
+                  value={field.value}
+                />
+              )}
+            />
           </GroupedList.Item>
           {provider === Provider.Serializd && (
             <GroupedList.Item>
-              <Controller control={control} name="allowsComments" render={({ field }) => <SwitchRow disabled={busy} label="Comments" note="Let others comment on the list." onChange={field.onChange} value={field.value} />} />
+              <Controller
+                control={control}
+                name="allowsComments"
+                render={({ field }) => (
+                  <SwitchRow
+                    disabled={busy}
+                    label="Comments"
+                    note="Let others comment on the list."
+                    onChange={field.onChange}
+                    value={field.value}
+                  />
+                )}
+              />
             </GroupedList.Item>
           )}
         </GroupedList>
         <View className="gap-3">
           <View className="flex-row items-center gap-3">
-            <Text className="text-foreground font-display text-lg flex-1">{heading}{items.length > 0 && <Text className="text-muted font-sans text-sm">{`  ${items.length}`}</Text>}</Text>
-            <Button disabled={busy} icon={<Button.Icon name="add" />} label={`Add ${noun}s`} onPress={() => setSearching(true)} size="sm" variant="quiet" />
+            <Text className="text-foreground font-display text-lg flex-1">
+              {heading}
+              {items.length > 0 && (
+                <Text className="text-muted font-sans text-sm">{`  ${items.length}`}</Text>
+              )}
+            </Text>
+            <Button
+              disabled={busy}
+              icon={<Button.Icon name="add" />}
+              label={`Add ${noun}s`}
+              onPress={() => setSearching(true)}
+              size="sm"
+              variant="quiet"
+            />
           </View>
           {items.length === 0 ? (
             <Text className="text-muted font-sans text-sm">{emptyNote()}</Text>
@@ -293,13 +525,35 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
                 keyboardShouldPersistTaps="handled"
                 renderItem={({ item, index }) => (
                   <View className="flex-row items-center gap-3 py-1.5">
-                    {ranked && <Text className="text-muted font-display text-base w-6 text-right">{index + 1}</Text>}
+                    {ranked && (
+                      <Text className="text-muted font-display text-base w-6 text-right">
+                        {index + 1}
+                      </Text>
+                    )}
                     <SmallPoster recyclingKey={item.id} size="sm" uri={item.coverImage} />
                     <View className="flex-1 min-w-0">
-                      <Text className="text-foreground font-sans-semibold text-sm" numberOfLines={1}>{item.title}</Text>
-                      {item.year != null && <Text className="text-muted font-sans text-xs mt-0.5">{item.year}</Text>}
+                      <Text
+                        className="text-foreground font-sans-semibold text-sm"
+                        numberOfLines={1}
+                      >
+                        {item.title}
+                      </Text>
+                      {item.year != null && (
+                        <Text className="text-muted font-sans text-xs mt-0.5">{item.year}</Text>
+                      )}
                     </View>
-                    <Button disabled={busy} icon={<Button.Icon name="close" />} iconOnly label={`Remove ${item.title}`} onPress={() => { haptics.selection(); setItems((current) => current.filter((entry) => entry.id !== item.id)); }} size="sm" variant="ghost" />
+                    <Button
+                      disabled={busy}
+                      icon={<Button.Icon name="close" />}
+                      iconOnly
+                      label={`Remove ${item.title}`}
+                      onPress={() => {
+                        haptics.selection();
+                        setItems((current) => current.filter((entry) => entry.id !== item.id));
+                      }}
+                      size="sm"
+                      variant="ghost"
+                    />
                   </View>
                 )}
               />
@@ -308,18 +562,43 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
           {errors.items?.message != null && <FieldError>{errors.items.message}</FieldError>}
         </View>
         <View className="gap-3">
-          {!writable && <Text className="text-muted font-sans text-sm">{needsScript ? letterboxdScriptHint(scriptUntrusted, 'create lists here') : 'Reconnect Letterboxd with a signed-in session to create lists here.'}</Text>}
-          {mutation.isError && <SectionEnter><Text className="text-accent font-sans text-sm" role="alert">{mutation.error.message}</Text></SectionEnter>}
-          {needsScript && !scriptUntrusted && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
-          {writable && <Button
-            icon={<Button.Icon name="add" />}
-            label={mutation.isError ? 'Try again' : 'Create list'}
-            loading={busy}
-            loadingLabel="Creating…"
-            onPress={() => void create()}
-          />}
+          {!writable && (
+            <Text className="text-muted font-sans text-sm">
+              {needsScript
+                ? letterboxdScriptHint(scriptUntrusted, 'create lists here')
+                : 'Reconnect Letterboxd with a signed-in session to create lists here.'}
+            </Text>
+          )}
+          {mutation.isError && (
+            <SectionEnter>
+              <Text className="text-accent font-sans text-sm" role="alert">
+                {mutation.error.message}
+              </Text>
+            </SectionEnter>
+          )}
+          {needsScript && !scriptUntrusted && (
+            <Button
+              icon={<Button.Icon name="open-outline" />}
+              label="Install Letterboxd script"
+              onPress={installLetterboxdScript}
+            />
+          )}
+          {writable && (
+            <Button
+              icon={<Button.Icon name="add" />}
+              label={mutation.isError ? 'Try again' : 'Create list'}
+              loading={busy}
+              loadingLabel="Creating…"
+              onPress={() => void create()}
+            />
+          )}
           {(!writable || mutation.isError) && (
-            <Button icon={<Button.Icon name="open-outline" />} label={`Create on ${label}`} onPress={() => void openExternalUrl(recoveryUrl)} variant="quiet" />
+            <Button
+              icon={<Button.Icon name="open-outline" />}
+              label={`Create on ${label}`}
+              onPress={() => void openExternalUrl(recoveryUrl)}
+              variant="quiet"
+            />
           )}
         </View>
       </KeyboardAwareScrollView>
@@ -328,7 +607,11 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
           <ListSearch
             items={items}
             onClose={() => setSearching(false)}
-            onSelect={(item) => setItems((current) => current.some((entry) => entry.id === item.id) ? current : [...current, item])}
+            onSelect={(item) =>
+              setItems((current) =>
+                current.some((entry) => entry.id === item.id) ? current : [...current, item],
+              )
+            }
             target={{ provider, title: name.trim() || 'New list', url: recoveryUrl }}
           />
         )}
@@ -337,7 +620,11 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
   );
 }
 
-export function NewListScreen({ providers, initialProvider, initialItems = [] }: {
+export function NewListScreen({
+  providers,
+  initialProvider,
+  initialItems = [],
+}: {
   providers: readonly { provider: ListProvider; username: string }[];
   initialProvider: ListProvider | null;
   initialItems?: NormalizedMediaItem[];
@@ -346,19 +633,36 @@ export function NewListScreen({ providers, initialProvider, initialItems = [] }:
   const first = providers[0];
   return (
     <View className="flex-1 bg-background">
-      <Head><title>New list — Shinobu</title></Head>
+      <Head>
+        <title>New list — Shinobu</title>
+      </Head>
       {first == null ? (
         <>
-        <ListsHeader provider={initialProvider ?? Provider.Letterboxd} title="New list" />
-        <CenteredNotice>
-          <CenteredNotice.Icon name="list-outline" />
-          <CenteredNotice.Title>Connect a list provider</CenteredNotice.Title>
-          <CenteredNotice.Body>Connect Letterboxd for film lists, Serializd for show lists, or Hardcover for book lists.</CenteredNotice.Body>
-          <CenteredNotice.Action icon={<Button.Icon name="link-outline" />} label="Open settings" onPress={() => pushRoute(routes.settings)} />
-        </CenteredNotice>
+          <ListsHeader provider={initialProvider ?? Provider.Letterboxd} title="New list" />
+          <CenteredNotice>
+            <CenteredNotice.Icon name="list-outline" />
+            <CenteredNotice.Title>Connect a list provider</CenteredNotice.Title>
+            <CenteredNotice.Body>
+              Connect Letterboxd for film lists, Serializd for show lists, or Hardcover for book
+              lists.
+            </CenteredNotice.Body>
+            <CenteredNotice.Action
+              icon={<Button.Icon name="link-outline" />}
+              label="Open settings"
+              onPress={() => pushRoute(routes.settings)}
+            />
+          </CenteredNotice>
         </>
       ) : (
-        <NewListForm initialItems={initialItems} initialProvider={providers.some((entry) => entry.provider === initialProvider) ? initialProvider! : first.provider} providers={providers} />
+        <NewListForm
+          initialItems={initialItems}
+          initialProvider={
+            providers.some((entry) => entry.provider === initialProvider)
+              ? initialProvider!
+              : first.provider
+          }
+          providers={providers}
+        />
       )}
     </View>
   );

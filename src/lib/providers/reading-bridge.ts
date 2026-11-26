@@ -57,7 +57,9 @@ export function parseBookTitle(title: string): ParsedTitle {
   const marker = VOLUME_MARKER.exec(rest) ?? PART_MARKER.exec(rest);
   const base = (marker == null ? rest : rest.slice(0, marker.index)).trim();
   // ": " only, so "Re:ZERO" keeps its name.
-  const names = [base, base.split(': ')[0].trim()].filter((name, index, all) => name !== '' && all.indexOf(name) === index);
+  const names = [base, base.split(': ')[0].trim()].filter(
+    (name, index, all) => name !== '' && all.indexOf(name) === index,
+  );
   return {
     names,
     volume: marker == null ? null : Number(marker[1]),
@@ -99,7 +101,9 @@ export function bridgeQueries(book: BridgeBook): string[] {
   if (parsed.volume == null && parsed.format == null) return [];
   const series = book.series?.name.replace(FORMAT_TAG, '').trim();
   const queries = series == null || series === '' ? parsed.names : [...parsed.names, series];
-  return queries.filter((query, index) => queries.findIndex((other) => titleKey(other) === titleKey(query)) === index);
+  return queries.filter(
+    (query, index) => queries.findIndex((other) => titleKey(other) === titleKey(query)) === index,
+  );
 }
 
 /**
@@ -107,7 +111,10 @@ export function bridgeQueries(book: BridgeBook): string[] {
  * `bridgeQueries` returned. One entry must match both a title and a staff
  * member, in the format the book's tag names; two that do are no match.
  */
-export function pickBridgeMatch(book: BridgeBook, results: readonly BridgeCandidate[]): BridgeMatch | null {
+export function pickBridgeMatch(
+  book: BridgeBook,
+  results: readonly BridgeCandidate[],
+): BridgeMatch | null {
   const match = matchFolded(foldBook(book), results.map(foldCandidate));
   return match == null ? null : { anilistId: match.anilistId, volume: match.volume };
 }
@@ -138,10 +145,17 @@ interface FoldedCandidate {
 }
 
 function foldCandidate(candidate: BridgeCandidate): FoldedCandidate {
-  return { candidate, titles: candidate.titles.map(titleKey), staff: new Set(candidate.staff.flatMap(nameKeys)) };
+  return {
+    candidate,
+    titles: candidate.titles.map(titleKey),
+    staff: new Set(candidate.staff.flatMap(nameKeys)),
+  };
 }
 
-function matchFolded(book: FoldedBook, folded: readonly FoldedCandidate[]): (BridgeMatch & { title: string }) | null {
+function matchFolded(
+  book: FoldedBook,
+  folded: readonly FoldedCandidate[],
+): (BridgeMatch & { title: string }) | null {
   const { parsed, titleNames, seriesName, authors } = book;
 
   const matches = new Map<number, { candidate: BridgeCandidate; viaTitle: boolean }>();
@@ -150,23 +164,30 @@ function matchFolded(book: FoldedBook, folded: readonly FoldedCandidate[]): (Bri
     if (parsed.format === 'manga' && candidate.format === 'NOVEL') continue;
     if (!authors.some((key) => staff.has(key))) continue;
     const viaTitle = titles.some((key) => titleNames.has(key));
-    if (viaTitle || (seriesName != null && titles.includes(seriesName))) matches.set(candidate.id, { candidate, viaTitle });
+    if (viaTitle || (seriesName != null && titles.includes(seriesName)))
+      matches.set(candidate.id, { candidate, viaTitle });
   }
   if (matches.size !== 1) return null;
 
   const [{ candidate, viaTitle }] = matches.values();
   // A match by series name alone can't say which volume: a spin-off or a
   // franchise numbers its own books.
-  const volume = viaTitle && !parsed.edition ? (parsed.volume ?? (candidate.volumes === 1 ? 1 : null)) : null;
+  const volume =
+    viaTitle && !parsed.edition ? (parsed.volume ?? (candidate.volumes === 1 ? 1 : null)) : null;
   // A number past the entry's known count, or a volume 0, names some other numbering.
-  const known = volume != null && volume >= 1 && (candidate.volumes == null || volume <= candidate.volumes);
+  const known =
+    volume != null && volume >= 1 && (candidate.volumes == null || volume <= candidate.volumes);
   return { anilistId: candidate.id, volume: known ? volume : null, title: candidate.titles[0] };
 }
 
 function bookOf(item: NormalizedMediaItem): BridgeBook | null {
   const credits = item.readingCredits;
   if (item.type !== 'BOOK' || credits == null) return null;
-  return { title: item.title, authors: credits.people, ...(credits.series != null ? { series: { name: credits.series } } : {}) };
+  return {
+    title: item.title,
+    authors: credits.people,
+    ...(credits.series != null ? { series: { name: credits.series } } : {}),
+  };
 }
 
 function candidateOf(item: NormalizedMediaItem): BridgeCandidate | null {
@@ -193,7 +214,8 @@ function foldedBookOf(item: NormalizedMediaItem): FoldedBook | null {
   if (folded === undefined) {
     const book = bookOf(item);
     const next = book == null ? null : foldBook(book);
-    folded = next != null && (next.parsed.volume != null || next.parsed.format != null) ? next : null;
+    folded =
+      next != null && (next.parsed.volume != null || next.parsed.format != null) ? next : null;
     foldedBooks.set(item, folded);
   }
   return folded;
@@ -255,11 +277,17 @@ export function showBridgedOnce(
     if (item.type === 'MANGA' && id != null && covering.has(id)) latest.set(id, item.lastUpdated);
   }
   return items.flatMap((item) => {
-    if (item.type === 'MANGA' && item.externalIds.anilist != null && covering.has(item.externalIds.anilist)) return [];
+    if (
+      item.type === 'MANGA' &&
+      item.externalIds.anilist != null &&
+      covering.has(item.externalIds.anilist)
+    )
+      return [];
     const grouping = bridged.get(item.id);
     if (grouping == null) return [item];
     const entryUpdate = latest.get(grouping.id);
-    const lastUpdated = entryUpdate != null && entryUpdate > item.lastUpdated ? entryUpdate : item.lastUpdated;
+    const lastUpdated =
+      entryUpdate != null && entryUpdate > item.lastUpdated ? entryUpdate : item.lastUpdated;
     return [{ ...item, bridgedAniList: grouping, lastUpdated }];
   });
 }

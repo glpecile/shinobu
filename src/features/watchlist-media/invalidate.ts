@@ -25,11 +25,15 @@ export function invalidateAfterWatchlist(
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
   }
   if (succeeded.includes(Provider.AniList)) {
-    if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
+    if (item.externalIds.anilist != null)
+      queryClient.invalidateQueries({
+        queryKey: anilistQueryKeys.relations(item.externalIds.anilist),
+      });
     queryClient.invalidateQueries({
-      queryKey: anilistMediaKind(item) === 'MANGA'
-        ? anilistQueryKeys.currentMangaEntries()
-        : anilistQueryKeys.currentAnimeEntries(),
+      queryKey:
+        anilistMediaKind(item) === 'MANGA'
+          ? anilistQueryKeys.currentMangaEntries()
+          : anilistQueryKeys.currentAnimeEntries(),
     });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {

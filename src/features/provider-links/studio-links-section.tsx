@@ -47,9 +47,7 @@ export function StudioLinksSection({
 
   return (
     <View className="mt-6">
-      <FieldLabel className="mb-2">
-        View on
-      </FieldLabel>
+      <FieldLabel className="mb-2">View on</FieldLabel>
       <LinkPill.Rail>
         {links.map(({ provider, url }) => (
           <LinkPill

@@ -110,13 +110,13 @@ AGENTS.md "Tests": one case per branch; don't test library behaviour or pass-thr
 
 ## Commands you will need
 
-| Purpose   | Command                                          | Expected on success |
-|-----------|--------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                  | exit 0              |
-| Typecheck | `bun typecheck`                                  | exit 0              |
-| One file  | `bun test src/state/queries/resolve-item.test.ts`| all pass            |
-| All tests | `bun run test`                                   | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                       | exit 0              |
+| Purpose   | Command                                           | Expected on success               |
+| --------- | ------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                   | exit 0                            |
+| Typecheck | `bun typecheck`                                   | exit 0                            |
+| One file  | `bun test src/state/queries/resolve-item.test.ts` | all pass                          |
+| All tests | `bun run test`                                    | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                        | exit 0                            |
 
 ## Scope
 

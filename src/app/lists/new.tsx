@@ -12,25 +12,57 @@ import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import type { MediaType } from '@/types/media';
 
-const MEDIA_TYPES: readonly string[] = ['MOVIE', 'TV', 'ANIME', 'MANGA', 'BOOK'] satisfies MediaType[];
+const MEDIA_TYPES: readonly string[] = [
+  'MOVIE',
+  'TV',
+  'ANIME',
+  'MANGA',
+  'BOOK',
+] satisfies MediaType[];
 
-type Props = { providers: { provider: ListProvider; username: string }[]; initialProvider: ListProvider | null };
+type Props = {
+  providers: { provider: ListProvider; username: string }[];
+  initialProvider: ListProvider | null;
+};
 
-function NewListWithItem({ id, type, ...props }: Props & { id: string; type: MediaType | undefined }) {
+function NewListWithItem({
+  id,
+  type,
+  ...props
+}: Props & { id: string; type: MediaType | undefined }) {
   const { item, isLoading } = useResolvedMediaItem(id, type);
-  if (item == null && isLoading) return <View className="flex-1 bg-background">
-    <ListsHeader provider={props.initialProvider ?? props.providers[0]?.provider ?? Provider.Letterboxd} title="New list" />
-    <View accessibilityLabel="Loading starting title" className="w-full max-w-2xl self-center px-6 gap-6">
-      {props.providers.length > 1 && <Skeleton className="h-8 w-72 rounded-full self-center" />}
-      <View className="gap-2"><Skeleton className="h-4 w-12 rounded" /><Skeleton className="h-10 w-full rounded-full" /></View>
-      <View className="gap-2"><Skeleton className="h-4 w-24 rounded" /><Skeleton className="h-22 w-full rounded-xl" /></View>
-    </View>
-  </View>;
+  if (item == null && isLoading)
+    return (
+      <View className="flex-1 bg-background">
+        <ListsHeader
+          provider={props.initialProvider ?? props.providers[0]?.provider ?? Provider.Letterboxd}
+          title="New list"
+        />
+        <View
+          accessibilityLabel="Loading starting title"
+          className="w-full max-w-2xl self-center px-6 gap-6"
+        >
+          {props.providers.length > 1 && <Skeleton className="h-8 w-72 rounded-full self-center" />}
+          <View className="gap-2">
+            <Skeleton className="h-4 w-12 rounded" />
+            <Skeleton className="h-10 w-full rounded-full" />
+          </View>
+          <View className="gap-2">
+            <Skeleton className="h-4 w-24 rounded" />
+            <Skeleton className="h-22 w-full rounded-xl" />
+          </View>
+        </View>
+      </View>
+    );
   return <NewListScreen {...props} initialItems={item == null ? [] : [item]} />;
 }
 
 export default function NewListRoute() {
-  const params = useLocalSearchParams<{ provider?: string | string[]; item?: string | string[]; type?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    provider?: string | string[];
+    item?: string | string[];
+    type?: string | string[];
+  }>();
   const connected = useConnectedProviders();
   const providers: Props['providers'] = [];
   const letterboxd = connected.includes(Provider.Letterboxd) ? getLetterboxdUsername() : null;
@@ -40,8 +72,24 @@ export default function NewListRoute() {
   const hardcover = useHardcoverListsGranted() && connected.includes(Provider.Hardcover);
   const hardcoverUsername = useHardcoverViewerQuery({ enabled: hardcover }).data?.username ?? '';
   if (hardcover) providers.push({ provider: Provider.Hardcover, username: hardcoverUsername });
-  const requested = params.provider === Provider.Letterboxd || params.provider === Provider.Serializd || params.provider === Provider.Hardcover ? params.provider : null;
-  if (typeof params.item !== 'string' || params.item === '') return <NewListScreen initialProvider={requested} providers={providers} />;
-  const type = typeof params.type === 'string' && MEDIA_TYPES.includes(params.type) ? params.type as MediaType : undefined;
-  return <NewListWithItem id={params.item} initialProvider={requested} providers={providers} type={type} />;
+  const requested =
+    params.provider === Provider.Letterboxd ||
+    params.provider === Provider.Serializd ||
+    params.provider === Provider.Hardcover
+      ? params.provider
+      : null;
+  if (typeof params.item !== 'string' || params.item === '')
+    return <NewListScreen initialProvider={requested} providers={providers} />;
+  const type =
+    typeof params.type === 'string' && MEDIA_TYPES.includes(params.type)
+      ? (params.type as MediaType)
+      : undefined;
+  return (
+    <NewListWithItem
+      id={params.item}
+      initialProvider={requested}
+      providers={providers}
+      type={type}
+    />
+  );
 }

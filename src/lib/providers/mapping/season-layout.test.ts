@@ -10,7 +10,10 @@ import { placeInLayout, watchedKeysInLayout, type SeasonLayout } from './season-
 
 describe('placeInLayout', () => {
   test('Link Click Bridon progress marks only its mapped season 3 episodes', () => {
-    const layout = [{ season: 2, episodeCount: 12 }, { season: 3, episodeCount: 6 }];
+    const layout = [
+      { season: 2, episodeCount: 12 },
+      { season: 3, episodeCount: 6 },
+    ];
     const episodes = new Map([
       [1, { season: 3, number: 1 }],
       [6, { season: 3, number: 6 }],
@@ -86,9 +89,7 @@ describe('placeInLayout', () => {
   });
 
   test('without an absolute number an unknown season is unplaceable', () => {
-    expect(
-      placeInLayout([{ season: 1, episodeCount: 24 }], { season: 3, number: 4 }),
-    ).toBeNull();
+    expect(placeInLayout([{ season: 1, episodeCount: 24 }], { season: 3, number: 4 })).toBeNull();
   });
 
   test('a missing or specials-only layout answers nothing', () => {

@@ -1,4 +1,9 @@
-import { InfiniteQueryObserver, QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query';
+import {
+  InfiniteQueryObserver,
+  QueryClient,
+  QueryClientProvider,
+  QueryObserver,
+} from '@tanstack/react-query';
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { createElement, Suspense } from 'react';
 import { renderToString } from 'react-dom/server';
@@ -21,7 +26,9 @@ mock.module('react-native-mmkv', () => ({
 }));
 let readResponse = () => new Response('{}');
 let readPublic: HttpFetch = async () => readResponse();
-mock.module('@/lib/http/client', () => ({ httpFetch: (input: RequestInfo | URL, init?: RequestInit) => readPublic(input, init) }));
+mock.module('@/lib/http/client', () => ({
+  httpFetch: (input: RequestInfo | URL, init?: RequestInit) => readPublic(input, init),
+}));
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
@@ -48,16 +55,23 @@ afterAll(() => {
   delete globals.window;
 });
 
-const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys, letterboxdFilmQuery, letterboxdFilmWatchQuery, useLetterboxdListLike, useLetterboxdListsQuery, useSuspenseLetterboxdListsQuery, useSuspenseLetterboxdListFilmsQuery } = await import(
-  './letterboxd'
-);
+const {
+  fetchLetterboxdReleaseInputs,
+  findInLetterboxdListsCache,
+  letterboxdQueryKeys,
+  letterboxdFilmQuery,
+  letterboxdFilmWatchQuery,
+  useLetterboxdListLike,
+  useLetterboxdListsQuery,
+  useSuspenseLetterboxdListsQuery,
+  useSuspenseLetterboxdListFilmsQuery,
+} = await import('./letterboxd');
 // Written through the session layer's own setters rather than into the map
 // above: `mock.module` is process-wide and the last registration wins, so
 // `tokens.ts` may well have captured another suite's fake MMKV. Going through
 // the real writers lands the session in whichever store is actually live.
-const { setProviderSession, clearProviderSession, setStoredTmdbToken } = await import(
-  '@/state/session/tokens'
-);
+const { setProviderSession, clearProviderSession, setStoredTmdbToken } =
+  await import('@/state/session/tokens');
 
 const NOW = new Date('2026-07-27T12:00:00.000Z');
 
@@ -68,7 +82,8 @@ test('a cold or partial liked-list index stays unknown instead of claiming unlik
     liked = useLetterboxdListLike('gian', 'melis_', 'black-mirror').liked;
     return null;
   }
-  const render = () => renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
+  const render = () =>
+    renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
   const key = letterboxdQueryKeys.lists('gian', 'liked');
   try {
     render();
@@ -76,7 +91,10 @@ test('a cold or partial liked-list index stays unknown instead of claiming unlik
     client.setQueryData(key, { pages: [{ lists: [], hasNextPage: true }], pageParams: [1] });
     render();
     expect(liked).toBeUndefined();
-    client.setQueryData(key, { pages: [{ lists: [{ owner: 'MELIS_', slug: 'black-mirror' }], hasNextPage: true }], pageParams: [1] });
+    client.setQueryData(key, {
+      pages: [{ lists: [{ owner: 'MELIS_', slug: 'black-mirror' }], hasNextPage: true }],
+      pageParams: [1],
+    });
     render();
     expect(liked).toBe(true);
     client.setQueryData(key, { pages: [{ lists: [], hasNextPage: false }], pageParams: [1] });
@@ -88,24 +106,42 @@ test('a cold or partial liked-list index stays unknown instead of claiming unlik
 });
 
 test('list likes share optimistic state across buttons and remounts, and roll back failed unlikes', async () => {
-  const { registerLetterboxdWebView, handleLetterboxdMessage } = await import('@/lib/providers/letterboxd/webview-bridge');
-  setProviderSession('letterboxd', { accessToken: '', username: 'gian', cookie: 'session', csrf: 'csrf' });
+  const { registerLetterboxdWebView, handleLetterboxdMessage } =
+    await import('@/lib/providers/letterboxd/webview-bridge');
+  setProviderSession('letterboxd', {
+    accessToken: '',
+    username: 'gian',
+    cookie: 'session',
+    csrf: 'csrf',
+  });
   const client = new QueryClient();
   const listsKey = letterboxdQueryKeys.lists('gian', 'liked');
   client.setQueryData(listsKey, { pages: [{ lists: [], hasNextPage: false }], pageParams: [1] });
   const index = new InfiniteQueryObserver(client, {
-    queryKey: listsKey, initialPageParam: 1, getNextPageParam: () => undefined, staleTime: Infinity, retry: false,
+    queryKey: listsKey,
+    initialPageParam: 1,
+    getNextPageParam: () => undefined,
+    staleTime: Infinity,
+    retry: false,
   });
   const unsubscribe = index.subscribe(() => {});
   let reads = 0;
-  readResponse = () => { reads += 1; return new Response('<div class="list-summary-list"></div>'); };
+  readResponse = () => {
+    reads += 1;
+    return new Response('<div class="list-summary-list"></div>');
+  };
   let mutation!: ReturnType<typeof useLetterboxdListLike>;
   function LikeRead() {
     useLetterboxdListsQuery('gian', 'liked');
     mutation = useLetterboxdListLike('gian', 'jack', 'classics');
-    return createElement('button', { 'aria-pressed': mutation.liked, disabled: mutation.isPending }, mutation.liked ? 'Unlike' : 'Like');
+    return createElement(
+      'button',
+      { 'aria-pressed': mutation.liked, disabled: mutation.isPending },
+      mutation.liked ? 'Unlike' : 'Like',
+    );
   }
-  const render = () => renderToString(createElement(QueryClientProvider, { client }, createElement(LikeRead)));
+  const render = () =>
+    renderToString(createElement(QueryClientProvider, { client }, createElement(LikeRead)));
   let loaded = Promise.withResolvers<string>();
   registerLetterboxdWebView({ loadPage: (id) => loaded.resolve(id), unloadPage: () => {} });
   try {
@@ -113,7 +149,9 @@ test('list likes share optimistic state across buttons and remounts, and roll ba
     const like = mutation.mutateAsync(true);
     const likeId = await loaded.promise;
     expect(render()).toContain('aria-pressed="true" disabled=""');
-    handleLetterboxdMessage(JSON.stringify({ id: likeId, status: 200, body: '{"result":true,"liked":true}' }));
+    handleLetterboxdMessage(
+      JSON.stringify({ id: likeId, status: 200, body: '{"result":true,"liked":true}' }),
+    );
     await like;
     expect(reads).toBe(1);
     expect(index.getCurrentResult().isError).toBe(false);
@@ -154,17 +192,33 @@ test('blocked list reads settle inline without retrying on remount, and an expli
   ] as const) {
     const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } });
     let requests = 0;
-    readResponse = () => { requests += 1; return Response.json({ error: 'upstream challenged' }, { status: 502 }); };
-    const render = () => renderToString(createElement(QueryClientProvider, { client },
-      createElement(Suspense, { fallback: 'loading' }, createElement(Read)),
-    ));
+    readResponse = () => {
+      requests += 1;
+      return Response.json({ error: 'upstream challenged' }, { status: 502 });
+    };
+    const render = () =>
+      renderToString(
+        createElement(
+          QueryClientProvider,
+          { client },
+          createElement(Suspense, { fallback: 'loading' }, createElement(Read)),
+        ),
+      );
     try {
       expect(render()).toContain('loading');
-      await Promise.all(client.getQueryCache().getAll().map((query) => query.promise?.catch(() => {})));
+      await Promise.all(
+        client
+          .getQueryCache()
+          .getAll()
+          .map((query) => query.promise?.catch(() => {})),
+      );
       expect(render()).toContain('<div>blocked</div>');
       expect(render()).toContain('<div>blocked</div>');
       expect(requests).toBe(1);
-      expect(client.getQueryCache().getAll()[0].state).toMatchObject({ status: 'error', data: undefined });
+      expect(client.getQueryCache().getAll()[0].state).toMatchObject({
+        status: 'error',
+        data: undefined,
+      });
       readResponse = () => new Response(html);
       await retry!();
       expect(render()).toContain('<div>loaded</div>');
@@ -183,12 +237,7 @@ test('blocked list reads settle inline without retrying on remount, and an expli
  * filter, the catalogue read and the query keys — while the year-gated matching
  * it would otherwise run is covered in `features/up-next/letterboxd-releases.test.ts`.
  */
-function film(
-  slug: string,
-  title: string,
-  year?: number,
-  tmdb?: number,
-): NormalizedMediaItem {
+function film(slug: string, title: string, year?: number, tmdb?: number): NormalizedMediaItem {
   return {
     id: `letterboxd-${slug}`,
     title,
@@ -253,9 +302,7 @@ function fakeClient(scenario: Scenario) {
           progressUnit: 'episode',
           lastUpdated: '2026-07-27T00:00:00.000Z',
           externalIds: { tmdb: tmdbId },
-          ...(scenario.dates?.[tmdbId] != null
-            ? { releaseCalendar: scenario.dates[tmdbId] }
-            : {}),
+          ...(scenario.dates?.[tmdbId] != null ? { releaseCalendar: scenario.dates[tmdbId] } : {}),
         },
         cast: [],
         crew: [],
@@ -329,10 +376,7 @@ describe('fetchLetterboxdReleaseInputs', () => {
 
   test('a failing catalogue read drops that film, not the source (R7)', async () => {
     const { client } = fakeClient({
-      watchlist: [
-        film('broken', 'Broken', 2026, 1),
-        film('survivor', 'Survivor', 2026, 2),
-      ],
+      watchlist: [film('broken', 'Broken', 2026, 1), film('survivor', 'Survivor', 2026, 2)],
       dates: { 2: { theatrical: '2026-08-01' } },
       failingCatalogue: [1],
     });
@@ -357,41 +401,80 @@ describe('fetchLetterboxdReleaseInputs', () => {
     const inputs = await fetchUpNextInputs(client, ['letterboxd']);
 
     expect(inputs.releases).toEqual([]);
-    expect(inputs.errors).toEqual([
-      { provider: 'letterboxd', message: 'watchlist 429' },
-    ]);
+    expect(inputs.errors).toEqual([{ provider: 'letterboxd', message: 'watchlist 429' }]);
   });
 });
 
-
 test('confirmed membership additions stay visible in a partially loaded list until an explicit refresh', async () => {
   const { useListMembership } = await import('./list-membership');
-  const { registerLetterboxdWebView, handleLetterboxdMessage } = await import('@/lib/providers/letterboxd/webview-bridge');
-  setProviderSession('letterboxd', { accessToken: '', username: 'gian', cookie: 'session', csrf: 'csrf' });
+  const { registerLetterboxdWebView, handleLetterboxdMessage } =
+    await import('@/lib/providers/letterboxd/webview-bridge');
+  setProviderSession('letterboxd', {
+    accessToken: '',
+    username: 'gian',
+    cookie: 'session',
+    csrf: 'csrf',
+  });
   const client = new QueryClient();
   const key = letterboxdQueryKeys.listFilms('gian', 'classics');
-  const original = { pages: [{ title: 'Classics', items: [], hasNextPage: true }], pageParams: [1] };
+  const original = {
+    pages: [{ title: 'Classics', items: [], hasNextPage: true }],
+    pageParams: [1],
+  };
   client.setQueryData(key, original);
   let reads = 0;
   const observer = new InfiniteQueryObserver(client, {
-    queryKey: key, initialPageParam: 1, getNextPageParam: () => 2, staleTime: Infinity,
-    queryFn: async () => { reads += 1; return original.pages[0]; },
+    queryKey: key,
+    initialPageParam: 1,
+    getNextPageParam: () => 2,
+    staleTime: Infinity,
+    queryFn: async () => {
+      reads += 1;
+      return original.pages[0];
+    },
   });
   const unsubscribe = observer.subscribe(() => {});
   let mutation!: ReturnType<typeof useListMembership>;
   function Read() {
-    mutation = useListMembership({ provider: 'letterboxd', username: 'gian', owner: 'gian', slug: 'classics', title: 'Classics', url: 'https://letterboxd.com/gian/list/classics/' });
+    mutation = useListMembership({
+      provider: 'letterboxd',
+      username: 'gian',
+      owner: 'gian',
+      slug: 'classics',
+      title: 'Classics',
+      url: 'https://letterboxd.com/gian/list/classics/',
+    });
     return null;
   }
   const loaded = Promise.withResolvers<string>();
   registerLetterboxdWebView({ loadPage: (id) => loaded.resolve(id), unloadPage: () => {} });
   try {
     renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
-    const item: NormalizedMediaItem = { id: 'tmdb-movie-348', title: 'Alien', type: 'MOVIE', coverImage: '', currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 348 } };
+    const item: NormalizedMediaItem = {
+      id: 'tmdb-movie-348',
+      title: 'Alien',
+      type: 'MOVIE',
+      coverImage: '',
+      currentProgress: 0,
+      progressUnit: 'episode',
+      lastUpdated: '',
+      externalIds: { tmdb: 348 },
+    };
     const added = mutation.mutateAsync({ item, present: true });
-    handleLetterboxdMessage(JSON.stringify({ id: await loaded.promise, status: 200, body: '{"result":true,"present":true,"filmSlug":"alien"}' }));
+    handleLetterboxdMessage(
+      JSON.stringify({
+        id: await loaded.promise,
+        status: 200,
+        body: '{"result":true,"present":true,"filmSlug":"alien"}',
+      }),
+    );
     await added;
-    expect(client.getQueryData<{ pages: { items: NormalizedMediaItem[] }[] }>(key)?.pages.flatMap((page) => page.items).map((entry) => entry.id)).toContain('letterboxd-alien');
+    expect(
+      client
+        .getQueryData<{ pages: { items: NormalizedMediaItem[] }[] }>(key)
+        ?.pages.flatMap((page) => page.items)
+        .map((entry) => entry.id),
+    ).toContain('letterboxd-alien');
     expect(client.getQueryState(key)?.isInvalidated).toBe(true);
     expect(reads).toBe(0);
     await observer.refetch();
@@ -413,25 +496,40 @@ test('cold film identities and watches share a bounded queue that drains and can
   let peak = 0;
   let aborted = 0;
   const unsubscribes: (() => void)[] = [];
-  readPublic = (input, init) => new Promise((resolve, reject) => {
-    const signal = init!.signal!;
-    started += 1;
-    active += 1;
-    peak = Math.max(peak, active);
-    signal.addEventListener('abort', () => {
-      active -= 1;
-      aborted += 1;
-      reject(signal.reason);
-    }, { once: true });
-    pending.push({ url: String(input), resolve: (response) => { active -= 1; resolve(response); } });
-  });
+  readPublic = (input, init) =>
+    new Promise((resolve, reject) => {
+      const signal = init!.signal!;
+      started += 1;
+      active += 1;
+      peak = Math.max(peak, active);
+      signal.addEventListener(
+        'abort',
+        () => {
+          active -= 1;
+          aborted += 1;
+          reject(signal.reason);
+        },
+        { once: true },
+      );
+      pending.push({
+        url: String(input),
+        resolve: (response) => {
+          active -= 1;
+          resolve(response);
+        },
+      });
+    });
   const subscribe = (prefix: string) => {
     for (let index = 0; index < 40; index += 1) {
       const slug = `${prefix}-${index}`;
-      unsubscribes.push(new QueryObserver(client, letterboxdFilmQuery(slug, false)).subscribe(() => {}));
+      unsubscribes.push(
+        new QueryObserver(client, letterboxdFilmQuery(slug, false)).subscribe(() => {}),
+      );
       const item = film(slug, slug);
       if (index % 2 === 1) item.externalIds = { tmdb: index + (prefix === 'complete' ? 1 : 1001) };
-      unsubscribes.push(new QueryObserver(client, letterboxdFilmWatchQuery('gian', item)).subscribe(() => {}));
+      unsubscribes.push(
+        new QueryObserver(client, letterboxdFilmWatchQuery('gian', item)).subscribe(() => {}),
+      );
     }
   };
   try {
@@ -442,20 +540,36 @@ test('cold film identities and watches share a bounded queue that drains and can
       const request = pending.shift()!;
       const tmdb = /\/tmdb\/([0-9]+)\//.exec(request.url)?.[1];
       if (tmdb != null) {
-        request.resolve(new Response(null, { status: 302, headers: { location: `/film/resolved-${tmdb}/` } }));
+        request.resolve(
+          new Response(null, { status: 302, headers: { location: `/film/resolved-${tmdb}/` } }),
+        );
         await Bun.sleep(0);
         continue;
       }
       const slug = /\/film\/([^/]+)\//.exec(request.url)![1];
-      request.resolve(new Response(request.url.includes('/gian/')
-        ? `<body data-owner="gian"><section class="film-viewing-info-wrapper"><a href="/film/${slug}/">Film</a></section>`
-        : `<body data-tmdb-id="1" data-tmdb-type="movie"><script type="application/ld+json">{"@type":"Movie","name":"Film"}</script>`));
+      request.resolve(
+        new Response(
+          request.url.includes('/gian/')
+            ? `<body data-owner="gian"><section class="film-viewing-info-wrapper"><a href="/film/${slug}/">Film</a></section>`
+            : `<body data-tmdb-id="1" data-tmdb-type="movie"><script type="application/ld+json">{"@type":"Movie","name":"Film"}</script>`,
+        ),
+      );
       await Bun.sleep(0);
     }
-    await Promise.all(client.getQueryCache().getAll().map((query) => query.promise));
+    await Promise.all(
+      client
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.promise),
+    );
     expect(started).toBe(100);
     expect(peak).toBe(8);
-    expect(client.getQueryCache().getAll().every((query) => query.state.status === 'success')).toBe(true);
+    expect(
+      client
+        .getQueryCache()
+        .getAll()
+        .every((query) => query.state.status === 'success'),
+    ).toBe(true);
     subscribe('cancel');
     await Bun.sleep(0);
     expect(started).toBe(108);
@@ -469,17 +583,28 @@ test('cold film identities and watches share a bounded queue that drains and can
     const first = new QueryObserver(client, letterboxdFilmWatchQuery('gian', sharedItem));
     const second = new QueryObserver(client, letterboxdFilmWatchQuery('other', sharedItem));
     const unsubscribeFirst = first.subscribe(() => {});
-    unsubscribes.push(unsubscribeFirst, second.subscribe(() => {}));
+    unsubscribes.push(
+      unsubscribeFirst,
+      second.subscribe(() => {}),
+    );
     await Bun.sleep(0);
     expect(started).toBe(109);
     unsubscribeFirst();
     await Bun.sleep(0);
     expect(aborted).toBe(8);
-    pending.shift()!.resolve(new Response(null, { status: 302, headers: { location: '/film/shared/' } }));
+    pending
+      .shift()!
+      .resolve(new Response(null, { status: 302, headers: { location: '/film/shared/' } }));
     await Bun.sleep(0);
     expect(started).toBe(110);
     expect(pending[0].url).toBe('https://letterboxd.com/other/film/shared/');
-    pending.shift()!.resolve(new Response('<body data-owner="other"><section class="film-viewing-info-wrapper"><a href="/film/shared/">Shared</a></section>'));
+    pending
+      .shift()!
+      .resolve(
+        new Response(
+          '<body data-owner="other"><section class="film-viewing-info-wrapper"><a href="/film/shared/">Shared</a></section>',
+        ),
+      );
     await Bun.sleep(0);
     expect(second.getCurrentResult().data?.currentProgress).toBe(1);
   } finally {

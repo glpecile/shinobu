@@ -1,8 +1,8 @@
 # Serializd: does a watchlist write clear watched state?
 
 **No.** Watched and watchlisted coexist per-season on the live API. The
-exclusivity Serializd's own copy claims — *"You can't mark a show / season as
-'Watched' and 'Watchlisted' at the same time"* — is a **UI convention, not an
+exclusivity Serializd's own copy claims — _"You can't mark a show / season as
+'Watched' and 'Watchlisted' at the same time"_ — is a **UI convention, not an
 API invariant**.
 
 Plan 0031 U10, discharging KTD-10's named risk and resolving stop-condition (c).
@@ -43,16 +43,16 @@ id is in both sets simultaneously**:
 239770 Doctor Who                       watched [366207]  watchlisted [435118]           overlap []
 ```
 
-A season that is watched *and* watchlisted at once cannot exist if the API
+A season that is watched _and_ watchlisted at once cannot exist if the API
 enforces exclusivity. Thirteen do. So a `watchlist_v2` POST naming a watched
 season does not clear that season's watched state — there is nothing left for
 KTD-10's filter to prevent.
 
-That is U10's third documented outcome, verbatim from the plan: *"If neither
+That is U10's third documented outcome, verbatim from the plan: _"If neither
 destroys anything, keep the filter anyway … and record that the exclusivity is a
-UI convention, not an API one."*
+UI convention, not an API one."_
 
-**Stop-condition (c) does not fire.** It requires the write to *destroy* watched
+**Stop-condition (c) does not fire.** It requires the write to _destroy_ watched
 state; 13 live counterexamples say it does not. `watchlistWrite` flips to
 `'write'` in `src/lib/providers/registry.ts`. Reverting that one token is the
 standing rollback (KTD-9).
@@ -85,7 +85,7 @@ rejected, so the guard is not rebuilt on it.
 - **The watchlist guard** (`watchlistSeasons`, `serializd/writes.ts`) treats a
   **404 from `/progress` as "no watched seasons known"** and proceeds with every
   eligible season. It stays fail-closed for 401/429/5xx/transport. This is safe
-  *because of the coexistence finding above*: with nothing to destroy, a guard
+  _because of the coexistence finding above_: with nothing to destroy, a guard
   with no input costs only the "S1 is already watched" copy, not data. The filter
   itself is kept, per U10's third outcome, and comes back to life on its own if
   the endpoint returns.

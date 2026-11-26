@@ -9,10 +9,7 @@ import { getMediaCatalogue } from '@/lib/providers/tmdb/reads';
 import type { TmdbDeps } from '@/lib/providers/tmdb/deps';
 import type { TmdbKind } from '@/lib/providers/tmdb/normalize';
 import type { TraktDeps } from '@/lib/providers/trakt/deps';
-import {
-  getMediaPeople,
-  getMediaStudios,
-} from '@/lib/providers/trakt/reads';
+import { getMediaPeople, getMediaStudios } from '@/lib/providers/trakt/reads';
 import { Provider } from '@/lib/providers/types';
 import type {
   MediaType,
@@ -57,7 +54,8 @@ export interface MediaDetails {
   characters?: NormalizedCharacter[];
   series?: HardcoverBookSeries;
   similarBookIds?: readonly number[];
-  source: 'tmdb' | typeof Provider.Trakt | typeof Provider.AniList | typeof Provider.Hardcover | 'none';
+  source:
+    'tmdb' | typeof Provider.Trakt | typeof Provider.AniList | typeof Provider.Hardcover | 'none';
 }
 
 export interface MediaDetailsParams {
@@ -155,22 +153,23 @@ export function getMediaDetails(
   }
   const tmdb = deps.tmdb;
   return getMediaCatalogue(tmdb, { kind, tmdbId }).pipe(
-    Effect.map(
-      (result): MediaDetails => ({
-        // A related series supplies display fields, not movie write IDs or episode progress.
-        catalogue: params.tmdbTvVariant == null ? result.catalogue : {
-          ...result.catalogue,
-          externalIds: {},
-          totalEpisodes: undefined,
-          runtime: undefined,
-          releaseCalendar: undefined,
-        },
-        cast: result.cast,
-        crew: result.crew,
-        studios: result.studios,
-        source: 'tmdb',
-      }),
-    ),
+    Effect.map((result): MediaDetails => ({
+      // A related series supplies display fields, not movie write IDs or episode progress.
+      catalogue:
+        params.tmdbTvVariant == null
+          ? result.catalogue
+          : {
+              ...result.catalogue,
+              externalIds: {},
+              totalEpisodes: undefined,
+              runtime: undefined,
+              releaseCalendar: undefined,
+            },
+      cast: result.cast,
+      crew: result.crew,
+      studios: result.studios,
+      source: 'tmdb',
+    })),
     // Any TMDB failure — auth, rate limit exhausted, 5xx, decode — degrades
     // to the provider path instead of blanking the sections.
     Effect.catch(() => providerFallback(deps, params)),

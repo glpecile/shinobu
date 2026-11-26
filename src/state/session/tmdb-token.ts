@@ -1,9 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import {
-  builderTmdbToken,
-  resolveTmdbToken,
-} from '@/lib/providers/tmdb/config';
+import { builderTmdbToken, resolveTmdbToken } from '@/lib/providers/tmdb/config';
 
 import {
   clearStoredTmdbToken,

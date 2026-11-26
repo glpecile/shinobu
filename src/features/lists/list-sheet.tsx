@@ -22,14 +22,28 @@ export function useListSheet() {
   const [list, setList] = useState<ListSummary | null>(null);
   const [open, setOpen] = useState(false);
   return {
-    openList: (next: ListSummary) => { haptics.selection(); setList(next); setOpen(true); },
+    openList: (next: ListSummary) => {
+      haptics.selection();
+      setList(next);
+      setOpen(true);
+    },
     sheetProps: { list, open, onClose: () => setOpen(false) },
   };
 }
 
-export function ListSheet({ list, open, onClose }: { list: ListSummary | null; open: boolean; onClose: () => void }) {
+export function ListSheet({
+  list,
+  open,
+  onClose,
+}: {
+  list: ListSummary | null;
+  open: boolean;
+  onClose: () => void;
+}) {
   const pushRoute = usePushRoute();
-  const letterboxdUsername = useConnectedProviders().includes(Provider.Letterboxd) ? getLetterboxdUsername() : null;
+  const letterboxdUsername = useConnectedProviders().includes(Provider.Letterboxd)
+    ? getLetterboxdUsername()
+    : null;
   return (
     <Sheet onClose={onClose} open={open && list != null}>
       {list != null && (
@@ -43,15 +57,42 @@ export function ListSheet({ list, open, onClose }: { list: ListSummary | null; o
           </SheetHeader>
           <PosterStack className="mt-5 max-w-md self-center" previews={list.previews} />
           <View className="mt-6 gap-3">
-            <Button icon={<Button.Icon name="list-outline" />} label="Open list" onPress={() => { haptics.selection(); onClose(); pushRoute(list.href); }} variant="quiet" />
+            <Button
+              icon={<Button.Icon name="list-outline" />}
+              label="Open list"
+              onPress={() => {
+                haptics.selection();
+                onClose();
+                pushRoute(list.href);
+              }}
+              variant="quiet"
+            />
             <View className="flex-row items-center gap-2">
-              <View className="flex-1"><ProviderListLink provider={list.provider} url={list.url} /></View>
+              <View className="flex-1">
+                <ProviderListLink provider={list.provider} url={list.url} />
+              </View>
               <Button.Capsule>
                 {list.provider === Provider.Letterboxd && letterboxdUsername != null && (
-                  <ListLikeButton owner={list.owner} size="md" slug={list.slug} url={list.url} username={letterboxdUsername} variant="ghost" />
+                  <ListLikeButton
+                    owner={list.owner}
+                    size="md"
+                    slug={list.slug}
+                    url={list.url}
+                    username={letterboxdUsername}
+                    variant="ghost"
+                  />
                 )}
                 <Tooltip label="Share">
-                  <Button icon={<Button.Icon name="share-outline" />} iconOnly label="Share" onPress={() => { haptics.selection(); void shareLink(list.href); }} variant="ghost" />
+                  <Button
+                    icon={<Button.Icon name="share-outline" />}
+                    iconOnly
+                    label="Share"
+                    onPress={() => {
+                      haptics.selection();
+                      void shareLink(list.href);
+                    }}
+                    variant="ghost"
+                  />
                 </Tooltip>
               </Button.Capsule>
             </View>

@@ -1,6 +1,10 @@
 import { Host } from '@expo/ui';
 import { Picker, Text } from '@expo/ui/swift-ui';
-import { accessibilityLabel as nativeAccessibilityLabel, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
+import {
+  accessibilityLabel as nativeAccessibilityLabel,
+  pickerStyle,
+  tag,
+} from '@expo/ui/swift-ui/modifiers';
 import { useColorScheme, View } from 'react-native';
 
 import type { SegmentedControlProps } from '@/components/segmented-control';

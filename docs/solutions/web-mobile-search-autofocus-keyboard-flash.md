@@ -26,9 +26,9 @@ those browsers would not have raised the keyboard for it anyway. The ⌘K path
 ## Rejected: forwarding `keyboardShouldPersistTaps` on web
 
 The obvious second suspect was `components/List/index.web.tsx`, which strips
-`keyboardShouldPersistTaps` with the comment *"keyboard is a native concern"*.
+`keyboardShouldPersistTaps` with the comment _"keyboard is a native concern"_.
 That looks wrong, because react-native-web's ScrollView **does** implement the
-prop and uses its *absence* to blur the focused input on any touch the scroll
+prop and uses its _absence_ to blur the focused input on any touch the scroll
 responder claims:
 
 ```js
@@ -41,8 +41,8 @@ if (!this.props.keyboardShouldPersistTaps && currentlyFocusedTextInput != null &
 `@legendapp/list/react-native` to the package's `react-native.web.js` on web,
 which ships its own `ListComponentScrollView` over a raw `<div>`. Forwarding the
 prop therefore reaches no consumer — it just spreads
-`keyboardshouldpersisttaps` onto that div and logs *"React does not recognize
-the `keyboardShouldPersistTaps` prop on a DOM element"* on every mount.
+`keyboardshouldpersisttaps` onto that div and logs _"React does not recognize
+the `keyboardShouldPersistTaps` prop on a DOM element"_ on every mount.
 
 Confirmed both ways in a headless browser: with the prop forwarded, the attribute
 appears on a class-less scrollable `div` (not an RNW `css-view-*` node) and the

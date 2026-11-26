@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View, type ScrollViewInstance } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
@@ -71,7 +79,14 @@ function SettingsRailSection({
         }}
       >
         {children}
-        <SettingsRailPinned count={count} height={height} icon={icon} scrollY={scrollY} title={title} top={top} />
+        <SettingsRailPinned
+          count={count}
+          height={height}
+          icon={icon}
+          scrollY={scrollY}
+          title={title}
+          top={top}
+        />
       </View>
     </OpenContext.Provider>
   );
@@ -121,7 +136,12 @@ function SettingsRailPinned({
       ? {}
       : {
           transform: [
-            { translateY: Math.max(0, Math.min(scrollY.get() - top.get(), height.get() - barHeight.get())) },
+            {
+              translateY: Math.max(
+                0,
+                Math.min(scrollY.get() - top.get(), height.get() - barHeight.get()),
+              ),
+            },
           ],
         },
   );
@@ -167,7 +187,9 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
 
   useAnimatedReaction(
     () => scrollY.get() <= HEAD_PASSED,
-    (atTop, wasAtTop) => { if (atTop && wasAtTop !== true) scheduleOnRN(setCurrent, null); },
+    (atTop, wasAtTop) => {
+      if (atTop && wasAtTop !== true) scheduleOnRN(setCurrent, null);
+    },
   );
 
   const onScroll = useAnimatedScrollHandler((event) => {
@@ -180,7 +202,8 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
         if (!(title in previous)) return previous;
         return Object.fromEntries(Object.entries(previous).filter(([key]) => key !== title));
       }
-      if (previous[title]?.y === placement.y && previous[title]?.icon === placement.icon) return previous;
+      if (previous[title]?.y === placement.y && previous[title]?.icon === placement.icon)
+        return previous;
       return { ...previous, [title]: placement };
     });
   });
@@ -220,7 +243,9 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
                 <Text
                   className={cn(
                     'text-sm',
-                    title === active ? 'text-foreground font-sans-semibold' : 'text-muted font-sans',
+                    title === active
+                      ? 'text-foreground font-sans-semibold'
+                      : 'text-muted font-sans',
                   )}
                 >
                   {title}
@@ -244,13 +269,7 @@ function SettingsRailHead({ label, children }: { label: string; children: ReactN
 }
 
 /** Put trailing buttons outside `SettingsRail.Target`; HTML forbids nested buttons on web. */
-function SettingsRailRow({
-  children,
-  dimmed = false,
-}: {
-  children: ReactNode;
-  dimmed?: boolean;
-}) {
+function SettingsRailRow({ children, dimmed = false }: { children: ReactNode; dimmed?: boolean }) {
   const { open } = useContext(OpenContext);
   if (!open) return null;
   return (
@@ -258,7 +277,12 @@ function SettingsRailRow({
       <View className={cn(RAIL_W, 'relative')}>
         <View className={cn('absolute w-px bg-border top-0 bottom-0', RAIL_LINE)} />
       </View>
-      <View className={cn('flex-1 min-w-0 flex-row items-center gap-3 py-2.5 pr-6 min-h-16', dimmed && 'opacity-50')}>
+      <View
+        className={cn(
+          'flex-1 min-w-0 flex-row items-center gap-3 py-2.5 pr-6 min-h-16',
+          dimmed && 'opacity-50',
+        )}
+      >
         {children}
       </View>
     </View>

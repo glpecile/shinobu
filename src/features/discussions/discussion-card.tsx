@@ -19,7 +19,9 @@ interface DiscussionPreview {
 }
 
 function DiscussionThumbnail({ image, title }: { image: string; title: string }) {
-  const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>(image === '' ? 'failed' : 'loading');
+  const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>(
+    image === '' ? 'failed' : 'loading',
+  );
   const muted = useThemeColor('--color-muted');
   return (
     <View className="w-24 shrink-0 self-stretch items-center justify-center">
@@ -40,8 +42,18 @@ function DiscussionThumbnail({ image, title }: { image: string; title: string })
 }
 
 /** Compact external preview of a 4chan opening post or Reddit post. */
-export function DiscussionCard({ thread, site, meta, accessibilityPlace, url }: {
-  thread: DiscussionPreview; site: string; meta: string; accessibilityPlace: string; url: string;
+export function DiscussionCard({
+  thread,
+  site,
+  meta,
+  accessibilityPlace,
+  url,
+}: {
+  thread: DiscussionPreview;
+  site: string;
+  meta: string;
+  accessibilityPlace: string;
+  url: string;
 }) {
   const muted = useThemeColor('--color-muted');
   const { width } = useWindowDimensions();
@@ -59,7 +71,12 @@ export function DiscussionCard({ thread, site, meta, accessibilityPlace, url }: 
       onPress={open}
     >
       {/* A 288pt card needs 336pt with the detail screen's two 24pt gutters. */}
-      <View className={cn('min-h-28 flex-row rounded-xl overflow-hidden bg-surface border border-border/60', width < 336 ? 'w-64' : 'w-72')}>
+      <View
+        className={cn(
+          'min-h-28 flex-row rounded-xl overflow-hidden bg-surface border border-border/60',
+          width < 336 ? 'w-64' : 'w-72',
+        )}
+      >
         <DiscussionThumbnail image={thread.image} key={thread.image} title={title} />
         <View className="flex-1 min-w-0 p-3 gap-2 justify-between">
           <Text className="text-foreground font-sans-semibold text-sm leading-5" numberOfLines={3}>
@@ -68,7 +85,11 @@ export function DiscussionCard({ thread, site, meta, accessibilityPlace, url }: 
           <View className="flex-row items-center justify-between gap-2">
             <Text className="text-muted font-sans text-xs flex-1 min-w-0">{meta}</Text>
             <View className="size-5 shrink-0 items-center justify-center">
-              {loading ? <Spinner color={muted} /> : <Ionicons color={muted} name="open-outline" size={14} />}
+              {loading ? (
+                <Spinner color={muted} />
+              ) : (
+                <Ionicons color={muted} name="open-outline" size={14} />
+              )}
             </View>
           </View>
         </View>

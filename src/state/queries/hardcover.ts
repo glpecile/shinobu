@@ -149,7 +149,10 @@ export function hardcoverBookEntryQuery(bookId: number) {
   };
 }
 
-export function useHardcoverBookEntryQuery(params: { bookId: number | undefined; enabled?: boolean }) {
+export function useHardcoverBookEntryQuery(params: {
+  bookId: number | undefined;
+  enabled?: boolean;
+}) {
   const { bookId, enabled = true } = params;
   return useQuery({
     ...hardcoverBookEntryQuery(bookId ?? 0),
@@ -194,9 +197,13 @@ function fetchHardcoverShelves(queryClient: QueryClient): Promise<HardcoverLibra
 }
 
 /** Currently Reading books for Continue Reading. */
-export async function fetchHardcoverReading(queryClient: QueryClient): Promise<NormalizedMediaItem[]> {
+export async function fetchHardcoverReading(
+  queryClient: QueryClient,
+): Promise<NormalizedMediaItem[]> {
   const entries = await fetchHardcoverShelves(queryClient);
-  return entries.flatMap((entry) => (entry.statusId === HardcoverStatus.Reading ? [entry.item] : []));
+  return entries.flatMap((entry) =>
+    entry.statusId === HardcoverStatus.Reading ? [entry.item] : [],
+  );
 }
 
 /** Want to Read books for the reading list. Read and Currently Reading books are not on it. */
@@ -264,7 +271,8 @@ const LISTS_STALE_MS = 15 * 60_000;
 export function useSuspenseHardcoverListsQuery(kind: HardcoverListKind) {
   return useSuspenseQuery({
     queryKey: hardcoverQueryKeys.lists(kind),
-    queryFn: ({ signal }) => Effect.runPromise(getHardcoverLists(hardcoverDeps(), kind), { signal }),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getHardcoverLists(hardcoverDeps(), kind), { signal }),
     staleTime: LISTS_STALE_MS,
   });
 }
@@ -290,7 +298,8 @@ export function useSuspenseHardcoverListQuery(id: number) {
 export function useSuspenseHardcoverBookListsQuery(bookId: number) {
   return useSuspenseQuery({
     queryKey: hardcoverQueryKeys.bookLists(bookId),
-    queryFn: ({ signal }) => Effect.runPromise(getHardcoverBookLists(hardcoverDeps(), bookId), { signal }),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getHardcoverBookLists(hardcoverDeps(), bookId), { signal }),
     staleTime: CATALOG_STALE_MS,
     gcTime: CATALOG_STALE_MS,
   });

@@ -1,8 +1,4 @@
-import {
-  LegendList,
-  type LegendListProps,
-  type LegendListRef,
-} from '@legendapp/list/react-native';
+import { LegendList, type LegendListProps, type LegendListRef } from '@legendapp/list/react-native';
 import { AnimatedLegendList, type AnimatedLegendListProps } from '@legendapp/list/reanimated';
 import type { ReactElement, Ref } from 'react';
 import type { ScrollViewProps } from 'react-native';
@@ -31,7 +27,8 @@ export function List<T>({
   sharedValues,
   ...props
 }: ListProps<T>): ReactElement {
-  const ListComponent = itemLayoutAnimation == null && sharedValues == null ? LegendList : AnimatedLegendList;
+  const ListComponent =
+    itemLayoutAnimation == null && sharedValues == null ? LegendList : AnimatedLegendList;
   return (
     <ListComponent
       {...props}

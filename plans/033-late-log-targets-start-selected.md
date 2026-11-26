@@ -71,25 +71,25 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
 `src/features/log-media/log-confirm-sheet.tsx:352-355`:
 
 ```ts
-  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
-  const completion = useLetterboxdCompletion(item);
-  const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
-  const [selectedProviders, setSelectedProviders] = useState(targets);
+const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
+const completion = useLetterboxdCompletion(item);
+const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
+const [selectedProviders, setSelectedProviders] = useState(targets);
 ```
 
 `src/features/log-media/log-confirm-sheet.tsx:439-447` (the retry path sets the
 selection to the failed providers):
 
 ```ts
-  // Back to the form with only what failed selected: re-sending a provider
-  // that already landed would log the watch twice.
-  function retry() {
-    if (result != null && result.failed.length > 0) {
-      setSelectedProviders([...result.failed]);
-      setRetryOf({ rewatch: result.rewatch });
-    }
-    logMedia.reset();
+// Back to the form with only what failed selected: re-sending a provider
+// that already landed would log the watch twice.
+function retry() {
+  if (result != null && result.failed.length > 0) {
+    setSelectedProviders([...result.failed]);
+    setRetryOf({ rewatch: result.rewatch });
   }
+  logMedia.reset();
+}
 ```
 
 `src/features/log-media/log-confirm-sheet.tsx:503` passes the setter to the
@@ -98,11 +98,9 @@ form fields: `onSelectedProvidersChange={setSelectedProviders}`.
 `src/features/log-media/session/catch-up-log-sheet.tsx:211-215`:
 
 ```ts
-  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(
-    item,
-  );
+const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
 
-  const [selectedProviders, setSelectedProviders] = useState(targets);
+const [selectedProviders, setSelectedProviders] = useState(targets);
 ```
 
 `src/features/log-media/session/catch-up-log-sheet.tsx:457` passes the setter:
@@ -130,21 +128,23 @@ From `AGENTS.md`:
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Install | `bun install --frozen-lockfile` | exit 0 |
-| Typecheck | `bun typecheck` | exit 0, no errors |
-| Lint | `bun lint` | exit 0 |
-| Full tests | `bun run test` | all pass |
+| Purpose    | Command                         | Expected on success |
+| ---------- | ------------------------------- | ------------------- |
+| Install    | `bun install --frozen-lockfile` | exit 0              |
+| Typecheck  | `bun typecheck`                 | exit 0, no errors   |
+| Lint       | `bun lint`                      | exit 0              |
+| Full tests | `bun run test`                  | all pass            |
 
 ## Scope
 
 **In scope** (the only files you should modify):
+
 - `src/features/log-media/log-confirm-sheet.tsx`
 - `src/features/log-media/session/catch-up-log-sheet.tsx`
 - `plans/README.md` (status row)
 
 **Out of scope** (do NOT touch, even though they look related):
+
 - `src/features/log-media/use-log-targets.ts` and `enrich.ts`.
 - `LogFormFields` and `ProviderPicker` props. They keep taking
   `selectedProviders` and `onSelectedProvidersChange`.
@@ -167,18 +167,18 @@ From `AGENTS.md`:
 In `src/features/log-media/log-confirm-sheet.tsx`, replace
 
 ```ts
-  const [selectedProviders, setSelectedProviders] = useState(targets);
+const [selectedProviders, setSelectedProviders] = useState(targets);
 ```
 
 with
 
 ```ts
-  // The user's opt-outs, not a copy of the targets: the id lookup can add a
-  // target after the sheet opens, and that target starts selected.
-  const [deselected, setDeselected] = useState<ProviderId[]>([]);
-  const selectedProviders = targets.filter((id) => !deselected.includes(id));
-  const setSelectedProviders = (next: readonly ProviderId[]) =>
-    setDeselected(targets.filter((id) => !next.includes(id)));
+// The user's opt-outs, not a copy of the targets: the id lookup can add a
+// target after the sheet opens, and that target starts selected.
+const [deselected, setDeselected] = useState<ProviderId[]>([]);
+const selectedProviders = targets.filter((id) => !deselected.includes(id));
+const setSelectedProviders = (next: readonly ProviderId[]) =>
+  setDeselected(targets.filter((id) => !next.includes(id)));
 ```
 
 `ProviderId` is already imported in this file. Leave `retry()` and the

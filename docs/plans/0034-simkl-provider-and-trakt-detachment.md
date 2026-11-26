@@ -169,18 +169,18 @@ U1 → U2 → {U3, U4} → U5 → {U6, U7} → U8 → U9 → U10. Trakt credenti
 
 ## Implementation Units
 
-| U-ID | Title | Key files | Depends on |
-|---|---|---|---|
-| U1 | Contract and registry widening | `src/lib/providers/{types,registry,routing,external-urls}.ts`, `src/types/media.ts` | — |
-| U2 | Simkl lib foundation: config, http, PKCE auth | `src/lib/providers/simkl/{config,deps,http,auth}.ts` | U1 |
-| U3 | Simkl reads and normalize | `src/lib/providers/simkl/{reads,normalize}.ts` | U2 |
-| U4 | Simkl writes | `src/lib/providers/simkl/writes.ts` | U2 |
-| U5 | Session and connect UI | `src/state/session/*`, `src/components/connect-simkl-button.tsx`, `src/state/queries/simkl.ts` | U1, U2 |
-| U6 | Write fan-out integration | `src/features/log-media/use-log-media.ts`, `src/features/watchlist-media/*` | U4, U5 |
-| U7 | Unified feed and trending migration | `src/state/queries/{use-unified-feed,watchlist}.ts` | U3, U5 |
-| U8 | Up Next rebuild | `src/state/queries/{up-next,up-next-cache}.ts`, `src/features/up-next/*` | U3, U7 |
-| U9 | Trakt detachment and migration UX | `src/lib/providers/trakt/config.ts`, `src/components/connect-trakt-button.tsx`, `src/state/session/*` | U7, U8 |
-| U10 | Knowledge capture and conventions | `docs/solutions/*`, `AGENTS.md`, `.env.template` | U9 |
+| U-ID | Title                                         | Key files                                                                                             | Depends on |
+| ---- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------- |
+| U1   | Contract and registry widening                | `src/lib/providers/{types,registry,routing,external-urls}.ts`, `src/types/media.ts`                   | —          |
+| U2   | Simkl lib foundation: config, http, PKCE auth | `src/lib/providers/simkl/{config,deps,http,auth}.ts`                                                  | U1         |
+| U3   | Simkl reads and normalize                     | `src/lib/providers/simkl/{reads,normalize}.ts`                                                        | U2         |
+| U4   | Simkl writes                                  | `src/lib/providers/simkl/writes.ts`                                                                   | U2         |
+| U5   | Session and connect UI                        | `src/state/session/*`, `src/components/connect-simkl-button.tsx`, `src/state/queries/simkl.ts`        | U1, U2     |
+| U6   | Write fan-out integration                     | `src/features/log-media/use-log-media.ts`, `src/features/watchlist-media/*`                           | U4, U5     |
+| U7   | Unified feed and trending migration           | `src/state/queries/{use-unified-feed,watchlist}.ts`                                                   | U3, U5     |
+| U8   | Up Next rebuild                               | `src/state/queries/{up-next,up-next-cache}.ts`, `src/features/up-next/*`                              | U3, U7     |
+| U9   | Trakt detachment and migration UX             | `src/lib/providers/trakt/config.ts`, `src/components/connect-trakt-button.tsx`, `src/state/session/*` | U7, U8     |
+| U10  | Knowledge capture and conventions             | `docs/solutions/*`, `AGENTS.md`, `.env.template`                                                      | U9         |
 
 ### U1. Contract and registry widening
 
@@ -279,16 +279,16 @@ U1 → U2 → {U3, U4} → U5 → {U6, U7} → U8 → U9 → U10. Trakt credenti
 
 ## Verification Contract
 
-| Gate | Command | Applies to |
-|---|---|---|
-| Lint | `bun lint` | every unit |
-| Types (exhaustive maps are the checklist) | `bun typecheck` | every unit, load-bearing after U1 |
-| Unit tests | `bun test` | every unit with test scenarios |
-| className discipline | `bun check:classnames` | U5, U6, U9 (UI units) |
-| Navigation guard | `bun check:router-push` | U5, U6, U9 |
-| Live Simkl round-trip | manual: connect, log one episode, see it on simkl.com | U2, U4, U6 |
-| Degraded-state proof | manual: fresh profile, no Trakt env — trending populated, Up Next works Simkl-only | U7, U8, U9 |
-| Migration proof | manual: seeded token without creds — banner, no silent logout | U9 |
+| Gate                                      | Command                                                                            | Applies to                        |
+| ----------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- |
+| Lint                                      | `bun lint`                                                                         | every unit                        |
+| Types (exhaustive maps are the checklist) | `bun typecheck`                                                                    | every unit, load-bearing after U1 |
+| Unit tests                                | `bun test`                                                                         | every unit with test scenarios    |
+| className discipline                      | `bun check:classnames`                                                             | U5, U6, U9 (UI units)             |
+| Navigation guard                          | `bun check:router-push`                                                            | U5, U6, U9                        |
+| Live Simkl round-trip                     | manual: connect, log one episode, see it on simkl.com                              | U2, U4, U6                        |
+| Degraded-state proof                      | manual: fresh profile, no Trakt env — trending populated, Up Next works Simkl-only | U7, U8, U9                        |
+| Migration proof                           | manual: seeded token without creds — banner, no silent logout                      | U9                                |
 
 UI verification runs on the iOS simulator (Argent tooling); the Android AVD is unreliable on this host and is not a gate.
 

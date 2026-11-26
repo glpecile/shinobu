@@ -45,7 +45,11 @@ import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
-import { useItemProgress, useProgressLibraries, type ProgressLibraries } from '@/state/queries/media-progress';
+import {
+  useItemProgress,
+  useProgressLibraries,
+  type ProgressLibraries,
+} from '@/state/queries/media-progress';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
@@ -101,7 +105,9 @@ function TimelineHead({
   const label = `${count} ${upcoming ? 'upcoming' : count === 1 ? 'title' : 'titles'}`;
   return (
     <RailHead label={`${upcoming ? 'Upcoming' : year}, ${label}`} onToggle={onToggle} open={open}>
-      <RailHead.Title muted={upcoming} showRail={showRail}>{upcoming ? 'TBA' : year}</RailHead.Title>
+      <RailHead.Title muted={upcoming} showRail={showRail}>
+        {upcoming ? 'TBA' : year}
+      </RailHead.Title>
       <RailHead.Count>{label}</RailHead.Count>
     </RailHead>
   );
@@ -117,8 +123,22 @@ function RailLine({ stop }: { stop: boolean }) {
   );
 }
 
-function CreditWatchedMark({ item, libraries, poster }: { item: NormalizedMediaItem; libraries: ProgressLibraries; poster?: boolean }) {
-  return <WatchedMark item={item} poster={poster} state={useItemProgress([item], libraries).progress[0]} />;
+function CreditWatchedMark({
+  item,
+  libraries,
+  poster,
+}: {
+  item: NormalizedMediaItem;
+  libraries: ProgressLibraries;
+  poster?: boolean;
+}) {
+  return (
+    <WatchedMark
+      item={item}
+      poster={poster}
+      state={useItemProgress([item], libraries).progress[0]}
+    />
+  );
 }
 
 function TimelineEntry({
@@ -179,7 +199,13 @@ function TimelineEntry({
   );
 }
 
-function TimelineScrollToTop({ scrollY, onPress }: { scrollY: SharedValue<number>; onPress: () => void }) {
+function TimelineScrollToTop({
+  scrollY,
+  onPress,
+}: {
+  scrollY: SharedValue<number>;
+  onPress: () => void;
+}) {
   const [visible, setVisible] = useState(false);
   useAnimatedReaction(
     () => scrollY.get() > SCROLL_TO_TOP_THRESHOLD,
@@ -223,10 +249,12 @@ export function CreditTimeline({
   }));
   function refocus() {
     settle.set(0);
-    settle.set(withTiming(1, {
-      duration: DURATION.swap,
-      easing: KEYFRAME_EASE_OUT,
-    }));
+    settle.set(
+      withTiming(1, {
+        duration: DURATION.swap,
+        easing: KEYFRAME_EASE_OUT,
+      }),
+    );
   }
   const listRef = useRef<LegendListRef>(null);
   const { scrollY } = useScrolledTitle();
@@ -263,11 +291,7 @@ export function CreditTimeline({
   }
 
   return (
-    <View
-      className="flex-1"
-      onLayout={onLayout}
-      style={enter}
-    >
+    <View className="flex-1" onLayout={onLayout} style={enter}>
       <List
         style={{ flex: 1 }}
         ref={listRef}
@@ -301,7 +325,9 @@ export function CreditTimeline({
               <Section className="mt-2 mx-6">
                 <Section.Header>
                   <Section.Title>
-                    {filmography.credits.some((credit) => credit.item.type === 'MANGA' || credit.item.type === 'BOOK')
+                    {filmography.credits.some(
+                      (credit) => credit.item.type === 'MANGA' || credit.item.type === 'BOOK',
+                    )
                       ? 'Works'
                       : 'Filmography'}
                   </Section.Title>
@@ -328,8 +354,14 @@ export function CreditTimeline({
                   <NativePickerMenu
                     onSelect={selectRole}
                     options={[
-                      { value: null, label: `All roles (${counts.reduce((sum, entry) => sum + entry.count, 0)})` },
-                      ...counts.map((entry) => ({ value: entry.role, label: `${entry.role} (${entry.count})` })),
+                      {
+                        value: null,
+                        label: `All roles (${counts.reduce((sum, entry) => sum + entry.count, 0)})`,
+                      },
+                      ...counts.map((entry) => ({
+                        value: entry.role,
+                        label: `${entry.role} (${entry.count})`,
+                      })),
                     ]}
                     title="Role"
                     value={activeRole}
@@ -399,13 +431,15 @@ export function CreditTimeline({
         onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
         scrollY={scrollY}
       />
-      {Platform.OS === 'web' && <RoleSheet
-        onClose={() => setRoleSheetOpen(false)}
-        onSelect={selectRole}
-        open={roleSheetOpen}
-        roles={counts}
-        value={activeRole}
-      />}
+      {Platform.OS === 'web' && (
+        <RoleSheet
+          onClose={() => setRoleSheetOpen(false)}
+          onSelect={selectRole}
+          open={roleSheetOpen}
+          roles={counts}
+          value={activeRole}
+        />
+      )}
     </View>
   );
 }
@@ -482,7 +516,7 @@ export function CreditTimelineSkeleton({
       {SKELETON_RUNS.map((rows, run) => (
         <View key={run}>
           <RailHead.Skeleton lead="title" showRail={view === 'list'} />
-          {Array.from({ length: rows }, (_entry, row) => (
+          {Array.from({ length: rows }, (_entry, row) =>
             view === 'grid' ? (
               <View className="flex-row gap-3 mx-6 pb-3" key={row}>
                 {Array.from({ length: columns }, (_, column) => (
@@ -495,8 +529,8 @@ export function CreditTimelineSkeleton({
               </View>
             ) : (
               <SkeletonRow index={run + row} key={row} last={row === rows - 1} />
-            )
-          ))}
+            ),
+          )}
         </View>
       ))}
     </View>

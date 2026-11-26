@@ -28,7 +28,8 @@ export function useSuspenseWikidataRatingsQuery(item: NormalizedMediaItem) {
   const lookup = wikidataRatingsLookup(item);
   return useSuspenseQuery({
     queryKey: wikidataQueryKeys.ratings(lookup),
-    queryFn: ({ signal }) => Effect.runPromise(getWikidataRatings({ fetch: httpFetch }, lookup), { signal }),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getWikidataRatings({ fetch: httpFetch }, lookup), { signal }),
     staleTime: RATINGS_CACHE_MS,
     gcTime: RATINGS_CACHE_MS,
     retry: false,

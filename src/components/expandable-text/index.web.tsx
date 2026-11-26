@@ -31,9 +31,7 @@ export function ExpandableText({
   const [fullHeight, setFullHeight] = useState(0);
   const reduceMotion = useReducedMotion();
   const collapsed =
-    fullHeight === 0
-      ? lines * LINE_HEIGHT
-      : Math.min(lines * LINE_HEIGHT, fullHeight);
+    fullHeight === 0 ? lines * LINE_HEIGHT : Math.min(lines * LINE_HEIGHT, fullHeight);
   const expandable = fullHeight > collapsed + 1;
 
   return (
@@ -45,9 +43,7 @@ export function ExpandableText({
       pressBehavior="immediate"
     >
       <View className="flex-row items-center justify-between mb-1.5">
-        <Text className="text-foreground font-sans-semibold text-base">
-          {title}
-        </Text>
+        <Text className="text-foreground font-sans-semibold text-base">{title}</Text>
         {expandable && <DisclosureChevron open={expanded} size={18} />}
       </View>
       <AnimatedView
@@ -65,9 +61,7 @@ export function ExpandableText({
       >
         <View onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}>
           {markdown == null ? (
-            <Text className="text-foreground font-sans text-base leading-relaxed">
-              {text}
-            </Text>
+            <Text className="text-foreground font-sans text-base leading-relaxed">{text}</Text>
           ) : (
             <MarkdownText text={markdown} />
           )}

@@ -88,7 +88,8 @@ export function logToAniList(
         // A reread of a completed entry runs REPEATING from its own volume
         // until then, and finishing it counts it. `rewatch` comes from
         // Hardcover's one volume, so it never starts a reread on its own.
-        const rereading = status === 'REPEATING' || (options.rewatch === true && status === 'COMPLETED');
+        const rereading =
+          status === 'REPEATING' || (options.rewatch === true && status === 'COMPLETED');
         const next = last
           ? 'COMPLETED'
           : rereading
@@ -110,9 +111,7 @@ export function logToAniList(
       variables = {
         mediaId,
         status: 'COMPLETED',
-        ...(options.rewatch === true
-          ? { repeat: (state.entry?.repeat ?? 0) + 1 }
-          : {}),
+        ...(options.rewatch === true ? { repeat: (state.entry?.repeat ?? 0) + 1 } : {}),
       };
     } else {
       const progress = options.progress;
@@ -292,9 +291,7 @@ function refusalClause(entry: NonNullable<AniListEntryState['entry']>): string |
   if (entry.notes != null && entry.notes.trim() !== '') return 'which carries notes';
   if (
     entry.startedAt != null &&
-    (entry.startedAt.year != null ||
-      entry.startedAt.month != null ||
-      entry.startedAt.day != null)
+    (entry.startedAt.year != null || entry.startedAt.month != null || entry.startedAt.day != null)
   ) {
     // AniList start dates are fuzzy — a year-only date is still a date the user
     // put there, so any non-null component counts.

@@ -1,4 +1,4 @@
-# An animated style's first paint is its *first render*, not its first mount
+# An animated style's first paint is its _first render_, not its first mount
 
 **Symptom (2026-09-11).** Reloading `/anime-seasons?season=SUMMER` flashed
 **Winter**: the season strip's pill painted on the first segment for a frame or
@@ -24,7 +24,7 @@ worklet result only lands from an effect, i.e. **after the first paint**.
 The pill's offset is `progress.value * segmentWidth`, and `segmentWidth` comes
 from the control's own `onLayout` — it is `0` on the first render, by design
 (the pill isn't rendered until the control is measured, so it has nothing to
-slide from). But the *hook* ran on that first render anyway, because it sat in
+slide from). But the _hook_ ran on that first render anyway, because it sat in
 the parent, so `initial` was frozen at `translateX(0)`: segment one, Winter.
 
 The format strip escaped it only because it takes no `progress` and uses a
@@ -34,7 +34,7 @@ plain style object, which React re-renders with the right value.
 
 Move the animated styles into the element they style, mounted only once the
 measurement exists (`SelectionPill` in `components/segmented-control.tsx`). Its
-first render *is* the measured one, so `initial` is the resting position.
+first render _is_ the measured one, so `initial` is the resting position.
 
 **Rule: an animated style whose worklet closes over layout state belongs in a
 component that does not render before that state is known.** Gating the JSX is

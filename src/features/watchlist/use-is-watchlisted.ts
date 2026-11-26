@@ -21,17 +21,13 @@ export function watchlistSourcesFor(
   for (const input of inputs) {
     const matches =
       input.item.id === item.id ||
-      (keys.size > 0 &&
-        watchlistMergeKeys(input.item).some((key) => keys.has(key)));
+      (keys.size > 0 && watchlistMergeKeys(input.item).some((key) => keys.has(key)));
     if (matches) sources.add(input.source);
   }
   return [...sources];
 }
 
-function isWatchlistedIn(
-  inputs: readonly WatchlistInput[],
-  item: NormalizedMediaItem,
-): boolean {
+function isWatchlistedIn(inputs: readonly WatchlistInput[], item: NormalizedMediaItem): boolean {
   return watchlistSourcesFor(inputs, item).length > 0;
 }
 
@@ -40,17 +36,13 @@ function isWatchlistedIn(
  * Uses `useSyncExternalStore` because TanStack Query's `skipToken` still registers an
  * active observer that throws if the shared key is invalidated with no real observer mounted.
  */
-export function useIsWatchlisted(
-  item: NormalizedMediaItem | undefined,
-): boolean | undefined {
+export function useIsWatchlisted(item: NormalizedMediaItem | undefined): boolean | undefined {
   const queryClient = useQueryClient();
   return useSyncExternalStore(
     (onStoreChange) => subscribeWatchlistInputs(queryClient, onStoreChange),
     () => {
       if (item == null) return undefined;
-      const data = queryClient.getQueryData<WatchlistInputs>(
-        watchlistQueryKeys.inputs(),
-      );
+      const data = queryClient.getQueryData<WatchlistInputs>(watchlistQueryKeys.inputs());
       return data == null ? undefined : isWatchlistedIn(data.inputs, item);
     },
     () => undefined,

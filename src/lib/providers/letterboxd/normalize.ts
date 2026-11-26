@@ -10,11 +10,7 @@ import type { LetterboxdWatchlistFilm } from './watchlist';
  * shared Image wrapper recovers failures from film-page JSON-LD instead
  * (docs/solutions/letterboxd-constructed-poster-403.md).
  */
-export function posterUrl(
-  filmId: number,
-  slug: string,
-  cacheBustingKey?: string,
-): string {
+export function posterUrl(filmId: number, slug: string, cacheBustingKey?: string): string {
   const digits = String(filmId).split('').join('/');
   const suffix = cacheBustingKey != null ? `?v=${cacheBustingKey}` : '';
   return `${LETTERBOXD_POSTER_CDN_URL}/resized/film-poster/${digits}/${filmId}-${slug}-0-600-0-900-crop.jpg${suffix}`;
@@ -34,10 +30,7 @@ export function normalizeWatchlistFilm(
   return {
     id: `letterboxd-${film.slug}`,
     title: film.title,
-    coverImage:
-      film.filmId != null
-        ? posterUrl(film.filmId, film.slug, film.cacheBustingKey)
-        : '',
+    coverImage: film.filmId != null ? posterUrl(film.filmId, film.slug, film.cacheBustingKey) : '',
     ...(film.year != null ? { year: film.year } : {}),
     type: 'MOVIE',
     currentProgress: 0,

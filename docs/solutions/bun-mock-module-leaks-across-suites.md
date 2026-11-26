@@ -6,7 +6,7 @@
 
 Adding `src/state/queries/up-next.test.ts` — which stubbed
 `@/lib/providers/trakt/reads` so the slot's per-show fan could be counted —
-broke two tests in a *different, untouched* file:
+broke two tests in a _different, untouched_ file:
 
 ```
 (fail) getWatchedShows pagination (2026 Trakt API change) > a single short page makes exactly one request
@@ -29,7 +29,7 @@ mock loads first wins for every later importer.
 
 ## Fix
 
-Mock modules only where the *module graph* can't load under bun at all
+Mock modules only where the _module graph_ can't load under bun at all
 (`react-native-mmkv`, `react-native`, `@/lib/http/client`) — those are stubs of
 things no test asserts on. For anything a test might legitimately exercise,
 inject at a seam instead. Here the seam was already there: every provider read

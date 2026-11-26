@@ -139,9 +139,9 @@ export function ConnectTmdbTokenSection() {
         <SettingsRail.Row>
           <View className="flex-1 gap-4">
             <Text className="text-muted font-sans text-sm">
-              This build ships without a TMDB key, so detail pages fall back to
-              your trackers’ metadata and the people and studio pages stay
-              closed. Add your own (free) TMDB read token to turn them on.
+              This build ships without a TMDB key, so detail pages fall back to your trackers’
+              metadata and the people and studio pages stay closed. Add your own (free) TMDB read
+              token to turn them on.
             </Text>
 
             <Collapsible label="How to get your TMDB token">
@@ -162,10 +162,8 @@ export function ConnectTmdbTokenSection() {
                 <Steps.Item>
                   <Text className="text-muted font-sans text-sm">
                     Request an API key if you don’t have one — pick{' '}
-                    <Text className="text-foreground font-sans-semibold">
-                      Developer
-                    </Text>
-                    , personal use.
+                    <Text className="text-foreground font-sans-semibold">Developer</Text>, personal
+                    use.
                   </Text>
                 </Steps.Item>
 
@@ -197,14 +195,10 @@ export function ConnectTmdbTokenSection() {
               )}
             />
             {errors.token != null && (
-              <Text className="text-accent font-sans text-xs">
-                {errors.token.message}
-              </Text>
+              <Text className="text-accent font-sans text-xs">{errors.token.message}</Text>
             )}
             {(status === 'invalid' || status === 'unreachable') && (
-              <Text className="text-accent font-sans text-xs">
-                {STATUS_MESSAGE[status]}
-              </Text>
+              <Text className="text-accent font-sans text-xs">{STATUS_MESSAGE[status]}</Text>
             )}
             <Button
               icon={<Button.Icon name="checkmark" />}

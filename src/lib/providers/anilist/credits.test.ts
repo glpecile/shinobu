@@ -79,9 +79,7 @@ describe('getAnimeCredits', () => {
       },
     });
 
-    const credits = await Effect.runPromise(
-      getAnimeCredits({ ...DEPS, fetch }, { mediaId: 1 }),
-    );
+    const credits = await Effect.runPromise(getAnimeCredits({ ...DEPS, fetch }, { mediaId: 1 }));
 
     expect(credits.cast).toEqual([
       {

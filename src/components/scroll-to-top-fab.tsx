@@ -1,9 +1,4 @@
-import {
-  FadeIn,
-  FadeOut,
-  Keyframe,
-  useReducedMotion,
-} from 'react-native-reanimated';
+import { FadeIn, FadeOut, Keyframe, useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Fab } from '@/components/fab';

@@ -12,7 +12,8 @@ export default defineRule({
         if (node.name.name === 'pointerEvents') {
           context.report({
             node,
-            message: 'Use style.pointerEvents instead; the pointerEvents prop is deprecated on React Native Web.',
+            message:
+              'Use style.pointerEvents instead; the pointerEvents prop is deprecated on React Native Web.',
           });
         }
       },

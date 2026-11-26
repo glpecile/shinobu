@@ -52,7 +52,6 @@ describe('filterWatchlistEntries', () => {
       'aftersun',
     ]);
   });
-
 });
 
 describe('watchlistProviderCounts', () => {
@@ -70,7 +69,6 @@ describe('watchlistProviderCounts', () => {
     expect(counts.find((o) => o.provider === 'letterboxd')?.partial).toBe(true);
     expect(counts.filter((o) => o.partial)).toHaveLength(1);
   });
-
 });
 
 describe('the counts are honest about paging', () => {
@@ -99,20 +97,13 @@ describe('watchlistFilterOptions', () => {
   });
 
   test('the partial flag survives the synthesized-option path', () => {
-    const options = watchlistFilterOptions(ENTRIES, 'serializd', [
-      'serializd',
-      'letterboxd',
-    ]);
+    const options = watchlistFilterOptions(ENTRIES, 'serializd', ['serializd', 'letterboxd']);
     expect(options.find((o) => o.provider === 'serializd')?.partial).toBe(true);
     expect(options.find((o) => o.provider === 'letterboxd')?.partial).toBe(true);
   });
 
   test('otherwise it is just the providers holding rows', () => {
-    expect(watchlistFilterOptions(ENTRIES, 'trakt')).toEqual(
-      watchlistProviderCounts(ENTRIES),
-    );
-    expect(watchlistFilterOptions(ENTRIES, null)).toEqual(
-      watchlistProviderCounts(ENTRIES),
-    );
+    expect(watchlistFilterOptions(ENTRIES, 'trakt')).toEqual(watchlistProviderCounts(ENTRIES));
+    expect(watchlistFilterOptions(ENTRIES, null)).toEqual(watchlistProviderCounts(ENTRIES));
   });
 });

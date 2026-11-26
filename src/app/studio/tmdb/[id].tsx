@@ -1,8 +1,4 @@
-import {
-  useLocalSearchParams,
-  useRouter,
-  type ErrorBoundaryProps,
-} from 'expo-router';
+import { useLocalSearchParams, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import { Suspense } from 'react';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
@@ -33,14 +29,19 @@ export default function StudioScreen() {
   }
 
   if (!Number.isSafeInteger(tmdbId) || tmdbId <= 0) {
-    return (
-      <PersonNotFound detail="This studio page doesn't exist." onGoBack={goBack} />
-    );
+    return <PersonNotFound detail="This studio page doesn't exist." onGoBack={goBack} />;
   }
 
   return (
     <ScrolledTitle>
-      <Suspense fallback={<><StudioSkeleton /><FloatingShareButton href={routes.studio(tmdbId)} /></>}>
+      <Suspense
+        fallback={
+          <>
+            <StudioSkeleton />
+            <FloatingShareButton href={routes.studio(tmdbId)} />
+          </>
+        }
+      >
         <StudioContent tmdbId={tmdbId} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />
@@ -54,9 +55,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
     <PersonNotFound
       detail="This studio couldn't be loaded."
       title="Couldn’t load"
-      onGoBack={() =>
-        router.canGoBack() ? router.back() : router.replace(routes.home)
-      }
+      onGoBack={() => (router.canGoBack() ? router.back() : router.replace(routes.home))}
       onRetry={retry}
     />
   );

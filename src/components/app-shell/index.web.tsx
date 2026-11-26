@@ -10,10 +10,7 @@ import { cn } from '@/lib/cn';
 import { emitSearchFocusRequest } from '@/features/search/focus-signal';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
-import {
-  toggleSidebarCollapsed,
-  useSidebarCollapsed,
-} from '@/state/prefs/sidebar';
+import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/state/prefs/sidebar';
 
 const RAIL_WIDTH = 64;
 const ICON_COL = RAIL_WIDTH - 16;
@@ -47,11 +44,7 @@ function isActive(pathname: string, href: string): boolean {
  * Touch browsers only raise the keyboard inside a user gesture, so search
  * navigation commits synchronously (`flushSync`) before requesting focus.
  */
-function onNavItemPress(
-  item: NavItem,
-  active: boolean,
-  pushRoute: (href: string) => void,
-): void {
+function onNavItemPress(item: NavItem, active: boolean, pushRoute: (href: string) => void): void {
   if (item.href === routes.search) {
     if (!active) flushSync(() => pushRoute(item.href));
     emitSearchFocusRequest();
@@ -121,8 +114,7 @@ function PanelIcon({
     >
       <View
         className={cn(
-          animate &&
-            'transition-transform duration-200 ease-in-out motion-reduce:transition-none',
+          animate && 'transition-transform duration-200 ease-in-out motion-reduce:transition-none',
         )}
         style={{
           backgroundColor: color,
@@ -316,11 +308,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </View>
         <View className="hidden md:flex mt-auto border-t border-border">
-          <SidebarToggle
-            collapsed={collapsed}
-            animate={animated}
-            onToggle={userToggleSidebar}
-          />
+          <SidebarToggle collapsed={collapsed} animate={animated} onToggle={userToggleSidebar} />
         </View>
       </View>
       <View className="flex-1 overflow-hidden">{children}</View>

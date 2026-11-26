@@ -1,10 +1,7 @@
 import { View } from 'react-native';
 
 import { Fab } from '@/components/fab';
-import {
-  useCatchUpControls,
-  useQuickLogBusy,
-} from '@/features/log-media/session/state';
+import { useCatchUpControls, useQuickLogBusy } from '@/features/log-media/session/state';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 
 export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {

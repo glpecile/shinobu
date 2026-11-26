@@ -28,7 +28,7 @@ writes that arrive while the lock is held into **one** POST, and resolves
 **every** waiter with that POST's single result
 (`docs/solutions/simkl-write-lock-coalescing.md` chose this on purpose).
 
-`logToSimkl` *drops* entries it can't build (no Simkl-resolvable id, an anime
+`logToSimkl` _drops_ entries it can't build (no Simkl-resolvable id, an anime
 batch with no ani.zip table) and still POSTs the rest. When anything lands, it
 returns `{ status: 'ok', reason: '<dropped reason>' }`. So when an unbuildable
 entry A is coalesced with a good entry B (common in the quick-log catch-up
@@ -87,34 +87,36 @@ The drop logic inside `logToSimkl`'s loop today (abridged):
 The adapter today ends with:
 
 ```ts
-    return log({
-      item,
-      ...(episode != null ? { episode } : {}),
-      ...(episodes != null ? { episodes } : {}),
-      ...(entryEpisodes != null ? { entryEpisodes } : {}),
-      ...(watchedAt != null ? { watchedAt } : {}),
-      episodeMap,
-    });
+return log({
+  item,
+  ...(episode != null ? { episode } : {}),
+  ...(episodes != null ? { episodes } : {}),
+  ...(entryEpisodes != null ? { entryEpisodes } : {}),
+  ...(watchedAt != null ? { watchedAt } : {}),
+  episodeMap,
+});
 ```
 
 ## Commands you will need
 
-| Purpose   | Command                                                   | Expected on success |
-|-----------|-----------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                           | exit 0              |
-| Typecheck | `bun typecheck`                                           | exit 0              |
-| Tests     | `bun test src/lib/providers/simkl/writes.test.ts src/features/log-media/use-log-media.test.ts` | all pass |
-| All tests | `bun run test`                                            | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                                | exit 0              |
+| Purpose   | Command                                                                                        | Expected on success               |
+| --------- | ---------------------------------------------------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                                                                | exit 0                            |
+| Typecheck | `bun typecheck`                                                                                | exit 0                            |
+| Tests     | `bun test src/lib/providers/simkl/writes.test.ts src/features/log-media/use-log-media.test.ts` | all pass                          |
+| All tests | `bun run test`                                                                                 | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                                                                     | exit 0                            |
 
 ## Scope
 
 **In scope**:
+
 - `src/lib/providers/simkl/writes.ts`
 - `src/features/log-media/use-log-media.ts` — `simklLogAdapter` only
 - `src/features/log-media/use-log-media.test.ts`
 
 **Out of scope**:
+
 - `simkl-write-lock.ts`: sharing one POST result is the documented design.
 - Per-item attribution of a partial `not_found` from Simkl's response. It
   needs id matching against Simkl's response and is deferred (see maintenance notes).
@@ -149,11 +151,11 @@ category/ids, anime `animeEpisodeNumbers` returning a string, and the TV empty
 batch. Then make the loop in `logToSimkl` call it first:
 
 ```ts
-    const reason = simklEntryDropReason(entry);
-    if (reason != null) {
-      dropped.push(reason);
-      continue;
-    }
+const reason = simklEntryDropReason(entry);
+if (reason != null) {
+  dropped.push(reason);
+  continue;
+}
 ```
 
 The rest of each branch keeps building the payload. It may call `categoryFor`,
@@ -170,11 +172,11 @@ In `simklLogAdapter` (`use-log-media.ts`), build the entry object into a const
 `entry`, then:
 
 ```ts
-    const dropReason = simklEntryDropReason(entry);
-    // An unbuildable entry would be dropped inside a coalesced POST and inherit
-    // the other entries' ok; alone it is a reasoned skip with the manual link.
-    if (dropReason != null) return { status: 'skipped', reason: dropReason };
-    return log(entry);
+const dropReason = simklEntryDropReason(entry);
+// An unbuildable entry would be dropped inside a coalesced POST and inherit
+// the other entries' ok; alone it is a reasoned skip with the manual link.
+if (dropReason != null) return { status: 'skipped', reason: dropReason };
+return log(entry);
 ```
 
 Import `simklEntryDropReason` next to the existing `logToSimkl` import.

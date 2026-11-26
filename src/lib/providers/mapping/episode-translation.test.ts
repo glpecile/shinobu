@@ -51,9 +51,10 @@ describe('translateEntryEpisodes', () => {
   test('the just-aired episode extrapolates, then still gets placed', () => {
     // Entry 12 isn't in the table yet; projected to S02E12 / absolute 24, then
     // placed into the single continuous season as episode 24.
-    expect(
-      translateEntryEpisodes(SEQUEL_TABLE, [12], { layout: ONE_CONTINUOUS_SEASON }),
-    ).toEqual({ ok: true, episodes: [{ season: 1, number: 24 }] });
+    expect(translateEntryEpisodes(SEQUEL_TABLE, [12], { layout: ONE_CONTINUOUS_SEASON })).toEqual({
+      ok: true,
+      episodes: [{ season: 1, number: 24 }],
+    });
   });
 
   test('a long-runner resolves against the destination instead of being refused', () => {
@@ -96,9 +97,7 @@ describe('translateEntryEpisodes', () => {
       layout: ONE_CONTINUOUS_SEASON,
     });
     expect(result.ok).toBe(false);
-    expect(result.ok === false && result.reason).toContain(
-      'no season mapping for episode 14',
-    );
+    expect(result.ok === false && result.reason).toContain('no season mapping for episode 14');
   });
 
   test("the entry's declared episode count caps extrapolation independently", () => {
@@ -144,19 +143,20 @@ describe('translateEntryEpisodes', () => {
   test('an unreadable season layout is a miss, never a raw TVDB write', () => {
     const result = translateEntryEpisodes(SEQUEL_TABLE, [1], { layout: null });
     expect(result.ok).toBe(false);
-    expect(result.ok === false && result.reason).toContain("season list");
+    expect(result.ok === false && result.reason).toContain('season list');
   });
 
   test('a missing or empty map is an honest miss', () => {
-    expect(
-      translateEntryEpisodes(null, [1], { layout: ONE_CONTINUOUS_SEASON }),
-    ).toEqual({ ok: false, reason: 'no ani.zip season mapping for this entry' });
-    expect(
-      translateEntryEpisodes(new Map(), [1], { layout: ONE_CONTINUOUS_SEASON }).ok,
-    ).toBe(false);
-    expect(
-      translateEntryEpisodes(SEQUEL_TABLE, [], { layout: ONE_CONTINUOUS_SEASON }).ok,
-    ).toBe(false);
+    expect(translateEntryEpisodes(null, [1], { layout: ONE_CONTINUOUS_SEASON })).toEqual({
+      ok: false,
+      reason: 'no ani.zip season mapping for this entry',
+    });
+    expect(translateEntryEpisodes(new Map(), [1], { layout: ONE_CONTINUOUS_SEASON }).ok).toBe(
+      false,
+    );
+    expect(translateEntryEpisodes(SEQUEL_TABLE, [], { layout: ONE_CONTINUOUS_SEASON }).ok).toBe(
+      false,
+    );
   });
 
   test('all-or-nothing: one unmappable episode fails the whole batch', () => {
@@ -193,7 +193,12 @@ describe('continuePrequelTable', () => {
   });
 
   test('a sequel crossing a season boundary skips instead of projecting absolute numbering', () => {
-    const prequel = table(2, Array.from({ length: 12 }, (_, i) => i + 1), 13, 38);
+    const prequel = table(
+      2,
+      Array.from({ length: 12 }, (_, i) => i + 1),
+      13,
+      38,
+    );
     const translated = translateEntryEpisodes(continuePrequelTable(prequel, 12, [1]), [1], {
       layout: [
         { season: 1, episodeCount: 23 },

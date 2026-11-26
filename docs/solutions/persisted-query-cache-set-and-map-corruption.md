@@ -17,7 +17,7 @@ persistence.
 
 ## It happened again with `Map` (2026-07-28)
 
-The note below said to add a tag *before* persisting anything exotic. `Map` was
+The note below said to add a tag _before_ persisting anything exotic. `Map` was
 persisted without one: `['mapping','anizip-episodes']` went on the allowlist with
 the home-feed restore (#37), and `AniZipEpisodeMap` is a `ReadonlyMap`
 (`lib/providers/mapping/anizip.ts`).
@@ -34,7 +34,7 @@ Every cold-started anime details screen with an ani.zip mapping threw, taking th
 seasons section's error boundary with it.
 
 **Two-part fix, and the second part is easy to miss:** a codec only fixes what it
-*writes*, so anyone with a corrupted snapshot already on disk keeps crashing.
+_writes_, so anyone with a corrupted snapshot already on disk keeps crashing.
 `BUSTER` had to be bumped (v3 → v4) to discard them. Any future codec addition
 needs the same pairing.
 
@@ -47,9 +47,11 @@ A tagged round-trip in the persister's `serialize`/`deserialize`, rather than a
 const SET_TAG = '@@set';
 const MAP_TAG = '@@map';
 JSON.stringify(client, (_k, v) =>
-  v instanceof Set ? { [SET_TAG]: [...v] } : v instanceof Map ? { [MAP_TAG]: [...v] } : v);
+  v instanceof Set ? { [SET_TAG]: [...v] } : v instanceof Map ? { [MAP_TAG]: [...v] } : v,
+);
 JSON.parse(cached, (_k, v) =>
-  isTaggedSet(v) ? new Set(v[SET_TAG]) : isTaggedMap(v) ? new Map(v[MAP_TAG]) : v);
+  isTaggedSet(v) ? new Set(v[SET_TAG]) : isTaggedMap(v) ? new Map(v[MAP_TAG]) : v,
+);
 ```
 
 Covered by `src/state/queries/persist.test.ts` (nested, empty, and a Map beside a
@@ -57,14 +59,14 @@ Set), including a regression asserting the exact `[...map.values()].map(...)` ca
 that threw.
 
 **Prefer the codec to a defensive guard at the call site.** A null-guard would
-turn a corrupted map into a silently *wrong* answer — no season title, no error —
+turn a corrupted map into a silently _wrong_ answer — no season title, no error —
 and every future `Map` consumer would inherit the bug.
 
 ## Before adding a key to the persist allowlist
 
 - **Is the payload plain JSON?** `Set`, `Map`, `Date`, and class instances all
   need codec support. `Set` and `Map` are handled today; `Date` and class
-  instances are **not** — add the tag, a test, *and* a `BUSTER` bump before
+  instances are **not** — add the tag, a test, _and_ a `BUSTER` bump before
   persisting anything else exotic. This checklist item already existed when
   `Map` was persisted without a codec, so treat it as load-bearing rather than
   advisory: check the payload's runtime type, not just its TypeScript shape.

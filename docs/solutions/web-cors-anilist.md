@@ -30,7 +30,7 @@ POST, so the blocked endpoint is never called from the browser.
 - **Native:** authorization-code grant works as documented (token exchange is a
   server-to-server-shaped POST that native apps can make directly; CORS is a
   browser-only constraint).
-- AniList stays `canRead`/`canWrite` on web — this is a per-platform *auth flow*
+- AniList stays `canRead`/`canWrite` on web — this is a per-platform _auth flow_
   difference, not a platform-availability gap, so no registry field is needed
   (per todos/008: don't add it until a provider actually fails for API calls).
 

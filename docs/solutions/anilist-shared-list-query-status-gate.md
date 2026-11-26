@@ -19,7 +19,7 @@ Two independent facts that only bite together:
   is the network read; the "Your Anime" row derives from it and Up Next reads
   the richer shape (plan 0019 U2). That sharing is deliberate — the 30 req/min
   budget (`anilist-rate-limit-retry-storm.md`) forbids a second PLANNING read —
-  so *whatever* the query widens to, both consumers get.
+  so _whatever_ the query widens to, both consumers get.
 - **`normalizeCurrentAnimeEntry` selected `status` and then dropped it.**
   `AniListCurrentEntry` had no status field at all, so nothing downstream could
   distinguish the two. The status was only ever implied by the query's
@@ -39,7 +39,7 @@ Three pieces, none of which works alone:
 
 1. `AniListCurrentEntry` carries `status: 'CURRENT' | 'PLANNING'`
    (`lib/providers/anilist/normalize.ts`). Anything not explicitly `PLANNING`
-   normalizes to `CURRENT` — PLANNING is the *restricted* status, so guessing it
+   normalizes to `CURRENT` — PLANNING is the _restricted_ status, so guessing it
    would silently hide series the user is watching.
 2. The row filters at its selector, not at the read: `fetchCurrentAnime`
    (`state/queries/anilist.ts`) keeps only `CURRENT`. One cached request, two
@@ -50,13 +50,13 @@ Three pieces, none of which works alone:
    not up next (nothing was started) and episode 1 airing weeks ago is not a
    calendar event.
 
-The gate also matters for dedupe: only *surviving* AniList entries suppress
+The gate also matters for dedupe: only _surviving_ AniList entries suppress
 their Trakt twin, so a gated PLANNING entry must not take an actively-watched
 Trakt card down with it.
 
 ## Amendment (2026-07-28, plan 0031 U12): a third consumer, same gate
 
-The text above says PLANNING is *for* Calendar. That was true when Calendar was
+The text above says PLANNING is _for_ Calendar. That was true when Calendar was
 the only thing that wanted it; it is now one of two. Plan 0031 adds
 `fetchPlannedAnime` (`state/queries/anilist.ts`) — the AniList leg of the
 cross-provider watchlist — as a **third selector over the same cached
@@ -65,7 +65,7 @@ cross-provider watchlist — as a **third selector over the same cached
 
 State the invariant consumer-agnostically, because the count will keep moving:
 
-> **The gate is about what PLANNING may *reach*, not about how many things read
+> **The gate is about what PLANNING may _reach_, not about how many things read
 > it.** A plan-to-watch entry may reach surfaces that mean "you intend to watch
 > this" — Calendar (it airs this week) and the watchlist (it is on your list).
 > It may never reach a surface that means "you are partway through this":
@@ -79,7 +79,7 @@ three-way test in `state/queries/anilist.test.ts` names this file so that a
 future "PLANNING is displayed now anyway, delete the gate" simplification fails
 a test that explains itself.
 
-## Amendment (2026-08-01, plan 0035 U1): CURRENT widens *outward*, and that is fine
+## Amendment (2026-08-01, plan 0035 U1): CURRENT widens _outward_, and that is fine
 
 The watchlist now reads **CURRENT ∪ PLANNING** (`fetchWatchlistAnime`, plan 0035
 R1) — an anime you are actively watching is on your watchlist, which is what the
@@ -139,6 +139,6 @@ matching Simkl. Old backlog remains excluded. See
 
 When a provider read is shared by two consumers on a budget, **widening the
 query is a change to every consumer**. Carry the discriminating field through
-normalization first, filter per consumer second — and check what the *derived*
+normalization first, filter per consumer second — and check what the _derived_
 fields (here `progress: 0`) mean for the newly admitted rows before assuming
 the existing classifier still holds.

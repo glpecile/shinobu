@@ -45,7 +45,7 @@ function SheetBody({
   const view = useEpisode(item, season, number);
   const episode = view.episode ?? pointer.episode;
   const logs = useEpisodeLogs(item, season, number, episode.firstAired);
-  const aired = episode.firstAired == null ? entryAired ?? false : hasAired(episode.firstAired);
+  const aired = episode.firstAired == null ? (entryAired ?? false) : hasAired(episode.firstAired);
   const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
 
   return (
@@ -58,8 +58,14 @@ function SheetBody({
           <MetaLine
             className="mt-1"
             parts={[
-              episode.firstAired != null && <MetaLine.Part icon="calendar-outline">{formatAirDate(episode.firstAired)}</MetaLine.Part>,
-              episode.runtime != null && <MetaLine.Part icon="time-outline">{`${episode.runtime} min`}</MetaLine.Part>,
+              episode.firstAired != null && (
+                <MetaLine.Part icon="calendar-outline">
+                  {formatAirDate(episode.firstAired)}
+                </MetaLine.Part>
+              ),
+              episode.runtime != null && (
+                <MetaLine.Part icon="time-outline">{`${episode.runtime} min`}</MetaLine.Part>
+              ),
             ]}
           />
         </SheetHeader.Content>
@@ -68,10 +74,7 @@ function SheetBody({
       <EpisodeLogs className="mt-4" logs={logs} />
 
       {episode.overview != null && (
-        <Text
-          className="text-foreground font-sans text-sm leading-relaxed mt-4"
-          numberOfLines={4}
-        >
+        <Text className="text-foreground font-sans text-sm leading-relaxed mt-4" numberOfLines={4}>
           {episode.overview}
         </Text>
       )}
@@ -86,8 +89,8 @@ function SheetBody({
           />
         ) : (
           <Text className="text-muted font-sans text-sm">
-            {airsIn == null ? 'Not aired yet' : `Airs ${airsIn.toLowerCase()}`} —
-            it can be logged once it&apos;s out.
+            {airsIn == null ? 'Not aired yet' : `Airs ${airsIn.toLowerCase()}`} — it can be logged
+            once it&apos;s out.
           </Text>
         )}
       </View>

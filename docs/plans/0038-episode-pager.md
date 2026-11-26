@@ -94,10 +94,7 @@ Behaviour of `episodeNeighbours` is unchanged. Do not touch its test.
  * boundaries (S1's last → S2's first). Specials (season 0) are their own
  * sequence: stepping back from S1E1 must not land on one.
  */
-export function episodeOrder(
-  seasons: readonly NormalizedSeason[],
-  season: number,
-): EpisodeRef[] {
+export function episodeOrder(seasons: readonly NormalizedSeason[], season: number): EpisodeRef[] {
   return [...seasons]
     .filter((entry) => (entry.number === 0) === (season === 0))
     .sort((a, b) => a.number - b.number)
@@ -150,7 +147,10 @@ export function useGoToEpisode(id: string) {
   const router = useRouter();
   const step = use(EpisodeStep);
   // push-guard-exempt: `replace`, see above.
-  return step ?? ((target: EpisodeRef) => router.replace(routes.episode(id, target.season, target.number)));
+  return (
+    step ??
+    ((target: EpisodeRef) => router.replace(routes.episode(id, target.season, target.number)))
+  );
 }
 ```
 
@@ -221,9 +221,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   const { width } = window;
   // A horizontal scroll view does not stretch its pages' height on every platform.
   const [height, setHeight] = useState(window.height);
-  const found = view.order.findIndex(
-    (entry) => entry.season === season && entry.number === number,
-  );
+  const found = view.order.findIndex((entry) => entry.season === season && entry.number === number);
   const order = found === -1 ? [{ season, number }] : view.order;
   const index = Math.max(found, 0);
   // The page the scroll last rested on: what the mounted window is centred on

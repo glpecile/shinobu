@@ -20,6 +20,7 @@ popularity, progress and activity dates need consistent coverage and units
 before becoming shared sorts; leave them out of this change.
 
 References:
+
 - https://github.com/lotusprey/otraku/blob/main/lib/feature/media/media_models.dart
 - https://github.com/RyanYuuki/AnymeX/blob/main/lib/screens/library/controller/library_controller.dart
 

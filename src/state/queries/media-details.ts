@@ -94,7 +94,8 @@ async function resolveTmdbId(
   const ids = await cachedAniZipIds(queryClient, {
     anilistId: item.externalIds.anilist,
   });
-  if (item.isFilm === true && ids?.tmdb != null && aniZipTmdbKind(ids) === 'movie') return { tmdbId: ids.tmdb };
+  if (item.isFilm === true && ids?.tmdb != null && aniZipTmdbKind(ids) === 'movie')
+    return { tmdbId: ids.tmdb };
   if (item.isFilm !== true && ids?.tvdb != null) {
     const tmdbId = await cachedTmdbTvIdByTvdb(queryClient, ids.tvdb);
     if (tmdbId != null) return { tmdbId };
@@ -120,10 +121,7 @@ export function buildMediaDetailsDeps(): MediaDetailsDeps {
 }
 
 /** Shared with cache-only observers so they retain the real query fetcher. */
-export function mediaDetailsQuery(
-  queryClient: QueryClient,
-  item: NormalizedMediaItem | undefined,
-) {
+export function mediaDetailsQuery(queryClient: QueryClient, item: NormalizedMediaItem | undefined) {
   return {
     queryKey: mediaDetailsQueryKeys.details(item),
     queryFn: async ({ signal }: { signal: AbortSignal }): Promise<MediaDetails> => {
@@ -131,24 +129,17 @@ export function mediaDetailsQuery(
       const tmdb = await resolveTmdbId(queryClient, item);
       const isFilm = tmdb?.isFilm === true ? true : item.isFilm;
       return Effect.runPromise(
-        getMediaDetails(
-          buildMediaDetailsDeps(),
-          {
-            type: item.type,
-            ...(item.tmdbTvVariant != null ? { tmdbTvVariant: item.tmdbTvVariant } : {}),
-            ...(isFilm != null ? { isFilm } : {}),
-            ...(tmdb != null ? { tmdbId: tmdb.tmdbId } : {}),
-            ...(item.externalIds.trakt != null
-              ? { traktId: item.externalIds.trakt }
-              : {}),
-            ...(item.externalIds.anilist != null
-              ? { anilistId: item.externalIds.anilist }
-              : {}),
-            ...(item.externalIds.hardcover != null
-              ? { hardcoverId: item.externalIds.hardcover }
-              : {}),
-          },
-        ),
+        getMediaDetails(buildMediaDetailsDeps(), {
+          type: item.type,
+          ...(item.tmdbTvVariant != null ? { tmdbTvVariant: item.tmdbTvVariant } : {}),
+          ...(isFilm != null ? { isFilm } : {}),
+          ...(tmdb != null ? { tmdbId: tmdb.tmdbId } : {}),
+          ...(item.externalIds.trakt != null ? { traktId: item.externalIds.trakt } : {}),
+          ...(item.externalIds.anilist != null ? { anilistId: item.externalIds.anilist } : {}),
+          ...(item.externalIds.hardcover != null
+            ? { hardcoverId: item.externalIds.hardcover }
+            : {}),
+        }),
         { signal },
       );
     },

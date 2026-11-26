@@ -38,9 +38,7 @@ export interface AniListWriteQueue {
   submit: <T>(key: string | null, rank: number, run: () => Promise<T>) => Promise<T>;
 }
 
-export function createAniListWriteQueue(
-  clock: FoldClock = REAL_CLOCK,
-): AniListWriteQueue {
+export function createAniListWriteQueue(clock: FoldClock = REAL_CLOCK): AniListWriteQueue {
   let inFlight = false;
   let settling = false;
   let holdStartedAt = 0;
@@ -56,9 +54,7 @@ export function createAniListWriteQueue(
         if (pending[i]!.key === head.key) batch.unshift(...pending.splice(i, 1));
       }
     }
-    const winner = batch.reduce((best, waiter) =>
-      waiter.rank > best.rank ? waiter : best,
-    );
+    const winner = batch.reduce((best, waiter) => (waiter.rank > best.rank ? waiter : best));
 
     inFlight = true;
     void winner.run().then(

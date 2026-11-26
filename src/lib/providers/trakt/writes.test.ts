@@ -76,9 +76,7 @@ describe('logToTrakt TV batch', () => {
     await Effect.runPromise(logToTrakt(capturingDeps(captured), TV_ITEM, options));
 
     const body = captured.body as TraktHistoryBody;
-    expect(body.shows[0].seasons).toEqual([
-      { number: 1, episodes: [{ number: 3 }] },
-    ]);
+    expect(body.shows[0].seasons).toEqual([{ number: 1, episodes: [{ number: 3 }] }]);
   });
 
   test('a whole-season `episodes` batch groups by season in one request', async () => {
@@ -95,10 +93,7 @@ describe('logToTrakt TV batch', () => {
 
     const body = captured.body as TraktHistoryBody;
     const byNumber = new Map(
-      body.shows[0].seasons.map((s) => [
-        s.number,
-        s.episodes.map((e) => e.number),
-      ]),
+      body.shows[0].seasons.map((s) => [s.number, s.episodes.map((e) => e.number)]),
     );
     expect(byNumber.get(1)).toEqual([5]);
     expect(byNumber.get(2)).toEqual([1, 2]);
@@ -136,7 +131,7 @@ function historyDeps(response: unknown): TraktDeps {
   };
 }
 
-describe('logToTrakt outcome read (the watchlist add\'s three-way, on history)', () => {
+describe("logToTrakt outcome read (the watchlist add's three-way, on history)", () => {
   const movie = {
     id: 'trakt-42',
     title: 'Sinners',
@@ -205,10 +200,7 @@ const MOVIE_ITEM = {
 const EMPTY_NOT_FOUND = { movies: [], shows: [], seasons: [], episodes: [] };
 const ZERO = { movies: 0, shows: 0, seasons: 0, episodes: 0 };
 
-function watchlistDeps(
-  responses: Array<() => Response>,
-  calls: { bodies: unknown[] },
-) {
+function watchlistDeps(responses: Array<() => Response>, calls: { bodies: unknown[] }) {
   const deps: TraktDeps = {
     tokens: TOKENS,
     clientId: 'id',
@@ -231,8 +223,7 @@ function watchlistDeps(
  * Sub-second Retry-After purely so the bounded sleep doesn't slow the suite;
  * the assertions below are about the retry *count*, not the delay.
  */
-const rateLimited = () =>
-  new Response('', { status: 429, headers: { 'Retry-After': '0.01' } });
+const rateLimited = () => new Response('', { status: 429, headers: { 'Retry-After': '0.01' } });
 
 function json(body: unknown, status = 201, headers: Record<string, string> = {}) {
   return () =>
@@ -340,9 +331,7 @@ describe('addToTraktWatchlist', () => {
       calls,
     );
 
-    const result = await Effect.runPromise(
-      Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)),
-    );
+    const result = await Effect.runPromise(Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)));
 
     expect(result._tag).toBe('Failure');
     if (result._tag === 'Failure') {
@@ -357,9 +346,7 @@ describe('addToTraktWatchlist', () => {
       calls,
     );
 
-    const result = await Effect.runPromise(
-      Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)),
-    );
+    const result = await Effect.runPromise(Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)));
 
     expect(result._tag).toBe('Failure');
   });
@@ -369,9 +356,7 @@ describe('addToTraktWatchlist', () => {
     const deps = watchlistDeps([], calls);
 
     const result = await Effect.runPromise(
-      Effect.result(
-        addToTraktWatchlist(deps, { ...MOVIE_ITEM, externalIds: { anilist: 1 } }),
-      ),
+      Effect.result(addToTraktWatchlist(deps, { ...MOVIE_ITEM, externalIds: { anilist: 1 } })),
     );
 
     expect(result._tag).toBe('Failure');
@@ -403,9 +388,7 @@ describe('addToTraktWatchlist', () => {
       calls,
     );
 
-    const result = await Effect.runPromise(
-      Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)),
-    );
+    const result = await Effect.runPromise(Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)));
 
     expect(result._tag).toBe('Failure');
     if (result._tag === 'Failure') {
@@ -442,9 +425,7 @@ describe('addToTraktWatchlist', () => {
     const calls = { bodies: [] as unknown[] };
     const deps = watchlistDeps([rateLimited, rateLimited], calls);
 
-    const result = await Effect.runPromise(
-      Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)),
-    );
+    const result = await Effect.runPromise(Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)));
 
     expect(result._tag).toBe('Failure');
     expect(calls.bodies).toHaveLength(2);

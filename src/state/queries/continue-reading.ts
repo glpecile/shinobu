@@ -50,7 +50,11 @@ export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
         ? [leg(Provider.AniList, anilistQueryKeys.reading(), () => fetchReadingManga(queryClient))]
         : []),
       ...(providers.includes(Provider.Hardcover)
-        ? [leg(Provider.Hardcover, hardcoverQueryKeys.reading(), () => fetchHardcoverReading(queryClient))]
+        ? [
+            leg(Provider.Hardcover, hardcoverQueryKeys.reading(), () =>
+              fetchHardcoverReading(queryClient),
+            ),
+          ]
         : []),
     ],
     combine: legInputs,

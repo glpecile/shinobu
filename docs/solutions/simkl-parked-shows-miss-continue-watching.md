@@ -22,13 +22,13 @@ functions away.
 
 Plan 0034 U8/R9's docblock gave two reasons for the exclusion. Both were wrong:
 
-- *"Mirroring Trakt, where the watchlist reaches Calendar through the calendar
-  leg and never the progress pool."* Trakt's watchlist is a separate list —
+- _"Mirroring Trakt, where the watchlist reaches Calendar through the calendar
+  leg and never the progress pool."_ Trakt's watchlist is a separate list —
   watchlisting a show there never displaces its watch history, so Trakt's
   progress pool genuinely does see every started show. Simkl's `plantowatch` is
-  a *status*, so for Simkl the same exclusion also drops started shows. Mirroring
+  a _status_, so for Simkl the same exclusion also drops started shows. Mirroring
   the shape of Trakt's rule reproduced none of its meaning.
-- *"Simkl only populates `next_watch_info` for `watching` items anyway."* Plan
+- _"Simkl only populates `next_watch_info` for `watching` items anyway."_ Plan
   0036 U8 already disproved this on device: `next_to_watch_info` is present on
   `plantowatch` rows, which is what let the details screen's fallback offer
   "Log S2E1". `getAllItems` sends `next_watch_info=yes` on every status.
@@ -38,7 +38,7 @@ Plan 0034 U8/R9's docblock gave two reasons for the exclusion. Both were wrong:
 `simklInputs` now reads both snapshots and admits the parked rows where
 `currentProgress > 0`.
 
-**Only started rows**, because Simkl's `plantowatch` *is* the watchlist. An
+**Only started rows**, because Simkl's `plantowatch` _is_ the watchlist. An
 un-started row there is something the user decided to watch, not something
 waiting one tap away — and `progressEntry` classifies every input it accepts as
 `aired`, so admitting the whole bucket would pour the user's entire backlog into
@@ -64,7 +64,7 @@ Checked for the rows this newly admits:
 `simklInputs` is one settled leg (R7), so a required second fetch would let a
 `plantowatch` outage blank the `watching` rows this leg has always carried. It
 `.catch(() => null)`s instead. That is not swallowing the error: the calendar and
-releases legs read the *same* cache entry through `simklTrackedItems` and settle
+releases legs read the _same_ cache entry through `simklTrackedItems` and settle
 their own failure into `errors`, so the outage still surfaces — it just no longer
 takes Continue Watching down with it. And the entry is the watchlist gather's
 own, so in a session that has opened `/watchlist` the read costs no request
@@ -74,8 +74,8 @@ own, so in a session that has opened `/watchlist` the read costs no request
 
 Same rule the details-side doc landed on, now with its cross-provider corollary:
 **a provider snapshot filtered by status is a filter over which items are
-listed, not over which facts are true** — and *"mirror what we do for the other
-provider"* is only sound when the other provider's data model actually matches.
+listed, not over which facts are true** — and _"mirror what we do for the other
+provider"_ is only sound when the other provider's data model actually matches.
 Trakt's list and Simkl's status are different objects wearing the same word
 ("watchlist"), and every rule copied across that gap has to be re-derived, not
 transplanted.

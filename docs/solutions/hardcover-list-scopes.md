@@ -17,6 +17,7 @@ sent to Hardcover for this note.
   ```
 
   `scope` holds the missing scopes, space separated.
+
 - **Other 403 causes use other `error` values:** `unsupported_operation`, and
   a burst-limit refusal. Only `insufficient_scope` says anything about scopes.
 - **The app registration allows exactly the scopes the app requests.** A

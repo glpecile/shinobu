@@ -12,7 +12,7 @@ plan's `+api`/EAS Hosting design — writes and sign-in remain dead, re-confirme
 by a Workers-egress re-spike the same day. The spike
 (`docs/solutions/letterboxd-web-proxy.md`) confirmed: server-side GET reads
 pass Cloudflare (even from a datacenter IP), but every state-changing POST —
-`POST /api/v0/production-log-entries` *and* `POST /user/login.do` — is
+`POST /api/v0/production-log-entries` _and_ `POST /user/login.do` — is
 403-challenged by Cloudflare client fingerprinting, even from the user's own
 residential IP with the exact browser UA and valid cookies/CSRF. Web writes
 and proxy sign-in are therefore impossible, and the product owner decided
@@ -47,7 +47,7 @@ Letterboxd today (see plan 0012 for the full history):
 reads, and diary writes on web — using Expo Router API routes as a stateless
 proxy. The native WebView path keeps working untouched; both coexist.**
 
-The mechanism: `letterboxd.com` blocks *browser* origins, not servers. A
+The mechanism: `letterboxd.com` blocks _browser_ origins, not servers. A
 `+api.ts` route running on our own web origin can forward requests to
 Letterboxd server-side, so the browser only ever talks to
 `shinobu.glpecile.xyz` — CORS disappears. The proxy is **stateless**: no
@@ -57,11 +57,11 @@ request.
 
 ### This reverses two documented decisions — update them in the same PR
 
-1. AGENTS.md "Web & CORS": *"a provider that blocks browser origins is
-   native-only on web, never proxied."* → carve out the Letterboxd stateless
+1. AGENTS.md "Web & CORS": _"a provider that blocks browser origins is
+   native-only on web, never proxied."_ → carve out the Letterboxd stateless
    relay (this matches the existing "only permissible server exception is a
    tiny stateless relay" language already in AGENTS.md Notifications).
-2. Plan 0012 (2026-07-16): *"Web writes: investigated and closed."* →
+2. Plan 0012 (2026-07-16): _"Web writes: investigated and closed."_ →
    supersede with a pointer here. Also fix the stale bullet in
    `docs/solutions/web-cors-letterboxd.md` (it still references the removed
    CSV path).
@@ -157,7 +157,7 @@ relay = the server never sees storage, only per-request headers.
 
 ## Risks (in priority order — R1 gates the whole design)
 
-- **R1 — Cloudflare IP/UA binding may kill proxied *writes*.** The reason
+- **R1 — Cloudflare IP/UA binding may kill proxied _writes_.** The reason
   native writes run inside the WebView is that replayed cookies don't
   authenticate from non-browser clients: the session includes Cloudflare
   `cf_clearance`, which is typically bound to the client IP + UA. A proxy
@@ -180,7 +180,7 @@ relay = the server never sees storage, only per-request headers.
   plan 0012; record new findings in `docs/solutions/`.
 - **R5 — Abuse surface.** A public proxy route can be used to hammer
   Letterboxd with other people's cookies. Allowlisting + origin checks (§2)
-  keep it narrow; it's unauthenticated by design (the *user's* cookie is the
+  keep it narrow; it's unauthenticated by design (the _user's_ cookie is the
   credential), same trust model as the native app holding the cookie.
 
 ## Work order
@@ -192,8 +192,8 @@ relay = the server never sees storage, only per-request headers.
    pass/fail per endpoint in `docs/solutions/letterboxd-web-proxy.md`. This
    decides R1/R2 and shapes everything below.
 1. Set up EAS Hosting: `eas login` (account needed), first `expo export -p web`
-   + `eas deploy` preview with a hello-world route, then custom domain
-   `shinobu.glpecile.xyz` (DNS at the `glpecile.xyz` registrar).
+   - `eas deploy` preview with a hello-world route, then custom domain
+     `shinobu.glpecile.xyz` (DNS at the `glpecile.xyz` registrar).
 2. `app.json` server output + origin; verify `npx expo serve` runs the app
    and a hello-world `+api` route locally.
 3. Proxy route(s) with allowlist + origin checks; unit tests (`bun test`) for

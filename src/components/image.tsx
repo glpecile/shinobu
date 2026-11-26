@@ -25,14 +25,19 @@ const LETTERBOXD_POSTER_PREFIX = 'https://a.ltrbxd.com/resized/film-poster/';
 type ImageComponentProps = ComponentProps<typeof StyledImage>;
 
 function uriOf(source: ImageComponentProps['source']): string | undefined {
-  return typeof source === 'string' ? source
-    : source != null && typeof source === 'object' && 'uri' in source ? source.uri : undefined;
+  return typeof source === 'string'
+    ? source
+    : source != null && typeof source === 'object' && 'uri' in source
+      ? source.uri
+      : undefined;
 }
 
 export function Image(props: ImageComponentProps) {
-  return uriOf(props.source)?.startsWith(LETTERBOXD_POSTER_PREFIX) === true
-    ? <LetterboxdPosterImage {...props} />
-    : <StyledImage cachePolicy={DEFAULT_CACHE_POLICY} transition={DEFAULT_TRANSITION} {...props} />;
+  return uriOf(props.source)?.startsWith(LETTERBOXD_POSTER_PREFIX) === true ? (
+    <LetterboxdPosterImage {...props} />
+  ) : (
+    <StyledImage cachePolicy={DEFAULT_CACHE_POLICY} transition={DEFAULT_TRANSITION} {...props} />
+  );
 }
 
 function LetterboxdPosterImage(props: ImageComponentProps) {
@@ -45,7 +50,9 @@ function LetterboxdPosterImage(props: ImageComponentProps) {
       cachePolicy={DEFAULT_CACHE_POLICY}
       transition={DEFAULT_TRANSITION}
       {...props}
-      source={poster != null ? (typeof source === 'object' ? { ...source, uri: poster } : poster) : source}
+      source={
+        poster != null ? (typeof source === 'object' ? { ...source, uri: poster } : poster) : source
+      }
       onError={(event) => {
         setFailedUri(uri ?? null);
         onError?.(event);

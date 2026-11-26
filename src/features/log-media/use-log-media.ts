@@ -13,22 +13,16 @@ import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-b
 import { logToSerializd } from '@/lib/providers/serializd/writes';
 import { HardcoverStatus } from '@/lib/providers/hardcover/reads';
 import { logToHardcover } from '@/lib/providers/hardcover/writes';
-import {
-  logToSimkl,
-  simklEntryDropReason,
-  type SimklLogEntry,
-} from '@/lib/providers/simkl/writes';
-import {
-  diaryHasEpisode,
-  getSerializdDiary,
-} from '@/lib/providers/serializd/diary';
-import {
-  getWatchedEpisodeKeys,
-  serializdHasEpisodes,
-} from '@/lib/providers/serializd/progress';
+import { logToSimkl, simklEntryDropReason, type SimklLogEntry } from '@/lib/providers/simkl/writes';
+import { diaryHasEpisode, getSerializdDiary } from '@/lib/providers/serializd/diary';
+import { getWatchedEpisodeKeys, serializdHasEpisodes } from '@/lib/providers/serializd/progress';
 import { recordRecentTags } from '@/state/prefs/recent-tags';
 import { DIARY_QUERY_ROOT, cachedDiaryEntries } from '@/state/queries/diary-pages';
-import { letterboxdDeps, letterboxdFilmWatchQuery, letterboxdQueryKeys } from '@/state/queries/letterboxd';
+import {
+  letterboxdDeps,
+  letterboxdFilmWatchQuery,
+  letterboxdQueryKeys,
+} from '@/state/queries/letterboxd';
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import {
   hardcoverBookEntryQuery,
@@ -155,9 +149,7 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
     return anilistWriteQueue.submit(
       // Foldable only where the write is a progress counter: a film's rewatch
       // *increments* `repeat`, so two of those are two facts.
-      progress != null && mediaId != null
-        ? `${mediaId}:${rewatch === true}`
-        : null,
+      progress != null && mediaId != null ? `${mediaId}:${rewatch === true}` : null,
       progress ?? 0,
       () =>
         Effect.runPromise(
@@ -273,7 +265,9 @@ function replaceAdapters<T>(
 ): LogAdapters {
   return {
     ...adapters,
-    ...Object.fromEntries(Array.from(entries, ([provider, value]) => [provider, adapterFor(value)])),
+    ...Object.fromEntries(
+      Array.from(entries, ([provider, value]) => [provider, adapterFor(value)]),
+    ),
   };
 }
 
@@ -288,7 +282,11 @@ export function withMappingSkips(
   adapters: LogAdapters,
   mappingSkips: ReadonlyMap<ProviderId, string>,
 ): LogAdapters {
-  return replaceAdapters(adapters, mappingSkips, (reason) => () => Promise.resolve({ status: 'skipped', reason }));
+  return replaceAdapters(
+    adapters,
+    mappingSkips,
+    (reason) => () => Promise.resolve({ status: 'skipped', reason }),
+  );
 }
 
 /**
@@ -296,12 +294,17 @@ export function withMappingSkips(
  * failed write landed: resending could log the watch twice. The error keeps
  * it in `failed`, so the report links to the provider and Try again re-reads.
  */
-export function withUnconfirmed(adapters: LogAdapters, unconfirmed: readonly ProviderId[]): LogAdapters {
+export function withUnconfirmed(
+  adapters: LogAdapters,
+  unconfirmed: readonly ProviderId[],
+): LogAdapters {
   return replaceAdapters(
     adapters,
     unconfirmed.map((provider) => [provider, PROVIDERS[provider].label] as const),
     (label) => () =>
-      Promise.reject(new Error(`Couldn't check whether the last try reached ${label}, so it wasn't sent again.`)),
+      Promise.reject(
+        new Error(`Couldn't check whether the last try reached ${label}, so it wasn't sent again.`),
+      ),
   );
 }
 
@@ -310,7 +313,10 @@ export function withUnconfirmed(adapters: LogAdapters, unconfirmed: readonly Pro
  * answer. The read's own error is the outcome, so the report says the target
  * could succeed later.
  */
-export function withUnread(adapters: LogAdapters, unread: ReadonlyMap<ProviderId, unknown>): LogAdapters {
+export function withUnread(
+  adapters: LogAdapters,
+  unread: ReadonlyMap<ProviderId, unknown>,
+): LogAdapters {
   return replaceAdapters(adapters, unread, (error) => () => Promise.reject(error));
 }
 
@@ -441,10 +447,7 @@ async function resolveLogPlan(
   // A later season logged from a TMDB/Trakt show logs to that cour's own
   // AniList and Simkl entry, as the cour's AniList page would.
   const cour =
-    entryInput == null &&
-    item.isFilm !== true &&
-    item.externalIds.anilist != null &&
-    laterSeason
+    entryInput == null && item.isFilm !== true && item.externalIds.anilist != null && laterSeason
       ? await canonicalCourEntry(queryClient, item.externalIds.anilist, canonicalInput)
       : null;
   if (cour != null) {
@@ -453,7 +456,11 @@ async function resolveLogPlan(
     item = {
       ...item,
       type: 'ANIME',
-      externalIds: { ...ids, anilist: cour.anilist, ...(cour.mal != null ? { mal: cour.mal } : {}) },
+      externalIds: {
+        ...ids,
+        anilist: cour.anilist,
+        ...(cour.mal != null ? { mal: cour.mal } : {}),
+      },
     };
   }
 
@@ -467,12 +474,7 @@ async function resolveLogPlan(
   const mappingSkips = new Map<ProviderId, string>();
   // A later canonical season has no place on the show's AniList entry, which
   // is its first cour. With no cour found, the only safe move is not to write.
-  if (
-    targets.includes(Provider.AniList) &&
-    cour == null &&
-    entryInput == null &&
-    laterSeason
-  ) {
+  if (targets.includes(Provider.AniList) && cour == null && entryInput == null && laterSeason) {
     mappingSkips.set(Provider.AniList, 'Could not find the AniList entry for this season');
   }
   if (
@@ -482,7 +484,10 @@ async function resolveLogPlan(
     laterSeason &&
     ((item.type === 'TV' && cour == null) || (cour != null && cour.mal == null))
   ) {
-    mappingSkips.set(Provider.Simkl, 'Could not resolve a cour-specific Simkl identity for these episodes');
+    mappingSkips.set(
+      Provider.Simkl,
+      'Could not resolve a cour-specific Simkl identity for these episodes',
+    );
   }
   if (entryInput == null) {
     return {
@@ -494,8 +499,7 @@ async function resolveLogPlan(
         // mapping to the cour, even for Simkl.
         entry:
           cour?.entry ??
-          (canonicalInput != null &&
-            canonicalInput.every((episode) => episode.season === 1)
+          (canonicalInput != null && canonicalInput.every((episode) => episode.season === 1)
             ? canonicalInput.map((episode) => episode.number)
             : null),
       },
@@ -528,9 +532,7 @@ async function resolveLogPlan(
       ? ({ ok: false, reason: 'no AniList id to resolve a canonical season from' } as const)
       : translateEntryEpisodes(episodeMap, entryInput, {
           layout,
-          ...(item.totalEpisodes != null
-            ? { declaredEpisodeCount: item.totalEpisodes }
-            : {}),
+          ...(item.totalEpisodes != null ? { declaredEpisodeCount: item.totalEpisodes } : {}),
         });
 
   if (!translated.ok) {
@@ -578,8 +580,7 @@ async function providerHasWatch(
         if (traktId == null) return fresh ? null : false;
         const progress = await queryClient.fetchQuery({
           queryKey: traktQueryKeys.showProgress(traktId),
-          queryFn: () =>
-            Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId })),
+          queryFn: () => Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId })),
           ...freshness,
         });
         return traktHasEpisodes(progress.watchedKeys, episodes);
@@ -594,8 +595,7 @@ async function providerHasWatch(
         if (item.type === 'BOOK') return null;
         const state = await queryClient.fetchQuery({
           queryKey: anilistQueryKeys.entryState(mediaId),
-          queryFn: () =>
-            Effect.runPromise(getEntryState(anilistDeps(), { mediaId })),
+          queryFn: () => Effect.runPromise(getEntryState(anilistDeps(), { mediaId })),
           ...freshness,
         });
         const entryNumbers = domains.entry;
@@ -611,8 +611,7 @@ async function providerHasWatch(
 
         const watchedKeys = await queryClient.fetchQuery({
           queryKey: serializdQueryKeys.progress(username, tmdbId),
-          queryFn: () =>
-            Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(), { tmdbId })),
+          queryFn: () => Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(), { tmdbId })),
           staleTime: fresh ? 0 : SERIALIZD_STALE_MS,
         });
         if (!serializdHasEpisodes(watchedKeys, episodes)) return false;
@@ -630,8 +629,11 @@ async function providerHasWatch(
         if (username == null || episodes != null) return false;
         // The member film page proves a viewing; null only means "no evidence".
         return (
-          await queryClient.fetchQuery({ ...letterboxdFilmWatchQuery(username, item), ...freshness })
-        ) != null;
+          (await queryClient.fetchQuery({
+            ...letterboxdFilmWatchQuery(username, item),
+            ...freshness,
+          })) != null
+        );
       }
 
       // Simkl reconcile needs a fresh unfiltered library snapshot and AniDB numbering. Until
@@ -701,12 +703,14 @@ export function invalidateAfterLog(
     }
   }
   if (succeeded.includes(Provider.AniList)) {
-    if (item.externalIds.anilist != null) invalidate({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
+    if (item.externalIds.anilist != null)
+      invalidate({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     invalidate({ queryKey: anilistQueryKeys.library() });
     invalidate({
-      queryKey: anilistMediaKind(item) === 'MANGA'
-        ? anilistQueryKeys.currentMangaEntries()
-        : anilistQueryKeys.currentAnimeEntries(),
+      queryKey:
+        anilistMediaKind(item) === 'MANGA'
+          ? anilistQueryKeys.currentMangaEntries()
+          : anilistQueryKeys.currentAnimeEntries(),
     });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {
@@ -745,13 +749,16 @@ export function invalidateAfterLog(
     const tmdb = item.externalIds.tmdb ?? null;
     const slug =
       item.externalIds.letterboxd ??
-      (tmdb != null ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb)) ?? null : null);
+      (tmdb != null
+        ? (queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb)) ?? null)
+        : null);
     invalidate({
       queryKey: letterboxdQueryKeys.filmWatchesRoot(),
       predicate: ({ queryKey }) =>
-        (slug != null && (queryKey[3] === slug ||
-          (typeof queryKey[4] === 'number' &&
-            queryClient.getQueryData(letterboxdQueryKeys.slug(queryKey[4])) === slug))) ||
+        (slug != null &&
+          (queryKey[3] === slug ||
+            (typeof queryKey[4] === 'number' &&
+              queryClient.getQueryData(letterboxdQueryKeys.slug(queryKey[4])) === slug))) ||
         (tmdb != null && queryKey[4] === tmdb),
     });
     // A pre-write RSS response must not repopulate the shared input as fresh.
@@ -795,12 +802,9 @@ export async function prefetchLogReconcile(
     await Promise.all(
       plan.targets
         .filter((provider) => !plan.mappingSkips.has(provider))
-        .map((provider) =>
-          providerHasWatch(queryClient, provider, plan.item, plan.domains),
-        ),
+        .map((provider) => providerHasWatch(queryClient, provider, plan.item, plan.domains)),
     );
-  } catch {
-  }
+  } catch {}
 }
 
 /** Resolved routing, numbering, and reconciliation for one log, before any write runs. */
@@ -887,7 +891,9 @@ export async function planLogWrite(
               !unread.has(provider) &&
               retryOf.unsent?.includes(provider) !== true &&
               (hasIt == null ||
-                (!hasIt && retryOf.unanswered?.includes(provider) === true && !logReadProvesAbsence(provider))),
+                (!hasIt &&
+                  retryOf.unanswered?.includes(provider) === true &&
+                  !logReadProvesAbsence(provider))),
           )
           .map(({ provider }) => provider)
       : [];
@@ -929,14 +935,22 @@ export async function planLogWrite(
  * Queue eligible targets offline. Replays resolve routing and reconciliation after the
  * connection returns.
  */
-function queueOffline(variables: LogMediaVariables, connected: readonly ProviderId[]): LogMediaResult {
+function queueOffline(
+  variables: LogMediaVariables,
+  connected: readonly ProviderId[],
+): LogMediaResult {
   const platform = currentPlatform();
   const userscript = hasLetterboxdUserscript();
   const targets = (
     variables.providers ??
-    resolveWriteTargets(variables.item, connected, { capability: 'log', platform, letterboxdUserscript: userscript })
+    resolveWriteTargets(variables.item, connected, {
+      capability: 'log',
+      platform,
+      letterboxdUserscript: userscript,
+    })
   ).filter(
-    (provider) => connected.includes(provider) && !isManualWriteTarget(provider, platform, 'log', userscript),
+    (provider) =>
+      connected.includes(provider) && !isManualWriteTarget(provider, platform, 'log', userscript),
   );
   if (targets.length === 0) {
     throw new Error(`No connected provider can log "${variables.item.title}"`);
@@ -998,7 +1012,10 @@ export function useLogMedia() {
       const replayed =
         replay == null
           ? null
-          : beginReplay(replay, (variables.providers ?? []).filter((provider) => !plan.unread.has(provider)));
+          : beginReplay(
+              replay,
+              (variables.providers ?? []).filter((provider) => !plan.unread.has(provider)),
+            );
       if (plan.targets.length === 0) {
         if (replay == null || replayed == null) {
           throw new Error(`No connected provider can log "${plan.item.title}"`);
@@ -1026,18 +1043,22 @@ export function useLogMedia() {
       if (result.succeeded.includes(Provider.Trakt) && traktId != null && loggedEpisodes != null) {
         queryClient.setQueryData<TraktShowProgressResult>(
           traktQueryKeys.showProgress(traktId),
-          (progress) => progress == null ? progress : {
-            ...progress,
-            watchedKeys: new Set([
-              ...progress.watchedKeys,
-              ...loggedEpisodes.map((episode) => `${episode.season}-${episode.number}`),
-            ]),
-          },
+          (progress) =>
+            progress == null
+              ? progress
+              : {
+                  ...progress,
+                  watchedKeys: new Set([
+                    ...progress.watchedKeys,
+                    ...loggedEpisodes.map((episode) => `${episode.season}-${episode.number}`),
+                  ]),
+                },
         );
       }
       // A retry or replay checks fresh state. An in-sync skip there can be the first evidence
       // a write landed, so its other reads still need invalidation.
-      const landed = variables.retryOf == null ? result.succeeded : [...result.succeeded, ...skipped];
+      const landed =
+        variables.retryOf == null ? result.succeeded : [...result.succeeded, ...skipped];
       const settled = invalidateAfterLog(queryClient, item, landed, [
         ...skipped,
         ...result.skipped,
@@ -1049,11 +1070,7 @@ export function useLogMedia() {
         void removeWatchedFromWatchlist(queryClient, item, connected);
       }
 
-      if (
-        variables.tags != null &&
-        variables.tags.length > 0 &&
-        result.succeeded.length > 0
-      ) {
+      if (variables.tags != null && variables.tags.length > 0 && result.succeeded.length > 0) {
         recordRecentTags(variables.tags);
       }
 
@@ -1081,11 +1098,16 @@ export function useLogMedia() {
           : outcomes
               .filter((outcome) => outcome.status === 'error' && outcome.transient === 'network')
               .map((outcome) => outcome.provider)
-              .filter((provider) => canQueueLog(provider, currentPlatform()) && logReadProvesAbsence(provider));
+              .filter(
+                (provider) =>
+                  canQueueLog(provider, currentPlatform()) && logReadProvesAbsence(provider),
+              );
         if (unanswered.length > 0 && queuePendingLog(intent, unanswered, 'uncertain')) {
           queued = unanswered;
           outcomes = outcomes.map((outcome) =>
-            queued.includes(outcome.provider) ? { provider: outcome.provider, status: 'queued' } : outcome,
+            queued.includes(outcome.provider)
+              ? { provider: outcome.provider, status: 'queued' }
+              : outcome,
           );
         }
       }

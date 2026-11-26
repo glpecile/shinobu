@@ -53,7 +53,7 @@ Below is the reference blueprint …", and a ~55-line `tsx` block using
 `plan.md` §1.2 Letterboxd bullet (~line 27):
 
 ```md
-* **Letterboxd (REST)** — movies, including anime films. Read: diary/log entries. Write: create a log entry ... **Caveat:** API access is by request only — ... Treat this as a live risk to track (`todos/004`), not a solved integration. If access isn't granted, the CSV diary export/import path is the fallback degraded mode — not the primary design.
+- **Letterboxd (REST)** — movies, including anime films. Read: diary/log entries. Write: create a log entry ... **Caveat:** API access is by request only — ... Treat this as a live risk to track (`todos/004`), not a solved integration. If access isn't granted, the CSV diary export/import path is the fallback degraded mode — not the primary design.
 ```
 
 AGENTS.md "Providers" section says instead: "Letterboxd writes go through the
@@ -80,9 +80,9 @@ exists at the repo root and says "Copy to .env.local … Every variable is optio
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Check   | the greps in each step | as stated |
+| Purpose | Command                | Expected on success |
+| ------- | ---------------------- | ------------------- |
+| Check   | the greps in each step | as stated           |
 
 No build or tests are needed.
 

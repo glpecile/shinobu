@@ -1,11 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useDeferredValue, useState } from 'react';
 import { type LayoutChangeEvent, Text, View } from 'react-native';
-import {
-  type EntryOrExitLayoutType,
-  FadeIn,
-  useReducedMotion,
-} from 'react-native-reanimated';
+import { type EntryOrExitLayoutType, FadeIn, useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
@@ -42,10 +38,7 @@ const chipEntering = Array.from({ length: CHIP_STAGGER_STEPS }, (_, step) =>
 
 const chipFading = FadeIn.duration(DURATION.swap);
 
-function chipAnimation(
-  index: number,
-  reduceMotion: boolean,
-): EntryOrExitLayoutType {
+function chipAnimation(index: number, reduceMotion: boolean): EntryOrExitLayoutType {
   if (reduceMotion) return chipFading;
   return chipEntering[Math.min(index, CHIP_STAGGER_STEPS - 1)];
 }
@@ -98,8 +91,7 @@ function TagChipSkeleton({
       onLayout={
         onMeasure == null
           ? undefined
-          : (event: LayoutChangeEvent) =>
-              onMeasure(event.nativeEvent.layout.height)
+          : (event: LayoutChangeEvent) => onMeasure(event.nativeEvent.layout.height)
       }
     >
       <View className="absolute inset-0 rounded-full border border-border bg-surface" />
@@ -143,8 +135,7 @@ function TagChip({
           onLayout={
             onMeasure == null
               ? undefined
-              : (event: LayoutChangeEvent) =>
-                  onMeasure(event.nativeEvent.layout.height)
+              : (event: LayoutChangeEvent) => onMeasure(event.nativeEvent.layout.height)
           }
         >
           <View className="absolute inset-0 rounded-full border border-border bg-surface" />
@@ -182,9 +173,7 @@ export function TagPicker({
   const [openedWith] = useState(value);
   const [expanded, setExpanded] = useState(false);
   const [rowHeight, setRowHeight] = useState(0);
-  const [heights, setHeights] = useState<ReadonlyMap<string, number>>(
-    () => new Map(),
-  );
+  const [heights, setHeights] = useState<ReadonlyMap<string, number>>(() => new Map());
 
   const fragment = useFilterFragment(activeTagFragment(value));
   const pool = pinSelectedTags(
@@ -199,17 +188,14 @@ export function TagPicker({
     const height = event.nativeEvent.layout.height;
     setHeights((current) => {
       if (height <= (current.get(key) ?? 0) + ROW_EPSILON) return current;
-      const next =
-        current.size >= MAX_MEASURED_LISTS ? new Map() : new Map(current);
+      const next = current.size >= MAX_MEASURED_LISTS ? new Map() : new Map(current);
       next.set(key, height);
       return next;
     });
   }
 
   function measureRow(height: number) {
-    setRowHeight((current) =>
-      Math.abs(height - current) > ROW_EPSILON ? height : current,
-    );
+    setRowHeight((current) => (Math.abs(height - current) > ROW_EPSILON ? height : current));
   }
 
   const loading = suggestions.length === 0 && letterboxdTags.isFetching;
@@ -217,9 +203,7 @@ export function TagPicker({
   if (suggestions.length === 0 && !loading) return null;
 
   const measured = rowHeight > 0 && contentHeight > 0;
-  const overflows = measured
-    ? contentHeight > rowHeight + ROW_EPSILON
-    : suggestions.length > 1;
+  const overflows = measured ? contentHeight > rowHeight + ROW_EPSILON : suggestions.length > 1;
   const collapsed = loading || (overflows && !expanded);
   const showToggle = !loading && measured && overflows;
 
@@ -271,11 +255,7 @@ export function TagPicker({
         }}
       >
         <PresstableOpacity
-          accessibilityLabel={
-            expanded
-              ? 'Show fewer tag suggestions'
-              : 'Show more tag suggestions'
-          }
+          accessibilityLabel={expanded ? 'Show fewer tag suggestions' : 'Show more tag suggestions'}
           accessibilityRole="button"
           accessibilityState={{ expanded }}
           className="flex-row items-center gap-1 self-start mt-2 py-1"

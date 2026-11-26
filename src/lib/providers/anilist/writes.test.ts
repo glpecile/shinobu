@@ -5,7 +5,12 @@ import type { TokenStore } from '@/lib/providers/token-store';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { AniListDeps } from './deps';
 import { getEntryState } from './reads';
-import { deleteAniListEntry, logToAniList, planOnAniList, setAniListTrackingStatus } from './writes';
+import {
+  deleteAniListEntry,
+  logToAniList,
+  planOnAniList,
+  setAniListTrackingStatus,
+} from './writes';
 
 const TOKENS: TokenStore = {
   get: () => ({ accessToken: 'tok' }),
@@ -220,7 +225,13 @@ describe('logToAniList series', () => {
           episodes: null,
           media: { type: 'MANGA', chapters: 59 },
         }),
-        { ...SERIES, id: 'anilist-100', type: 'MANGA', progressUnit: 'chapter', externalIds: { anilist: 100 } },
+        {
+          ...SERIES,
+          id: 'anilist-100',
+          type: 'MANGA',
+          progressUnit: 'chapter',
+          externalIds: { anilist: 100 },
+        },
         { progress: 59 },
       ),
     );
@@ -244,25 +255,37 @@ describe('logToAniList series', () => {
         { volume: { number: 2, finished: true } },
       ),
     );
-    expect(captured.variables).toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2 });
+    expect(captured.variables).toEqual({
+      mediaId: 143703,
+      status: 'COMPLETED',
+      progressVolumes: 2,
+    });
   });
 
   test('a bridged reread runs REPEATING until its last volume, which counts it', async () => {
-    expect(await rereadVolume({ status: 'COMPLETED', progress: 35, progressVolumes: 2, repeat: 0 }, 1))
-      .toEqual({ mediaId: 143703, status: 'REPEATING', progressVolumes: 1 });
-    expect(await rereadVolume({ status: 'REPEATING', progress: 35, progressVolumes: 1, repeat: 0 }, 2))
-      .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 1 });
-    expect(await rereadVolume({ status: 'CURRENT', progress: 12, progressVolumes: 3, repeat: 0 }, 1))
-      .toEqual({ mediaId: 143703, status: 'CURRENT', progressVolumes: 3 });
-    expect(await rereadVolume({ status: 'COMPLETED', progress: 35, progressVolumes: 2, repeat: 1 }, 2))
-      .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 2 });
+    expect(
+      await rereadVolume({ status: 'COMPLETED', progress: 35, progressVolumes: 2, repeat: 0 }, 1),
+    ).toEqual({ mediaId: 143703, status: 'REPEATING', progressVolumes: 1 });
+    expect(
+      await rereadVolume({ status: 'REPEATING', progress: 35, progressVolumes: 1, repeat: 0 }, 2),
+    ).toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 1 });
+    expect(
+      await rereadVolume({ status: 'CURRENT', progress: 12, progressVolumes: 3, repeat: 0 }, 1),
+    ).toEqual({ mediaId: 143703, status: 'CURRENT', progressVolumes: 3 });
+    expect(
+      await rereadVolume({ status: 'COMPLETED', progress: 35, progressVolumes: 2, repeat: 1 }, 2),
+    ).toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 2 });
   });
 
   test('a bridged page log makes the entry Reading and writes no number (KTD-3)', async () => {
     const captured = { variables: null as unknown };
     await Effect.runPromise(
       logToAniList(
-        capturingDeps(captured, { entry: null, episodes: null, media: { type: 'MANGA', volumes: 2 } }),
+        capturingDeps(captured, {
+          entry: null,
+          episodes: null,
+          media: { type: 'MANGA', volumes: 2 },
+        }),
         { ...BOOK },
         { volume: { number: 1, finished: false } },
       ),
@@ -289,9 +312,7 @@ describe('logToAniList series', () => {
   test('a series log without progress fails loudly', async () => {
     const captured = { variables: null as unknown };
     const result = await Effect.runPromise(
-      Effect.result(
-        logToAniList(capturingDeps(captured, { entry: null, episodes: 16 }), SERIES),
-      ),
+      Effect.result(logToAniList(capturingDeps(captured, { entry: null, episodes: 16 }), SERIES)),
     );
     expect(result._tag).toBe('Failure');
   });
@@ -300,10 +321,10 @@ describe('logToAniList series', () => {
     const captured = { variables: null as unknown };
     const result = await Effect.runPromise(
       Effect.result(
-        logToAniList(
-          capturingDeps(captured, { entry: null, episodes: 1 }),
-          { ...FILM, externalIds: {} },
-        ),
+        logToAniList(capturingDeps(captured, { entry: null, episodes: 1 }), {
+          ...FILM,
+          externalIds: {},
+        }),
       ),
     );
     expect(result._tag).toBe('Failure');
@@ -497,7 +518,6 @@ describe('getEntryState carries the MediaList entry id', () => {
       customLists: ['Winter 2026'],
     });
   });
-
 });
 
 /**
@@ -713,7 +733,6 @@ describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
     expect(seen.entryReads).toBe(2);
     expect(seen.mutations).toEqual([{ id: 700 }]);
   });
-
 });
 
 /**
@@ -805,14 +824,20 @@ describe('setAniListTrackingStatus', () => {
     const repeating = calls();
     await Effect.runPromise(
       setAniListTrackingStatus(
-        watchlistDeps(current, { entry: { status: 'CURRENT', progress: 5, repeat: 1 }, episodes: 24 }),
+        watchlistDeps(current, {
+          entry: { status: 'CURRENT', progress: 5, repeat: 1 },
+          episodes: 24,
+        }),
         SERIES,
         'paused',
       ),
     );
     const skipped = await Effect.runPromise(
       setAniListTrackingStatus(
-        watchlistDeps(repeating, { entry: { status: 'REPEATING', progress: 3, repeat: 1 }, episodes: 24 }),
+        watchlistDeps(repeating, {
+          entry: { status: 'REPEATING', progress: 3, repeat: 1 },
+          episodes: 24,
+        }),
         SERIES,
         'dropped',
       ),

@@ -14,7 +14,10 @@ import { useCSSVariable } from 'uniwind';
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { ExpandableText } from '@/components/expandable-text';
-import { FloatingBackButton, useFloatingBackButtonClearance } from '@/components/floating-back-button';
+import {
+  FloatingBackButton,
+  useFloatingBackButtonClearance,
+} from '@/components/floating-back-button';
 import { FloatingShareButton } from '@/components/floating-share-button';
 import { Image } from '@/components/image';
 import { MetaLine } from '@/components/meta-line';
@@ -44,7 +47,10 @@ import {
   seriesPremiere,
   watchlistCtaIsPrimary,
 } from '@/features/log-media/release-gate';
-import { useWatchlistCtaShown, WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
+import {
+  useWatchlistCtaShown,
+  WatchlistMediaButton,
+} from '@/features/watchlist-media/watchlist-media-button';
 import { BookListsSection } from '@/features/lists/book-lists-section';
 import {
   PeopleSection,
@@ -142,13 +148,7 @@ function anilistWatchedLabel(
   }
 }
 
-function ProgressOfTotal({
-  progress,
-  total,
-}: {
-  progress: number;
-  total: number;
-}) {
+function ProgressOfTotal({ progress, total }: { progress: number; total: number }) {
   return (
     <View className="flex-row items-baseline mt-0.5">
       {/* Clamped: AniList counts a manga's extra chapters past its total (62 of 59). */}
@@ -166,7 +166,9 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
     type: item.type,
-    enabled: PROVIDERS[Provider.AniList].mediaTypes.includes(item.type) && connected.includes(Provider.AniList),
+    enabled:
+      PROVIDERS[Provider.AniList].mediaTypes.includes(item.type) &&
+      connected.includes(Provider.AniList),
   });
   const simklEntry = useSimklLibraryEntryQuery({
     item,
@@ -186,8 +188,8 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const days = [
     ...new Set(
-      [...plays, ...(watched != null ? [{ watchedAt: watched.lastWatchedAt }] : [])].map(
-        (play) => localDayKey(play, timeZone),
+      [...plays, ...(watched != null ? [{ watchedAt: watched.lastWatchedAt }] : [])].map((play) =>
+        localDayKey(play, timeZone),
       ),
     ),
   ].sort((a, b) => b.localeCompare(a));
@@ -238,11 +240,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   return (
     <View accessible accessibilityLabel={label} className="flex-row items-start gap-1.5 mt-1.5">
       <View className="justify-center" style={{ height: 20 * fontScale }}>
-        <Ionicons
-          color={accent}
-          name="eye"
-          size={13}
-        />
+        <Ionicons color={accent} name="eye" size={13} />
       </View>
       <View
         accessibilityElementsHidden
@@ -301,11 +299,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
           />
         ))}
       </Rail>
-      <StudioSheet
-        onClose={() => setSheetOpen(false)}
-        open={sheetOpen}
-        studio={studio}
-      />
+      <StudioSheet onClose={() => setSheetOpen(false)} open={sheetOpen} studio={studio} />
     </Section>
   );
 }
@@ -381,27 +375,19 @@ function CreditRails({
         }))}
       />
       <StudiosList studios={studios} />
-      <PersonCreditSheet
-        credit={credit}
-        onClose={() => setCreditOpen(false)}
-        open={creditOpen}
-      />
+      <PersonCreditSheet credit={credit} onClose={() => setCreditOpen(false)} open={creditOpen} />
     </>
   );
 }
 
 function CreditsSections({ item }: { item: NormalizedMediaItem }) {
   const { data } = useSuspenseMediaDetailsQuery(item);
-  return (
-    <CreditRails cast={data.cast} crew={data.crew} crewTitle="Crew" studios={data.studios} />
-  );
+  return <CreditRails cast={data.cast} crew={data.crew} crewTitle="Crew" studios={data.studios} />;
 }
 
 function MangaCreditsSections({ mediaId }: { mediaId: number }) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId, type: 'MANGA' });
-  return (
-    <CreditRails characters={data.characters} crew={data.staff} crewTitle="Staff" />
-  );
+  return <CreditRails characters={data.characters} crew={data.staff} crewTitle="Staff" />;
 }
 
 function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
@@ -447,7 +433,9 @@ function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdr
         <View style={{ height: backButtonClearance }} />
       )}
       <View className="w-full max-w-4xl self-center px-6">
-        <View className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', !backdrop && 'mt-0')}>
+        <View
+          className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', !backdrop && 'mt-0')}
+        >
           <View className="flex-1">
             <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
             <Skeleton className="h-8 w-48 rounded mt-2" delay={staggerDelay(2)} />
@@ -478,30 +466,49 @@ export default function DetailsRoute() {
 }
 
 function DetailsScreen() {
-  const { provider, id: resourceId, 'media-type': resourceType, zoomPoster: posterParam } = useLocalSearchParams<{
-    provider: string; id: string; 'media-type'?: string; zoomPoster?: string;
+  const {
+    provider,
+    id: resourceId,
+    'media-type': resourceType,
+    zoomPoster: posterParam,
+  } = useLocalSearchParams<{
+    provider: string;
+    id: string;
+    'media-type'?: string;
+    zoomPoster?: string;
   }>();
-  const zoomPoster = process.env.EXPO_OS === 'ios' && typeof posterParam === 'string' && posterParam.startsWith('https://')
-    ? posterParam : undefined;
+  const zoomPoster =
+    process.env.EXPO_OS === 'ios' &&
+    typeof posterParam === 'string' &&
+    posterParam.startsWith('https://')
+      ? posterParam
+      : undefined;
   let mediaType: MediaType | undefined;
   switch (resourceType) {
-    case 'movie': mediaType = 'MOVIE'; break;
-    case 'tv': mediaType = 'TV'; break;
-    case 'manga': mediaType = 'MANGA'; break;
-    default: break;
+    case 'movie':
+      mediaType = 'MOVIE';
+      break;
+    case 'tv':
+      mediaType = 'TV';
+      break;
+    case 'manga':
+      mediaType = 'MANGA';
+      break;
+    default:
+      break;
   }
-  const validType = resourceType == null ||
+  const validType =
+    resourceType == null ||
     (provider === Provider.Trakt && (mediaType === 'MOVIE' || mediaType === 'TV')) ||
     (provider === Provider.AniList && mediaType === 'MANGA');
-  const id = validType ? mediaItemId(provider, resourceId) ?? '' : '';
+  const id = validType ? (mediaItemId(provider, resourceId) ?? '') : '';
   const router = useRouter();
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
   // Composed into `${background}00` for LinearGradient (web var() can't be concatenated);
   // static prerender falls back to #0a0a0a (docs/solutions/web-prerender-bakes-js-resolved-colors.md).
   const backgroundVariable = useCSSVariable('--color-background');
-  const background =
-    typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
+  const background = typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   const backButtonClearance = useFloatingBackButtonClearance();
   const [refreshCount, setRefreshCount] = useState(0);
 
@@ -558,20 +565,38 @@ function DetailsScreen() {
       return (
         <View className="flex-1 bg-background">
           <CenteredNotice>
-            <Head><title>Select media type — Shinobu</title></Head>
+            <Head>
+              <title>Select media type — Shinobu</title>
+            </Head>
             <CenteredNotice.Title>Movie or TV show?</CenteredNotice.Title>
-            <CenteredNotice.Body>This older Trakt link doesn’t specify its media type.</CenteredNotice.Body>
+            <CenteredNotice.Body>
+              This older Trakt link doesn’t specify its media type.
+            </CenteredNotice.Body>
             <CenteredNotice.Actions>
-              <Button icon={<Button.Icon name="open-outline" />} label="Open movie" onPress={() => router.replace(routes.details(id, 'MOVIE'))} />
-              <Button icon={<Button.Icon name="open-outline" />} label="Open TV show" onPress={() => router.replace(routes.details(id, 'TV'))} />
-              <Button icon={<Button.Icon name="arrow-back" />} label="Go back" onPress={goBack} variant="quiet" />
+              <Button
+                icon={<Button.Icon name="open-outline" />}
+                label="Open movie"
+                onPress={() => router.replace(routes.details(id, 'MOVIE'))}
+              />
+              <Button
+                icon={<Button.Icon name="open-outline" />}
+                label="Open TV show"
+                onPress={() => router.replace(routes.details(id, 'TV'))}
+              />
+              <Button
+                icon={<Button.Icon name="arrow-back" />}
+                label="Go back"
+                onPress={goBack}
+                variant="quiet"
+              />
             </CenteredNotice.Actions>
           </CenteredNotice>
         </View>
       );
     }
     const externalUrl = mediaLinkUrl(id, mediaType);
-    const needsHardcover = provider === Provider.Hardcover && !connected.includes(Provider.Hardcover);
+    const needsHardcover =
+      provider === Provider.Hardcover && !connected.includes(Provider.Hardcover);
     return (
       <View className="flex-1 bg-background">
         <CenteredNotice>
@@ -606,7 +631,11 @@ function DetailsScreen() {
               icon={<Button.Icon name="arrow-back" />}
               label="Go back"
               onPress={goBack}
-              variant={externalUrl != null || provider === Provider.Trakt || needsHardcover ? 'quiet' : 'primary'}
+              variant={
+                externalUrl != null || provider === Provider.Trakt || needsHardcover
+                  ? 'quiet'
+                  : 'primary'
+              }
             />
           </CenteredNotice.Actions>
         </CenteredNotice>
@@ -623,10 +652,10 @@ function DetailsScreen() {
   const bookSeries = mediaDetails.data?.series;
   const displayedProgress =
     shown.type === 'ANIME' && shown.isFilm !== true
-      ? anilistEntry.data?.entry?.progress ?? simklProgress.data ?? shown.currentProgress
-      : (onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
+      ? (anilistEntry.data?.entry?.progress ?? simklProgress.data ?? shown.currentProgress)
+      : ((onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
         simklProgress.data ??
-        shown.currentProgress;
+        shown.currentProgress);
   const headerEpisodes =
     tvSeasonsCache?.flatMap((season) => season.episodes) ?? animeSeasonCache?.episodes;
   const display = preAiringDisplay(shown, headerEpisodes, displayedProgress);
@@ -634,9 +663,11 @@ function DetailsScreen() {
 
   function refresh() {
     const { trakt, tmdb, letterboxd } = shown.externalIds;
-    const letterboxdSlug = letterboxd ?? (tmdb != null
-      ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb))
-      : null);
+    const letterboxdSlug =
+      letterboxd ??
+      (tmdb != null
+        ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb))
+        : null);
     const keys: QueryKey[] = [
       mediaDetailsQueryKeys.details(item),
       traktQueryKeys.watchedMovies(),
@@ -645,16 +676,28 @@ function DetailsScreen() {
       simklQueryKeys.ratings(ratingsLookup(shown)),
       wikidataQueryKeys.ratings(wikidataRatingsLookup(shown)),
       ...(trakt != null
-        ? [traktQueryKeys.seasons(trakt), traktQueryKeys.showProgress(trakt), traktQueryKeys.images(shown.type, trakt)]
+        ? [
+            traktQueryKeys.seasons(trakt),
+            traktQueryKeys.showProgress(trakt),
+            traktQueryKeys.images(shown.type, trakt),
+          ]
         : []),
       ...(tmdb != null ? [tmdbQueryKeys.seasons(tmdb), letterboxdQueryKeys.slug(tmdb)] : []),
       ...(letterboxdSlug != null ? [letterboxdQueryKeys.film(letterboxdSlug)] : []),
       ...(anilistId != null
-        ? [anilistQueryKeys.entryState(anilistId), anilistQueryKeys.relations(anilistId), anilistQueryKeys.anime(anilistId)]
+        ? [
+            anilistQueryKeys.entryState(anilistId),
+            anilistQueryKeys.relations(anilistId),
+            anilistQueryKeys.anime(anilistId),
+          ]
         : []),
     ];
     for (const queryKey of keys) {
-      queryClient.removeQueries({ queryKey, type: 'inactive', predicate: (query) => query.state.status === 'error' });
+      queryClient.removeQueries({
+        queryKey,
+        type: 'inactive',
+        predicate: (query) => query.state.status === 'error',
+      });
     }
     setRefreshCount((count) => count + 1);
     return Promise.allSettled(
@@ -673,11 +716,7 @@ function DetailsScreen() {
         <View style={{ height: backButtonClearance }} />
       ) : (
         <View className="h-80 relative">
-          <Image
-            source={{ uri: backdrop }}
-            className="w-full h-full"
-            contentFit="cover"
-          />
+          <Image source={{ uri: backdrop }} className="w-full h-full" contentFit="cover" />
           {/* Same-hue transparent start (`#rrggbb00`), not 'transparent':
               fading from transparent-black to white passes through gray. */}
           <LinearGradient
@@ -694,7 +733,12 @@ function DetailsScreen() {
       )}
 
       <View className="w-full max-w-4xl self-center px-6">
-        <View className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', backdrop == null && 'mt-0')}>
+        <View
+          className={cn(
+            'flex-row items-end md:items-start gap-4 -mt-24 mb-6',
+            backdrop == null && 'mt-0',
+          )}
+        >
           <View className="flex-1">
             <Eyebrow>{shown.type}</Eyebrow>
             <ScrolledTitle.Anchor className="mt-1">
@@ -713,17 +757,25 @@ function DetailsScreen() {
             <MetaLine
               className="mt-1.5"
               parts={[
-                shown.year != null && <MetaLine.Part icon="calendar-outline">{String(shown.year)}</MetaLine.Part>,
-                shown.runtime != null && <MetaLine.Part icon="time-outline">{`${shown.runtime} min`}</MetaLine.Part>,
+                shown.year != null && (
+                  <MetaLine.Part icon="calendar-outline">{String(shown.year)}</MetaLine.Part>
+                ),
+                shown.runtime != null && (
+                  <MetaLine.Part icon="time-outline">{`${shown.runtime} min`}</MetaLine.Part>
+                ),
                 shown.genres != null && shown.genres.length > 0 && (
-                  <MetaLine.Part icon="pricetags-outline">{shown.genres.slice(0, 3).join(', ')}</MetaLine.Part>
+                  <MetaLine.Part icon="pricetags-outline">
+                    {shown.genres.slice(0, 3).join(', ')}
+                  </MetaLine.Part>
                 ),
                 !showProgress && shown.progressUnit === 'page' && shown.totalEpisodes != null && (
                   <MetaLine.Part icon="book-outline">{`${shown.totalEpisodes} pages`}</MetaLine.Part>
                 ),
                 bookSeries != null && (
                   <MetaLine.Part icon="library-outline">
-                    {bookSeries.position != null ? `${bookSeries.name} #${bookSeries.position}` : bookSeries.name}
+                    {bookSeries.position != null
+                      ? `${bookSeries.name} #${bookSeries.position}`
+                      : bookSeries.name}
                   </MetaLine.Part>
                 ),
               ]}
@@ -768,16 +820,14 @@ function DetailsScreen() {
                   shown.totalEpisodes == null ? (
                     displayedProgress
                   ) : (
-                    <ProgressOfTotal
-                      progress={displayedProgress}
-                      total={shown.totalEpisodes}
-                    />
+                    <ProgressOfTotal progress={displayedProgress} total={shown.totalEpisodes} />
                   )
                 }
                 caption={`${shown.progressUnit}s`}
               />
               {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
-              {shown.type === 'ANIME' && shown.isFilm !== true &&
+              {shown.type === 'ANIME' &&
+                shown.isFilm !== true &&
                 shown.totalEpisodes != null &&
                 shown.runtime != null && (
                   <StatTile
@@ -814,7 +864,11 @@ function DetailsScreen() {
         )}
       </SuspenseSection>
 
-      <RecommendationsAndTagsSection item={shown} onItemActions={openActions} resetKey={refreshCount} />
+      <RecommendationsAndTagsSection
+        item={shown}
+        onItemActions={openActions}
+        resetKey={refreshCount}
+      />
       <SimilarBooksSection item={item} onItemActions={openActions} resetKey={refreshCount} />
       <BookListsSection item={item} resetKey={refreshCount} />
 

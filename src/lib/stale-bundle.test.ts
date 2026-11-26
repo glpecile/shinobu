@@ -21,7 +21,11 @@ beforeEach(() => {
   Object.defineProperty(globalThis, 'window', {
     configurable: true,
     value: {
-      location: { reload: () => { reloads += 1; } },
+      location: {
+        reload: () => {
+          reloads += 1;
+        },
+      },
       sessionStorage: {
         getItem: (key: string) => stored.get(key) ?? null,
         setItem: (key: string, value: string) => stored.set(key, value),
@@ -30,7 +34,11 @@ beforeEach(() => {
   });
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
-    value: { get onLine() { return online; } },
+    value: {
+      get onLine() {
+        return online;
+      },
+    },
   });
 });
 

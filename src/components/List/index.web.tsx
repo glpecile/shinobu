@@ -1,8 +1,4 @@
-import {
-  LegendList,
-  type LegendListProps,
-  type LegendListRef,
-} from '@legendapp/list/react-native';
+import { LegendList, type LegendListProps, type LegendListRef } from '@legendapp/list/react-native';
 import { AnimatedLegendList, type AnimatedLegendListProps } from '@legendapp/list/reanimated';
 import { Activity, type ReactElement, type Ref } from 'react';
 import { useIsFocused } from 'expo-router';
@@ -43,7 +39,11 @@ export function List<T>({
     <Activity mode={focused ? 'visible' : 'hidden'}>
       <ListComponent
         {...props}
-        style={props.horizontal || scrollEnabled === false ? style : [{ flexGrow: 1, flexShrink: 1 }, style]}
+        style={
+          props.horizontal || scrollEnabled === false
+            ? style
+            : [{ flexGrow: 1, flexShrink: 1 }, style]
+        }
         {...(itemLayoutAnimation != null ? { itemLayoutAnimation } : {})}
         onStartReachedThreshold={onStartReachedThreshold}
         recycleItems={recycleItems}

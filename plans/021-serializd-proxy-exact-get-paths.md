@@ -65,15 +65,15 @@ Read the whole file header comment before editing (AGENTS.md: "read the invarian
 
 Client GET call sites today (from `src/lib/providers/serializd/*.ts`):
 
-| File | Path (relative to base) | Query keys |
-|---|---|---|
-| `show.ts:44` | `show/{tmdbId}` | none |
-| `season-id.ts:37` | `show/{tmdbId}/season/{seasonNumber}` | none |
-| `diary.ts:54` | `user/{username}/diary` | `page` |
-| `lists.ts:117` | `user/{username}/lists` or `user/{username}/liked_lists` | `sort_by`, `page` |
-| `progress.ts:35` | `user/{username}/show/{tmdbId}/progress` | none |
-| `watched.ts:34` | `user/{username}/watchedpage_v2/{page}` | `sort_by` |
-| (existing exact rules) `list/{id}`, `search/upcoming_episodes_v3` | | check each call site for query keys |
+| File                                                              | Path (relative to base)                                  | Query keys                          |
+| ----------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------- |
+| `show.ts:44`                                                      | `show/{tmdbId}`                                          | none                                |
+| `season-id.ts:37`                                                 | `show/{tmdbId}/season/{seasonNumber}`                    | none                                |
+| `diary.ts:54`                                                     | `user/{username}/diary`                                  | `page`                              |
+| `lists.ts:117`                                                    | `user/{username}/lists` or `user/{username}/liked_lists` | `sort_by`, `page`                   |
+| `progress.ts:35`                                                  | `user/{username}/show/{tmdbId}/progress`                 | none                                |
+| `watched.ts:34`                                                   | `user/{username}/watchedpage_v2/{page}`                  | `sort_by`                           |
+| (existing exact rules) `list/{id}`, `search/upcoming_episodes_v3` |                                                          | check each call site for query keys |
 
 `{username}` is built with `encodeURIComponent`. `show.ts:35` also mentions
 `show/` in a comment; confirm it isn't a second call.
@@ -87,13 +87,13 @@ traversal reaches the rules. Keep that comment accurate.
 
 ## Commands you will need
 
-| Purpose   | Command                                     | Expected on success |
-|-----------|---------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`             | exit 0              |
-| One file  | `bun test worker/serializd-proxy.test.ts`   | all pass            |
-| Typecheck | `bun typecheck`                             | exit 0              |
-| All tests | `bun run test`                              | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                  | exit 0              |
+| Purpose   | Command                                   | Expected on success               |
+| --------- | ----------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`           | exit 0                            |
+| One file  | `bun test worker/serializd-proxy.test.ts` | all pass                          |
+| Typecheck | `bun typecheck`                           | exit 0                            |
+| All tests | `bun run test`                            | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                | exit 0                            |
 
 ## Scope
 
@@ -134,6 +134,7 @@ const ID = '[1-9][0-9]{0,14}';
 ```
 
 Rules (GET):
+
 - `^show/${ID}$`
 - `^show/${ID}/season/(?:0|${ID})$`. Season 0 (specials) exists. Confirm in `season-id.ts` whether 0 can be sent.
 - `^user/${SEGMENT}/diary$`, query `['page']`
@@ -159,9 +160,9 @@ query keys are allowlisted per rule.
 Before `await request.arrayBuffer()`, add:
 
 ```ts
-    const limit = subPath === 'list/edit' ? MAX_LIST_EDIT_BYTES : MAX_BODY_BYTES;
-    const declared = Number(request.headers.get('Content-Length') ?? NaN);
-    if (Number.isFinite(declared) && declared > limit) return jsonError(413, 'request too large');
+const limit = subPath === 'list/edit' ? MAX_LIST_EDIT_BYTES : MAX_BODY_BYTES;
+const declared = Number(request.headers.get('Content-Length') ?? NaN);
+if (Number.isFinite(declared) && declared > limit) return jsonError(413, 'request too large');
 ```
 
 Keep the existing post-read `byteLength` check: `Content-Length` can be absent or wrong.

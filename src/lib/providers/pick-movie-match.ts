@@ -46,9 +46,7 @@ export function pickMovieMatch(
     return exactYear.find(titleMatches) ?? exactYear[0] ?? null;
   }
 
-  const nearby = movies.filter(
-    (movie) => movie.year != null && Math.abs(movie.year - year) <= 1,
-  );
+  const nearby = movies.filter((movie) => movie.year != null && Math.abs(movie.year - year) <= 1);
   const exactTitled = nearby.filter(titleMatches);
   const candidates = exactTitled.length > 0 ? exactTitled : nearby;
   return candidates.length === 1 ? (candidates[0] ?? null) : null;
@@ -64,13 +62,9 @@ export function pickAnimeFilmMatch(
   title: string,
 ): NormalizedMediaItem | null {
   if (year == null) return null;
-  const films = results.filter(
-    (result) => result.isFilm === true && result.year === year,
-  );
+  const films = results.filter((result) => result.isFilm === true && result.year === year);
   const wanted = titleKey(title);
-  return (
-    films.find((film) => titleKey(film.title) === wanted) ?? films[0] ?? null
-  );
+  return films.find((film) => titleKey(film.title) === wanted) ?? films[0] ?? null;
 }
 
 type AnimeNames = Pick<NormalizedMediaItem, 'title' | 'titles'>;
@@ -98,7 +92,8 @@ function isSameAnime(
   record: AnimeNames & Pick<NormalizedMediaItem, 'year' | 'type'>,
 ): boolean {
   if (entry.year == null || record.year !== entry.year) return false;
-  const types = entry.isFilm === true ? ['MOVIE'] : entry.totalEpisodes === 1 ? ['TV', 'MOVIE'] : ['TV'];
+  const types =
+    entry.isFilm === true ? ['MOVIE'] : entry.totalEpisodes === 1 ? ['TV', 'MOVIE'] : ['TV'];
   if (!types.includes(record.type)) return false;
   const names = nameKeys(entry);
   return [...nameKeys(record)].some((name) => names.has(name));
@@ -118,6 +113,8 @@ export function pickAniListMatch(
   results: readonly NormalizedMediaItem[],
   record: AnimeNames & Pick<NormalizedMediaItem, 'year' | 'type'>,
 ): NormalizedMediaItem | null {
-  const matches = results.filter((result) => result.type === 'ANIME' && isSameAnime(result, record));
+  const matches = results.filter(
+    (result) => result.type === 'ANIME' && isSameAnime(result, record),
+  );
   return matches.length === 1 ? (matches[0] ?? null) : null;
 }

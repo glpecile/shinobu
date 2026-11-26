@@ -9,7 +9,7 @@ The hardest requirements in this app are all concentrated in `lib/providers/`, a
 they map 1:1 onto what Effect is built for:
 
 - **Fan-out with partial failure.** AGENTS.md mandates that `useLogMedia` surface
-  *which* provider failed, never a collapsed boolean/throw.
+  _which_ provider failed, never a collapsed boolean/throw.
   `Effect.all(writes, { mode: 'either', concurrency: 'unbounded' })` produces a
   per-provider `Either` structurally — no hand-rolled `Promise.allSettled` +
   index-to-provider bookkeeping. See `src/lib/providers/errors.test.ts` for the
@@ -32,7 +32,7 @@ they map 1:1 onto what Effect is built for:
 ## Costs / risks
 
 1. **Two runtimes.** TanStack Query is the mandated data-fetching engine; Effect
-   has opinions about everything. Running both *fully* would compete. Mitigated by
+   has opinions about everything. Running both _fully_ would compete. Mitigated by
    the containment rule below.
 2. **Mental-model tax.** Generator syntax, layers, fibers — every contributor and
    every agent session has to speak it. Mitigated by documenting the idioms in

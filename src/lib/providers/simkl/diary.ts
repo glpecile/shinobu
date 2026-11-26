@@ -1,4 +1,3 @@
-
 import { Provider } from '@/lib/providers/types';
 import type { NormalizedDiaryEntry } from '@/types/media';
 import type { SimklLibrary, SimklLibraryEntry } from './normalize';
@@ -34,10 +33,7 @@ function entryMs(entry: NormalizedDiaryEntry): number {
  * (AniDB convention), so "Ep 5" is the truthful detail line, matching how
  * AniList's leg renders the same log — not "S1E5".
  */
-function episodeEntries(
-  entry: SimklLibraryEntry,
-  includeSeason: boolean,
-): NormalizedDiaryEntry[] {
+function episodeEntries(entry: SimklLibraryEntry, includeSeason: boolean): NormalizedDiaryEntry[] {
   const entries: NormalizedDiaryEntry[] = [];
   for (const episode of entry.watchedEpisodes) {
     if (episode.watchedAt == null) continue;
@@ -93,7 +89,5 @@ export function simklDiaryEntries(library: SimklLibrary): NormalizedDiaryEntry[]
     const play = playEntry(entry);
     if (play != null) entries.push(play);
   }
-  return entries
-    .sort((a, b) => entryMs(b) - entryMs(a))
-    .slice(0, SIMKL_DIARY_WINDOW);
+  return entries.sort((a, b) => entryMs(b) - entryMs(a)).slice(0, SIMKL_DIARY_WINDOW);
 }

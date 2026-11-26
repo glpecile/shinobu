@@ -16,7 +16,13 @@ function Content({ children }: { children: ReactNode }) {
   return <View className="flex-1">{children}</View>;
 }
 
-function SheetEyebrow({ tone = 'accent', children }: { tone?: 'muted' | 'accent'; children: ReactNode }) {
+function SheetEyebrow({
+  tone = 'accent',
+  children,
+}: {
+  tone?: 'muted' | 'accent';
+  children: ReactNode;
+}) {
   return <Eyebrow tone={tone}>{children}</Eyebrow>;
 }
 

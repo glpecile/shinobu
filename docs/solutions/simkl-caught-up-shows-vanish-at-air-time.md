@@ -12,7 +12,7 @@ back in Continue Watching hours later. Anime was unaffected.
 2. `calendarEntry` drops an airing the instant it has aired, on the stated
    assumption that "the progress leg already produced the same episode". For
    Simkl it hadn't: there was no pointer to produce it from.
-3. The pointer only returns once Simkl marks the episode aired *and* the
+3. The pointer only returns once Simkl marks the episode aired _and_ the
    15-minute `watching` snapshot is refetched, which nothing but an Up Next
    refetch triggers. Pull-to-refresh refetches the gather, not the snapshot
    inside it.
@@ -24,7 +24,7 @@ back in Continue Watching hours later. Anime was unaffected.
 Anime escaped because AniList states `airingAt` for the next episode ahead of
 time, and AniList wins the dedupe.
 
-Reproduced on the emulator: *High Value Target* S1E5 aired at 04:00:00Z and at
+Reproduced on the emulator: _High Value Target_ S1E5 aired at 04:00:00Z and at
 04:00:49Z was in neither section.
 
 ## Fix

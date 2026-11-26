@@ -21,7 +21,8 @@ const DEPS = {
 
 test.each([
   {
-    description: '[Website](https://example.com) | [Twitter](https://x.com/baku)<br><br>An animator.',
+    description:
+      '[Website](https://example.com) | [Twitter](https://x.com/baku)<br><br>An animator.',
     biography: 'Website | Twitter\n\nAn animator.',
     markdown: '[Website](https://example.com) | [Twitter](https://x.com/baku)\n\nAn animator.',
   },
@@ -43,9 +44,7 @@ test.each([
       },
     });
 
-    const { person } = await Effect.runPromise(
-      getAniListStaff({ ...DEPS, fetch }, { id: 19 }),
-    );
+    const { person } = await Effect.runPromise(getAniListStaff({ ...DEPS, fetch }, { id: 19 }));
     expect(person.biography).toBe(biography);
     expect(person.biographyMarkdown).toBe(markdown);
   },
@@ -65,9 +64,7 @@ describe('searchAniListStaff', () => {
     });
 
     await expect(
-      Effect.runPromise(
-        searchAniListStaff({ ...DEPS, fetch }, { name: 'Hayao Miyazaki' }),
-      ),
+      Effect.runPromise(searchAniListStaff({ ...DEPS, fetch }, { name: 'Hayao Miyazaki' })),
     ).resolves.toEqual([
       { id: 96_879, name: 'Hayao Miyazaki' },
       { id: 12, name: '新海誠' },
@@ -101,9 +98,7 @@ describe('searchAniListStaff', () => {
 
     const missing = mockFetch({ data: { Page: null } });
     await expect(
-      Effect.runPromise(
-        searchAniListStaff({ ...DEPS, fetch: missing }, { name: 'x' }),
-      ),
+      Effect.runPromise(searchAniListStaff({ ...DEPS, fetch: missing }, { name: 'x' })),
     ).resolves.toEqual([]);
   });
 });
@@ -113,19 +108,13 @@ describe('searchAniListStudio', () => {
     const fetch = mockFetch({
       data: {
         Page: {
-          studios: [
-            { id: 21, name: 'Studio Ghibli' },
-            { id: 22, name: null },
-            null,
-          ],
+          studios: [{ id: 21, name: 'Studio Ghibli' }, { id: 22, name: null }, null],
         },
       },
     });
 
     await expect(
-      Effect.runPromise(
-        searchAniListStudio({ ...DEPS, fetch }, { name: 'Studio Ghibli' }),
-      ),
+      Effect.runPromise(searchAniListStudio({ ...DEPS, fetch }, { name: 'Studio Ghibli' })),
     ).resolves.toEqual([{ id: 21, name: 'Studio Ghibli' }]);
   });
 });

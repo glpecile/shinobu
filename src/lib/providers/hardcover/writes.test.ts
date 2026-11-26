@@ -8,8 +8,12 @@ mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({ getString: () => undefined, set: () => {}, remove: () => {} }),
 }));
 
-const { addToHardcoverReadingList, logToHardcover, removeFromHardcoverReadingList, setHardcoverTrackingStatus } =
-  await import('./writes');
+const {
+  addToHardcoverReadingList,
+  logToHardcover,
+  removeFromHardcoverReadingList,
+  setHardcoverTrackingStatus,
+} = await import('./writes');
 
 const BOOK: NormalizedMediaItem = {
   id: 'hardcover-427578',
@@ -38,7 +42,10 @@ interface Mutation {
   variables: Record<string, unknown>;
 }
 
-function library(initial: Entry | null, options: { mutationError?: string; readFails?: boolean } = {}) {
+function library(
+  initial: Entry | null,
+  options: { mutationError?: string; readFails?: boolean } = {},
+) {
   let entry = initial;
   const mutations: Mutation[] = [];
   const deps: HardcoverDeps = {
@@ -66,7 +73,10 @@ function library(initial: Entry | null, options: { mutationError?: string; readF
           status_id: object.status_id ?? entry?.status_id ?? 1,
           user_book_reads:
             object.status_id === 2
-              ? [{ id: 77, finished_at: null, progress_pages: null }, ...(entry?.user_book_reads ?? [])]
+              ? [
+                  { id: 77, finished_at: null, progress_pages: null },
+                  ...(entry?.user_book_reads ?? []),
+                ]
               : (entry?.user_book_reads ?? []),
         };
       }
@@ -90,7 +100,10 @@ describe('logToHardcover — finished', () => {
     await run(logToHardcover(deps, BOOK, { reading: { finished: true }, date: '2026-11-12' }));
 
     expect(mutations).toEqual([
-      { name: 'update_user_book', variables: { id: 456, object: { status_id: 3, user_date: '2026-11-12' } } },
+      {
+        name: 'update_user_book',
+        variables: { id: 456, object: { status_id: 3, user_date: '2026-11-12' } },
+      },
     ]);
   });
 
@@ -104,11 +117,19 @@ describe('logToHardcover — finished', () => {
     const sameDay = library(read);
     const reread = library(read);
 
-    const skipped = await run(logToHardcover(repeated.deps, BOOK, { reading: { finished: true }, ...PAST }));
-    const sentBefore = await run(
-      logToHardcover(sameDay.deps, BOOK, { reading: { finished: true }, date: '2020-01-01', reread: true }),
+    const skipped = await run(
+      logToHardcover(repeated.deps, BOOK, { reading: { finished: true }, ...PAST }),
     );
-    await run(logToHardcover(reread.deps, BOOK, { reading: { finished: true }, ...PAST, reread: true }));
+    const sentBefore = await run(
+      logToHardcover(sameDay.deps, BOOK, {
+        reading: { finished: true },
+        date: '2020-01-01',
+        reread: true,
+      }),
+    );
+    await run(
+      logToHardcover(reread.deps, BOOK, { reading: { finished: true }, ...PAST, reread: true }),
+    );
 
     expect(skipped).toMatchObject({ success: { status: 'skipped' } });
     expect(sentBefore).toMatchObject({ success: { status: 'skipped' } });
@@ -149,7 +170,9 @@ describe('logToHardcover — page reached', () => {
       user_book_reads: [{ id: 12, finished_at: null, progress_pages: 140 }],
     });
 
-    await run(logToHardcover(deps, BOOK, { reading: { finished: false, page: 142 }, date: '2026-11-12' }));
+    await run(
+      logToHardcover(deps, BOOK, { reading: { finished: false, page: 142 }, date: '2026-11-12' }),
+    );
 
     expect(mutations).toEqual([
       { name: 'update_user_book_read', variables: { id: 12, object: { progress_pages: 142 } } },
@@ -166,10 +189,15 @@ describe('logToHardcover — page reached', () => {
       ],
     });
 
-    await run(logToHardcover(deps, BOOK, { reading: { finished: false, page: 0 }, date: '2026-11-12' }));
+    await run(
+      logToHardcover(deps, BOOK, { reading: { finished: false, page: 0 }, date: '2026-11-12' }),
+    );
 
     expect(mutations).toEqual([
-      { name: 'update_user_book', variables: { id: 456, object: { status_id: 2, user_date: '2026-11-12' } } },
+      {
+        name: 'update_user_book',
+        variables: { id: 456, object: { status_id: 2, user_date: '2026-11-12' } },
+      },
     ]);
   });
 });
@@ -180,7 +208,10 @@ describe('logToHardcover — refusals', () => {
 
     const result = await run(logToHardcover(deps, BOOK, { reading: { finished: true }, ...PAST }));
 
-    expect(result).toMatchObject({ _tag: 'Failure', failure: { _tag: 'ProviderNetworkError', retryable: false } });
+    expect(result).toMatchObject({
+      _tag: 'Failure',
+      failure: { _tag: 'ProviderNetworkError', retryable: false },
+    });
   });
 
   test('an item with no Hardcover id sends nothing', async () => {
@@ -237,7 +268,9 @@ describe('the reading list', () => {
 
     expect(bare.mutations).toEqual([{ name: 'delete_user_book', variables: { id: 456 } }]);
     expect(keptRating).toMatchObject({ success: { status: 'skipped' } });
-    expect(keptRead).toMatchObject({ success: { status: 'skipped', reason: 'Hardcover tracks this as Read' } });
+    expect(keptRead).toMatchObject({
+      success: { status: 'skipped', reason: 'Hardcover tracks this as Read' },
+    });
     expect([...rated.mutations, ...read.mutations]).toEqual([]);
   });
 });
@@ -261,7 +294,9 @@ describe('pause and drop', () => {
     expect(reading.mutations).toEqual([
       { name: 'update_user_book', variables: { id: 456, object: { status_id: 5 } } },
     ]);
-    expect(skipped).toMatchObject({ success: { status: 'skipped', reason: 'Hardcover tracks this as Read' } });
+    expect(skipped).toMatchObject({
+      success: { status: 'skipped', reason: 'Hardcover tracks this as Read' },
+    });
     expect(read.mutations).toEqual([]);
   });
 });

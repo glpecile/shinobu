@@ -38,18 +38,12 @@ function entry(
 
 describe('isNewEpisode', () => {
   test('an episode aired today or in the last six days is new', () => {
-    expect(isNewEpisode(entry({ firstAired: localInstant(7, 23, 9) }), NOW)).toBe(
-      true,
-    );
-    expect(isNewEpisode(entry({ firstAired: localInstant(7, 18) }), NOW)).toBe(
-      true,
-    );
+    expect(isNewEpisode(entry({ firstAired: localInstant(7, 23, 9) }), NOW)).toBe(true);
+    expect(isNewEpisode(entry({ firstAired: localInstant(7, 18) }), NOW)).toBe(true);
   });
 
   test('a week-old episode is no longer new', () => {
-    expect(isNewEpisode(entry({ firstAired: localInstant(7, 16) }), NOW)).toBe(
-      false,
-    );
+    expect(isNewEpisode(entry({ firstAired: localInstant(7, 16) }), NOW)).toBe(false);
   });
 
   test('an episode with no air instant is never new', () => {
@@ -59,35 +53,31 @@ describe('isNewEpisode', () => {
 
 describe('continueWatchingBadges', () => {
   test('shows episode runtime, falling back to the show runtime', () => {
-    expect(continueWatchingBadges(entry({ runtime: 48 }), NOW)).toEqual([
-      { label: '48m' },
+    expect(continueWatchingBadges(entry({ runtime: 48 }), NOW)).toEqual([{ label: '48m' }]);
+    expect(continueWatchingBadges(entry({}, { ...ITEM, runtime: 24 }), NOW)).toEqual([
+      { label: '24m' },
     ]);
-    expect(
-      continueWatchingBadges(entry({}, { ...ITEM, runtime: 24 }), NOW),
-    ).toEqual([{ label: '24m' }]);
   });
 
   test('a recent episode adds the New pill after the runtime', () => {
     expect(
-      continueWatchingBadges(
-        entry({ runtime: 48, firstAired: localInstant(7, 22) }),
-        NOW,
-      ),
+      continueWatchingBadges(entry({ runtime: 48, firstAired: localInstant(7, 22) }), NOW),
     ).toEqual([{ label: '48m' }, { label: 'New', tone: 'accent' }]);
   });
 });
 
 describe('calendarBadges', () => {
   test('leads with the relative day, then the local air time', () => {
-    expect(
-      calendarBadges(entry({ firstAired: localInstant(7, 24, 21) }), NOW),
-    ).toEqual([{ label: 'Tomorrow', tone: 'accent' }, { label: '21:00' }]);
+    expect(calendarBadges(entry({ firstAired: localInstant(7, 24, 21) }), NOW)).toEqual([
+      { label: 'Tomorrow', tone: 'accent' },
+      { label: '21:00' },
+    ]);
   });
 
   test('a date-only air date keeps the day badge and drops the time', () => {
-    expect(calendarBadges(entry({ firstAired: '2026-07-24' }), NOW)).toEqual(
-      [{ label: 'Tomorrow', tone: 'accent' }],
-    );
+    expect(calendarBadges(entry({ firstAired: '2026-07-24' }), NOW)).toEqual([
+      { label: 'Tomorrow', tone: 'accent' },
+    ]);
   });
 
   test('an entry with no instant carries no badges at all', () => {
@@ -97,16 +87,16 @@ describe('calendarBadges', () => {
 
 describe('continueWatchingBadges — behind count', () => {
   test('two or more aired-unwatched episodes get a behind pill', () => {
-    expect(
-      continueWatchingBadges({ ...entry(), episodesBehind: 1284 }, NOW),
-    ).toContainEqual({ label: '1,284 behind' });
+    expect(continueWatchingBadges({ ...entry(), episodesBehind: 1284 }, NOW)).toContainEqual({
+      label: '1,284 behind',
+    });
   });
 
   test('one behind is what the card already says by existing — no pill', () => {
-    expect(continueWatchingBadges({ ...entry(), episodesBehind: 1 }, NOW)).toEqual(
-      [],
-    );
+    expect(continueWatchingBadges({ ...entry(), episodesBehind: 1 }, NOW)).toEqual([]);
     expect(continueWatchingBadges(entry(), NOW)).toEqual([]);
-    expect(continueWatchingBadges({ ...entry({ runtime: Infinity }), episodesBehind: Infinity }, NOW)).toEqual([]);
+    expect(
+      continueWatchingBadges({ ...entry({ runtime: Infinity }), episodesBehind: Infinity }, NOW),
+    ).toEqual([]);
   });
 });

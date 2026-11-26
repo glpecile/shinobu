@@ -33,27 +33,19 @@ export function mergeCatalogueMetadata(
   return {
     ...item,
     coverImage: item.coverImage !== '' ? item.coverImage : catalogue.coverImage,
-    ...(!hasBackdrop && catalogueBackdrop != null
-      ? { backdropImage: catalogueBackdrop }
-      : {}),
+    ...(!hasBackdrop && catalogueBackdrop != null ? { backdropImage: catalogueBackdrop } : {}),
     ...(item.overview == null && catalogue.overview != null
       ? { overview: catalogue.overview }
       : {}),
-    ...(item.year == null && catalogue.year != null
-      ? { year: catalogue.year }
-      : {}),
+    ...(item.year == null && catalogue.year != null ? { year: catalogue.year } : {}),
     ...(item.releaseDate == null && catalogue.releaseDate != null
       ? { releaseDate: catalogue.releaseDate }
       : {}),
     ...(item.releaseCalendar == null && catalogue.releaseCalendar != null
       ? { releaseCalendar: catalogue.releaseCalendar }
       : {}),
-    ...(item.runtime == null && catalogue.runtime != null
-      ? { runtime: catalogue.runtime }
-      : {}),
-    ...(item.genres == null && catalogue.genres != null
-      ? { genres: catalogue.genres }
-      : {}),
+    ...(item.runtime == null && catalogue.runtime != null ? { runtime: catalogue.runtime } : {}),
+    ...(item.genres == null && catalogue.genres != null ? { genres: catalogue.genres } : {}),
     ...mergeRatings(item.ratings, catalogue.ratings),
     externalIds: { ...catalogue.externalIds, ...item.externalIds },
   };
@@ -80,17 +72,13 @@ export function applyPrimaryMetadata(
 
   const hasBackdrop = item.backdropImage != null && item.backdropImage !== '';
   const primaryBackdrop =
-    primary.backdropImage != null && primary.backdropImage !== ''
-      ? primary.backdropImage
-      : null;
+    primary.backdropImage != null && primary.backdropImage !== '' ? primary.backdropImage : null;
 
   return {
     ...item,
     ...(isFilm ? { isFilm: true } : {}),
     coverImage: item.coverImage !== '' ? item.coverImage : primary.coverImage,
-    ...(!hasBackdrop && primaryBackdrop != null
-      ? { backdropImage: primaryBackdrop }
-      : {}),
+    ...(!hasBackdrop && primaryBackdrop != null ? { backdropImage: primaryBackdrop } : {}),
     ...(!isAnimeCour && primary.overview != null ? { overview: primary.overview } : {}),
     ...(!isAnimeCour && primary.genres != null && primary.genres.length > 0
       ? { genres: primary.genres }

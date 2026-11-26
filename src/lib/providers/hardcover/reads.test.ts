@@ -20,17 +20,36 @@ function deps(data: unknown): HardcoverDeps {
 
 describe('searchBooks', () => {
   test('same-title books stay separate, each with its own authors', async () => {
-    const hits = await Effect.runPromise(searchBooks(deps({
-      search: {
-        error: null,
-        results: {
-          hits: [
-            { document: { id: '61', title: 'No Longer Human', author_names: ['Osamu Dazai'], release_year: 1948 } },
-            { document: { id: '902', title: 'No Longer Human', author_names: ['Junji Ito', 'Osamu Dazai'], release_year: 2019 } },
-          ],
-        },
-      },
-    }), { query: 'No Longer Human', perPage: 20 }));
+    const hits = await Effect.runPromise(
+      searchBooks(
+        deps({
+          search: {
+            error: null,
+            results: {
+              hits: [
+                {
+                  document: {
+                    id: '61',
+                    title: 'No Longer Human',
+                    author_names: ['Osamu Dazai'],
+                    release_year: 1948,
+                  },
+                },
+                {
+                  document: {
+                    id: '902',
+                    title: 'No Longer Human',
+                    author_names: ['Junji Ito', 'Osamu Dazai'],
+                    release_year: 2019,
+                  },
+                },
+              ],
+            },
+          },
+        }),
+        { query: 'No Longer Human', perPage: 20 },
+      ),
+    );
 
     expect(hits.map(({ item, authors }) => [item.id, item.year, authors])).toEqual([
       ['hardcover-61', 1948, ['Osamu Dazai']],
@@ -41,19 +60,24 @@ describe('searchBooks', () => {
 
 describe('getBook', () => {
   test('each author lists each role once, and a string series position decodes', async () => {
-    const book = await Effect.runPromise(getBook(deps({
-      books_by_pk: {
-        id: 902,
-        title: 'No Longer Human',
-        contributions: [
-          { contribution: null, author: { id: 1, name: 'Junji Ito' } },
-          { contribution: '', author: { id: 1, name: 'Junji Ito' } },
-          { contribution: 'Illustrator', author: { id: 1, name: 'Junji Ito' } },
-          { contribution: 'Translator', author: { id: 2, name: 'Jocelyne Allen' } },
-        ],
-        featured_book_series: { position: '1.5', series: { name: 'No Longer Human' } },
-      },
-    }), 902));
+    const book = await Effect.runPromise(
+      getBook(
+        deps({
+          books_by_pk: {
+            id: 902,
+            title: 'No Longer Human',
+            contributions: [
+              { contribution: null, author: { id: 1, name: 'Junji Ito' } },
+              { contribution: '', author: { id: 1, name: 'Junji Ito' } },
+              { contribution: 'Illustrator', author: { id: 1, name: 'Junji Ito' } },
+              { contribution: 'Translator', author: { id: 2, name: 'Jocelyne Allen' } },
+            ],
+            featured_book_series: { position: '1.5', series: { name: 'No Longer Human' } },
+          },
+        }),
+        902,
+      ),
+    );
 
     expect(book.authors.map(({ name, job }) => [name, job])).toEqual([
       ['Junji Ito', 'Author, Illustrator'],
@@ -65,13 +89,22 @@ describe('getBook', () => {
 
 describe('getAuthor', () => {
   test('books group by role with the author row first, and a book sits on a role once', async () => {
-    const author = await Effect.runPromise(getAuthor(deps({
-      authors: [{ id: 1, name: 'Junji Ito', slug: 'junji-ito' }],
-      books: [
-        { id: 10, title: 'Narrated', contributions: [{ contribution: 'Narrator' }] },
-        { id: 11, title: 'Written', contributions: [{ contribution: null }, { contribution: '' }] },
-      ],
-    }), { id: 1 }));
+    const author = await Effect.runPromise(
+      getAuthor(
+        deps({
+          authors: [{ id: 1, name: 'Junji Ito', slug: 'junji-ito' }],
+          books: [
+            { id: 10, title: 'Narrated', contributions: [{ contribution: 'Narrator' }] },
+            {
+              id: 11,
+              title: 'Written',
+              contributions: [{ contribution: null }, { contribution: '' }],
+            },
+          ],
+        }),
+        { id: 1 },
+      ),
+    );
 
     expect(author.rows.map(({ role, items }) => [role, items.map((item) => item.id)])).toEqual([
       ['Author', ['hardcover-11']],

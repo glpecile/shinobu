@@ -64,9 +64,7 @@ function raceDeps(options: { refreshStatus?: number } = {}) {
         });
       }
       if (path === '/data') {
-        return authHeader(init)?.startsWith('Bearer fresh-')
-          ? json({ ok: true })
-          : json(null, 401);
+        return authHeader(init)?.startsWith('Bearer fresh-') ? json({ ok: true }) : json(null, 401);
       }
       throw new Error(`unexpected path ${path}`);
     },
@@ -76,35 +74,42 @@ function raceDeps(options: { refreshStatus?: number } = {}) {
 }
 
 function run(deps: TraktDeps, signal?: AbortSignal) {
-  return Effect.runPromise(
-    Effect.result(traktAuthedRequest<{ ok: boolean }>(deps, '/data')),
-    { signal },
-  );
+  return Effect.runPromise(Effect.result(traktAuthedRequest<{ ok: boolean }>(deps, '/data')), {
+    signal,
+  });
 }
 
-test.each(['trakt', 'tmdb'] as const)('%s does not retry before a long Retry-After expires', async (provider) => {
-  let calls = 0;
-  const { deps } = raceDeps();
-  deps.fetch = async () => {
-    calls += 1;
-    return new Response(null, { status: 429, headers: { 'Retry-After': '60' } });
-  };
-  const error = await Effect.runPromise(Effect.flip(
-    provider === 'trakt'
-      ? traktAuthedRequest(deps, '/data')
-      : tmdbRequest({ fetch: deps.fetch, token: 'test' }, '/data'),
-  ));
-  expect(calls).toBe(1);
-  expect(error._tag).toBe('ProviderRateLimitError');
-  if (error._tag === 'ProviderRateLimitError') expect(error.retryAfterMs).toBe(60_000);
-}, 10_000);
+test.each(['trakt', 'tmdb'] as const)(
+  '%s does not retry before a long Retry-After expires',
+  async (provider) => {
+    let calls = 0;
+    const { deps } = raceDeps();
+    deps.fetch = async () => {
+      calls += 1;
+      return new Response(null, { status: 429, headers: { 'Retry-After': '60' } });
+    };
+    const error = await Effect.runPromise(
+      Effect.flip(
+        provider === 'trakt'
+          ? traktAuthedRequest(deps, '/data')
+          : tmdbRequest({ fetch: deps.fetch, token: 'test' }, '/data'),
+      ),
+    );
+    expect(calls).toBe(1);
+    expect(error._tag).toBe('ProviderRateLimitError');
+    if (error._tag === 'ProviderRateLimitError') expect(error.retryAfterMs).toBe(60_000);
+  },
+  10_000,
+);
 
 describe('traktAuthedRequest refresh coalescing', () => {
   test('cancelling one waiter does not cancel the shared token grant', async () => {
     const { deps, tokens, refreshCalls } = raceDeps();
     const fetch = deps.fetch;
     let grantStarted!: () => void;
-    const started = new Promise<void>((resolve) => { grantStarted = resolve; });
+    const started = new Promise<void>((resolve) => {
+      grantStarted = resolve;
+    });
     deps.fetch = (input, init) => {
       if (String(input).includes('/oauth/token')) grantStarted();
       return fetch(input, init);
@@ -156,9 +161,9 @@ describe('traktAuthedRequest refresh coalescing', () => {
       expect(Result.isFailure(result)).toBe(true);
       if (Result.isFailure(result)) {
         expect(result.failure._tag).toBe('ProviderAuthError');
-        expect(
-          result.failure._tag === 'ProviderAuthError' && result.failure.refreshFailed,
-        ).toBe(true);
+        expect(result.failure._tag === 'ProviderAuthError' && result.failure.refreshFailed).toBe(
+          true,
+        );
       }
     }
     expect(tokens.get()).toBeNull();

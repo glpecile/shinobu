@@ -7,14 +7,14 @@ used a real client id or token.
 
 ## Findings
 
-| Endpoint | Probe | Result |
-| --- | --- | --- |
-| `OPTIONS api.hardcover.app/v1/graphql` | preflight, `POST`, `content-type, authorization` | 200, `access-control-allow-origin: *`, both headers allowed, `access-control-max-age: 7200` |
-| `POST api.hardcover.app/v1/graphql` | invalid bearer token | 401 `invalid_token`, `access-control-allow-origin: *` on the error too |
-| `OPTIONS api.hardcover.app/oauth2/token` | preflight, `POST`, `content-type` | 200, `access-control-allow-origin: *`, `GET, POST, OPTIONS` |
-| `POST api.hardcover.app/oauth2/token` | bogus client, form body and JSON body | 401 `invalid_client`, `access-control-allow-origin: *` |
-| `OPTIONS` and `POST api.hardcover.app/oauth2/revoke` | same as the token endpoint | same as the token endpoint |
-| `GET api.hardcover.app/.well-known/oauth-authorization-server` | `Origin` header | 200, readable from the browser |
+| Endpoint                                                       | Probe                                            | Result                                                                                      |
+| -------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `OPTIONS api.hardcover.app/v1/graphql`                         | preflight, `POST`, `content-type, authorization` | 200, `access-control-allow-origin: *`, both headers allowed, `access-control-max-age: 7200` |
+| `POST api.hardcover.app/v1/graphql`                            | invalid bearer token                             | 401 `invalid_token`, `access-control-allow-origin: *` on the error too                      |
+| `OPTIONS api.hardcover.app/oauth2/token`                       | preflight, `POST`, `content-type`                | 200, `access-control-allow-origin: *`, `GET, POST, OPTIONS`                                 |
+| `POST api.hardcover.app/oauth2/token`                          | bogus client, form body and JSON body            | 401 `invalid_client`, `access-control-allow-origin: *`                                      |
+| `OPTIONS` and `POST api.hardcover.app/oauth2/revoke`           | same as the token endpoint                       | same as the token endpoint                                                                  |
+| `GET api.hardcover.app/.well-known/oauth-authorization-server` | `Origin` header                                  | 200, readable from the browser                                                              |
 
 - **The token endpoint passes.** AniList's does not
   (`web-cors-anilist.md`), which was the reason for this probe. Web runs the

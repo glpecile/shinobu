@@ -36,7 +36,7 @@ come back only after the next successful refresh, which can be the next
 WorkManager interval or a foreground plus the 15-minute throttle. Users miss
 episode alerts because their phone was offline for a moment.
 
-Plan 0020 R4 is deliberate: a broken provider must not stop the *other*
+Plan 0020 R4 is deliberate: a broken provider must not stop the _other_
 providers' notifications. Keep it. This plan adds one narrow rule: if the gather
 reported errors **and** produced no candidates, keep the existing schedule.
 
@@ -80,13 +80,13 @@ Existing tests include `'turning alerts off while inputs load prevents schedulin
 
 ## Commands you will need
 
-| Purpose   | Command                                                   | Expected on success |
-|-----------|-----------------------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`                           | exit 0              |
-| Typecheck | `bun typecheck`                                           | exit 0              |
-| One file  | `bun test src/features/notifications/refresh.test.ts`     | all pass            |
-| All tests | `bun run test`                                            | all pass (never plain `bun test`) |
-| Lint      | `bun lint`                                                | exit 0              |
+| Purpose   | Command                                               | Expected on success               |
+| --------- | ----------------------------------------------------- | --------------------------------- |
+| Install   | `bun install --frozen-lockfile`                       | exit 0                            |
+| Typecheck | `bun typecheck`                                       | exit 0                            |
+| One file  | `bun test src/features/notifications/refresh.test.ts` | all pass                          |
+| All tests | `bun run test`                                        | all pass (never plain `bun test`) |
+| Lint      | `bun lint`                                            | exit 0                            |
 
 ## Scope
 
@@ -109,9 +109,9 @@ see maintenance notes.
 After computing `candidates`, add:
 
 ```ts
-  // Offline or every leg down: an empty list from a failed gather would cancel
-  // every pending alert. Keep the last schedule; the next good refresh replaces it.
-  if (inputs.errors.length > 0 && candidates.length === 0) return;
+// Offline or every leg down: an empty list from a failed gather would cancel
+// every pending alert. Keep the last schedule; the next good refresh replaces it.
+if (inputs.errors.length > 0 && candidates.length === 0) return;
 ```
 
 Leave the R4 comment above as it is (partial failures with candidates still schedule).
@@ -123,18 +123,18 @@ Leave the R4 comment above as it is (partial failures with candidates still sche
 In `refresh.test.ts`, add one case in `describe('refreshNotifications')`:
 
 ```ts
-  test('a gather that failed and found nothing keeps the existing schedule', async () => {
-    const { deps, calls } = makeDeps({
-      gatherInputs: async () => ({
-        ...EMPTY_INPUTS,
-        errors: [{ provider: 'trakt', message: 'offline' }],
-      }),
-    });
-
-    await refreshNotifications(deps, { throttle: false });
-
-    expect(calls.schedule).toBe(0);
+test('a gather that failed and found nothing keeps the existing schedule', async () => {
+  const { deps, calls } = makeDeps({
+    gatherInputs: async () => ({
+      ...EMPTY_INPUTS,
+      errors: [{ provider: 'trakt', message: 'offline' }],
+    }),
   });
+
+  await refreshNotifications(deps, { throttle: false });
+
+  expect(calls.schedule).toBe(0);
+});
 ```
 
 Also confirm that an existing test already covers "empty inputs, **no** errors

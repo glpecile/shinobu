@@ -15,10 +15,10 @@ TV id (a film filed as a special of a TVDB show).
 
 Counted on 2026-11-12 over entries with an AniList id and a TMDB id:
 
-| ani.zip record | TMDB id is a TV id | TMDB id is a movie id |
-|----------------|-------------------:|----------------------:|
-| has `thetvdb_id` | 6,953 | 253 |
-| has no `thetvdb_id` | 8 | 1,066 |
+| ani.zip record      | TMDB id is a TV id | TMDB id is a movie id |
+| ------------------- | -----------------: | --------------------: |
+| has `thetvdb_id`    |              6,953 |                   253 |
+| has no `thetvdb_id` |                  8 |                 1,066 |
 
 ## Fix
 

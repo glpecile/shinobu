@@ -25,7 +25,7 @@ the targets it claims), and `usePushRoute` opens the href in a new tab instead
 of pushing when it did. One guard in the resource every press-driven
 navigation already funnels through — cards, rows, person rails, sheet
 actions — so no call site changed. The recorded modifier expires after a
-second, which is what stops a cmd-click from leaking into the *next* press
+second, which is what stops a cmd-click from leaking into the _next_ press
 (a keyboard activation has no pointerdown of its own).
 
 Not covered, for want of a real anchor: middle-click, the context menu's "Open

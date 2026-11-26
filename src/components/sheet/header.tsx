@@ -6,7 +6,12 @@ import { cn } from '@/lib/cn';
 
 import { SheetCloseContext } from './context';
 
-export function SheetDismissHeader({ children, className, onClose, done = false }: {
+export function SheetDismissHeader({
+  children,
+  className,
+  onClose,
+  done = false,
+}: {
   children: ReactNode;
   className?: string;
   onClose?: () => void;

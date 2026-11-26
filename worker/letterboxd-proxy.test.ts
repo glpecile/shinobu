@@ -1,9 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import {
-  handleLetterboxdProxy,
-  isLetterboxdProxyRequest,
-} from './letterboxd-proxy';
+import { handleLetterboxdProxy, isLetterboxdProxyRequest } from './letterboxd-proxy';
 import {
   handleLetterboxdWriteSpike,
   isLetterboxdWriteSpikeRequest,
@@ -46,9 +43,9 @@ function htmlResponse(status = 200): Response {
 
 describe('isLetterboxdProxyRequest', () => {
   test('matches the /api/letterboxd/ prefix only', () => {
-    expect(
-      isLetterboxdProxyRequest(new URL(`${ORIGIN}/api/letterboxd/gian/watchlist/`)),
-    ).toBe(true);
+    expect(isLetterboxdProxyRequest(new URL(`${ORIGIN}/api/letterboxd/gian/watchlist/`))).toBe(
+      true,
+    );
     expect(isLetterboxdProxyRequest(new URL(`${ORIGIN}/api/serializd/show/1`))).toBe(false);
     expect(isLetterboxdProxyRequest(new URL(`${ORIGIN}/`))).toBe(false);
   });
@@ -135,10 +132,7 @@ describe('allowlist', () => {
 
   test('forwards to letterboxd.com with the sub-path verbatim', async () => {
     const upstream = capturingUpstream(htmlResponse());
-    await handleLetterboxdProxy(
-      proxyRequest('/api/letterboxd/gian/watchlist/'),
-      upstream.fetch,
-    );
+    await handleLetterboxdProxy(proxyRequest('/api/letterboxd/gian/watchlist/'), upstream.fetch);
     expect(upstream.captured[0].url).toBe('https://letterboxd.com/gian/watchlist/');
   });
 
@@ -314,9 +308,9 @@ describe('letterboxd write spike (throwaway)', () => {
 
   test('matches the spike path only', () => {
     expect(isLetterboxdWriteSpikeRequest(new URL(`${ORIGIN}${SPIKE}`))).toBe(true);
-    expect(
-      isLetterboxdWriteSpikeRequest(new URL(`${ORIGIN}/api/letterboxd/gian/rss/`)),
-    ).toBe(false);
+    expect(isLetterboxdWriteSpikeRequest(new URL(`${ORIGIN}/api/letterboxd/gian/rss/`))).toBe(
+      false,
+    );
   });
 
   test('is POST-only', async () => {
@@ -341,9 +335,7 @@ describe('letterboxd write spike (throwaway)', () => {
       }),
       upstream.fetch,
     );
-    expect(upstream.captured[0].url).toBe(
-      'https://letterboxd.com/api/v0/production-log-entries',
-    );
+    expect(upstream.captured[0].url).toBe('https://letterboxd.com/api/v0/production-log-entries');
     const headers = upstream.captured[0].init?.headers as Record<string, string>;
     expect(headers.Cookie).toBe('session=abc');
     expect(headers['User-Agent']).toBe('TestBrowser/1.0');
@@ -352,10 +344,10 @@ describe('letterboxd write spike (throwaway)', () => {
   });
 
   test('classifies the Cloudflare challenge page as challenged', async () => {
-    const challenge = new Response(
-      '<html><head><title>Just a moment...</title></head></html>',
-      { status: 403, headers: { 'content-type': 'text/html' } },
-    );
+    const challenge = new Response('<html><head><title>Just a moment...</title></head></html>', {
+      status: 403,
+      headers: { 'content-type': 'text/html' },
+    });
     const upstream = capturingUpstream(challenge);
     const res = await handleLetterboxdWriteSpike(
       proxyRequest(SPIKE, { method: 'POST', body: '{}' }),

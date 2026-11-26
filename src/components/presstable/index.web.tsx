@@ -21,8 +21,11 @@ const FEEDBACK = {
   userSelect: 'none',
 } as ViewStyle;
 
-type PresstableProps = Omit<ComponentProps<typeof Pressable>, 'onPress' | 'onLongPress' | 'onPressIn' | 'style'>
-  & PressBehaviorProps & {
+type PresstableProps = Omit<
+  ComponentProps<typeof Pressable>,
+  'onPress' | 'onLongPress' | 'onPressIn' | 'style'
+> &
+  PressBehaviorProps & {
     onPress?: () => void;
     onLongPress?: () => void;
     style?: StyleProp<ViewStyle>;
@@ -51,12 +54,17 @@ function WebPresstable({
   );
 }
 
-export function PresstableScale({ minScale = MIN_SCALE, ...props }: PresstableProps & { minScale?: number }) {
+export function PresstableScale({
+  minScale = MIN_SCALE,
+  ...props
+}: PresstableProps & { minScale?: number }) {
   const reduceMotion = useReducedMotion();
   return (
     <WebPresstable
       {...props}
-      pressedStyle={reduceMotion ? { opacity: ACTIVE_OPACITY } : { transform: [{ scale: minScale }] }}
+      pressedStyle={
+        reduceMotion ? { opacity: ACTIVE_OPACITY } : { transform: [{ scale: minScale }] }
+      }
     />
   );
 }

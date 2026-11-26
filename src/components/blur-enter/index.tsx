@@ -20,13 +20,7 @@ const fading = css.keyframes({
   to: { opacity: 1 },
 });
 
-export function BlurEnter({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+export function BlurEnter({ children, className }: { children: ReactNode; className?: string }) {
   const reduceMotion = useReducedMotion();
 
   return (

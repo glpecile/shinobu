@@ -10,10 +10,7 @@ import {
   TRAKT_CREATE_APP_URL,
 } from '@/lib/providers/external-urls';
 import { ANILIST_GRAPHQL_URL } from '@/lib/providers/anilist/http';
-import {
-  TRAKT_API_BASE_URL,
-  TRAKT_AUTHORIZE_URL,
-} from '@/lib/providers/trakt/config';
+import { TRAKT_API_BASE_URL, TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
 
 export interface UrlCheck {
   name: string;

@@ -15,7 +15,9 @@ function wordSpanDistance(query: string, title: string): number {
     end += Array.from(word).length;
     boundaries.add(end);
   }
-  let previous = Array.from({ length: b.length + 1 }, (_, index) => boundaries.has(index) ? 0 : Infinity);
+  let previous = Array.from({ length: b.length + 1 }, (_, index) =>
+    boundaries.has(index) ? 0 : Infinity,
+  );
   let beforePrevious = previous;
   for (let i = 1; i <= a.length; i++) {
     const row = [i];
@@ -37,19 +39,23 @@ function wordSpanDistance(query: string, title: string): number {
 
 function titleScore(query: string, item: NormalizedMediaItem): number {
   const queryLength = Array.from(query).length;
-  return Math.max(...[item.title, ...Object.values(item.titles ?? {})].map((title) => {
-    const normalized = titleKey(title);
-    const key = normalized.replaceAll(' ', '');
-    if (key === query) return 1;
-    if (key.startsWith(query)) return 0.98;
-    if (key.includes(query)) return 0.95;
-    const distance = wordSpanDistance(query, normalized);
-    const titleLength = Array.from(key).length;
-    // At most two edits; shorter words cannot afford the same ambiguity.
-    return distance <= Math.min(2, Math.max(1, Math.floor(queryLength / 5)))
-      ? 0.9 - distance / queryLength - 0.05 * (1 - Math.min(queryLength, titleLength) / Math.max(queryLength, titleLength))
-      : 0;
-  }));
+  return Math.max(
+    ...[item.title, ...Object.values(item.titles ?? {})].map((title) => {
+      const normalized = titleKey(title);
+      const key = normalized.replaceAll(' ', '');
+      if (key === query) return 1;
+      if (key.startsWith(query)) return 0.98;
+      if (key.includes(query)) return 0.95;
+      const distance = wordSpanDistance(query, normalized);
+      const titleLength = Array.from(key).length;
+      // At most two edits; shorter words cannot afford the same ambiguity.
+      return distance <= Math.min(2, Math.max(1, Math.floor(queryLength / 5)))
+        ? 0.9 -
+            distance / queryLength -
+            0.05 * (1 - Math.min(queryLength, titleLength) / Math.max(queryLength, titleLength))
+        : 0;
+    }),
+  );
 }
 
 /**
@@ -73,16 +79,21 @@ export const searchFuzzy = Effect.fnUntraced(function* (
 
   const ranked = new Map(direct.map((item) => [item.id, { item, score: titleScore(key, item) }]));
   if (direct.length < 5) {
-    const fallbacks = words.length === 1
-      // Keep roughly two thirds, but at least four code points to avoid overly broad prefixes.
-      ? (characters.length >= 5 ? [characters.slice(0, Math.max(4, Math.ceil(characters.length * 0.65))).join('')] : [])
-      : [...new Set(words)]
-        .filter((word) => word.length >= 3)
-        .sort((a, b) => b.length - a.length)
-        .slice(0, 2);
-    const supplements = yield* Effect.forEach(fallbacks, (word) =>
-      search(word).pipe(Effect.catch(() => Effect.succeed([]))),
-    { concurrency: 2 });
+    const fallbacks =
+      words.length === 1
+        ? // Keep roughly two thirds, but at least four code points to avoid overly broad prefixes.
+          characters.length >= 5
+          ? [characters.slice(0, Math.max(4, Math.ceil(characters.length * 0.65))).join('')]
+          : []
+        : [...new Set(words)]
+            .filter((word) => word.length >= 3)
+            .sort((a, b) => b.length - a.length)
+            .slice(0, 2);
+    const supplements = yield* Effect.forEach(
+      fallbacks,
+      (word) => search(word).pipe(Effect.catch(() => Effect.succeed([]))),
+      { concurrency: 2 },
+    );
     for (const item of supplements.flat()) {
       if (ranked.has(item.id)) continue;
       const score = titleScore(key, item);

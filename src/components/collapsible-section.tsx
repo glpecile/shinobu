@@ -1,5 +1,12 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { createContext, useContext, useRef, type ComponentProps, type ReactNode, type RefObject } from 'react';
+import {
+  createContext,
+  useContext,
+  useRef,
+  type ComponentProps,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { Text, View, type ViewInstance } from 'react-native';
 import {
   useAnimatedReaction,
@@ -18,10 +25,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
-import {
-  setSectionCollapsed,
-  useSectionCollapsed,
-} from '@/state/prefs/collapsed-sections';
+import { setSectionCollapsed, useSectionCollapsed } from '@/state/prefs/collapsed-sections';
 
 const ScrollContext = createContext<{
   content: RefObject<ViewInstance | null>;
@@ -34,7 +38,10 @@ function CollapsibleSectionScroll({
   children,
   onRefresh,
   ...props
-}: Omit<ComponentProps<typeof RefreshableScrollView>, 'onScroll' | 'scrollEventThrottle' | 'onRefresh'> & {
+}: Omit<
+  ComponentProps<typeof RefreshableScrollView>,
+  'onScroll' | 'scrollEventThrottle' | 'onRefresh'
+> & {
   onRefresh?: () => Promise<unknown>;
 }) {
   const content = useRef<ViewInstance>(null);
@@ -68,7 +75,9 @@ function CollapsibleSectionScroll({
       {onRefresh == null ? (
         <GestureScrollView {...scrollProps}>{contentView}</GestureScrollView>
       ) : (
-        <RefreshableScrollView {...scrollProps} onRefresh={onRefresh}>{contentView}</RefreshableScrollView>
+        <RefreshableScrollView {...scrollProps} onRefresh={onRefresh}>
+          {contentView}
+        </RefreshableScrollView>
       )}
     </ScrollContext.Provider>
   );
@@ -113,13 +122,21 @@ export function CollapsibleSection({
   const sticky = useAnimatedStyle(() => {
     if (!_WORKLET || scrollY == null || contentY == null) return {};
     return {
-      transform: [{ translateY: Math.max(0, Math.min(scrollY.get() - contentY.get() - top.get(), sectionHeight.get() - headerHeight.get())) }],
+      transform: [
+        {
+          translateY: Math.max(
+            0,
+            Math.min(
+              scrollY.get() - contentY.get() - top.get(),
+              sectionHeight.get() - headerHeight.get(),
+            ),
+          ),
+        },
+      ],
     };
   });
   const collapsed = useSectionCollapsed(collapseKey);
-  const toggle = useDisclosureToggle(() =>
-    setSectionCollapsed(collapseKey, !collapsed),
-  );
+  const toggle = useDisclosureToggle(() => setSectionCollapsed(collapseKey, !collapsed));
 
   return (
     <View
@@ -128,7 +145,10 @@ export function CollapsibleSection({
       ref={section}
     >
       <AnimatedView
-        className={cn('flex-row items-center justify-between px-4 mb-3', scroll && 'z-10 mb-0 pb-3 bg-background web:sticky web:top-0 web:-mt-3 web:pt-3')}
+        className={cn(
+          'flex-row items-center justify-between px-4 mb-3',
+          scroll && 'z-10 mb-0 pb-3 bg-background web:sticky web:top-0 web:-mt-3 web:pt-3',
+        )}
         onLayout={(event) => headerHeight.set(event.nativeEvent.layout.height)}
         style={sticky}
       >

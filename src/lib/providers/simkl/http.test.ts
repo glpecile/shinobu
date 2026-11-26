@@ -42,9 +42,7 @@ describe('simklHttp', () => {
   });
 
   test('401 maps to ProviderAuthError as a dead session, with no retry', async () => {
-    const { deps, calls } = makeDeps(
-      () => new Response(null, { status: 401 }),
-    );
+    const { deps, calls } = makeDeps(() => new Response(null, { status: 401 }));
     const error = await Effect.runPromise(
       Effect.flip(simklHttp(deps, '/sync/all-items', { accessToken: 'tok-x' })),
     );
@@ -57,8 +55,11 @@ describe('simklHttp', () => {
   });
 
   test('429 maps to ProviderRateLimitError, carrying Retry-After when sent', async () => {
-    const { deps } = makeDeps(
-      () => Response.json({ error: 'user_limit_exceeded' }, { status: 429, headers: { 'Retry-After': '3' } }),
+    const { deps } = makeDeps(() =>
+      Response.json(
+        { error: 'user_limit_exceeded' },
+        { status: 429, headers: { 'Retry-After': '3' } },
+      ),
     );
     const error = await Effect.runPromise(Effect.flip(simklHttp(deps, '/sync/history')));
     expect(error._tag).toBe('ProviderRateLimitError');
@@ -68,26 +69,28 @@ describe('simklHttp', () => {
   });
 
   test('a burst 429 ignores the daily reset header so the queue can retry shortly', async () => {
-    const { deps } = makeDeps(() => Response.json({ error: 'rate_limit' }, {
-      status: 429, headers: { 'Retry-After': '45000' },
-    }));
+    const { deps } = makeDeps(() =>
+      Response.json(
+        { error: 'rate_limit' },
+        {
+          status: 429,
+          headers: { 'Retry-After': '45000' },
+        },
+      ),
+    );
     const error = await Effect.runPromise(Effect.flip(simklHttp(deps, '/sync/history')));
     expect(error._tag).toBe('ProviderRateLimitError');
     if (error._tag === 'ProviderRateLimitError') expect(error.retryAfterMs).toBeUndefined();
   });
 
   test('400 with a rate_limit body maps to ProviderRateLimitError (write lock)', async () => {
-    const { deps } = makeDeps(
-      () => Response.json({ error: 'RATE_LIMIT' }, { status: 400 }),
-    );
+    const { deps } = makeDeps(() => Response.json({ error: 'RATE_LIMIT' }, { status: 400 }));
     const error = await Effect.runPromise(Effect.flip(simklHttp(deps, '/sync/history')));
     expect(error._tag).toBe('ProviderRateLimitError');
   });
 
   test('other 400s map to ProviderNetworkError with the status', async () => {
-    const { deps } = makeDeps(
-      () => Response.json({ error: 'bad_request' }, { status: 400 }),
-    );
+    const { deps } = makeDeps(() => Response.json({ error: 'bad_request' }, { status: 400 }));
     const error = await Effect.runPromise(Effect.flip(simklHttp(deps, '/sync/history')));
     expect(error._tag).toBe('ProviderNetworkError');
     if (error._tag === 'ProviderNetworkError') {

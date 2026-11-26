@@ -21,33 +21,29 @@ const SOURCE: ProviderId = 'trakt';
 
 describe('resolveQuickLog', () => {
   test('every provider succeeding settles quietly', () => {
-    expect(
-      resolveQuickLog(result({ succeeded: ['trakt', 'serializd'] }), SOURCE),
-    ).toEqual({ phase: 'settling', notice: null });
+    expect(resolveQuickLog(result({ succeeded: ['trakt', 'serializd'] }), SOURCE)).toEqual({
+      phase: 'settling',
+      notice: null,
+    });
   });
 
   test('source ok + another provider failing still settles, and names the failure', () => {
     expect(
-      resolveQuickLog(
-        result({ succeeded: ['trakt'], failed: ['serializd'] }),
-        SOURCE,
-      ),
+      resolveQuickLog(result({ succeeded: ['trakt'], failed: ['serializd'] }), SOURCE),
     ).toEqual({ phase: 'settling', notice: 'Failed on Serializd.' });
   });
 
   test('source failing does not advance, even when another provider succeeded', () => {
     expect(
-      resolveQuickLog(
-        result({ succeeded: ['serializd'], failed: ['trakt'] }),
-        SOURCE,
-      ),
+      resolveQuickLog(result({ succeeded: ['serializd'], failed: ['trakt'] }), SOURCE),
     ).toEqual({ phase: 'failed', notice: 'Failed on Trakt.' });
   });
 
   test('a skipped source counts as ok — that provider already had the watch', () => {
-    expect(
-      resolveQuickLog(result({ skipped: ['trakt'], succeeded: [] }), SOURCE),
-    ).toEqual({ phase: 'settling', notice: null });
+    expect(resolveQuickLog(result({ skipped: ['trakt'], succeeded: [] }), SOURCE)).toEqual({
+      phase: 'settling',
+      notice: null,
+    });
   });
 
   test('a source that reported nothing at all is blamed rather than advanced', () => {

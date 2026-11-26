@@ -3,7 +3,12 @@ import { describe, expect, test } from 'bun:test';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { airedAnimeEpisodes, catchUpEpisodeCode, catchUpQueue, catalogueCatchUpQueue } from './queue';
+import {
+  airedAnimeEpisodes,
+  catchUpEpisodeCode,
+  catchUpQueue,
+  catalogueCatchUpQueue,
+} from './queue';
 
 const item = (extra: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem => ({
   id: 'x-1',
@@ -46,22 +51,33 @@ describe('catchUpQueue', () => {
   });
 
   test('detail-page queues stay after the requested episode, ordered across seasons without specials', () => {
-    expect(catalogueCatchUpQueue({ season: 1, number: 3 }, [
-      { season: 2, number: 2 }, { season: 0, number: 4 },
-      { season: 1, number: 1 }, { season: 2, number: 1 },
+    expect(
+      catalogueCatchUpQueue({ season: 1, number: 3 }, [
+        { season: 2, number: 2 },
+        { season: 0, number: 4 },
+        { season: 1, number: 1 },
+        { season: 2, number: 1 },
+        { season: 1, number: 3 },
+      ]),
+    ).toEqual([
       { season: 1, number: 3 },
-    ])).toEqual([
-      { season: 1, number: 3 }, { season: 2, number: 1 }, { season: 2, number: 2 },
+      { season: 2, number: 1 },
+      { season: 2, number: 2 },
     ]);
-    expect(catalogueCatchUpQueue({ season: 0, number: 1 }, [
-      { season: 1, number: 1 },
-    ])).toEqual([{ season: 0, number: 1 }]);
+    expect(catalogueCatchUpQueue({ season: 0, number: 1 }, [{ season: 1, number: 1 }])).toEqual([
+      { season: 0, number: 1 },
+    ]);
   });
 
   test('entry-relative detail queues preserve gaps and never fabricate a canonical season', () => {
-    expect(catalogueCatchUpQueue({ number: 3 }, [
-      { number: 6 }, { number: 2 }, { number: 3 }, { number: 4 },
-    ])).toEqual([{ number: 3 }, { number: 4 }, { number: 6 }]);
+    expect(
+      catalogueCatchUpQueue({ number: 3 }, [
+        { number: 6 },
+        { number: 2 },
+        { number: 3 },
+        { number: 4 },
+      ]),
+    ).toEqual([{ number: 3 }, { number: 4 }, { number: 6 }]);
     expect(catalogueCatchUpQueue({ number: 3 }, [])).toEqual([{ number: 3 }]);
   });
 

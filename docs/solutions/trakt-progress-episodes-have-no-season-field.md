@@ -18,16 +18,14 @@ lives only on the enclosing season object:
   "seasons": [
     {
       "number": 1,
-      "episodes": [
-        { "number": 1, "completed": true, "last_watched_at": "..." }
-      ]
+      "episodes": [{ "number": 1, "completed": true, "last_watched_at": "..." }]
     }
   ]
 }
 ```
 
 This differs from the `/shows/:id/seasons?extended=full,episodes` catalogue
-payload, whose episodes *do* carry their own `season` field — easy to assume
+payload, whose episodes _do_ carry their own `season` field — easy to assume
 the progress endpoint matches, and it doesn't.
 
 `normalizeWatchedProgress` built its watched keys from `episode.season`, so

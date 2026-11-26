@@ -95,35 +95,32 @@ export function EpisodeHeading({
         align={align}
         className="mt-1.5"
         parts={[
-          episode.firstAired != null && <MetaLine.Part icon="calendar-outline">{formatAirDate(episode.firstAired)}</MetaLine.Part>,
-          episode.runtime != null && <MetaLine.Part icon="time-outline">{`${episode.runtime} min`}</MetaLine.Part>,
+          episode.firstAired != null && (
+            <MetaLine.Part icon="calendar-outline">
+              {formatAirDate(episode.firstAired)}
+            </MetaLine.Part>
+          ),
+          episode.runtime != null && (
+            <MetaLine.Part icon="time-outline">{`${episode.runtime} min`}</MetaLine.Part>
+          ),
         ]}
       />
     </View>
   );
 }
 
-export function EpisodeLogs({
-  logs,
-  className,
-}: {
-  logs: EpisodeLog[];
-  className?: string;
-}) {
+export function EpisodeLogs({ logs, className }: { logs: EpisodeLog[]; className?: string }) {
   const accent = useThemeColor('--color-accent');
   if (logs.length === 0) return null;
   const labels = logs.map((log) => PROVIDERS[log.provider].label);
-  const names = labels.length === 1 ? labels[0] : `${labels.slice(0, -1).join(', ')} & ${labels.at(-1)}`;
+  const names =
+    labels.length === 1 ? labels[0] : `${labels.slice(0, -1).join(', ')} & ${labels.at(-1)}`;
   const watchedAt = logs
     .flatMap((log) => (log.watchedAt != null ? [log.watchedAt] : []))
     .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
   return (
     <View className={cn('flex-row items-center gap-2', className)}>
-      <Ionicons
-        color={accent}
-        name="eye"
-        size={14}
-      />
+      <Ionicons color={accent} name="eye" size={14} />
       {logs.map((log) => (
         <ProviderIcon id={log.provider} key={log.provider} size={16} />
       ))}
@@ -191,11 +188,7 @@ function EpisodeCredits({
         }))}
         title="Crew"
       />
-      <PersonCreditSheet
-        credit={credit}
-        onClose={() => setCreditOpen(false)}
-        open={creditOpen}
-      />
+      <PersonCreditSheet credit={credit} onClose={() => setCreditOpen(false)} open={creditOpen} />
     </>
   );
 }
@@ -222,7 +215,11 @@ export const EpisodeStep = createContext<((target: EpisodeRef) => void) | null>(
 export function useGoToEpisode() {
   const router = useRouter();
   const step = use(EpisodeStep);
-  return step ?? ((target: EpisodeRef) => router.setParams({ episode: [String(target.season), String(target.number)] }));
+  return (
+    step ??
+    ((target: EpisodeRef) =>
+      router.setParams({ episode: [String(target.season), String(target.number)] }))
+  );
 }
 
 export function EpisodeNavigation({
@@ -248,7 +245,10 @@ export function EpisodeNavigation({
     go(target);
   }
   return (
-    <View className="absolute self-center web:self-end web:mr-4 flex-row items-center gap-2" style={{ bottom: insets.bottom + 12 }}>
+    <View
+      className="absolute self-center web:self-end web:mr-4 flex-row items-center gap-2"
+      style={{ bottom: insets.bottom + 12 }}
+    >
       <Button.Capsule className="w-52" floating>
         <Button
           disabled={prev == null}
@@ -259,7 +259,9 @@ export function EpisodeNavigation({
           variant="ghost"
         />
         <View className="flex-1 items-center">
-          <MorphText className="font-sans-semibold text-lg text-foreground self-center">{episodeCode(season, number)}</MorphText>
+          <MorphText className="font-sans-semibold text-lg text-foreground self-center">
+            {episodeCode(season, number)}
+          </MorphText>
         </View>
         <Button
           disabled={next == null}
@@ -274,13 +276,18 @@ export function EpisodeNavigation({
         className="relative"
         onPointerEnter={() => setShowSeriesHint(true)}
         onPointerLeave={() => setShowSeriesHint(false)}
-        {...(process.env.EXPO_OS === 'web' ? {
-          onFocus: () => setShowSeriesHint(true),
-          onBlur: () => setShowSeriesHint(false),
-        } : {})}
+        {...(process.env.EXPO_OS === 'web'
+          ? {
+              onFocus: () => setShowSeriesHint(true),
+              onBlur: () => setShowSeriesHint(false),
+            }
+          : {})}
       >
         {process.env.EXPO_OS === 'web' && showSeriesHint && (
-          <View className="absolute bottom-full right-0 mb-2 px-3 py-2 rounded-md border border-border bg-surface shadow-sm" style={{ pointerEvents: 'none' }}>
+          <View
+            className="absolute bottom-full right-0 mb-2 px-3 py-2 rounded-md border border-border bg-surface shadow-sm"
+            style={{ pointerEvents: 'none' }}
+          >
             <Text className="font-sans text-xs text-foreground whitespace-nowrap">View series</Text>
           </View>
         )}

@@ -1,10 +1,4 @@
-import {
-  DropdownMenu,
-  DropdownMenuItem,
-  Host,
-  RNHostView,
-  Text,
-} from '@expo/ui/jetpack-compose';
+import { DropdownMenu, DropdownMenuItem, Host, RNHostView, Text } from '@expo/ui/jetpack-compose';
 import { useState } from 'react';
 import { useColorScheme, View } from 'react-native';
 

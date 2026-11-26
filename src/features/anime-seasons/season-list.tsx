@@ -14,7 +14,11 @@ import { useWakeAt } from '@/lib/time/use-wake-at';
 import { setSectionCollapsed, useSectionCollapsed } from '@/state/prefs/collapsed-sections';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { useConnectedProviders } from '@/state/session';
-import { useItemProgress, useProgressLibraries, type ProgressLibraries } from '@/state/queries/media-progress';
+import {
+  useItemProgress,
+  useProgressLibraries,
+  type ProgressLibraries,
+} from '@/state/queries/media-progress';
 import { findLibraryEntry } from '@/state/queries/simkl';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -47,12 +51,14 @@ const SHELF_ICON = {
 const HEAD_HEIGHT = 64;
 
 function libraryStatus(item: NormalizedMediaItem, libraries: ProgressLibraries): LibraryStatus {
-  const anilist = libraries.connected.includes(Provider.AniList) && libraries.indexes.anilist != null
-    ? findAniListProgress(item, libraries.indexes.anilist)?.status
-    : undefined;
-  const simkl = libraries.connected.includes(Provider.Simkl) && libraries.indexes.simkl != null
-    ? findLibraryEntry(libraries.indexes.simkl, item)?.status
-    : undefined;
+  const anilist =
+    libraries.connected.includes(Provider.AniList) && libraries.indexes.anilist != null
+      ? findAniListProgress(item, libraries.indexes.anilist)?.status
+      : undefined;
+  const simkl =
+    libraries.connected.includes(Provider.Simkl) && libraries.indexes.simkl != null
+      ? findLibraryEntry(libraries.indexes.simkl, item)?.status
+      : undefined;
   if (anilist === 'CURRENT' || anilist === 'REPEATING' || simkl === 'watching') return 'watching';
   if (anilist === 'PLANNING' || simkl === 'plantowatch') return 'planned';
   return undefined;
@@ -60,7 +66,9 @@ function libraryStatus(item: NormalizedMediaItem, libraries: ProgressLibraries):
 
 function countLabel(row: Extract<SeasonRow, { kind: 'head' }>, now: Date): string {
   const count = `${row.count} ${row.count === 1 ? 'title' : 'titles'}`;
-  return !row.open && row.next != null ? `${count} · next ${airingWhen(row.next.airingAt, now)}` : count;
+  return !row.open && row.next != null
+    ? `${count} · next ${airingWhen(row.next.airingAt, now)}`
+    : count;
 }
 
 /** Only AniList and Simkl key anime by AniList/MAL ids; Trakt and Letterboxd records carry neither. */
@@ -69,7 +77,11 @@ function canShelve(connected: readonly ProviderId[]): boolean {
 }
 
 export function SeasonSkeleton({ animated }: { animated: boolean }) {
-  return canShelve(useConnectedProviders()) ? <ShelvesSkeleton animated={animated} /> : <WallSkeleton animated={animated} />;
+  return canShelve(useConnectedProviders()) ? (
+    <ShelvesSkeleton animated={animated} />
+  ) : (
+    <WallSkeleton animated={animated} />
+  );
 }
 
 function newDate(): Date {
@@ -108,15 +120,23 @@ export function SeasonList({
   const [now, refreshNow] = useReducer(newDate, undefined, newDate);
   const soonest = Math.min(
     localDayAt(1, now).getTime(),
-    ...Object.values(nextAiring).map((next) => Date.parse(next.airingAt)).filter((at) => at > now.getTime()),
+    ...Object.values(nextAiring)
+      .map((next) => Date.parse(next.airingAt))
+      .filter((at) => at > now.getTime()),
   );
   useWakeAt(soonest, now, refreshNow);
 
-  const settling = [libraries.queries.anilist, libraries.queries.simkl].some((query) => query.isEnabled && query.isPending);
+  const settling = [libraries.queries.anilist, libraries.queries.simkl].some(
+    (query) => query.isEnabled && query.isPending,
+  );
   if (settling) return <SeasonSkeleton animated={active} />;
-  const failedLibraries = [libraries.queries.anilist, libraries.queries.simkl].filter((query) => query.isEnabled && query.isError);
+  const failedLibraries = [libraries.queries.anilist, libraries.queries.simkl].filter(
+    (query) => query.isEnabled && query.isError,
+  );
 
-  const progressById = new Map(progress.items.map((item, index) => [item.id, progress.progress[index]]));
+  const progressById = new Map(
+    progress.items.map((item, index) => [item.id, progress.progress[index]]),
+  );
   const rows = seasonRows(
     progress.items,
     (item) => {
@@ -145,12 +165,33 @@ export function SeasonList({
       onEndReachedThreshold={0.6}
       // docs/solutions/diary-scroll-jank-is-row-mount-cost.md — poster cells are keyed by column for reuse.
       recycleItems
-      ListHeaderComponent={failedLibraries.length > 0 ? (
-        <View className="items-center mt-3 mb-4">
-          <Button icon={<Button.Icon name="refresh" />} label="Couldn’t load your library" onPress={() => { void Promise.all(failedLibraries.map((query) => query.refetch())); }} size="sm" variant="quiet" />
-        </View>
-      ) : undefined}
-      refreshControl={<RefreshControl onRefresh={() => Promise.all([onRefresh(), ...[libraries.queries.anilist, libraries.queries.simkl].filter((query) => query.isEnabled).map((query) => query.refetch())])} />}
+      ListHeaderComponent={
+        failedLibraries.length > 0 ? (
+          <View className="items-center mt-3 mb-4">
+            <Button
+              icon={<Button.Icon name="refresh" />}
+              label="Couldn’t load your library"
+              onPress={() => {
+                void Promise.all(failedLibraries.map((query) => query.refetch()));
+              }}
+              size="sm"
+              variant="quiet"
+            />
+          </View>
+        ) : undefined
+      }
+      refreshControl={
+        <RefreshControl
+          onRefresh={() =>
+            Promise.all([
+              onRefresh(),
+              ...[libraries.queries.anilist, libraries.queries.simkl]
+                .filter((query) => query.isEnabled)
+                .map((query) => query.refetch()),
+            ])
+          }
+        />
+      }
       renderItem={({ item: row }) => {
         switch (row.kind) {
           case 'head':
@@ -160,7 +201,9 @@ export function SeasonList({
                 onToggle={() => setSectionCollapsed(`anime-seasons-${row.key}`, row.open)}
                 open={row.open}
               >
-                <RailHead.Icon name={SHELF_ICON[row.key]} showRail={false}>{SHELF_TITLE[row.key]}</RailHead.Icon>
+                <RailHead.Icon name={SHELF_ICON[row.key]} showRail={false}>
+                  {SHELF_TITLE[row.key]}
+                </RailHead.Icon>
                 <RailHead.Count>{countLabel(row, now)}</RailHead.Count>
               </RailHead>
             );
@@ -199,14 +242,31 @@ export function SeasonList({
   );
 }
 
-function ShelfList({ data, now, ...props }: Omit<ListProps<SeasonRow>, 'data' | 'onViewableItemsChanged'> & { data: readonly SeasonRow[]; now: Date }) {
-  const [pinned, setPinned] = useState<{ shelf: SeasonShelf | null; visible: boolean }>({ shelf: null, visible: false });
+function ShelfList({
+  data,
+  now,
+  ...props
+}: Omit<ListProps<SeasonRow>, 'data' | 'onViewableItemsChanged'> & {
+  data: readonly SeasonRow[];
+  now: Date;
+}) {
+  const [pinned, setPinned] = useState<{ shelf: SeasonShelf | null; visible: boolean }>({
+    shelf: null,
+    visible: false,
+  });
   const shelved = data.some((row) => row.kind === 'head');
   // A find, not a lookup Map: React Compiler would tie the Map, and with it the
   // list's viewability handler, to the pin, and hand the list a new handler per pin.
-  const pinnedHead = data.find((row): row is Extract<SeasonRow, { kind: 'head' }> => row.kind === 'head' && row.key === pinned.shelf);
+  const pinnedHead = data.find(
+    (row): row is Extract<SeasonRow, { kind: 'head' }> =>
+      row.kind === 'head' && row.key === pinned.shelf,
+  );
 
-  function handleViewableItemsChanged({ viewableItems }: { viewableItems: Array<{ index: number; item: SeasonRow }> }) {
+  function handleViewableItemsChanged({
+    viewableItems,
+  }: {
+    viewableItems: Array<{ index: number; item: SeasonRow }>;
+  }) {
     let top = viewableItems[0];
     for (const token of viewableItems) if (token.index < top.index) top = token;
     const shelf = top == null || top.item.kind === 'head' || !shelved ? null : top.item.shelf;

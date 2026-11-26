@@ -12,7 +12,7 @@ execution: code
 
 ## Goal Capsule
 
-- **Objective:** Six owner-requested fixes on the details/watchlist surfaces: (1) anime counts as watchlisted when CURRENT *or* PLANNING on AniList, reads and removal both; (2) the actor credit sheet drops its biography; (3) studio pills get a long-press sheet with open-in-provider links; (4) "Open in AniList" deep-links to resolved numeric-id pages and hides on miss — never a dead-end search; (5) person/studio filmography rows show release years; (6) a show with zero aired episodes reads "hasn't aired yet" instead of finished/rewatchable.
+- **Objective:** Six owner-requested fixes on the details/watchlist surfaces: (1) anime counts as watchlisted when CURRENT _or_ PLANNING on AniList, reads and removal both; (2) the actor credit sheet drops its biography; (3) studio pills get a long-press sheet with open-in-provider links; (4) "Open in AniList" deep-links to resolved numeric-id pages and hides on miss — never a dead-end search; (5) person/studio filmography rows show release years; (6) a show with zero aired episodes reads "hasn't aired yet" instead of finished/rewatchable.
 - **Authority:** AGENTS.md overrides this plan where they conflict. Non-negotiable inherited contracts: the AniList status gate (`docs/solutions/anilist-shared-list-query-status-gate.md`), the R36 fresh-read/fresh-id delete invariants (plan 0031), `src/lib/providers/external-urls.ts` purity (loaded under plain bun by `scripts/check-external-urls.ts`), and the `hasAired` timezone contract.
 - **Execution profile:** designed for delegated autonomous execution in dependency order U1→U7. Units are independent except U1→U2 and U4→U5; each is one landable commit. Run Verification Contract gates per unit.
 - **Stop conditions:** stop and surface (do not guess) if: AniList's `Page { staff/studios(search:) }` shapes disagree with the Planning Contract; the destructive-remove flow would require weakening the fresh-read/fresh-id invariants; or Letterboxd's `/studio/{slug}/` URL shape turns out not to exist for probe-tested studios.
@@ -71,7 +71,7 @@ Owner-reported friction from daily use (2026-08-01). An anime being actively wat
 ### Scope Boundaries
 
 - **Not touched:** Calendar/Up Next sources (PLANNING confinement stays exactly as-is); the `/person` route's full biography (`ExpandableText` stays); bulk watchlist removal (30 req/min budget, out per plan 0031); Trakt/Serializd/Simkl person or studio links (no such pages — `providerPersonUrl` already returns `null` for them).
-- **Deferred to Follow-Up Work:** an AniList staff-id carry-through for *people* in anime credits mirrors the studio-id carry (R12) — do it if it falls out naturally in U4, otherwise defer; a richer studio sheet (logo, description) — `NormalizedStudio` has neither field today.
+- **Deferred to Follow-Up Work:** an AniList staff-id carry-through for _people_ in anime credits mirrors the studio-id carry (R12) — do it if it falls out naturally in U4, otherwise defer; a richer studio sheet (logo, description) — `NormalizedStudio` has neither field today.
 
 ---
 
@@ -157,7 +157,7 @@ flowchart TB
 - **Requirements:** R6, R7.
 - **Dependencies:** none.
 - **Files:** `src/features/person/person-credit-sheet.tsx`.
-- **Approach:** remove the biography `Text` block inside `CreditBiography` and rename/reshape what remains (meta line + loading skeleton). Re-check the early-return guard that currently keys on meta *and* bio both being empty — it must now key on meta alone. The person query stays (R7). Shrink the skeleton to match the shorter content.
+- **Approach:** remove the biography `Text` block inside `CreditBiography` and rename/reshape what remains (meta line + loading skeleton). Re-check the early-return guard that currently keys on meta _and_ bio both being empty — it must now key on meta alone. The person query stays (R7). Shrink the skeleton to match the shorter content.
 - **Test scenarios:** none — pure JSX removal with no decision logic; the sheet's pure helpers are untouched. `Test expectation: none — presentational removal.`
 - **Verification:** `bun lint`, `bun check:classnames`; manual: long-press an actor — role, meta line, filmography row, links render; no bio; no blank gap when the person has no meta.
 
@@ -241,13 +241,13 @@ flowchart TB
 
 ## Verification Contract
 
-| Gate | Command | Applies to |
-|---|---|---|
-| Unit tests | `bun test` | every unit; U1, U2, U4, U5, U6, U7 add/extend colocated `*.test.ts` (pure modules, no renderer) |
-| Lint | `bun lint` | every unit |
-| className discipline | `bun check:classnames` | U2, U3, U5 (JSX-touching units) |
-| Navigation guard | `bun check:router-push` | U5 |
-| Link liveness | `bun check:links` | U4, U5 (new URL builders registered in the probe) |
+| Gate                 | Command                 | Applies to                                                                                      |
+| -------------------- | ----------------------- | ----------------------------------------------------------------------------------------------- |
+| Unit tests           | `bun test`              | every unit; U1, U2, U4, U5, U6, U7 add/extend colocated `*.test.ts` (pure modules, no renderer) |
+| Lint                 | `bun lint`              | every unit                                                                                      |
+| className discipline | `bun check:classnames`  | U2, U3, U5 (JSX-touching units)                                                                 |
+| Navigation guard     | `bun check:router-push` | U5                                                                                              |
+| Link liveness        | `bun check:links`       | U4, U5 (new URL builders registered in the probe)                                               |
 
 Manual QA per unit is listed in each unit's Verification line; run on the iOS simulator (the Android AVD starves on this host). Behavioral gates that cannot be unit-tested (sheet presentation, long-press, morph labels) are manual-only by repo convention — tests never render.
 

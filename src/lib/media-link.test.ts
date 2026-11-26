@@ -12,7 +12,10 @@ describe('incoming media links', () => {
     ['https://hardcover.app/books/no-longer-human', '/details/hardcover/books-no-longer-human'],
     ['https://hardcover.app/authors/osamu-dazai', '/person/hardcover/authors-osamu-dazai'],
     ['https://www.imdb.com/name/nm0000001/?ref_=share', '/person/imdb/nm0000001'],
-    ['shinobu://open?url=https%3A%2F%2Fletterboxd.com%2Ffilm%2Falien%2F', '/details/letterboxd/alien'],
+    [
+      'shinobu://open?url=https%3A%2F%2Fletterboxd.com%2Ffilm%2Falien%2F',
+      '/details/letterboxd/alien',
+    ],
   ])('%s opens its exact media item', (path, expected) => {
     for (const initial of [true, false]) {
       expect(redirectSystemPath({ path, initial })).toBe(expected);

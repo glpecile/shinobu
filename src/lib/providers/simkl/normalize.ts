@@ -94,12 +94,7 @@ export interface SimklAllItemsResponse {
 
 export type SimklLibraryBucket = 'shows' | 'movies' | 'anime';
 
-export type SimklWatchStatus =
-  | 'watching'
-  | 'plantowatch'
-  | 'hold'
-  | 'completed'
-  | 'dropped';
+export type SimklWatchStatus = 'watching' | 'plantowatch' | 'hold' | 'completed' | 'dropped';
 
 const SIMKL_WATCH_STATUSES: readonly SimklWatchStatus[] = [
   'watching',
@@ -408,8 +403,12 @@ function watchedEpisodesFrom(raw: SimklAllItemsEntry): SimklWatchedEpisode[] {
       episodes.push({
         season: season.number,
         number: episode.number,
-        ...(mappedSeason != null && Number.isInteger(mappedSeason) && mappedSeason >= 0 &&
-        mappedEpisode != null && Number.isInteger(mappedEpisode) && mappedEpisode > 0
+        ...(mappedSeason != null &&
+        Number.isInteger(mappedSeason) &&
+        mappedSeason >= 0 &&
+        mappedEpisode != null &&
+        Number.isInteger(mappedEpisode) &&
+        mappedEpisode > 0
           ? { canonical: { season: mappedSeason, number: mappedEpisode } }
           : {}),
         ...(episode.watched_at != null && episode.watched_at !== ''
@@ -443,9 +442,7 @@ export function normalizeLibraryEntry(
     // Movies carry no episode count; a completed movie is one play.
     (type === 'MOVIE' && status === 'completed' ? 1 : 0);
   const lastWatchedAt =
-    raw.last_watched_at != null && raw.last_watched_at !== ''
-      ? raw.last_watched_at
-      : undefined;
+    raw.last_watched_at != null && raw.last_watched_at !== '' ? raw.last_watched_at : undefined;
   const addedToWatchlistAt =
     raw.added_to_watchlist_at != null && raw.added_to_watchlist_at !== ''
       ? raw.added_to_watchlist_at
@@ -465,9 +462,7 @@ export function normalizeLibraryEntry(
       ...(isFilm ? { isFilm } : {}),
       currentProgress: watchedCount,
       progressUnit: 'episode',
-      ...(raw.total_episodes_count != null
-        ? { totalEpisodes: raw.total_episodes_count }
-        : {}),
+      ...(raw.total_episodes_count != null ? { totalEpisodes: raw.total_episodes_count } : {}),
       lastUpdated: lastWatchedAt ?? addedToWatchlistAt ?? nowIso,
       externalIds: externalIdsFrom(media.ids),
     },
@@ -484,18 +479,13 @@ export function normalizeLibraryEntry(
     ...(raw.not_aired_episodes_count != null
       ? { notAiredEpisodes: raw.not_aired_episodes_count }
       : {}),
-    watchedKeys: new Set(
-      watchedEpisodes.map((episode) => `${episode.season}-${episode.number}`),
-    ),
+    watchedKeys: new Set(watchedEpisodes.map((episode) => `${episode.season}-${episode.number}`)),
     watchedEpisodes,
     ...(nextToWatch != null ? { nextToWatch } : {}),
   };
 }
 
-export function normalizeAllItems(
-  raw: SimklAllItemsResponse,
-  nowIso: string,
-): SimklLibrary {
+export function normalizeAllItems(raw: SimklAllItemsResponse, nowIso: string): SimklLibrary {
   const bucket = (key: SimklLibraryBucket): SimklLibraryEntry[] =>
     (raw[key] ?? [])
       .map((entry) => normalizeLibraryEntry(entry, key, nowIso))
@@ -520,8 +510,7 @@ export function normalizeCalendarFile(raw: SimklCalendarFile): SimklCalendarEntr
     if (simklId == null || date == null || date === '') continue;
 
     const meta = metadata[String(simklId)];
-    const finaleType =
-      entry.finale_type != null ? FINALE_TYPES[entry.finale_type] : undefined;
+    const finaleType = entry.finale_type != null ? FINALE_TYPES[entry.finale_type] : undefined;
     const episode =
       entry.episode?.episode != null
         ? {
@@ -543,8 +532,7 @@ export function normalizeCalendarFile(raw: SimklCalendarFile): SimklCalendarEntr
       // a tracked show's airing.
       title: meta?.title ?? '',
       poster: simklPosterUrl(meta?.poster),
-      externalIds:
-        meta?.ids != null ? externalIdsFrom(meta.ids) : { simkl: simklId },
+      externalIds: meta?.ids != null ? externalIdsFrom(meta.ids) : { simkl: simklId },
       ...(meta?.anime_type != null ? { animeType: meta.anime_type } : {}),
       ...(meta?.total_episodes != null ? { totalEpisodes: meta.total_episodes } : {}),
     });
@@ -592,7 +580,9 @@ export function normalizeTrendingItem(
     // probe 2026-07-31) — the year derives from it.
     ...(releaseDate != null ? { year: Number(releaseDate.slice(0, 4)) } : {}),
     ...(raw.genres != null && raw.genres.length > 0 ? { genres: raw.genres } : {}),
-    ...(raw.ratings?.simkl != null ? { ratings: normalizeRatings({ simkl: raw.ratings.simkl }) } : {}),
+    ...(raw.ratings?.simkl != null
+      ? { ratings: normalizeRatings({ simkl: raw.ratings.simkl }) }
+      : {}),
     type,
     ...(isFilm ? { isFilm } : {}),
     ...(releaseDate != null ? { releaseDate } : {}),
@@ -610,13 +600,15 @@ function simklScore(
   rank?: number | null,
 ): NormalizedRating[] {
   if (score?.rating == null || score.rating <= 0) return [];
-  return [{
-    source,
-    value: score.rating,
-    scale: 10,
-    ...(score.votes != null && score.votes > 0 ? { votes: score.votes } : {}),
-    ...(rank != null ? { rank } : {}),
-  }];
+  return [
+    {
+      source,
+      value: score.rating,
+      scale: 10,
+      ...(score.votes != null && score.votes > 0 ? { votes: score.votes } : {}),
+      ...(rank != null ? { rank } : {}),
+    },
+  ];
 }
 
 /** Simkl's own score plus the IMDb (movies, TV) or MAL (anime) score it mirrors. */
@@ -670,9 +662,7 @@ export function normalizeSearchIdMatch(
   };
 }
 
-function activityBucket(
-  raw: SimklActivityBucketRaw | null | undefined,
-): SimklActivityBucket {
+function activityBucket(raw: SimklActivityBucketRaw | null | undefined): SimklActivityBucket {
   return {
     all: raw?.all ?? null,
     removedFromList: raw?.removed_from_list ?? null,

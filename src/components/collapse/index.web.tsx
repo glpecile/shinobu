@@ -30,9 +30,7 @@ export function Collapse({ open, children }: { open: boolean; children: ReactNod
         transitionTimingFunction: EASE_IN_OUT,
       }}
     >
-      <View onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}>
-        {children}
-      </View>
+      <View onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}>{children}</View>
     </AnimatedView>
   );
 }

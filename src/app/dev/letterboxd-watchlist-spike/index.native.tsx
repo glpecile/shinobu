@@ -27,12 +27,10 @@ export default function LetterboxdWatchlistSpikeScreen() {
   if (!hasSession) {
     return (
       <View className={cn('flex-1 bg-background px-6', screenHeaderTopPadding)}>
-        <Text className="text-2xl font-display text-foreground">
-          Connect Letterboxd first
-        </Text>
+        <Text className="text-2xl font-display text-foreground">Connect Letterboxd first</Text>
         <Text className="text-muted font-sans mt-3">
-          The capture only means anything inside a signed-in session — that is the
-          whole reason the spike runs in a WebView rather than over fetch.
+          The capture only means anything inside a signed-in session — that is the whole reason the
+          spike runs in a WebView rather than over fetch.
         </Text>
       </View>
     );
@@ -41,9 +39,7 @@ export default function LetterboxdWatchlistSpikeScreen() {
   return (
     <KeyboardAvoidingView className="flex-1 bg-background">
       <View className={cn('px-4 gap-2', screenHeaderTopPadding, 'pb-2')}>
-        <Text className="text-2xl font-display text-foreground">
-          Watchlist capture (U6)
-        </Text>
+        <Text className="text-2xl font-display text-foreground">Watchlist capture (U6)</Text>
         {/* Keep short: Letterboxd's fixed actions panel clips its icon row unless the WebView gets most of the viewport. */}
         <Text className="text-muted font-sans text-sm">
           Tap the site&rsquo;s own watchlist control — add, then remove.

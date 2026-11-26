@@ -20,7 +20,12 @@ import { useHiddenLists, visibleByIds } from '@/state/prefs/hidden-items';
 import { useHardcoverListsPrompt } from './hardcover-lists-prompt';
 import { LIST_CARD_TEXT_HEIGHT, ListCard, NewListCard } from './list-card';
 import { ListSheet, useListSheet } from './list-sheet';
-import { hardcoverListSummary, letterboxdListSummary, serializdListSummary, type ListSummary } from './list-summary';
+import {
+  hardcoverListSummary,
+  letterboxdListSummary,
+  serializdListSummary,
+  type ListSummary,
+} from './list-summary';
 import { POSTER_STACK_RATIO } from './poster-stack';
 
 const CARD_WIDTH = 240;
@@ -32,7 +37,9 @@ export function listsTitle(kind: LetterboxdListKind) {
 export function ListCardSkeleton({ delay }: { delay: number }) {
   return (
     <View>
-      <View style={{ aspectRatio: POSTER_STACK_RATIO }}><Skeleton className="w-full h-full rounded-md" delay={delay} /></View>
+      <View style={{ aspectRatio: POSTER_STACK_RATIO }}>
+        <Skeleton className="w-full h-full rounded-md" delay={delay} />
+      </View>
       <Skeleton className="h-4 w-3/4 rounded mt-2.5" delay={delay} />
       <Skeleton className="h-3 w-1/2 rounded mt-2" delay={delay} />
     </View>
@@ -44,35 +51,82 @@ export function ListsRowSkeleton() {
     <View className="mb-6">
       <Skeleton className="h-7 w-40 rounded mx-4 mb-3" />
       <Rail className="px-4">
-        {[0, 1, 2].map((index) => <View className="w-60 mr-4" key={index}><ListCardSkeleton delay={staggerDelay(index)} /></View>)}
+        {[0, 1, 2].map((index) => (
+          <View className="w-60 mr-4" key={index}>
+            <ListCardSkeleton delay={staggerDelay(index)} />
+          </View>
+        ))}
       </Rail>
     </View>
   );
 }
 
-export function LetterboxdListsRow({ username, kind }: { username: string; kind: LetterboxdListKind }) {
+export function LetterboxdListsRow({
+  username,
+  kind,
+}: {
+  username: string;
+  kind: LetterboxdListKind;
+}) {
   const pages = useSuspenseLetterboxdListsQuery(username, kind);
-  return <ListsRail indexHref={routes.letterboxdLists(kind)} kind={kind} lists={(pages.data?.pages[0]?.lists ?? []).map(letterboxdListSummary)} provider={Provider.Letterboxd} />;
+  return (
+    <ListsRail
+      indexHref={routes.letterboxdLists(kind)}
+      kind={kind}
+      lists={(pages.data?.pages[0]?.lists ?? []).map(letterboxdListSummary)}
+      provider={Provider.Letterboxd}
+    />
+  );
 }
 
-export function SerializdListsRow({ username, kind }: { username: string; kind: SerializdListKind }) {
+export function SerializdListsRow({
+  username,
+  kind,
+}: {
+  username: string;
+  kind: SerializdListKind;
+}) {
   const pages = useSuspenseSerializdListsQuery(username, kind);
-  return <ListsRail indexHref={routes.serializdLists(kind)} kind={kind} lists={pages.data.pages[0].lists.map(serializdListSummary)} provider={Provider.Serializd} />;
+  return (
+    <ListsRail
+      indexHref={routes.serializdLists(kind)}
+      kind={kind}
+      lists={pages.data.pages[0].lists.map(serializdListSummary)}
+      provider={Provider.Serializd}
+    />
+  );
 }
 
 export function HardcoverListsRow({ kind }: { kind: HardcoverListKind }) {
   const lists = useSuspenseHardcoverListsQuery(kind);
-  return <ListsRail indexHref={routes.hardcoverLists(kind)} kind={kind} lists={lists.data.map(hardcoverListSummary)} provider={Provider.Hardcover} />;
+  return (
+    <ListsRail
+      indexHref={routes.hardcoverLists(kind)}
+      kind={kind}
+      lists={lists.data.map(hardcoverListSummary)}
+      provider={Provider.Hardcover}
+    />
+  );
 }
 
 export function HardcoverListsReconnectRow() {
   const pushRoute = usePushRoute();
   const prompt = useHardcoverListsPrompt();
   return (
-    <CollapsibleSection collapseKey={`${Provider.Hardcover}-created-lists`} leading={<ProviderIcon id={Provider.Hardcover} size={16} />} title={listsTitle('created')}>
+    <CollapsibleSection
+      collapseKey={`${Provider.Hardcover}-created-lists`}
+      leading={<ProviderIcon id={Provider.Hardcover} size={16} />}
+      title={listsTitle('created')}
+    >
       <View className="px-4 gap-3 items-start">
         <Text className="text-muted font-sans text-sm">{prompt.body}</Text>
-        <Button icon={<Button.Icon name="link-outline" />} label="Reconnect Hardcover" onPress={() => pushRoute(routes.hardcoverLists('created'))} size="sm" variant="quiet" />
+        <Button
+          icon={<Button.Icon name="link-outline" />}
+          label="Reconnect Hardcover"
+          onPress={() => pushRoute(routes.hardcoverLists('created'))}
+          size="sm"
+          variant="quiet"
+        />
       </View>
     </CollapsibleSection>
   );
@@ -80,7 +134,12 @@ export function HardcoverListsReconnectRow() {
 
 type RailItem = ListSummary | { id: 'new' };
 
-function ListsRail({ lists: allLists, provider, kind, indexHref }: {
+function ListsRail({
+  lists: allLists,
+  provider,
+  kind,
+  indexHref,
+}: {
   lists: ListSummary[];
   provider: ListSummary['provider'];
   kind: 'created' | 'liked';
@@ -95,28 +154,41 @@ function ListsRail({ lists: allLists, provider, kind, indexHref }: {
   const items: RailItem[] = kind === 'created' ? [{ id: 'new' }, ...lists] : lists;
   return (
     <CollapsibleSection
-      action={allLists.length > 0 ? <ViewAllLink onPress={() => pushRoute(indexHref)} title={title} /> : undefined}
+      action={
+        allLists.length > 0 ? (
+          <ViewAllLink onPress={() => pushRoute(indexHref)} title={title} />
+        ) : undefined
+      }
       collapseKey={`${provider}-${kind}-lists`}
       leading={<ProviderIcon id={provider} size={16} />}
       title={title}
     >
       {items.length === 0 ? (
-        <Text className="px-4 text-muted font-sans text-sm">All of these lists are hidden. Unhide them in Settings, or open View all.</Text>
-      ) : <VirtualizedRail
-        data={items}
-        estimatedItemSize={CARD_WIDTH + 16}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={<View className="w-4" />}
-        ListFooterComponent={<View className="w-1" />}
-        renderItem={({ item }) => (
-          <View className="w-60 mr-4">
-            {'title' in item
-              ? <ListCard list={item} onActions={openList} onPress={() => pushRoute(item.href)} />
-              : <NewListCard onPress={() => pushRoute(routes.newList(provider))} provider={provider} />}
-          </View>
-        )}
-        style={{ height: CARD_WIDTH / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale }}
-      />}
+        <Text className="px-4 text-muted font-sans text-sm">
+          All of these lists are hidden. Unhide them in Settings, or open View all.
+        </Text>
+      ) : (
+        <VirtualizedRail
+          data={items}
+          estimatedItemSize={CARD_WIDTH + 16}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={<View className="w-4" />}
+          ListFooterComponent={<View className="w-1" />}
+          renderItem={({ item }) => (
+            <View className="w-60 mr-4">
+              {'title' in item ? (
+                <ListCard list={item} onActions={openList} onPress={() => pushRoute(item.href)} />
+              ) : (
+                <NewListCard
+                  onPress={() => pushRoute(routes.newList(provider))}
+                  provider={provider}
+                />
+              )}
+            </View>
+          )}
+          style={{ height: CARD_WIDTH / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale }}
+        />
+      )}
       <ListSheet {...sheetProps} />
     </CollapsibleSection>
   );

@@ -9,7 +9,12 @@ export interface NativeSwitchProps {
   value: boolean;
 }
 
-export function NativeSwitch({ accessibilityLabel, disabled, onValueChange, value }: NativeSwitchProps) {
+export function NativeSwitch({
+  accessibilityLabel,
+  disabled,
+  onValueChange,
+  value,
+}: NativeSwitchProps) {
   const accent = useThemeColor('--color-accent');
   const accentForeground = useThemeColor('--color-accent-foreground');
   const border = useThemeColor('--color-border');

@@ -64,12 +64,12 @@ redirects, and the Letterboxd userscript opens tabs, not frames.
 
 ## Commands you will need
 
-| Purpose   | Command                                   | Expected on success |
-|-----------|-------------------------------------------|---------------------|
-| Install   | `bun install --frozen-lockfile`           | exit 0              |
-| Build web | `bun run build:web`                       | exit 0, `dist/_headers` exists |
-| Serve     | `bun run dev:worker`                      | wrangler prints a local URL (default `http://localhost:8787`) |
-| Inspect   | `curl -sI http://localhost:8787/`         | the new headers present |
+| Purpose   | Command                           | Expected on success                                           |
+| --------- | --------------------------------- | ------------------------------------------------------------- |
+| Install   | `bun install --frozen-lockfile`   | exit 0                                                        |
+| Build web | `bun run build:web`               | exit 0, `dist/_headers` exists                                |
+| Serve     | `bun run dev:worker`              | wrangler prints a local URL (default `http://localhost:8787`) |
+| Inspect   | `curl -sI http://localhost:8787/` | the new headers present                                       |
 
 ## Scope
 
@@ -77,6 +77,7 @@ redirects, and the Letterboxd userscript opens tabs, not frames.
 non-obvious Cloudflare behaviour, as `docs/solutions/web-security-headers.md`.
 
 **Out of scope**:
+
 - `worker/*.ts`: the proxies already set their own CSP and nosniff.
 - A `script-src`/`connect-src`/`img-src` CSP (follow-up).
 - `wrangler.jsonc`.

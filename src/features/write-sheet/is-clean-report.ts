@@ -1,7 +1,4 @@
-import {
-  okReasonOutcomes,
-  splitSkippedOutcomes,
-} from '@/features/log-media/manual-write-links';
+import { okReasonOutcomes, splitSkippedOutcomes } from '@/features/log-media/manual-write-links';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import type { ProviderId } from '@/lib/providers/types';
 

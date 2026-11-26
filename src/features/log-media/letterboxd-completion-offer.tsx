@@ -3,7 +3,15 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { useCatchUpControls } from '@/features/log-media/session/state';
 import type { LogRequest } from './log-request';
 
-export function LetterboxdCompletionOffer({ request, onClose, onOpenRequest }: { request: LogRequest; onClose: () => void; onOpenRequest?: (request: LogRequest) => void }) {
+export function LetterboxdCompletionOffer({
+  request,
+  onClose,
+  onOpenRequest,
+}: {
+  request: LogRequest;
+  onClose: () => void;
+  onOpenRequest?: (request: LogRequest) => void;
+}) {
   const { openLog } = useCatchUpControls();
   return (
     <>
@@ -12,7 +20,12 @@ export function LetterboxdCompletionOffer({ request, onClose, onOpenRequest }: {
       </WriteSheet.Header>
       <WriteSheet.Description>{request.description}</WriteSheet.Description>
       <WriteSheet.Actions>
-        <Button variant="log" icon={<Button.Icon name="eye-outline" />} label={request.title} onPress={() => onOpenRequest != null ? onOpenRequest(request) : openLog(request)} />
+        <Button
+          variant="log"
+          icon={<Button.Icon name="eye-outline" />}
+          label={request.title}
+          onPress={() => (onOpenRequest != null ? onOpenRequest(request) : openLog(request))}
+        />
       </WriteSheet.Actions>
     </>
   );

@@ -37,9 +37,7 @@ export function traktHttp<A>(
             'Content-Type': 'application/json',
             'trakt-api-version': '2',
             'trakt-api-key': deps.clientId,
-            ...(options.accessToken
-              ? { Authorization: `Bearer ${options.accessToken}` }
-              : {}),
+            ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
           },
           ...(options.body != null ? { body: JSON.stringify(options.body) } : {}),
         }),

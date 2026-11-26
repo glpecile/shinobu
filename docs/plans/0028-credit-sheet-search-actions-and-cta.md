@@ -62,7 +62,7 @@ under the viewer on every details-screen open.
   the 32px never widens the button — it wraps it in invisible padding and takes
   that width from the label. Nested with `EmptyFeed`'s own `px-8` and the tile's
   `px-8`, the label had ~126px to lay out in at 390px wide.
-- **(5)** `applyPrimaryMetadata` (plan 0014) makes TMDB win for *every* display
+- **(5)** `applyPrimaryMetadata` (plan 0014) makes TMDB win for _every_ display
   field including `coverImage`/`backdropImage`. The details screen renders
   instantly from the resolved feed/search item and re-renders when
   `useMediaDetailsQuery` resolves, so the poster the viewer just tapped is
@@ -71,7 +71,7 @@ under the viewer on every details-screen open.
 ### Requirements
 
 - **R1** — Long-pressing a Cast or Crew card opens a sheet showing the credit in
-  full: name, whether it's a cast or crew credit, the *unclamped* role text,
+  full: name, whether it's a cast or crew credit, the _unclamped_ role text,
   and — when TMDB can serve it — the person's meta line and biography, plus a
   row into their filmography and the person "View on" provider links. On web,
   where long-press isn't discoverable, a hover-revealed ⋯ opens the same sheet.
@@ -103,7 +103,7 @@ under the viewer on every details-screen open.
   surfaces still show one "View on {source}" row. `providerLinks="connected"`
   is opt-in, and search is its only caller.
 - Not touched: studio pills. A studio has a name and nothing to expand.
-- No reverse: person → all credits on this title. The sheet is about *one*
+- No reverse: person → all credits on this title. The sheet is about _one_
   credit.
 
 ### Assumptions
@@ -123,7 +123,7 @@ under the viewer on every details-screen open.
 ### Key Technical Decisions
 
 - **KTD1 — One row shell, not two.** The diary's `DiaryRowShell` already
-  encodes the whole web ⋯ problem: the ⋯ can't be a *child* of the row's
+  encodes the whole web ⋯ problem: the ⋯ can't be a _child_ of the row's
   pressable (nesting two gesture-handler buttons lets a ⋯ press bubble into the
   row press), so on web the row splits into sibling pressables with the ⋯
   between them, while native stays one pressable. Search needs exactly that, so
@@ -150,20 +150,20 @@ under the viewer on every details-screen open.
 
 ### High-Level Technical Design
 
-| Change | File |
-| --- | --- |
-| Shared row shell (press / long-press / hover ⋯) | `src/components/actionable-row.tsx` (new) |
-| Diary rows adopt it | `src/features/diary/diary-list.tsx` |
-| Search rows adopt it + mount the actions sheet | `src/app/(tabs)/search.tsx` |
-| Actions sheet: `providerLinks`, `canHide` | `src/features/card-actions/card-actions-sheet.tsx` |
-| Credit sheet | `src/features/person/person-credit-sheet.tsx` (new) |
-| Person meta-line helpers | `src/features/person/meta-line.ts` (new) |
-| Non-suspending person query | `src/state/queries/tmdb.ts` |
-| Cast/crew cards: long-press + hover ⋯ | `src/app/details/[id].tsx` |
-| Clear button chip | `src/app/(tabs)/search.tsx` |
-| `shape` prop + `className` contract | `src/components/button.tsx` |
-| CTA padding + pill | `src/components/empty-state-tile.tsx`, `src/app/(tabs)/index.tsx` |
-| Artwork fill-only | `src/lib/providers/merge-metadata.ts` |
+| Change                                          | File                                                              |
+| ----------------------------------------------- | ----------------------------------------------------------------- |
+| Shared row shell (press / long-press / hover ⋯) | `src/components/actionable-row.tsx` (new)                         |
+| Diary rows adopt it                             | `src/features/diary/diary-list.tsx`                               |
+| Search rows adopt it + mount the actions sheet  | `src/app/(tabs)/search.tsx`                                       |
+| Actions sheet: `providerLinks`, `canHide`       | `src/features/card-actions/card-actions-sheet.tsx`                |
+| Credit sheet                                    | `src/features/person/person-credit-sheet.tsx` (new)               |
+| Person meta-line helpers                        | `src/features/person/meta-line.ts` (new)                          |
+| Non-suspending person query                     | `src/state/queries/tmdb.ts`                                       |
+| Cast/crew cards: long-press + hover ⋯           | `src/app/details/[id].tsx`                                        |
+| Clear button chip                               | `src/app/(tabs)/search.tsx`                                       |
+| `shape` prop + `className` contract             | `src/components/button.tsx`                                       |
+| CTA padding + pill                              | `src/components/empty-state-tile.tsx`, `src/app/(tabs)/index.tsx` |
+| Artwork fill-only                               | `src/lib/providers/merge-metadata.ts`                             |
 
 ---
 

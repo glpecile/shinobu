@@ -37,11 +37,7 @@ export function StudioCard({
       >
         {studio.logo != null ? (
           <View className="h-20 rounded-lg bg-logo-tile p-3">
-            <Image
-              className="flex-1"
-              contentFit="contain"
-              source={{ uri: studio.logo }}
-            />
+            <Image className="flex-1" contentFit="contain" source={{ uri: studio.logo }} />
           </View>
         ) : (
           <View className="h-20 rounded-lg bg-surface border border-border items-center justify-center">

@@ -76,13 +76,9 @@ describe('selectReleaseCandidates', () => {
   });
 
   test('caps the candidate list', () => {
-    const films = Array.from({ length: 50 }, (_, index) =>
-      film(`upcoming-${index}`, 2026),
-    );
+    const films = Array.from({ length: 50 }, (_, index) => film(`upcoming-${index}`, 2026));
 
-    expect(selectReleaseCandidates([film('old', 1999), ...films], NOW)).toEqual(
-      films.slice(0, 30),
-    );
+    expect(selectReleaseCandidates([film('old', 1999), ...films], NOW)).toEqual(films.slice(0, 30));
   });
 });
 
@@ -139,9 +135,7 @@ describe('letterboxdReleaseInputs', () => {
   test('never runs more than a handful of resolves at once', async () => {
     let inFlight = 0;
     let peak = 0;
-    const films = Array.from({ length: 30 }, (_, index) =>
-      film(`upcoming-${index}`, 2026),
-    );
+    const films = Array.from({ length: 30 }, (_, index) => film(`upcoming-${index}`, 2026));
 
     await letterboxdReleaseInputs(films, NOW, async () => {
       inFlight += 1;

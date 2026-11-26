@@ -18,10 +18,19 @@ const listeners = new Set<() => void>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
     getString: (key: string) => store.get(key),
-    set: (key: string, value: string) => { store.set(key, value); for (const listener of listeners) listener(); },
-    remove: (key: string) => { store.delete(key); for (const listener of listeners) listener(); },
+    set: (key: string, value: string) => {
+      store.set(key, value);
+      for (const listener of listeners) listener();
+    },
+    remove: (key: string) => {
+      store.delete(key);
+      for (const listener of listeners) listener();
+    },
     getAllKeys: () => [...store.keys()],
-    addOnValueChangedListener: (listener: () => void) => { listeners.add(listener); return { remove: () => listeners.delete(listener) }; },
+    addOnValueChangedListener: (listener: () => void) => {
+      listeners.add(listener);
+      return { remove: () => listeners.delete(listener) };
+    },
   }),
 }));
 let requests = 0;
@@ -38,31 +47,77 @@ mock.module('@/lib/http/client', () => ({
       return Response.json({ data: { MediaListCollection: { lists: [{ entries: mangaList }] } } });
     }
     const { query, variables } = JSON.parse(String(init.body));
-    if (query.includes('Page(page:')) return Response.json({ data: { Page: {
-      pageInfo: { hasNextPage: false }, media: Array.from({ length: 50 }, (_, i) => ({ id: i + 1, type: 'ANIME' })),
-    } } });
+    if (query.includes('Page(page:'))
+      return Response.json({
+        data: {
+          Page: {
+            pageInfo: { hasNextPage: false },
+            media: Array.from({ length: 50 }, (_, i) => ({ id: i + 1, type: 'ANIME' })),
+          },
+        },
+      });
     if (variables.id === 2 && sequelProgress != null) {
-      return Response.json({ data: { Media: {
-        id: 2, type: 'ANIME', title: { romaji: 'Sequel' }, episodes: 12,
-        mediaListEntry: { id: 200, status: 'CURRENT', progress: sequelProgress },
-      } } });
+      return Response.json({
+        data: {
+          Media: {
+            id: 2,
+            type: 'ANIME',
+            title: { romaji: 'Sequel' },
+            episodes: 12,
+            mediaListEntry: { id: 200, status: 'CURRENT', progress: sequelProgress },
+          },
+        },
+      });
     }
-    return new Response(JSON.stringify({ data: { Media: {
-      id: 1, type: 'ANIME', title: { romaji: 'Title' }, description: 'Full synopsis',
-      mediaListEntry: { id: 100, status: 'CURRENT', progress: progressOverride ?? (new Headers(init.headers).get('Authorization') === 'Bearer second' ? 2 : 1) },
-      episodes: 1,
-      duration: 24,
-      airingSchedule: { edges: [] },
-      streamingEpisodes: [],
-      relations: { edges: [{ relationType: 'SEQUEL', node: { id: 2, type: 'ANIME', title: { romaji: 'Sequel' } } }] },
-    } } }));
+    return new Response(
+      JSON.stringify({
+        data: {
+          Media: {
+            id: 1,
+            type: 'ANIME',
+            title: { romaji: 'Title' },
+            description: 'Full synopsis',
+            mediaListEntry: {
+              id: 100,
+              status: 'CURRENT',
+              progress:
+                progressOverride ??
+                (new Headers(init.headers).get('Authorization') === 'Bearer second' ? 2 : 1),
+            },
+            episodes: 1,
+            duration: 24,
+            airingSchedule: { edges: [] },
+            streamingEpisodes: [],
+            relations: {
+              edges: [
+                {
+                  relationType: 'SEQUEL',
+                  node: { id: 2, type: 'ANIME', title: { romaji: 'Sequel' } },
+                },
+              ],
+            },
+          },
+        },
+      }),
+    );
   },
 }));
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
 
-const { anilistQueryKeys, anilistRelationsQuery, fetchAniListSequel, fetchWatchlistAnime, fetchWatchlistManga, useAniListEpisodesQuery, useSuspenseAniListRelationsQuery, useAnimeByIdQuery, useAniListEntryStateQuery, useSuspenseSeasonalAnimePagesQuery } = await import('./anilist');
+const {
+  anilistQueryKeys,
+  anilistRelationsQuery,
+  fetchAniListSequel,
+  fetchWatchlistAnime,
+  fetchWatchlistManga,
+  useAniListEpisodesQuery,
+  useSuspenseAniListRelationsQuery,
+  useAnimeByIdQuery,
+  useAniListEntryStateQuery,
+  useSuspenseSeasonalAnimePagesQuery,
+} = await import('./anilist');
 const { useSuspenseContinueReadingQuery } = await import('./continue-reading');
 const { setProviderSession, clearProviderSession } = await import('@/state/session/tokens');
 const { createQueryClient } = await import('./query-client');
@@ -72,7 +127,8 @@ test('the episode read does not multiply the combined query’s retry budget', a
   failureStatus = 503;
   const client = createQueryClient();
   client.setDefaultOptions({ queries: { ...client.getDefaultOptions().queries, retryDelay: 0 } });
-  const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, children);
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client }, children);
   const read = renderHook(() => useAniListEpisodesQuery({ mediaId: 1 }), { wrapper });
   try {
     await waitFor(() => expect(read.result.current.isError).toBe(true));
@@ -88,11 +144,17 @@ test('metadata, progress, episodes and relations share a request and revalidate 
   requests = 0;
   setProviderSession('anilist', { accessToken: 'first' });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const wrapper = ({ children }: { children: ReactNode }) => createElement(
-    QueryClientProvider, { client }, createElement(Suspense, { fallback: null }, children),
-  );
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(Suspense, { fallback: null }, children),
+    );
   const episodes = renderHook(() => useAniListEpisodesQuery({ mediaId: 1 }).data, { wrapper });
-  const relations = renderHook(() => useSuspenseAniListRelationsQuery({ mediaId: 1, type: 'ANIME' }).data, { wrapper });
+  const relations = renderHook(
+    () => useSuspenseAniListRelationsQuery({ mediaId: 1, type: 'ANIME' }).data,
+    { wrapper },
+  );
   const metadata = renderHook(() => useAnimeByIdQuery(1), { wrapper });
   const progress = renderHook(() => useAniListEntryStateQuery({ mediaId: 1 }), { wrapper });
   await waitFor(() => expect(episodes.result.current?.episodes).toHaveLength(1));
@@ -100,14 +162,21 @@ test('metadata, progress, episodes and relations share a request and revalidate 
   expect(requests).toBe(1);
   await waitFor(() => expect(metadata.result.current.data?.overview).toBe('Full synopsis'));
   await waitFor(() => expect(progress.result.current.data?.entry?.progress).toBe(1));
-  await act(async () => { setProviderSession('anilist', { accessToken: 'second' }); });
+  await act(async () => {
+    setProviderSession('anilist', { accessToken: 'second' });
+  });
   await waitFor(() => expect(progress.result.current.data?.entry?.progress).toBe(2));
   await waitFor(() => expect(relations.result.current?.entryState?.entry?.progress).toBe(2));
   expect(requests).toBe(2);
   progressOverride = 3;
-  await act(async () => { await client.invalidateQueries({ queryKey: anilistQueryKeys.relations(1) }); });
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: anilistQueryKeys.relations(1) });
+  });
   await waitFor(() => expect(progress.result.current.data?.entry?.progress).toBe(3));
-  expect(client.getQueryData<{ entry: { progress: number } }>(anilistQueryKeys.entryState(1))?.entry.progress).toBe(3);
+  expect(
+    client.getQueryData<{ entry: { progress: number } }>(anilistQueryKeys.entryState(1))?.entry
+      .progress,
+  ).toBe(3);
   expect(requests).toBe(3);
   metadata.unmount();
   progress.unmount();
@@ -140,8 +209,16 @@ test('sequel handoff sees progress recorded elsewhere while its details were sti
 test('seasonal pagination uses the server flag and reuses Home’s cached first page', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const window = { season: 'WINTER' as const, year: 2027 };
-  client.setQueryData(anilistQueryKeys.seasonalAnime(window, 'TV'), { items: [], hasNextPage: true });
-  const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, createElement(Suspense, { fallback: null }, children));
+  client.setQueryData(anilistQueryKeys.seasonalAnime(window, 'TV'), {
+    items: [],
+    hasNextPage: true,
+  });
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(Suspense, { fallback: null }, children),
+    );
   requests = 0;
   const pages = renderHook(() => useSuspenseSeasonalAnimePagesQuery(window, 'TV'), { wrapper });
   await waitFor(() => expect(pages.result.current.hasNextPage).toBe(true));
@@ -153,10 +230,7 @@ test('seasonal pagination uses the server flag and reuses Home’s cached first 
   client.clear();
 });
 
-function entry(
-  anilistId: number,
-  status: AniListCurrentEntry['status'],
-): AniListCurrentEntry {
+function entry(anilistId: number, status: AniListCurrentEntry['status']): AniListCurrentEntry {
   return {
     entryId: anilistId * 100,
     item: {
@@ -203,9 +277,7 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
     const client = new QueryClient();
     client.setQueryData(anilistQueryKeys.currentAnimeEntries(), [planning]);
 
-    expect((await fetchWatchlistAnime(client)).map((e) => e.item.id)).toEqual([
-      'anilist-42',
-    ]);
+    expect((await fetchWatchlistAnime(client)).map((e) => e.item.id)).toEqual(['anilist-42']);
 
     // 2. Neither Up Next section does — not Continue Watching (it is not
     //    "aired, waiting, one tap away"; nothing has been started) and not
@@ -235,15 +307,22 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
       { id: 12, status: 'REPEATING', progress: 4, updatedAt: 1_752_000_200, media: mangaMedia(2) },
     ];
     requests = 0;
-    const wrapper = ({ children }: { children: ReactNode }) => createElement(
-      QueryClientProvider, { client }, createElement(Suspense, { fallback: null }, children),
-    );
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(
+        QueryClientProvider,
+        { client },
+        createElement(Suspense, { fallback: null }, children),
+      );
     const rail = renderHook(() => useSuspenseContinueReadingQuery(), { wrapper });
 
     // Newest update first. The planned manga is the newest update and still
     // stays off a rail that means "you are partway through this".
-    await waitFor(() => expect(rail.result.current?.map((item) => item.id)).toEqual(['anilist-2', 'anilist-1']));
-    expect((await fetchWatchlistManga(client)).map((planned) => planned.item.id)).toEqual(['anilist-3']);
+    await waitFor(() =>
+      expect(rail.result.current?.map((item) => item.id)).toEqual(['anilist-2', 'anilist-1']),
+    );
+    expect((await fetchWatchlistManga(client)).map((planned) => planned.item.id)).toEqual([
+      'anilist-3',
+    ]);
     expect(requests).toBe(2);
     rail.unmount();
     client.clear();

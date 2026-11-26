@@ -1,4 +1,4 @@
-# Diary scroll jank is row *mount* cost, not grouping cost
+# Diary scroll jank is row _mount_ cost, not grouping cost
 
 ## Symptom
 
@@ -29,10 +29,10 @@ scratch.
 Two things that looked like causes and were not:
 
 - **`Intl.DateTimeFormat` per entry.** Real (it was constructed once per entry
-  in `groupDiaryEntries` *and* once per day header in `flattenDays`) and worth
+  in `groupDiaryEntries` _and_ once per day header in `flattenDays`) and worth
   caching — but grouping only runs on re-render, never during a drag.
 - **Missing `estimatedItemSize`/`getItemType`.** Also real, also worth adding —
-  but size hints only change how the virtualizer *estimates*, not what a row
+  but size hints only change how the virtualizer _estimates_, not what a row
   costs to build.
 - **`[Native] objectKeys` at 245ms** in the CPU table was an artifact: the
   profiler reported `the sampler stalled for 316.6ms inside this window`, and
@@ -59,7 +59,7 @@ DiaryClusterRow — 44 renders, max 126.38ms for a single render
 `DiaryClusterRow` called `summarizeCluster` (unions + sorts every entry's
 episodes and providers) plus `formatEpisodeDetail` (sorts them again) in its
 body. Un-recycled that ran once per cluster; recycled it runs every time the row
-scrolls past a *different* run. It now happens once per cluster in
+scrolls past a _different_ run. It now happens once per cluster in
 `flattenDays`, which already walks each cluster exactly once, and the row takes
 a precomputed `ClusterView`.
 
@@ -72,11 +72,11 @@ flattened.
 
 Same corpus, same gesture, same device — worst single React commit:
 
-| | Worst commit | Hot commits (≥16ms) |
-|---|---|---|
-| Before | 332.3ms | 2 of 7 |
-| + rail redesign + recycling | 132.2ms | 9 of 37 |
-| + cluster precompute | **47.5ms** | 6 of 38 |
+|                             | Worst commit | Hot commits (≥16ms) |
+| --------------------------- | ------------ | ------------------- |
+| Before                      | 332.3ms      | 2 of 7              |
+| + rail redesign + recycling | 132.2ms      | 9 of 37             |
+| + cluster precompute        | **47.5ms**   | 6 of 38             |
 
 At 47.5ms the worst commit is Legend List's own container machinery
 (`Container2`, `ContainerSlotBase`, `PositionViewState2`), not our components.

@@ -16,10 +16,7 @@ const usernameSchema = z.object({
     .string()
     .trim()
     .min(1, 'Enter your Letterboxd username first.')
-    .regex(
-      /^[a-zA-Z0-9_-]+$/,
-      'Just the username — no URL or @, only letters, numbers, - and _.',
-    ),
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Just the username — no URL or @, only letters, numbers, - and _.'),
 });
 
 type UsernameForm = z.infer<typeof usernameSchema>;
@@ -55,9 +52,8 @@ export function ConnectLetterboxdButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        Connect your public Letterboxd profile to read your watchlist and diary.
-        For film logging, use the mobile app or the optional browser script
-        under Advanced setup below.
+        Connect your public Letterboxd profile to read your watchlist and diary. For film logging,
+        use the mobile app or the optional browser script under Advanced setup below.
       </Text>
       <Controller
         control={control}
@@ -74,9 +70,7 @@ export function ConnectLetterboxdButton() {
         )}
       />
       {errors.username != null && (
-        <Text className="text-accent font-sans text-xs">
-          {errors.username.message}
-        </Text>
+        <Text className="text-accent font-sans text-xs">{errors.username.message}</Text>
       )}
       {status === 'not-found' && (
         <Text className="text-accent font-sans text-xs">

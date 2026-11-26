@@ -6,7 +6,7 @@
 
 Plan 0030 U8 needed `fetchUpNextInputs` to prove the Letterboxd release source
 settles under its own provider id. Reaching that resolve requires a username
-*and* a TMDB token, so a new suite in `src/state/queries/up-next.test.ts` did
+_and_ a TMDB token, so a new suite in `src/state/queries/up-next.test.ts` did
 what `letterboxd.test.ts` already does — `setStoredTmdbToken(…)` plus
 `globalThis.window = {}`, cleaned up in `afterAll`.
 
@@ -40,7 +40,7 @@ function readToken(): string {
 bun runs every test file in **one process with one module registry**, so
 `tmdb-token.ts` is instantiated once for the whole run. The moment any file
 fakes a `window` in and calls `tmdbToken()`, `cachedToken` is populated —
-permanently. `delete globalThis.window` in `afterAll` puts the *gate* back but
+permanently. `delete globalThis.window` in `afterAll` puts the _gate_ back but
 cannot clear the memo, and there is no reset path (the invalidation listener is
 registered by `useSyncExternalStore`, which never runs under bun).
 
@@ -51,7 +51,7 @@ ordering decides whether the suite is green.
 
 Only **one** test file in the run may fake a `window` for the token, and it must
 be the file that already owns both states — `state/queries/letterboxd.test.ts`,
-whose no-token suite is deliberately declared *before* the token is set. The
+whose no-token suite is deliberately declared _before_ the token is set. The
 `fetchUpNextInputs` assertion moved there rather than duplicating the dance:
 
 ```ts

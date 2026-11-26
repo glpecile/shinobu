@@ -284,10 +284,16 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
   const wide = width >= 768;
   const logos = subject === 'studios';
   const size = (logos ? LOGO_TILES : POSTER_TILES)[wide ? 'wide' : 'compact'];
-  const wallWidth = reduceMotion ? Math.max(width * 1.5, width + height * Math.sin((8 * Math.PI) / 180) + size.width * 2) : width * 1.5;
+  const wallWidth = reduceMotion
+    ? Math.max(width * 1.5, width + height * Math.sin((8 * Math.PI) / 180) + size.width * 2)
+    : width * 1.5;
   const columns = Math.ceil(wallWidth / (size.width + size.gap));
-  const tiltOverscan = reduceMotion ? Math.ceil(wallWidth * Math.sin((8 * Math.PI) / 180) / 2) : 0;
-  const staticRows = Math.ceil((height + tiltOverscan * 2 + size.height * 3) / (size.height + size.gap));
+  const tiltOverscan = reduceMotion
+    ? Math.ceil((wallWidth * Math.sin((8 * Math.PI) / 180)) / 2)
+    : 0;
+  const staticRows = Math.ceil(
+    (height + tiltOverscan * 2 + size.height * 3) / (size.height + size.gap),
+  );
   const dealtFor = `${subject}:${columns}:${size.perColumn}`;
   const [dealt, setDealt] = useState(() => ({
     key: dealtFor,
@@ -324,11 +330,14 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
               onPointerLeave={() => setHovered((current) => (current === column ? null : current))}
               style={{
                 marginTop: -rhythm.offset * (size.height + size.gap),
-                animationName: subject === 'titles' ? heldKeyframes(
-                  reduceMotion ? sectionFading : wallEntering,
-                  column * ENTER_STAGGER,
-                  ENTER_DURATION,
-                ) : undefined,
+                animationName:
+                  subject === 'titles'
+                    ? heldKeyframes(
+                        reduceMotion ? sectionFading : wallEntering,
+                        column * ENTER_STAGGER,
+                        ENTER_DURATION,
+                      )
+                    : undefined,
                 animationDuration: ENTER_DURATION + column * ENTER_STAGGER,
                 animationTimingFunction: EASE_OUT,
               }}
@@ -344,9 +353,15 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
                   animationPlayState: focused && hovered !== column ? 'running' : 'paused',
                 }}
               >
-                {(reduceMotion ? Array.from({ length: staticRows }, (_, index) => set[index % set.length]) : [...set, ...set, ...set]).map((uri, index) => (
+                {(reduceMotion
+                  ? Array.from({ length: staticRows }, (_, index) => set[index % set.length])
+                  : [...set, ...set, ...set]
+                ).map((uri, index) => (
                   <View
-                    className={cn('rounded-lg overflow-hidden bg-surface', logos && 'p-4 border border-border')}
+                    className={cn(
+                      'rounded-lg overflow-hidden bg-surface',
+                      logos && 'p-4 border border-border',
+                    )}
                     key={index}
                     style={{ width: size.width, height: size.height }}
                   >

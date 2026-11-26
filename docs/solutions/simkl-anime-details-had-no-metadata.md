@@ -1,7 +1,7 @@
 # A Simkl anime's details page had no synopsis, genres or other titles
 
-**Symptom (2026-11-17).** `/details/simkl/2764258` (*Seitokai ni mo Ana wa
-Aru!*) showed a title, a year and a poster. It had no overview, no genres, no
+**Symptom (2026-11-17).** `/details/simkl/2764258` (_Seitokai ni mo Ana wa
+Aru!_) showed a title, a year and a poster. It had no overview, no genres, no
 runtime, and the copy sheet listed no English or native title. A cold link to
 the same page also had no Seasons, Related or credits sections.
 

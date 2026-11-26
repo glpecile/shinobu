@@ -77,7 +77,15 @@ function RailHeadDate({
   );
 }
 
-function RailHeadTitle({ children, muted = false, showRail = true }: { children: ReactNode; muted?: boolean; showRail?: boolean }) {
+function RailHeadTitle({
+  children,
+  muted = false,
+  showRail = true,
+}: {
+  children: ReactNode;
+  muted?: boolean;
+  showRail?: boolean;
+}) {
   const open = useContext(OpenContext);
   return (
     <View className="relative pl-6 pr-2 pb-3">
@@ -94,7 +102,15 @@ function RailHeadTitle({ children, muted = false, showRail = true }: { children:
   );
 }
 
-function RailHeadIcon({ name, children, showRail = true }: { name: IconName; children: ReactNode; showRail?: boolean }) {
+function RailHeadIcon({
+  name,
+  children,
+  showRail = true,
+}: {
+  name: IconName;
+  children: ReactNode;
+  showRail?: boolean;
+}) {
   const open = useContext(OpenContext);
   const muted = useThemeColor('--color-muted');
   return (
@@ -160,7 +176,17 @@ function RailHeadSkeleton({
   );
 }
 
-function RailHeadPinned({ title, count, visible, icon }: { title: string; count: string; visible: boolean; icon?: IconName }) {
+function RailHeadPinned({
+  title,
+  count,
+  visible,
+  icon,
+}: {
+  title: string;
+  count: string;
+  visible: boolean;
+  icon?: IconName;
+}) {
   const reduceMotion = useReducedMotion();
   const muted = useThemeColor('--color-muted');
   return (
@@ -183,7 +209,10 @@ function RailHeadPinned({ title, count, visible, icon }: { title: string; count:
     >
       {icon != null && <Ionicons color={muted} name={icon} size={16} />}
       <Text className="font-display text-base text-foreground">{title}</Text>
-      <Text className={cn('ml-3 shrink text-muted font-sans text-xs', icon != null && 'ml-1')} numberOfLines={1}>
+      <Text
+        className={cn('ml-3 shrink text-muted font-sans text-xs', icon != null && 'ml-1')}
+        numberOfLines={1}
+      >
         {count}
       </Text>
     </AnimatedView>

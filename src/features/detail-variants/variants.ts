@@ -14,13 +14,21 @@ export function detailVariants(
   const { tmdb, anilist, simkl, letterboxd } = item.externalIds;
   const movie = item.type === 'MOVIE' || item.isFilm === true;
   const variants: DetailVariant[] = [];
-  if (item.tmdbTvVariant != null) variants.push({ source: 'tmdb', id: `tmdb-tv-${item.tmdbTvVariant}`, type: 'TV' });
+  if (item.tmdbTvVariant != null)
+    variants.push({ source: 'tmdb', id: `tmdb-tv-${item.tmdbTvVariant}`, type: 'TV' });
   if (tmdb != null && item.type !== 'MANGA') {
     variants.push({ source: 'tmdb', id: `tmdb-${movie ? 'movie' : 'tv'}-${tmdb}` });
   }
   if (anilist != null) variants.push({ source: Provider.AniList, id: `anilist-${anilist}` });
-  if (simkl != null && item.type !== 'MANGA') variants.push({ source: Provider.Simkl, id: `simkl-${simkl}` });
-  if (letterboxd != null && movie) variants.push({ source: Provider.Letterboxd, id: `letterboxd-${letterboxd}` });
-  if (letterboxdVariant != null && !movie) variants.push({ source: Provider.Letterboxd, id: `letterboxd-${letterboxdVariant}`, type: 'MOVIE' });
+  if (simkl != null && item.type !== 'MANGA')
+    variants.push({ source: Provider.Simkl, id: `simkl-${simkl}` });
+  if (letterboxd != null && movie)
+    variants.push({ source: Provider.Letterboxd, id: `letterboxd-${letterboxd}` });
+  if (letterboxdVariant != null && !movie)
+    variants.push({
+      source: Provider.Letterboxd,
+      id: `letterboxd-${letterboxdVariant}`,
+      type: 'MOVIE',
+    });
   return variants.filter((variant) => variant.id !== item.id);
 }

@@ -13,7 +13,7 @@ AniList's budget is **30 req/min** (degraded mode; see
 docs/solutions/web-cors-anilist.md). Three compounding defaults:
 
 1. **`new QueryClient()` with default `staleTime: 0`.** Every screen mount
-   refetches every observed query — and `useUnifiedFeed` is mounted on *both*
+   refetches every observed query — and `useUnifiedFeed` is mounted on _both_
    the home and details screens. Measured with a request counter on web:
    **~4 AniList requests per home→details→back cycle with AniList
    disconnected** (seasonal row refetched on each navigation + episodes +
@@ -24,7 +24,7 @@ docs/solutions/web-cors-anilist.md). Three compounding defaults:
    a value that never changes within a session.
 3. **Retry amplification.** On a 429, `lib/providers/anilist/http.ts` already
    sleeps (≤5 s) and retries once. TanStack Query's default `retry: 3` then
-   retried the *whole* query — up to 8 HTTP calls per failing query, spending
+   retried the _whole_ query — up to 8 HTTP calls per failing query, spending
    the recovering budget on doomed retries and extending the outage.
 
 ## Fix
@@ -34,7 +34,7 @@ docs/solutions/web-cors-anilist.md). Three compounding defaults:
   `ProviderRateLimitError`/`ProviderAuthError` (detected via the FiberFailure
   `name`, which carries the Effect tagged-error tag: rejections from
   `Effect.runPromise` are `FiberFailure`s with `name: "(FiberFailure)
-  ProviderRateLimitError"`, `message: "An error has occurred"` — which is
+ProviderRateLimitError"`, `message: "An error has occurred"` — which is
   exactly the string the redbox showed).
 - Catalogue rows (trending/seasonal) get `staleTime: 15 min`; episodes 5 min;
   credits 1 h. User state (entry state, watching list) keeps the 60 s floor —

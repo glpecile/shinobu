@@ -13,14 +13,10 @@ describe('extractSerializdLogin', () => {
   });
 
   test('returns null while the token cookie is absent (keep the WebView open)', () => {
-    expect(
-      extractSerializdLogin([{ name: 'ph_session', value: 'analytics' }]),
-    ).toBeNull();
+    expect(extractSerializdLogin([{ name: 'ph_session', value: 'analytics' }])).toBeNull();
   });
 
   test('ignores an empty token cookie value', () => {
-    expect(
-      extractSerializdLogin([{ name: SERIALIZD_TOKEN_COOKIE, value: '' }]),
-    ).toBeNull();
+    expect(extractSerializdLogin([{ name: SERIALIZD_TOKEN_COOKIE, value: '' }])).toBeNull();
   });
 });

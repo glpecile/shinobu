@@ -37,10 +37,7 @@ function episode(
   };
 }
 
-function release(
-  itemId: string,
-  kind: 'theatrical' | 'digital' | 'physical',
-): UpNextEntry {
+function release(itemId: string, kind: 'theatrical' | 'digital' | 'physical'): UpNextEntry {
   return {
     kind: 'release',
     id: `${itemId}-${kind}`,
@@ -53,9 +50,7 @@ function release(
 
 describe('groupDayEntries', () => {
   test('collapses a season drop into one group', () => {
-    const entries = Array.from({ length: 10 }, (_, index) =>
-      episode('trakt-1', 2, index + 1),
-    );
+    const entries = Array.from({ length: 10 }, (_, index) => episode('trakt-1', 2, index + 1));
 
     const groups = groupDayEntries(entries);
 
@@ -109,10 +104,7 @@ describe('groupLabel', () => {
   });
 
   test('drops the season when the batch spans more than one', () => {
-    const groups = groupDayEntries([
-      episode('trakt-1', 1, 12),
-      episode('trakt-1', 2, 1),
-    ]);
+    const groups = groupDayEntries([episode('trakt-1', 1, 12), episode('trakt-1', 2, 1)]);
 
     expect(groupLabel(groups[0]!)).toBe('2 episodes');
   });
@@ -128,4 +120,3 @@ describe('groupLabel', () => {
     expect(groupLabel(groups[0]!)).toBe('2 episodes');
   });
 });
-

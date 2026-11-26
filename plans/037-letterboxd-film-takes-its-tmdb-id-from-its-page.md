@@ -99,7 +99,14 @@ export async function enrichExternalIds(
 export function letterboxdFilmQuery(slug: string | null, hasTmdb: boolean) {
   return {
     queryKey: [...letterboxdQueryKeys.film(slug ?? ''), hasTmdb],
-    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getFilmItem({ fetch: letterboxdDeps().fetch, tmdb: hasTmdb ? tmdbDeps() : null }, slug ?? ''), { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(
+        getFilmItem(
+          { fetch: letterboxdDeps().fetch, tmdb: hasTmdb ? tmdbDeps() : null },
+          slug ?? '',
+        ),
+        { signal },
+      ),
     enabled: slug != null,
     // Identity never churns; only the Letterboxd average drifts, and a day is
     // the persisted snapshot's lifetime anyway.
@@ -145,17 +152,18 @@ Outside React the same module family uses `tmdbToken()` from
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Install | `bun install --frozen-lockfile` | exit 0 |
-| Typecheck | `bun typecheck` | exit 0, no errors |
-| Lint | `bun lint` | exit 0 |
-| Focused tests | `bun test --isolate src/features/log-media/enrich.test.ts` | all pass |
-| Full tests | `bun run test` | all pass |
+| Purpose       | Command                                                    | Expected on success |
+| ------------- | ---------------------------------------------------------- | ------------------- |
+| Install       | `bun install --frozen-lockfile`                            | exit 0              |
+| Typecheck     | `bun typecheck`                                            | exit 0, no errors   |
+| Lint          | `bun lint`                                                 | exit 0              |
+| Focused tests | `bun test --isolate src/features/log-media/enrich.test.ts` | all pass            |
+| Full tests    | `bun run test`                                             | all pass            |
 
 ## Scope
 
 **In scope** (the only files you should modify):
+
 - `src/state/queries/letterboxd.ts` (add one exported function)
 - `src/features/log-media/enrich.ts` (add one block before the text search)
 - `src/features/log-media/enrich.test.ts`
@@ -165,6 +173,7 @@ Outside React the same module family uses `tmdbToken()` from
 - `plans/README.md` (status row)
 
 **Out of scope** (do NOT touch, even though they look related):
+
 - `getFilmItem` and `letterboxdFilmQuery`. Reuse them as they are.
 - The text-search block. It stays, unchanged, as the fallback.
 - `src/state/queries/media-details.ts`.
@@ -202,20 +211,20 @@ In `src/features/log-media/enrich.ts`, import `cachedLetterboxdFilm` from
 comment `// A movie carrying no movie-side id at all`:
 
 ```ts
-  // Letterboxd's film page states the film's exact TMDB id, and whether the
-  // "film" is a TV series, which has no movie identity elsewhere.
-  if (
-    item.type === 'MOVIE' &&
-    externalIds.letterboxd != null &&
-    externalIds.trakt == null &&
-    externalIds.tmdb == null &&
-    externalIds.imdb == null &&
-    connected.some((id) => id !== Provider.Letterboxd)
-  ) {
-    const film = await cachedLetterboxdFilm(queryClient, externalIds.letterboxd);
-    if (film?.tmdbTvVariant != null) return { ...item, tmdbTvVariant: film.tmdbTvVariant };
-    if (film?.externalIds.tmdb != null) externalIds = { ...externalIds, tmdb: film.externalIds.tmdb };
-  }
+// Letterboxd's film page states the film's exact TMDB id, and whether the
+// "film" is a TV series, which has no movie identity elsewhere.
+if (
+  item.type === 'MOVIE' &&
+  externalIds.letterboxd != null &&
+  externalIds.trakt == null &&
+  externalIds.tmdb == null &&
+  externalIds.imdb == null &&
+  connected.some((id) => id !== Provider.Letterboxd)
+) {
+  const film = await cachedLetterboxdFilm(queryClient, externalIds.letterboxd);
+  if (film?.tmdbTvVariant != null) return { ...item, tmdbTvVariant: film.tmdbTvVariant };
+  if (film?.externalIds.tmdb != null) externalIds = { ...externalIds, tmdb: film.externalIds.tmdb };
+}
 ```
 
 Do not change the text-search block. Its own condition
@@ -242,11 +251,14 @@ Do not change the text-search block. Its own condition
 
 2. The existing fixture `idlessFilm()` has `externalIds: {}`. Add one
    `describe` after the block `enrichExternalIds — Simkl needs the same
-   bridges Trakt does`:
+bridges Trakt does`:
 
    ```ts
    describe('enrichExternalIds — a Letterboxd film asks its own page first', () => {
-     const slugOnly = (): NormalizedMediaItem => ({ ...idlessFilm(), externalIds: { letterboxd: 'hokum' } });
+     const slugOnly = (): NormalizedMediaItem => ({
+       ...idlessFilm(),
+       externalIds: { letterboxd: 'hokum' },
+     });
 
      beforeEach(() => {
        calls.length = 0;

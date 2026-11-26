@@ -52,7 +52,7 @@ from code and official API docs whether a **single just-written log** can be
 removed precisely:
 
 - Trakt: `POST /sync/history/remove` by history id (does the log response return the id?).
-- Simkl: `/sync/history/remove` removes *all* plays of an item or episode, not one. Is that acceptable for undoing the latest?
+- Simkl: `/sync/history/remove` removes _all_ plays of an item or episode, not one. Is that acceptable for undoing the latest?
 - AniList: a log changes `progress`/`status`/`repeat`. Undo means restoring the previous values, not deleting the entry. Is the pre-write state available? (`entryState` is read during reconcile.)
 - Letterboxd: the diary entry id from the write receipt (native WebView and userscript). Is there a delete endpoint the session can call?
 - Serializd: `episode_log/remove` and `watched/remove_v2` are already allowlisted in `worker/serializd-proxy.ts`.

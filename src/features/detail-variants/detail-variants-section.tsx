@@ -37,15 +37,18 @@ export function DetailVariantsSection({ item }: { item: NormalizedMediaItem }) {
   const anilist = useAniListIdByTmdbQuery(item).data;
   const simkl = useSimklLookupQuery(simklLookupParamsFor(item)).data?.externalIds.simkl;
   const letterboxd = findLetterboxdTwinInCache(useQueryClient(), item)?.externalIds.letterboxd;
-  const variants = detailVariants({
-    ...item,
-    externalIds: {
-      ...item.externalIds,
-      ...(anilist != null ? { anilist } : {}),
-      ...(simkl != null ? { simkl } : {}),
-      ...(letterboxd != null ? { letterboxd } : {}),
+  const variants = detailVariants(
+    {
+      ...item,
+      externalIds: {
+        ...item.externalIds,
+        ...(anilist != null ? { anilist } : {}),
+        ...(simkl != null ? { simkl } : {}),
+        ...(letterboxd != null ? { letterboxd } : {}),
+      },
     },
-  }, letterboxd).filter((variant) => hasTmdb || variant.source !== 'tmdb');
+    letterboxd,
+  ).filter((variant) => hasTmdb || variant.source !== 'tmdb');
 
   if (variants.length === 0) return null;
 

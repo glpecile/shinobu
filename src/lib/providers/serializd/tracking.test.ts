@@ -3,25 +3,39 @@ import * as Effect from 'effect/Effect';
 
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
-import { getSerializdTrackingLists, resumeOnSerializd, serializdTrackingState, setSerializdTrackingStatus } from './tracking';
+import {
+  getSerializdTrackingLists,
+  resumeOnSerializd,
+  serializdTrackingState,
+  setSerializdTrackingStatus,
+} from './tracking';
 import type { SerializdWatchedShow } from './watched';
 
 const session = { accessToken: 'tok', username: 'gian' };
 const item = { title: 'Breaking Bad', externalIds: { tmdb: 1396 } } as NormalizedMediaItem;
-const watched = (watchedSeasons: number): SerializdWatchedShow => ({ item, watchedSeasons, totalSeasons: 5 });
+const watched = (watchedSeasons: number): SerializdWatchedShow => ({
+  item,
+  watchedSeasons,
+  totalSeasons: 5,
+});
 
 test('a watching show is added to Paused and leaves Currently Watching, and an untracked or completed one is a skip', async () => {
   const calls: Array<[string, unknown]> = [];
   const deps: SerializdDeps = {
-    session, baseUrl: 'https://api.test',
+    session,
+    baseUrl: 'https://api.test',
     fetch: async (url, init) => {
       calls.push([String(url), JSON.parse(String(init?.body))]);
       return new Response('');
     },
   };
-  const paused = await Effect.runPromise(setSerializdTrackingStatus(deps, item, 'watching', 'paused'));
+  const paused = await Effect.runPromise(
+    setSerializdTrackingStatus(deps, item, 'watching', 'paused'),
+  );
   const skipped = await Effect.runPromise(setSerializdTrackingStatus(deps, item, null, 'dropped'));
-  const completed = await Effect.runPromise(setSerializdTrackingStatus(deps, item, 'completed', 'paused'));
+  const completed = await Effect.runPromise(
+    setSerializdTrackingStatus(deps, item, 'completed', 'paused'),
+  );
 
   expect(paused).toEqual({ status: 'ok' });
   expect(calls).toEqual([
@@ -34,17 +48,23 @@ test('a watching show is added to Paused and leaves Currently Watching, and an u
 
 test('a status comes from every page of the three lists, then from watched seasons', async () => {
   const calls: string[] = [];
-  const lists = await Effect.runPromise(getSerializdTrackingLists({
-    session, baseUrl: 'https://api.test',
-    fetch: async (url) => {
-      const path = new URL(String(url)).pathname + new URL(String(url)).search;
-      calls.push(path);
-      if (path.startsWith('/user/gian/dropped_shows_page/')) {
-        return Response.json({ totalPages: 2, items: [{ showId: path.includes('/2?') ? 7 : 6 }] });
-      }
-      return Response.json({ totalPages: 1, items: [] });
-    },
-  }));
+  const lists = await Effect.runPromise(
+    getSerializdTrackingLists({
+      session,
+      baseUrl: 'https://api.test',
+      fetch: async (url) => {
+        const path = new URL(String(url)).pathname + new URL(String(url)).search;
+        calls.push(path);
+        if (path.startsWith('/user/gian/dropped_shows_page/')) {
+          return Response.json({
+            totalPages: 2,
+            items: [{ showId: path.includes('/2?') ? 7 : 6 }],
+          });
+        }
+        return Response.json({ totalPages: 1, items: [] });
+      },
+    }),
+  );
 
   expect(calls.toSorted()).toEqual([
     '/user/gian/currently_watching_page/1?sort_by=date_added_desc',
@@ -61,11 +81,15 @@ test('a status comes from every page of the three lists, then from watched seaso
 test('a log moves a paused show to Currently Watching, and sends nothing for a show on neither list', async () => {
   const posts: string[] = [];
   const deps: SerializdDeps = {
-    session, baseUrl: 'https://api.test',
+    session,
+    baseUrl: 'https://api.test',
     fetch: async (url, init) => {
       const { pathname } = new URL(String(url));
       if (init?.method === 'POST') posts.push(pathname);
-      return Response.json({ totalPages: 1, items: pathname.includes('paused_shows_page') ? [{ showId: 1396 }] : [] });
+      return Response.json({
+        totalPages: 1,
+        items: pathname.includes('paused_shows_page') ? [{ showId: 1396 }] : [],
+      });
     },
   };
   await Effect.runPromise(resumeOnSerializd(deps, 1396));

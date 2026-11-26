@@ -10,13 +10,34 @@ export function canLikeList(username: string | null, owner: string) {
   return username != null && username.toLowerCase() !== owner.toLowerCase();
 }
 
-export function ListLikeButton({ username, owner, slug, url, size = 'sm', variant = 'quiet' }: { username: string; owner: string; slug: string; url: string; size?: 'sm' | 'md'; variant?: 'quiet' | 'ghost' }) {
+export function ListLikeButton({
+  username,
+  owner,
+  slug,
+  url,
+  size = 'sm',
+  variant = 'quiet',
+}: {
+  username: string;
+  owner: string;
+  slug: string;
+  url: string;
+  size?: 'sm' | 'md';
+  variant?: 'quiet' | 'ghost';
+}) {
   const mutation = useLetterboxdListLike(username, owner, slug);
   const hasSession = useHasLetterboxdWriteSession();
   const hasScript = useLetterboxdUserscript('list-like');
   const canWrite = process.env.EXPO_OS === 'web' ? hasScript : hasSession;
   if (!canLikeList(username, owner)) return null;
-  const label = mutation.liked == null ? 'Check like status on Letterboxd' : canWrite ? mutation.liked ? 'Unlike list' : 'Like list' : 'Like / unlike on Letterboxd';
+  const label =
+    mutation.liked == null
+      ? 'Check like status on Letterboxd'
+      : canWrite
+        ? mutation.liked
+          ? 'Unlike list'
+          : 'Like list'
+        : 'Like / unlike on Letterboxd';
   return (
     <Tooltip label={label}>
       <LikeButton
@@ -26,9 +47,16 @@ export function ListLikeButton({ username, owner, slug, url, size = 'sm', varian
         size={size}
         variant={variant}
         onChange={(liked) => {
-          if (!canWrite || mutation.liked == null) { void openExternalUrl(url); return; }
+          if (!canWrite || mutation.liked == null) {
+            void openExternalUrl(url);
+            return;
+          }
           mutation.mutate(liked, {
-            onError: () => toast.error('Couldn’t confirm the change', 'Open this list with the Letterboxd button beside the heart before retrying.'),
+            onError: () =>
+              toast.error(
+                'Couldn’t confirm the change',
+                'Open this list with the Letterboxd button beside the heart before retrying.',
+              ),
           });
         }}
       />

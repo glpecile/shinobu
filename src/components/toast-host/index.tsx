@@ -24,7 +24,6 @@ const EXIT = new Keyframe({
 /** Must be mounted inside `GestureHandlerRootView` for `sonner-native` dismiss gestures. */
 export function ToastHost() {
   const colorScheme = useColorScheme();
-  const theme =
-    colorScheme === 'dark' || colorScheme === 'light' ? colorScheme : 'system';
+  const theme = colorScheme === 'dark' || colorScheme === 'light' ? colorScheme : 'system';
   return <Toaster theme={theme} animation={{ enter: ENTER, exit: EXIT }} />;
 }

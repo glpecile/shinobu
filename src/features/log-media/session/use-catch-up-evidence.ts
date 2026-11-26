@@ -7,8 +7,7 @@ import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import type { CatchUpEvidence } from './queue';
 
 export type CatchUpEvidenceState =
-  | { status: 'loading' }
-  | { status: 'ready'; evidence: CatchUpEvidence };
+  { status: 'loading' } | { status: 'ready'; evidence: CatchUpEvidence };
 
 export function useCatchUpEvidence(entry: UpNextEpisodeEntry): CatchUpEvidenceState {
   const chainable = (entry.episodesBehind ?? 1) > 1;
@@ -26,9 +25,7 @@ export function useCatchUpEvidence(entry: UpNextEpisodeEntry): CatchUpEvidenceSt
   const traktNeedsLayout =
     source === Provider.Trakt && progress.data != null && progress.data.airedEpisodes == null;
   const needsLayout =
-    chainable &&
-    entry.episode.season != null &&
-    (source === Provider.Simkl || traktNeedsLayout);
+    chainable && entry.episode.season != null && (source === Provider.Simkl || traktNeedsLayout);
   const layout = useSeasonLayoutQuery({
     tmdb: needsLayout ? item.externalIds.tmdb : undefined,
     trakt: needsLayout ? traktId : undefined,

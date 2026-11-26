@@ -62,8 +62,8 @@ README voice: short declarative sentences, no marketing adjectives. Match it.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
+| Purpose | Command                         | Expected on success                 |
+| ------- | ------------------------------- | ----------------------------------- |
 | Check   | `grep -n "encrypted" README.md` | no line claims tokens are encrypted |
 
 No build or test is needed. It's a docs-only change.

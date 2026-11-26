@@ -1,9 +1,5 @@
 import { Text, View } from 'react-native';
-import {
-  useAnimatedStyle,
-  useReducedMotion,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { useAnimatedStyle, useReducedMotion, type SharedValue } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
@@ -48,12 +44,15 @@ function SelectionPill<T extends string>({
   tone: 'default' | 'accent';
 }) {
   const reduceMotion = useReducedMotion();
-  const index = Math.max(0, options.findIndex((option) => option.value === value));
+  const index = Math.max(
+    0,
+    options.findIndex((option) => option.value === value),
+  );
   const pillFollow = useAnimatedStyle(() =>
     progress ? { transform: [{ translateX: `${progress.get() * 100}%` }] } : {},
   );
   const copyFollow = useAnimatedStyle(() =>
-    progress ? { transform: [{ translateX: `${-progress.get() * 100 / options.length}%` }] } : {},
+    progress ? { transform: [{ translateX: `${(-progress.get() * 100) / options.length}%` }] } : {},
   );
   const slide = (offset: `${number}%`) => ({
     transform: [{ translateX: offset }],
@@ -83,7 +82,7 @@ function SelectionPill<T extends string>({
         className="flex-1 flex-row"
         style={[
           { width: `${options.length * 100}%` as `${number}%` },
-          progress ? copyFollow : slide(`${-index * 100 / options.length}%`),
+          progress ? copyFollow : slide(`${(-index * 100) / options.length}%`),
         ]}
       >
         {options.map((option) => (
@@ -129,10 +128,7 @@ export function SegmentedControl<T extends string>({
     // (docs/solutions/web-pressables-skip-gesture-handler.md).
     <View
       accessibilityLabel={accessibilityLabel}
-      className={cn(
-        'flex-row rounded-full border border-border p-0.5',
-        className,
-      )}
+      className={cn('flex-row rounded-full border border-border p-0.5', className)}
     >
       {options.map((option) => (
         <PresstableOpacity
@@ -143,15 +139,15 @@ export function SegmentedControl<T extends string>({
           key={option.value}
           onPress={() => select(option.value)}
         >
-          <Text
-            className={cn(labelClassName, 'text-foreground')}
-            numberOfLines={1}
-          >
+          <Text className={cn(labelClassName, 'text-foreground')} numberOfLines={1}>
             {option.label}
           </Text>
         </PresstableOpacity>
       ))}
-      <View className="absolute inset-0.5 border border-transparent" style={{ pointerEvents: 'none' }}>
+      <View
+        className="absolute inset-0.5 border border-transparent"
+        style={{ pointerEvents: 'none' }}
+      >
         <SelectionPill
           options={options}
           progress={progress}

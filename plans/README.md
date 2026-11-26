@@ -19,34 +19,34 @@ Status values: TODO | IN PROGRESS | DONE | NEEDS REVISION (review finding) | BLO
 Ranked by leverage: severity × confidence ÷ effort, with security and
 unblocking work floated up. Work top to bottom unless a dependency says otherwise.
 
-| Rank | Plan | Title | Category | Priority | Effort | Risk | Depends on | Status |
-|-----:|------|-------|----------|----------|--------|------|------------|--------|
-| 1 | [005](005-simkl-reconcile-blocks-rewatches.md) | A provider whose watch state can't be read no longer blocks rewatches elsewhere | bug | P1 | S | LOW | — | DONE (#369) |
-| 2 | [006](006-disconnect-purges-diary.md) | Disconnecting a provider also drops the cached unified diary | bug / privacy | P1 | S | LOW | — | DONE (#368) |
-| 3 | [008](008-readme-token-encryption-claim.md) | The README stops claiming tokens are encrypted | docs (security claim) | P1 | S | LOW | — | DONE (#378) |
-| 4 | [009](009-simkl-unbuildable-entry-skips-alone.md) | An unbuildable Simkl log is skipped on its own, never coalesced into a batch's `ok` | bug | P1 | S | LOW | — | DONE (#374) |
-| 5 | [007](007-web-oauth-returns-need-a-pending-flow.md) | Web OAuth returns only complete a connect this browser started (AniList login CSRF, Trakt `state`, Trakt reconnect) | security + bug | P1 | M | MED | — | DONE (#382; AniList `state` echo confirmed 2026-11-01) |
-| 6 | [010](010-mapping-lookups-dont-cache-transient-failures.md) | Identity and title lookups stop caching a network failure as "no match" | bug | P2 | S–M | LOW | — | DONE (#377) |
-| 7 | [011](011-trakt-continue-watching-reports-total-failure.md) | Trakt Continue Watching reports an error when every progress call fails | bug | P2 | S | LOW | — | DONE (#370) |
-| 8 | [012](012-notifications-keep-schedule-on-failed-gather.md) | A failed gather never replaces scheduled release notifications with nothing | bug | P2 | S | LOW | 011 (recommended) | DONE (#380, stacked on #370) |
-| 9 | [017](017-settings-refresh-scoped.md) | Settings pull-to-refresh refreshes the home feed, not the whole cache | perf | P2 | S | LOW | — | DONE (#371) |
-| 10 | [018](018-letterboxd-film-watch-invalidation-scoped.md) | A Letterboxd log refreshes only the logged film's watch state | perf | P2 | S | LOW | — | DONE (#373) |
-| 11 | [015](015-harden-github-workflows.md) | Workflows pin actions and Bun; the release job keeps signing secrets narrow | security + dx | P2 | S | MED | — | DONE (#372; release dry run pending) |
-| 12 | [016](016-web-security-headers.md) | The web app sends baseline security headers (no framing, nosniff, referrer, HSTS) | security | P2 | S | LOW | — | DONE (#381) |
-| 13 | [013](013-session-changes-keep-cache-in-step.md) | Losing or gaining a session keeps the query cache in step | bug | P2 | M | MED | 006 | DONE (#386; gathers read the usable providers when each fetch starts) |
-| 14 | [014](014-log-retry-never-becomes-a-rewatch.md) | Retrying a failed provider never turns a landed write into a rewatch | bug (MED confidence) | P2 | S | LOW | 005 | DONE (#385; retries refetch watch state and don't resend an unreadable target) |
-| 15 | [019](019-resolve-item-characterization-tests.md) | `useResolvedMediaItem` gets characterization tests | tests | P2 | M | LOW | — | DONE (#375) |
-| 16 | [020](020-letterboxd-userscript-localhost-opt-in.md) | The Letterboxd userscript trusts localhost only after an explicit opt-in | security | P3 | S | LOW | — | DONE (#384) |
-| 17 | [021](021-serializd-proxy-exact-get-paths.md) | The Serializd proxy forwards only the GET paths and query keys the app uses | security | P3 | S | MED | — | DONE (#387) |
-| 18 | [022](022-trakt-log-invalidates-by-media-type.md) | A Trakt log refreshes the watched library for its own media type only | perf | P3 | S | LOW | 018 | DONE (#383, stacked on #373) |
-| 19 | [024](024-write-result-type-in-provider-layer.md) | `ProviderWriteResult` lives in the provider layer | tech-debt | P3 | S | LOW | — | BLOCKED (STOP: `src/lib/media-sort.test.ts` already imports `@/features/watchlist/*`) |
-| 20 | [026](026-up-next-calendar-key-test-clock.md) | The Up Next calendar-key test uses a fixed clock | tests (flake) | P3 | S | LOW | — | DONE (#376) |
-| 21 | [027](027-agents-and-plan-md-drift.md) | AGENTS.md, plan.md and README stop steering agents toward banned patterns | docs | P3 | S | LOW | — | DONE (#388) |
-| 22 | [025](025-ci-web-export-and-doctor.md) | CI checks the static web export and Expo doctor on every PR | dx | P3 | S | LOW | 015 | BLOCKED (STOP: `build:web` prerenders `studio/lookup/[name]` with a live TMDB fetch) |
-| 23 | [023](023-effect-boundary-lint-rule.md) | A lint rule keeps Effect in its layers; Serializd connect stops importing it | tech-debt | P3 | M | LOW | — | DONE (#379) |
-| 24 | [028](028-measure-persisted-snapshot-size.md) | Investigate: measure the persisted snapshot on web | perf (investigate) | P3 | S | LOW | — | BLOCKED (needs real connected accounts in a browser) |
-| 25 | [029](029-spike-undo-a-log.md) | Direction spike: "undo this log" across providers | direction | — | S (feature L) | LOW | — | DONE (#389, `docs/plans/0115-undo-log.md`) |
-| 26 | [030](030-spike-offline-durable-logs.md) | Direction spike: restart-safe offline logging (#208) | direction | — | S–M (feature L) | LOW | 005, 014 (recommended) | DONE (#390, `docs/plans/0116-offline-log-replay.md`) |
+| Rank | Plan                                                        | Title                                                                                                               | Category              | Priority | Effort          | Risk | Depends on             | Status                                                                                |
+| ---: | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------- | -------- | --------------- | ---- | ---------------------- | ------------------------------------------------------------------------------------- |
+|    1 | [005](005-simkl-reconcile-blocks-rewatches.md)              | A provider whose watch state can't be read no longer blocks rewatches elsewhere                                     | bug                   | P1       | S               | LOW  | —                      | DONE (#369)                                                                           |
+|    2 | [006](006-disconnect-purges-diary.md)                       | Disconnecting a provider also drops the cached unified diary                                                        | bug / privacy         | P1       | S               | LOW  | —                      | DONE (#368)                                                                           |
+|    3 | [008](008-readme-token-encryption-claim.md)                 | The README stops claiming tokens are encrypted                                                                      | docs (security claim) | P1       | S               | LOW  | —                      | DONE (#378)                                                                           |
+|    4 | [009](009-simkl-unbuildable-entry-skips-alone.md)           | An unbuildable Simkl log is skipped on its own, never coalesced into a batch's `ok`                                 | bug                   | P1       | S               | LOW  | —                      | DONE (#374)                                                                           |
+|    5 | [007](007-web-oauth-returns-need-a-pending-flow.md)         | Web OAuth returns only complete a connect this browser started (AniList login CSRF, Trakt `state`, Trakt reconnect) | security + bug        | P1       | M               | MED  | —                      | DONE (#382; AniList `state` echo confirmed 2026-11-01)                                |
+|    6 | [010](010-mapping-lookups-dont-cache-transient-failures.md) | Identity and title lookups stop caching a network failure as "no match"                                             | bug                   | P2       | S–M             | LOW  | —                      | DONE (#377)                                                                           |
+|    7 | [011](011-trakt-continue-watching-reports-total-failure.md) | Trakt Continue Watching reports an error when every progress call fails                                             | bug                   | P2       | S               | LOW  | —                      | DONE (#370)                                                                           |
+|    8 | [012](012-notifications-keep-schedule-on-failed-gather.md)  | A failed gather never replaces scheduled release notifications with nothing                                         | bug                   | P2       | S               | LOW  | 011 (recommended)      | DONE (#380, stacked on #370)                                                          |
+|    9 | [017](017-settings-refresh-scoped.md)                       | Settings pull-to-refresh refreshes the home feed, not the whole cache                                               | perf                  | P2       | S               | LOW  | —                      | DONE (#371)                                                                           |
+|   10 | [018](018-letterboxd-film-watch-invalidation-scoped.md)     | A Letterboxd log refreshes only the logged film's watch state                                                       | perf                  | P2       | S               | LOW  | —                      | DONE (#373)                                                                           |
+|   11 | [015](015-harden-github-workflows.md)                       | Workflows pin actions and Bun; the release job keeps signing secrets narrow                                         | security + dx         | P2       | S               | MED  | —                      | DONE (#372; release dry run pending)                                                  |
+|   12 | [016](016-web-security-headers.md)                          | The web app sends baseline security headers (no framing, nosniff, referrer, HSTS)                                   | security              | P2       | S               | LOW  | —                      | DONE (#381)                                                                           |
+|   13 | [013](013-session-changes-keep-cache-in-step.md)            | Losing or gaining a session keeps the query cache in step                                                           | bug                   | P2       | M               | MED  | 006                    | DONE (#386; gathers read the usable providers when each fetch starts)                 |
+|   14 | [014](014-log-retry-never-becomes-a-rewatch.md)             | Retrying a failed provider never turns a landed write into a rewatch                                                | bug (MED confidence)  | P2       | S               | LOW  | 005                    | DONE (#385; retries refetch watch state and don't resend an unreadable target)        |
+|   15 | [019](019-resolve-item-characterization-tests.md)           | `useResolvedMediaItem` gets characterization tests                                                                  | tests                 | P2       | M               | LOW  | —                      | DONE (#375)                                                                           |
+|   16 | [020](020-letterboxd-userscript-localhost-opt-in.md)        | The Letterboxd userscript trusts localhost only after an explicit opt-in                                            | security              | P3       | S               | LOW  | —                      | DONE (#384)                                                                           |
+|   17 | [021](021-serializd-proxy-exact-get-paths.md)               | The Serializd proxy forwards only the GET paths and query keys the app uses                                         | security              | P3       | S               | MED  | —                      | DONE (#387)                                                                           |
+|   18 | [022](022-trakt-log-invalidates-by-media-type.md)           | A Trakt log refreshes the watched library for its own media type only                                               | perf                  | P3       | S               | LOW  | 018                    | DONE (#383, stacked on #373)                                                          |
+|   19 | [024](024-write-result-type-in-provider-layer.md)           | `ProviderWriteResult` lives in the provider layer                                                                   | tech-debt             | P3       | S               | LOW  | —                      | BLOCKED (STOP: `src/lib/media-sort.test.ts` already imports `@/features/watchlist/*`) |
+|   20 | [026](026-up-next-calendar-key-test-clock.md)               | The Up Next calendar-key test uses a fixed clock                                                                    | tests (flake)         | P3       | S               | LOW  | —                      | DONE (#376)                                                                           |
+|   21 | [027](027-agents-and-plan-md-drift.md)                      | AGENTS.md, plan.md and README stop steering agents toward banned patterns                                           | docs                  | P3       | S               | LOW  | —                      | DONE (#388)                                                                           |
+|   22 | [025](025-ci-web-export-and-doctor.md)                      | CI checks the static web export and Expo doctor on every PR                                                         | dx                    | P3       | S               | LOW  | 015                    | BLOCKED (STOP: `build:web` prerenders `studio/lookup/[name]` with a live TMDB fetch)  |
+|   23 | [023](023-effect-boundary-lint-rule.md)                     | A lint rule keeps Effect in its layers; Serializd connect stops importing it                                        | tech-debt             | P3       | M               | LOW  | —                      | DONE (#379)                                                                           |
+|   24 | [028](028-measure-persisted-snapshot-size.md)               | Investigate: measure the persisted snapshot on web                                                                  | perf (investigate)    | P3       | S               | LOW  | —                      | BLOCKED (needs real connected accounts in a browser)                                  |
+|   25 | [029](029-spike-undo-a-log.md)                              | Direction spike: "undo this log" across providers                                                                   | direction             | —        | S (feature L)   | LOW  | —                      | DONE (#389, `docs/plans/0115-undo-log.md`)                                            |
+|   26 | [030](030-spike-offline-durable-logs.md)                    | Direction spike: restart-safe offline logging (#208)                                                                | direction             | —        | S–M (feature L) | LOW  | 005, 014 (recommended) | DONE (#390, `docs/plans/0116-offline-log-replay.md`)                                  |
 
 Direction spikes (029, 030) are options for the owner, not ranked against
 bugs. Each produces a design doc in `docs/plans/`, never production code. The
@@ -115,12 +115,12 @@ means the linked PR completed implementation or its spike, not that it merged.
 
 ## Round 1 (2026-10-26)
 
-| Plan | Title | Priority | Effort | Depends on | Status |
-|------|-------|----------|--------|------------|--------|
-| [001](001-anilist-diary-pagination.md) | AniList diary keeps paginating past filtered entries | P1 | S | — | DONE |
-| [002](002-anizip-transient-failures-not-cached.md) | Failed ani.zip lookups are retried, not cached as misses | P1 | S | — | DONE |
-| [003](003-diary-poster-fallback-after-trakt.md) | Diary posters wait for Trakt art before a details read | P2 | S | — | DONE |
-| [004](004-bottom-sheet-stable-release.md) | Bottom sheet off `0.17.0-next.2` to stable `0.17.1` | P2 | S + device QA | — | BLOCKED (code complete; full native checklist pending) |
+| Plan                                               | Title                                                    | Priority | Effort        | Depends on | Status                                                 |
+| -------------------------------------------------- | -------------------------------------------------------- | -------- | ------------- | ---------- | ------------------------------------------------------ |
+| [001](001-anilist-diary-pagination.md)             | AniList diary keeps paginating past filtered entries     | P1       | S             | —          | DONE                                                   |
+| [002](002-anizip-transient-failures-not-cached.md) | Failed ani.zip lookups are retried, not cached as misses | P1       | S             | —          | DONE                                                   |
+| [003](003-diary-poster-fallback-after-trakt.md)    | Diary posters wait for Trakt art before a details read   | P2       | S             | —          | DONE                                                   |
+| [004](004-bottom-sheet-stable-release.md)          | Bottom sheet off `0.17.0-next.2` to stable `0.17.1`      | P2       | S + device QA | —          | BLOCKED (code complete; full native checklist pending) |
 
 ### Execution evidence (round 1)
 
@@ -254,9 +254,9 @@ Round 2:
 
 ## Round 3: performance review (2026-11-02)
 
-| Plan | Title | Category | Priority | Effort | Risk | Status |
-|------|-------|----------|----------|--------|------|--------|
-| [031](031-performance-review-2026-11.md) | The five slowest spots from a device profile | perf | P3 | S | LOW | IN PROGRESS (diary leaves and the compiler lint done in #411; follow-ups A–B open) |
+| Plan                                     | Title                                        | Category | Priority | Effort | Risk | Status                                                                             |
+| ---------------------------------------- | -------------------------------------------- | -------- | -------- | ------ | ---- | ---------------------------------------------------------------------------------- |
+| [031](031-performance-review-2026-11.md) | The five slowest spots from a device profile | perf     | P3       | S      | LOW  | IN PROGRESS (diary leaves and the compiler lint done in #411; follow-ups A–B open) |
 
 ## Round 4: log routing and identity matching (2026-11-12)
 
@@ -264,16 +264,16 @@ Owner request: find the edge cases where a log misses a provider or reaches
 the wrong title, such as an AniList film that never logs to Letterboxd. The
 owner chose every finding. Work top to bottom unless a dependency says otherwise.
 
-| Rank | Plan | Title | Category | Priority | Effort | Risk | Depends on | Status |
-|-----:|------|-------|----------|----------|--------|------|------------|--------|
-| 1 | [032](032-movie-never-takes-a-tv-anime-anilist-id.md) | A movie never takes a TV anime's AniList id from ani.zip | bug (wrong write) | P1 | S | LOW | — | DONE (PR #441) |
-| 2 | [033](033-late-log-targets-start-selected.md) | A log target that appears after the sheet opens starts selected | bug | P1 | S | LOW | — | DONE (PR #440) |
-| 3 | [034](034-anime-takes-a-tmdb-id-of-its-own-kind.md) | An AniList anime takes a TMDB id only when the id is of its own kind | bug (wrong write) | P1 | M | MED | 032 | DONE (PR #441) |
-| 4 | [035](035-anilist-unplaced-season-is-a-reasoned-skip.md) | A later-season log that finds no AniList entry reports a reasoned AniList skip | bug | P2 | S | LOW | — | DONE (PR #439) |
-| 5 | [036](036-unmapped-anizip-records-refresh.md) | An ani.zip record with no bridge ids is asked again after a day | bug | P2 | S | LOW | — | DONE (PR #439) |
-| 6 | [038](038-one-episode-anime-filed-as-a-movie-logs-as-a-film.md) | A one-episode anime that TMDB files as a movie logs as a film | feature | P2 | M | MED | 034 | DONE (PR #441) |
-| 7 | [037](037-letterboxd-film-takes-its-tmdb-id-from-its-page.md) | A Letterboxd film with only a slug takes its TMDB id from its film page | bug | P3 | S | LOW | — (after 032, 034 to avoid a rebase) | DONE (PR #442, stacked on #441) |
-| 8 | [039](039-unmatched-provider-gets-a-manual-row.md) | A connected provider with no match for an anime gets a manual row in the log sheet | bug (no dead end) | P3 | M | LOW | 034, 038 (recommended) | DONE (PR #440) |
+| Rank | Plan                                                            | Title                                                                              | Category          | Priority | Effort | Risk | Depends on                           | Status                          |
+| ---: | --------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------- | -------- | ------ | ---- | ------------------------------------ | ------------------------------- |
+|    1 | [032](032-movie-never-takes-a-tv-anime-anilist-id.md)           | A movie never takes a TV anime's AniList id from ani.zip                           | bug (wrong write) | P1       | S      | LOW  | —                                    | DONE (PR #441)                  |
+|    2 | [033](033-late-log-targets-start-selected.md)                   | A log target that appears after the sheet opens starts selected                    | bug               | P1       | S      | LOW  | —                                    | DONE (PR #440)                  |
+|    3 | [034](034-anime-takes-a-tmdb-id-of-its-own-kind.md)             | An AniList anime takes a TMDB id only when the id is of its own kind               | bug (wrong write) | P1       | M      | MED  | 032                                  | DONE (PR #441)                  |
+|    4 | [035](035-anilist-unplaced-season-is-a-reasoned-skip.md)        | A later-season log that finds no AniList entry reports a reasoned AniList skip     | bug               | P2       | S      | LOW  | —                                    | DONE (PR #439)                  |
+|    5 | [036](036-unmapped-anizip-records-refresh.md)                   | An ani.zip record with no bridge ids is asked again after a day                    | bug               | P2       | S      | LOW  | —                                    | DONE (PR #439)                  |
+|    6 | [038](038-one-episode-anime-filed-as-a-movie-logs-as-a-film.md) | A one-episode anime that TMDB files as a movie logs as a film                      | feature           | P2       | M      | MED  | 034                                  | DONE (PR #441)                  |
+|    7 | [037](037-letterboxd-film-takes-its-tmdb-id-from-its-page.md)   | A Letterboxd film with only a slug takes its TMDB id from its film page            | bug               | P3       | S      | LOW  | — (after 032, 034 to avoid a rebase) | DONE (PR #442, stacked on #441) |
+|    8 | [039](039-unmatched-provider-gets-a-manual-row.md)              | A connected provider with no match for an anime gets a manual row in the log sheet | bug (no dead end) | P3       | M      | LOW  | 034, 038 (recommended)               | DONE (PR #440)                  |
 
 ### The shared root cause (plans 032, 034, 038)
 
@@ -282,10 +282,10 @@ knows the kind (`{"tv": N}` or `{"movie": [N]}`); ani.zip returns one number.
 TMDB movie and TV ids share a number space. Counted on 2026-11-12, for entries
 with an AniList id and a TMDB id:
 
-| ani.zip record | TMDB id is a TV id | TMDB id is a movie id |
-|----------------|-------------------:|----------------------:|
-| has `thetvdb_id` | 6,953 | 253 |
-| has no `thetvdb_id` | 8 | 1,066 |
+| ani.zip record      | TMDB id is a TV id | TMDB id is a movie id |
+| ------------------- | -----------------: | --------------------: |
+| has `thetvdb_id`    |              6,953 |                   253 |
+| has no `thetvdb_id` |                  8 |                 1,066 |
 
 `mappings.type` does not tell the kind: 675 `MOVIE` records carry a TV id.
 Plan 032 adds the rule as `aniZipTmdbKind`; 034 and 038 build on it.
@@ -352,13 +352,13 @@ each cited file before a finding counted. Five findings were confirmed in
 code, small, and checkable without a device. All five shipped in #478, one
 commit each, so they have no plan file.
 
-| Fix | `PERF.md` section |
-|-----|-------------------|
-| The Simkl library is indexed once per snapshot, not once per lookup | Lists |
-| Home pull-to-refresh stops downloading list indexes that no screen shows | Invalidation |
-| Three detail reads set `gcTime` equal to `staleTime` | Requests |
-| The shared list row and the credit timeline row prefetch details on press | Prefetch |
-| A discussion catalog is normalized once when it is fetched (plan 031 follow-up A) | Data layout |
+| Fix                                                                               | `PERF.md` section |
+| --------------------------------------------------------------------------------- | ----------------- |
+| The Simkl library is indexed once per snapshot, not once per lookup               | Lists             |
+| Home pull-to-refresh stops downloading list indexes that no screen shows          | Invalidation      |
+| Three detail reads set `gcTime` equal to `staleTime`                              | Requests          |
+| The shared list row and the credit timeline row prefetch details on press         | Prefetch          |
+| A discussion catalog is normalized once when it is fetched (plan 031 follow-up A) | Data layout       |
 
 Evidence: typecheck and lint exit 0 and 1,766 tests pass on the PR branch.
 The Simkl test failed before its fix. On a Pixel 8 Pro dev build, Home pull

@@ -1,14 +1,6 @@
-import {
-  BottomSheetProvider,
-  ModalBottomSheet,
-} from '@swmansion/react-native-bottom-sheet';
+import { BottomSheetProvider, ModalBottomSheet } from '@swmansion/react-native-bottom-sheet';
 import { useState, type ReactNode } from 'react';
-import {
-  ScrollView,
-  View,
-  type LayoutChangeEvent,
-  type ViewStyle,
-} from 'react-native';
+import { ScrollView, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 import {
   KeyboardController,
@@ -57,9 +49,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
       // types `style` as static, but `wrapNativeView` forwards animated styles to it.
       style={lift as unknown as ViewStyle}
       wrapNativeView={createAnimatedComponent}
-      surface={
-        <View className="absolute inset-0 bg-surface rounded-t-3xl border border-border" />
-      }
+      surface={<View className="absolute inset-0 bg-surface rounded-t-3xl border border-border" />}
     >
       <SheetContent>
         <SheetCloseContext.Provider value={close}>
@@ -86,17 +76,13 @@ const HEIGHT_EPSILON = 1;
  */
 function SheetContent({ children }: { children: ReactNode }) {
   const keyboardVisible = useKeyboardState((state) => state.isVisible);
-  const maxHeight = Math.round(
-    useWindowDimensions().height * MAX_SHEET_FRACTION,
-  );
+  const maxHeight = Math.round(useWindowDimensions().height * MAX_SHEET_FRACTION);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
 
   function measure(event: LayoutChangeEvent) {
     const height = event.nativeEvent.layout.height;
     setContentHeight((current) =>
-      current != null && Math.abs(current - height) <= HEIGHT_EPSILON
-        ? current
-        : height,
+      current != null && Math.abs(current - height) <= HEIGHT_EPSILON ? current : height,
     );
   }
 
@@ -119,11 +105,7 @@ function SheetContent({ children }: { children: ReactNode }) {
 
   // Height sits on the wrapper `View` so the unmeasured first frame doesn't let
   // `ScrollView` fill and latch the `'content'` detent at the cap.
-  return (
-    <View style={height == null ? undefined : { height, flexShrink: 1 }}>
-      {scroller}
-    </View>
-  );
+  return <View style={height == null ? undefined : { height, flexShrink: 1 }}>{scroller}</View>;
 }
 
 export function SheetProvider({ children }: { children: ReactNode }) {

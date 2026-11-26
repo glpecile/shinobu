@@ -21,8 +21,20 @@ import { useTrackingState } from './use-tracking-state';
 import { useIsTrackingStatusPending, useTrackingStatus } from './use-tracking-status';
 
 const COPY = {
-  paused: { title: 'Pause tracking', done: 'Paused', verb: 'Pause on', pending: 'Pausing…', icon: 'pause' },
-  dropped: { title: 'Drop', done: 'Dropped', verb: 'Drop on', pending: 'Dropping…', icon: 'close-circle-outline' },
+  paused: {
+    title: 'Pause tracking',
+    done: 'Paused',
+    verb: 'Pause on',
+    pending: 'Pausing…',
+    icon: 'pause',
+  },
+  dropped: {
+    title: 'Drop',
+    done: 'Dropped',
+    verb: 'Drop on',
+    pending: 'Dropping…',
+    icon: 'close-circle-outline',
+  },
 } as const;
 
 export function TrackingStatusPicker({
@@ -83,7 +95,10 @@ export function TrackingStatusPicker({
           : 'Watched episodes stay. Log a new episode to resume.'}
       </WriteSheet.Description>
 
-      <View className={cn(pending && 'opacity-50')} style={{ pointerEvents: pending ? 'none' : 'auto' }}>
+      <View
+        className={cn(pending && 'opacity-50')}
+        style={{ pointerEvents: pending ? 'none' : 'auto' }}
+      >
         <FieldLabel className="mt-5 mb-2">Change on</FieldLabel>
         {writable.length > 0 && (
           <ProviderToggleList

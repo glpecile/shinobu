@@ -113,9 +113,7 @@ function accessToken(deps: SimklDeps): Effect.Effect<string, ProviderAuthError> 
  * Simkl should see one show with five episodes, not the same show five times.
  * Different `watched_at`s stay apart: Simkl dates a whole item, not an episode.
  */
-function mergeSameItem(
-  entries: Array<Record<string, unknown>>,
-): Array<Record<string, unknown>> {
+function mergeSameItem(entries: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   const merged = new Map<string, Record<string, unknown>>();
   for (const entry of entries) {
     const key = JSON.stringify({ ids: entry.ids, watched_at: entry.watched_at });
@@ -124,7 +122,10 @@ function mergeSameItem(
       merged.set(existing == null ? key : `${key}#${merged.size}`, entry);
       continue;
     }
-    const seasons = existing.seasons as Array<{ number: number; episodes: Array<{ number: number }> }>;
+    const seasons = existing.seasons as Array<{
+      number: number;
+      episodes: Array<{ number: number }>;
+    }>;
     for (const season of entry.seasons as typeof seasons) {
       const target = seasons.find((candidate) => candidate.number === season.number);
       if (target == null) seasons.push(season);
@@ -308,7 +309,11 @@ export function logToSimkl(
   const shows: Array<Record<string, unknown>> = [];
   const anime: Array<Record<string, unknown>> = [];
   const dropped: string[] = [];
-  const byCategory: Record<SimklCategory, Array<Record<string, unknown>>> = { movies, shows, anime };
+  const byCategory: Record<SimklCategory, Array<Record<string, unknown>>> = {
+    movies,
+    shows,
+    anime,
+  };
 
   for (const entry of entries) {
     const built = buildEntry(entry);
@@ -443,7 +448,8 @@ export function setSimklTrackingStatus(
   if (reason != null || entry == null) return Effect.succeed(skip(reason ?? ''));
   const ids = idsFor(entry.item);
   const body = ids == null ? null : listBody(entry.item, { to: target, ids });
-  if (body == null) return Effect.fail(noIdsError(entry.item, status === 'paused' ? 'pause' : 'drop'));
+  if (body == null)
+    return Effect.fail(noIdsError(entry.item, status === 'paused' ? 'pause' : 'drop'));
 
   return Effect.gen(function* () {
     const token = yield* accessToken(deps);
@@ -469,9 +475,7 @@ interface SimklHistoryRemoveResponse {
  * (an anime series Simkl files under `anime[]` can arrive typed `TV`).
  */
 function isFilmLike(candidate: NormalizedMediaItem): boolean {
-  return (
-    candidate.type === 'MOVIE' || (candidate.type === 'ANIME' && candidate.isFilm === true)
-  );
+  return candidate.type === 'MOVIE' || (candidate.type === 'ANIME' && candidate.isFilm === true);
 }
 
 function isSameSimklItem(item: NormalizedMediaItem, entry: SimklLibraryEntry): boolean {
@@ -542,11 +546,11 @@ export function removeFromSimklWatchlist(
       return skip(destructiveSkipReason(item));
     }
 
-    const response = yield* simklHttp<SimklHistoryRemoveResponse>(
-      deps,
-      '/sync/history/remove',
-      { method: 'POST', body, accessToken: token },
-    );
+    const response = yield* simklHttp<SimklHistoryRemoveResponse>(deps, '/sync/history/remove', {
+      method: 'POST',
+      body,
+      accessToken: token,
+    });
     if (notFoundCount(response.not_found) > 0) {
       return skip('Simkl could not match any submitted item (not_found)');
     }

@@ -2,7 +2,7 @@
 
 ## Symptom
 
-(owner, 2026-09-12.) Opening *Ted Lasso* S4E7 logged
+(owner, 2026-09-12.) Opening _Ted Lasso_ S4E7 logged
 `Encountered two children with the same key, 'tmdb-person-3593833'` from
 `features/person/people-section.tsx`'s cast rail. React's warning is not
 cosmetic: sibling cards sharing a key may be duplicated or dropped.
@@ -20,7 +20,7 @@ between episodes is a second credit, not an edit:
 `normalizeCrewEntries` had always folded a person's several jobs into one
 entry; `normalizeCastEntries` mapped the array straight through, so one person
 became two cards keyed `tmdb-person-${id}`. The episode normalizer's own
-guest-star dedupe only covered guests that repeated a *regular*, which is a
+guest-star dedupe only covered guests that repeated a _regular_, which is a
 different duplicate.
 
 ## Fix
@@ -34,6 +34,6 @@ regular credited again as a guest now merges instead of losing the guest role.
 
 ## Rule
 
-Anything keyed by a *person* out of a credits payload has to be folded by that
+Anything keyed by a _person_ out of a credits payload has to be folded by that
 person first. A provider's credit list is one row per credit, and "one row per
 human" is our contract, not theirs.

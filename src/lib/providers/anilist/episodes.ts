@@ -55,10 +55,14 @@ function airingInstant(seconds: number): string {
 }
 
 /** AniList schedules only episode 1 for finished all-at-once releases; fall back to the release date (`YYYY-MM-DD`). */
-function singleDayRelease(media: Partial<NonNullable<AnimeEpisodesResponse['Media']>>): string | undefined {
+function singleDayRelease(
+  media: Partial<NonNullable<AnimeEpisodesResponse['Media']>>,
+): string | undefined {
   const { status, startDate: start, endDate: end } = media;
-  if (status !== 'FINISHED' || start?.year == null || start.month == null || start.day == null) return undefined;
-  if (end?.year !== start.year || end.month !== start.month || end.day !== start.day) return undefined;
+  if (status !== 'FINISHED' || start?.year == null || start.month == null || start.day == null)
+    return undefined;
+  if (end?.year !== start.year || end.month !== start.month || end.day !== start.day)
+    return undefined;
   return `${start.year}-${String(start.month).padStart(2, '0')}-${String(start.day).padStart(2, '0')}`;
 }
 
@@ -83,28 +87,36 @@ export function getAnimeEpisodes(
 }
 
 /** AniList caps airing connections at 25 even when perPage asks for more. */
-export const completeAiringSchedule = Effect.fnUntraced(function*(
+export const completeAiringSchedule = Effect.fnUntraced(function* (
   deps: AniListDeps,
   mediaId: number,
   media: Partial<NonNullable<AnimeEpisodesResponse['Media']>> | null,
 ): Effect.fn.Return<void, ProviderError> {
   let schedule = media?.airingSchedule;
   for (let page = 2; schedule?.pageInfo?.hasNextPage === true; page++) {
-    const data = yield* anilistRequest<AnimeEpisodesResponse>(deps,
+    const data = yield* anilistRequest<AnimeEpisodesResponse>(
+      deps,
       `query ($id: Int, $page: Int) { Media(id: $id) {
         airingSchedule(page: $page, perPage: 25) {
           pageInfo { hasNextPage } edges { node { episode airingAt } }
         }
-      } }`, { variables: { id: mediaId, page } });
+      } }`,
+      { variables: { id: mediaId, page } },
+    );
     schedule = data.Media?.airingSchedule;
     if (media?.airingSchedule != null) {
-      media.airingSchedule.edges = [...(media.airingSchedule.edges ?? []), ...(schedule?.edges ?? [])];
+      media.airingSchedule.edges = [
+        ...(media.airingSchedule.edges ?? []),
+        ...(schedule?.edges ?? []),
+      ];
       media.airingSchedule.pageInfo = schedule?.pageInfo;
     }
   }
 });
 
-export function normalizeAnimeEpisodes(media: Partial<NonNullable<AnimeEpisodesResponse['Media']>> | null): NormalizedSeason {
+export function normalizeAnimeEpisodes(
+  media: Partial<NonNullable<AnimeEpisodesResponse['Media']>> | null,
+): NormalizedSeason {
   if (media == null) {
     return buildSeason([]);
   }
@@ -140,7 +152,9 @@ export function normalizeAnimeEpisodes(media: Partial<NonNullable<AnimeEpisodesR
       title: streamingEpisode?.title ?? `Episode ${number}`,
       ...(airByEpisode.has(number)
         ? { firstAired: airByEpisode.get(number) }
-        : releaseDay != null ? { firstAired: releaseDay } : {}),
+        : releaseDay != null
+          ? { firstAired: releaseDay }
+          : {}),
       ...(duration != null ? { runtime: duration } : {}),
     });
   }

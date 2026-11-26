@@ -2,10 +2,7 @@ import type { SerializdSession } from '@/lib/providers/serializd/deps';
 import { Provider } from '@/lib/providers/types';
 import { getProviderSession, setProviderSession } from './tokens';
 
-export function connectSerializd(params: {
-  accessToken: string;
-  username: string;
-}): void {
+export function connectSerializd(params: { accessToken: string; username: string }): void {
   setProviderSession(Provider.Serializd, {
     accessToken: params.accessToken,
     username: params.username,

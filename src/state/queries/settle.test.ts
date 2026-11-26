@@ -11,9 +11,10 @@ describe('settle', () => {
   });
 
   test('captures a rejection as this provider’s error instead of throwing', async () => {
-    expect(
-      await settle('anilist', () => Promise.reject(new Error('anilist down'))),
-    ).toEqual({ inputs: [], errors: [{ provider: 'anilist', message: 'anilist down' }] });
+    expect(await settle('anilist', () => Promise.reject(new Error('anilist down')))).toEqual({
+      inputs: [],
+      errors: [{ provider: 'anilist', message: 'anilist down' }],
+    });
   });
 
   test('stringifies a non-Error rejection rather than losing it', async () => {

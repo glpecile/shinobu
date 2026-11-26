@@ -38,26 +38,43 @@ export function findLetterboxdTwinInCache(
     ...cachedDiaryEntries(queryClient)
       .filter((entry) => entry?.provider === Provider.Letterboxd)
       .map((entry) => entry.item),
-    ...queryClient.getQueriesData<NormalizedMediaItem[]>({ queryKey: [Provider.Letterboxd, 'watchlist'] })
+    ...queryClient
+      .getQueriesData<NormalizedMediaItem[]>({ queryKey: [Provider.Letterboxd, 'watchlist'] })
       .flatMap(([, data]) => data ?? []),
-    ...queryClient.getQueriesData<{ pages: NormalizedMediaItem[][] }>({ queryKey: [Provider.Letterboxd, 'watchlist-pages'] })
+    ...queryClient
+      .getQueriesData<{ pages: NormalizedMediaItem[][] }>({
+        queryKey: [Provider.Letterboxd, 'watchlist-pages'],
+      })
       .flatMap(([, data]) => data?.pages.flat() ?? []),
-    ...queryClient.getQueriesData<{ pages: LetterboxdListFilmsPage[] }>({ queryKey: [Provider.Letterboxd, 'list-films'] })
+    ...queryClient
+      .getQueriesData<{ pages: LetterboxdListFilmsPage[] }>({
+        queryKey: [Provider.Letterboxd, 'list-films'],
+      })
       .flatMap(([, data]) => data?.pages.flatMap((page) => page.items) ?? []),
-    ...queryClient.getQueriesData<NormalizedMediaItem | null>({ queryKey: [Provider.Letterboxd, 'film'] })
-      .flatMap(([, data]) => data == null ? [] : [data]),
+    ...queryClient
+      .getQueriesData<NormalizedMediaItem | null>({ queryKey: [Provider.Letterboxd, 'film'] })
+      .flatMap(([, data]) => (data == null ? [] : [data])),
   ];
   if (item.type === 'TV' || (item.type === 'ANIME' && item.isFilm !== true)) {
-    const twins = new Map(candidates.filter((twin) => twin?.externalIds?.letterboxd != null)
-      .map((twin) => [twin.externalIds.letterboxd, twin]));
+    const twins = new Map(
+      candidates
+        .filter((twin) => twin?.externalIds?.letterboxd != null)
+        .map((twin) => [twin.externalIds.letterboxd, twin]),
+    );
     const matches = [...twins.values()].filter((twin) => {
       if (twin.tmdbTvVariant != null) return twin.tmdbTvVariant === item.externalIds.tmdb;
       if (twin.externalIds.tmdb != null) return false;
-      return item.year != null && twin.year === item.year && titleKey(twin.title) === titleKey(item.title);
+      return (
+        item.year != null &&
+        twin.year === item.year &&
+        titleKey(twin.title) === titleKey(item.title)
+      );
     });
     return matches.length === 1 ? matches[0] : undefined;
   }
   return candidates.find(
-    (twin) => twin?.externalIds?.letterboxd != null && watchlistMergeKeys(twin).some((key) => keys.has(key)),
+    (twin) =>
+      twin?.externalIds?.letterboxd != null &&
+      watchlistMergeKeys(twin).some((key) => keys.has(key)),
   );
 }

@@ -8,10 +8,7 @@ import { VirtualizedRail } from '@/components/rail';
 import { SectionEnter, useArrivalHistory } from '@/components/section-enter';
 import { episodeCardRailHeight } from '@/features/up-next/ui/metrics';
 import { haptics } from '@/lib/haptics';
-import {
-  animeSeasonLabel,
-  type AnimeSeasonWindow,
-} from '@/lib/providers/anilist/season';
+import { animeSeasonLabel, type AnimeSeasonWindow } from '@/lib/providers/anilist/season';
 import { usePushRoute } from '@/lib/navigation';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -35,9 +32,7 @@ interface FeedRowCallbacks {
   onItemActions: (item: NormalizedMediaItem) => void;
 }
 
-export function YourWatchlistRow({
-  onItemActions,
-}: FeedRowCallbacks) {
+export function YourWatchlistRow({ onItemActions }: FeedRowCallbacks) {
   const { entries } = useSuspenseWatchlistQuery();
   const pushRoute = usePushRoute();
   const items = capFeedRow(entries.map((entry) => entry.item));
@@ -106,9 +101,7 @@ export function LetterboxdWatchlistRow({
   );
 }
 
-export function TrendingMoviesRow({
-  onItemActions,
-}: FeedRowCallbacks) {
+export function TrendingMoviesRow({ onItemActions }: FeedRowCallbacks) {
   const { data } = useSuspenseTrendingMoviesQuery();
   const items = useVisibleItems(data);
   return (
@@ -122,9 +115,7 @@ export function TrendingMoviesRow({
   );
 }
 
-export function TrendingShowsRow({
-  onItemActions,
-}: FeedRowCallbacks) {
+export function TrendingShowsRow({ onItemActions }: FeedRowCallbacks) {
   const { data } = useSuspenseTrendingShowsQuery();
   const items = useVisibleItems(data);
   return (

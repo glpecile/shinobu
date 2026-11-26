@@ -55,7 +55,7 @@ bundle — see `docs/solutions/expo-notifications-foreground-handler.md`).
 `notifications-runtime/` shipped as `index.ts` (no-op) + `index.native.tsx`
 (real runtime) and Metro **served the no-op on Android and iOS** from
 2026-07-24 until this fix. `metro-resolver` walks `sourceExts` in order and,
-for *each* extension, tries `index.<platform>.<ext>`, `index.native.<ext>`,
+for _each_ extension, tries `index.<platform>.<ext>`, `index.native.<ext>`,
 then `index.<ext>` (`resolveSourceFileForAllExts` in `resolve.js`). With
 `.ts` ahead of `.tsx`, `index.ts` matches before `index.native.tsx` is ever
 considered. Nothing warns: the bundle loads, the component renders `null`.

@@ -38,7 +38,6 @@ function testClock() {
 }
 
 describe('createAniListWriteQueue', () => {
-
   test('writes waiting on one entry collapse into its highest episode', async () => {
     const { clock, advance } = testClock();
     const queue = createAniListWriteQueue(clock);
@@ -77,11 +76,7 @@ describe('createAniListWriteQueue', () => {
     first.resolve('a1');
     await advance();
 
-    expect(await Promise.all([head, other, rewatch])).toEqual([
-      'a1',
-      'b1',
-      'a-rewatch',
-    ]);
+    expect(await Promise.all([head, other, rewatch])).toEqual(['a1', 'b1', 'a-rewatch']);
     expect(ranks.sort()).toEqual(['a-rewatch', 'a1', 'b1']);
   });
 
@@ -110,9 +105,7 @@ describe('createAniListWriteQueue', () => {
     const queue = createAniListWriteQueue(clock);
     const first = deferred<string>();
     const head = queue.submit('1:false', 3, () => first.promise);
-    const folded = queue.submit('1:false', 4, () =>
-      Promise.reject(new Error('rate limited')),
-    );
+    const folded = queue.submit('1:false', 4, () => Promise.reject(new Error('rate limited')));
     const settled = folded.then(
       () => 'resolved',
       (error: Error) => error.message,
@@ -128,9 +121,7 @@ describe('createAniListWriteQueue', () => {
     const queue = createAniListWriteQueue(clock);
     await queue.submit('1:false', 1, () => Promise.reject(new Error('nope'))).catch(() => {});
     await advance();
-    expect(await queue.submit('1:false', 2, () => Promise.resolve('after'))).toBe(
-      'after',
-    );
+    expect(await queue.submit('1:false', 2, () => Promise.resolve('after'))).toBe('after');
   });
 
   test('each press restarts the settle window until the hold cap', async () => {

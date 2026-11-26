@@ -36,11 +36,22 @@ function letterboxdRow(
 describe('computeWatchlist', () => {
   test('backfills valid metadata in either gather order without changing provider identity or state', () => {
     const preferred: WatchlistInput = {
-      source: 'simkl', simklWatchedCount: 3,
-      item: Object.freeze(item({ id: 'simkl-1', runtime: 0, currentProgress: 3, externalIds: { tmdb: 1, simkl: 1 } })),
+      source: 'simkl',
+      simklWatchedCount: 3,
+      item: Object.freeze(
+        item({ id: 'simkl-1', runtime: 0, currentProgress: 3, externalIds: { tmdb: 1, simkl: 1 } }),
+      ),
     };
-    const fallback = traktRow({ id: 'trakt-1', runtime: 90, year: 2001, externalIds: { tmdb: 1, trakt: 1 } });
-    for (const inputs of [[preferred, fallback], [fallback, preferred]]) {
+    const fallback = traktRow({
+      id: 'trakt-1',
+      runtime: 90,
+      year: 2001,
+      externalIds: { tmdb: 1, trakt: 1 },
+    });
+    for (const inputs of [
+      [preferred, fallback],
+      [fallback, preferred],
+    ]) {
       const [merged] = computeWatchlist(inputs);
       expect(merged.item).toEqual({ ...preferred.item, runtime: 90, year: 2001 });
       expect(merged.sources).toEqual(['trakt', 'simkl']);
@@ -50,48 +61,86 @@ describe('computeWatchlist', () => {
   });
 
   test('keeps known preferred metadata, rejects invalid fallback values and incompatible runtime units', () => {
-    const preferred: WatchlistInput = { source: 'anilist', item: item({ id: 'anilist-1', type: 'ANIME', runtime: 24, year: 2024, externalIds: { imdb: 'same' } }) };
-    const fallback = traktRow({ id: 'trakt-1', runtime: 100, year: 2001, externalIds: { imdb: 'same' } });
+    const preferred: WatchlistInput = {
+      source: 'anilist',
+      item: item({
+        id: 'anilist-1',
+        type: 'ANIME',
+        runtime: 24,
+        year: 2024,
+        externalIds: { imdb: 'same' },
+      }),
+    };
+    const fallback = traktRow({
+      id: 'trakt-1',
+      runtime: 100,
+      year: 2001,
+      externalIds: { imdb: 'same' },
+    });
     expect(computeWatchlist([preferred, fallback])[0].item).toEqual(preferred.item);
-    const missing = { ...preferred, item: { ...preferred.item, runtime: undefined, year: undefined } };
+    const missing = {
+      ...preferred,
+      item: { ...preferred.item, runtime: undefined, year: undefined },
+    };
     expect(computeWatchlist([missing, fallback])[0].item).toEqual(missing.item);
-    const invalid = { ...fallback, item: { ...fallback.item, type: 'TV' as const, runtime: NaN, year: -1 } };
+    const invalid = {
+      ...fallback,
+      item: { ...fallback.item, type: 'TV' as const, runtime: NaN, year: -1 },
+    };
     expect(computeWatchlist([missing, invalid])[0].item).toEqual(missing.item);
     const manga = { ...missing, item: { ...missing.item, type: 'MANGA' as const } };
-    expect(computeWatchlist([manga, { ...invalid, item: { ...invalid.item, runtime: 24 } }])[0].item.runtime).toBeUndefined();
+    expect(
+      computeWatchlist([manga, { ...invalid, item: { ...invalid.item, runtime: 24 } }])[0].item
+        .runtime,
+    ).toBeUndefined();
   });
 
   test('a want-to-read volume and its planned AniList entry merge under the book; a second volume keeps its own card (plan 0117 B6)', () => {
     const planned: WatchlistInput = {
-      source: 'anilist', anilistStatus: 'PLANNING',
+      source: 'anilist',
+      anilistStatus: 'PLANNING',
       item: item({
-        id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 },
+        id: 'anilist-143703',
+        title: 'Nisemonogatari',
+        type: 'MANGA',
+        externalIds: { anilist: 143703 },
         readingCredits: { people: ['NISIOISIN'], format: 'NOVEL', volumes: 2 },
       }),
     };
     const volume: WatchlistInput = {
       source: 'hardcover',
       item: item({
-        id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)', type: 'BOOK',
-        externalIds: { hardcover: 61 }, readingCredits: { people: ['NISIOISIN'] },
+        id: 'hardcover-61',
+        title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)',
+        type: 'BOOK',
+        externalIds: { hardcover: 61 },
+        readingCredits: { people: ['NISIOISIN'] },
       }),
     };
     const second: WatchlistInput = {
       source: 'hardcover',
       item: item({
-        id: 'hardcover-62', title: 'NISEMONOGATARI, Part 2: Fake Tale (Light Novel)', type: 'BOOK',
-        externalIds: { hardcover: 62 }, readingCredits: { people: ['NISIOISIN'] },
+        id: 'hardcover-62',
+        title: 'NISEMONOGATARI, Part 2: Fake Tale (Light Novel)',
+        type: 'BOOK',
+        externalIds: { hardcover: 62 },
+        readingCredits: { people: ['NISIOISIN'] },
       }),
     };
     const [entry, own] = computeWatchlist([planned, volume, second], [planned.item]);
-    expect(computeWatchlist([planned, second, volume], [planned.item]).map((card) => card.id)).toEqual(['hardcover-61', 'hardcover-62']);
+    expect(
+      computeWatchlist([planned, second, volume], [planned.item]).map((card) => card.id),
+    ).toEqual(['hardcover-61', 'hardcover-62']);
     expect(entry).toMatchObject({
       id: 'hardcover-61',
       sources: ['anilist', 'hardcover'],
       sourceIds: ['anilist-143703', 'hardcover-61'],
       anilistStatus: 'PLANNING',
     });
-    expect(entry.item).toMatchObject({ externalIds: { hardcover: 61 }, bridgedAniList: { id: 143703, title: 'Nisemonogatari' } });
+    expect(entry.item).toMatchObject({
+      externalIds: { hardcover: 61 },
+      bridgedAniList: { id: 143703, title: 'Nisemonogatari' },
+    });
     expect(own).toMatchObject({ id: 'hardcover-62', sources: ['hardcover'] });
   });
 
@@ -158,7 +207,11 @@ describe('computeWatchlist', () => {
   test('IMDb ids merge rows that share no TMDB id', () => {
     const entries = computeWatchlist([
       traktRow({ id: 'trakt-1', externalIds: { imdb: 'tt0113277' } }),
-      letterboxdRow({ id: 'letterboxd-heat', title: 'Other title', externalIds: { imdb: 'tt0113277' } }),
+      letterboxdRow({
+        id: 'letterboxd-heat',
+        title: 'Other title',
+        externalIds: { imdb: 'tt0113277' },
+      }),
     ]);
 
     expect(entries).toHaveLength(1);
@@ -253,7 +306,6 @@ describe('computeWatchlist', () => {
     expect(entry.sources).toEqual(['anilist', 'simkl']);
     expect(entry.simklWatchedCount).toBe(7);
   });
-
 });
 
 describe('watchlistMergeKeys', () => {

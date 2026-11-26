@@ -23,7 +23,7 @@ execution: code
 
 ## Goal Capsule
 
-Shinobu can record what you *have* watched. It cannot record what you *want*
+Shinobu can record what you _have_ watched. It cannot record what you _want_
 to watch, and it cannot show you what you already told your trackers you want.
 This plan adds both halves.
 
@@ -41,7 +41,7 @@ This plan adds both halves.
   read screen (`/watchlist/letterboxd`) as its only watchlist.
 - **Objective (removal):** the surface can un-watchlist, on every provider whose
   API supports it, degrading to a manual provider link where it does not. This
-  is only honest *because* the read surface exists — a merged entry knows which
+  is only honest _because_ the read surface exists — a merged entry knows which
   providers hold it, so a Remove row never acts against an item that was never
   added.
 - **Authority:** AGENTS.md overrides this plan where they conflict (theme
@@ -64,9 +64,9 @@ This plan adds both halves.
     is the only data-destroying code in the plan (`DeleteMediaListEntry`, R36)
     and it must not review alongside a new screen — the same reason PR B is
     split for the Worker contract.
-  The Letterboxd unit (U6) is spike-gated and ships degraded — manual link only —
-  if the spike fails; that degradation is stated in the PR, never silently
-  absorbed.
+    The Letterboxd unit (U6) is spike-gated and ships degraded — manual link only —
+    if the spike fails; that degradation is stated in the PR, never silently
+    absorbed.
 - **Stop conditions:** (a) the Letterboxd in-page watchlist endpoint cannot be
   captured from the authenticated WebView, **or is found to be a toggle**
   (fall back is KTD-6, degrade to a manual target, not a blocker);
@@ -75,14 +75,14 @@ This plan adds both halves.
   at risk — record and continue);
   (c) **Serializd's `watchlist_v2` is confirmed to clear watched state on
   partly-watched shows and the season-filter guard does not prevent it** —
-  including the case where the guard *cannot see* the watched season at all,
+  including the case where the guard _cannot see_ the watched season at all,
   i.e. U10 step 1 finds that a season marked watched wholesale is absent from
-  `/progress`'s `watchedSeasons` (KTD-10) — that *does* block the Serializd
+  `/progress`'s `watchedSeasons` (KTD-10) — that _does_ block the Serializd
   write, which reverts to `'manual'`
   by a one-token registry flip; PR B degrades, PRs A and C are unaffected;
   (d) the Serializd `items[]` element shape cannot be confirmed against a real
   account before the read normalizer is written (KTD-9 named risk) — the
-  Serializd *read* is already out of v1, so this only blocks a follow-up.
+  Serializd _read_ is already out of v1, so this only blocks a follow-up.
 
 ---
 
@@ -92,7 +92,7 @@ This plan adds both halves.
 
 The write surface gains a second verb: **want-to-watch**. Given a
 `NormalizedMediaItem` and nothing else, it routes to every connected provider
-applicable to that item's type *and declared capable of the watchlist verb*,
+applicable to that item's type _and declared capable of the watchlist verb_,
 fires in parallel, and reports per-provider outcomes in routing order. The write
 path itself stays membership-read-free and idempotent-by-provider: it never
 issues a per-item membership query (KTD-3, unchanged).
@@ -111,7 +111,7 @@ produces `WatchlistEntry`, never `UpNextEntry`, and never feeds `computeUpNext`.
 ### Problem Frame
 
 `useLogMedia` (`src/features/log-media/use-log-media.ts:494`) is the only
-cross-provider write in the app, and every part of it presumes a *watch* has
+cross-provider write in the app, and every part of it presumes a _watch_ has
 happened: `planLogWrite` runs a reconcile pass (`reconcile.ts:36`), resolves a
 canonical episode via the plan-0027 ani.zip round trip
 (`use-log-media.ts:244`), and carries `watchedAt`, `tags` and `rewatch`
@@ -147,14 +147,14 @@ Four pieces of the answer already exist and are unused here.
 3. **Plan 0030 already widened the AniList list read to
    `status_in: [CURRENT, PLANNING]`** (`anilist/reads.ts:96`) and already carries
    `status` through normalization (`anilist/normalize.ts:149,173`). PLANNING
-   entries are therefore *already in the cached payload* under
+   entries are therefore _already in the cached payload_ under
    `anilistQueryKeys.currentAnimeEntries()`. The read surface's AniList leg is a
    selector, not a query, and costs **zero** extra requests.
 4. The Trakt paginated-sync loop already exists as `getWatchedPages<Raw>`
    (`trakt/reads.ts:204`), private and "watched"-named; the watchlist read
    generalizes it rather than writing a second short-page-terminates loop.
 
-What does *not* exist: any declaration that a provider can accept a watchlist
+What does _not_ exist: any declaration that a provider can accept a watchlist
 write at all. `ProviderDescriptor` carries exactly `id, label, mediaTypes,
 canRead, canWrite, unsupportedWritePlatforms?` (`lib/providers/types.ts:23-38`)
 and routing reads a single capability flag (`routing.ts:55`).
@@ -170,15 +170,15 @@ and routing reads a single capability flag (`routing.ts:55`).
 - R2. The verb applies to **anything unseen**, not only unreleased things. All
   three `filmReleaseStatus` outcomes — `released`, `unreleased`, `unknown` —
   are valid targets (owner decision). `release-gate.ts` is never called as a
-  gate on this path; it is consulted only for CTA *placement* (R11).
+  gate on this path; it is consulted only for CTA _placement_ (R11).
 - R3. The payload is the `NormalizedMediaItem` and **nothing else** — no
   `episodes`, no `entryEpisodes`, no season, no `watchedAt`, no `tags`, no
   `rewatch`. (Q8; KTD-7.)
-- R4. Watchlisting a TV show is **show-level** as a *product* contract. Seasons
+- R4. Watchlisting a TV show is **show-level** as a _product_ contract. Seasons
   and episodes are not user-visible watchlist targets even where a provider
   accepts them (Trakt does — blueprint §L19254). This is a deliberate narrowing,
   not an API limitation. **Amended 2026-07-28:** show-level is not always one
-  call. Serializd's watchlist is *season-keyed* (`season_ids` is required on both
+  call. Serializd's watchlist is _season-keyed_ (`season_ids` is required on both
   writes), so its adapter enumerates seasons via `GET /show/{tmdbId}` and then
   writes — 2 requests, and the season ids it sends are filtered by KTD-10's
   guard. The narrowing holds at the surface; the transport is per-provider.
@@ -198,10 +198,10 @@ and routing reads a single capability flag (`routing.ts:55`).
   Letterboxd as an applicable target … it's just routed to the manual-log
   fallback", `registry.ts:38-40`). (Q1; KTD-1.)
 - R6. **REVERSED by the 2026-07-28 owner decision on OQ-2.** The original R6
-  read: *"Serializd declares `watchlistWrite: 'manual'` … no corroborated
+  read: _"Serializd declares `watchlistWrite: 'manual'` … no corroborated
   endpoint in any of the three consumer projects the plan-0017 Appendix was
   compiled from, and the only route in is a widening of the Worker path+method
-  allowlist."* Both premises have been overturned by research, and the owner
+  allowlist."_ Both premises have been overturned by research, and the owner
   authorised the widening.
 
   Serializd now declares `watchlistWrite: 'write'` and
@@ -217,8 +217,8 @@ and routing reads a single capability flag (`routing.ts:55`).
   `Velocidensity/serializd-py` — the spec the owner pointed at — has **zero**
   watchlist support. At `HEAD` (latest commit 2026-07-18) it implements exactly
   the nine calls the current allowlist already covers, and `grep -rin
-  "watchlist\|bookmark"` returns nothing; there is no open issue or PR adding
-  one. It is a valid corroborator for the *transport* (base URL, app headers,
+"watchlist\|bookmark"` returns nothing; there is no open issue or PR adding
+  one. It is a valid corroborator for the _transport_ (base URL, app headers,
   bearer scheme, `{"message": …}` error convention) and nothing else. The
   endpoints were instead derived from three independent, corroborating sources:
   (A) Serializd's own Next.js bundle, verbatim axios lines; (B) a Django
@@ -231,6 +231,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   `'none'` still has no declaring provider; the state exists so a future
   provider with no watchlist concept at all (a music or games domain) can be
   excluded outright rather than shown a link that means nothing. (Q1; KTD-1.)
+
 - R7. Letterboxd declares `'write'` only if U6's spike succeeds, and its write
   still inherits `unsupportedWritePlatforms: ['web']` from the same
   fingerprint wall that bans the diary write — three spike rounds, four
@@ -249,18 +250,18 @@ and routing reads a single capability flag (`routing.ts:55`).
   mid-run stays excluded from Up Next (`up-next.ts:186`, `compute.ts:229-235`,
   `docs/solutions/anilist-shared-list-query-status-gate.md`). A regression
   test names this explicitly. **Amended 2026-07-28:** now that this plan both
-  *creates* and *displays* PLANNING entries, R9 is doubly load-bearing — see R28
+  _creates_ and _displays_ PLANNING entries, R9 is doubly load-bearing — see R28
   for the display-side half and its three-way regression test. The gate at
   `compute.ts:229-235` and the `CURRENT` filter at `state/queries/anilist.ts
-  :153-160` are **behaviourally frozen by this plan**: not one line changes.
+:153-160` are **behaviourally frozen by this plan**: not one line changes.
   (KTD-2, KTD-11.)
 - R10. Title+year → id resolution reuses `enrichExternalIds` and
   `pickMovieMatch` unchanged. It is **never** relaxed to "top hit" — a wrong
   match would watchlist a different film on the user's real trackers
   (`docs/solutions/trakt-text-search-wrong-movie-match.md`).
 - R21. **NEW (2026-07-28).** A Serializd watchlist write **never clears watched
-  state**. Serializd's own copy is explicit — *"You can't mark a show / season as
-  'Watched' and 'Watchlisted' at the same time"* — so writing every season id of
+  state**. Serializd's own copy is explicit — _"You can't mark a show / season as
+  'Watched' and 'Watchlisted' at the same time"_ — so writing every season id of
   a partly-watched show plausibly clears those seasons' watched flags. The
   adapter reads progress first and sends **only season ids with no watched
   episodes and not present in `watchedSeasons` at all**. A show with no unwatched
@@ -268,7 +269,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   guard is **fail-closed**, exactly like KTD-2's: a failed progress read is an
   `error` outcome, never a write. **The guard does not consume
   `getWatchedEpisodeKeys`** — that helper flattens `watchedSeasons` into
-  `${season}-${episode}` keys and therefore *drops* a season whose
+  `${season}-${episode}` keys and therefore _drops_ a season whose
   `watchedEpisodes` array is empty or absent (`progress.ts:31-36`), which is
   exactly the shape a season marked watched wholesale (`POST /watched_v2`,
   no episode rows) may take. KTD-10 specifies the raw read the guard uses
@@ -295,7 +296,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   the diary (every row is already watched). **Amended 2026-07-28:** the original
   also excluded `/watchlist/letterboxd` on the grounds that "every row is already
   on that provider's watchlist". Once the surface is cross-provider that
-  reasoning inverts — a film on the Letterboxd watchlist and *not* on Trakt's is
+  reasoning inverts — a film on the Letterboxd watchlist and _not_ on Trakt's is
   exactly where an add is most useful. So on `/watchlist` the sheet shows the
   add row **only when `useIsWatchlisted` is not already true for every applicable
   connected provider**, and always shows the **Remove** row (R35). The sheet
@@ -310,7 +311,7 @@ and routing reads a single capability flag (`routing.ts:55`).
 - R14. The CTA reads **"Add to watchlist"** (**"Add to reading list"** for
   read-intent items) and morphs in place to **"On your watchlist"** via
   `morphLabel`. **Amended 2026-07-28 — the truth source changes.** The original
-  derived the settled label from the *mutation report*
+  derived the settled label from the _mutation report_
   (`failed.length === 0 && (succeeded.length > 0 || reasonedSkips.length > 0)`),
   read cross-mount via `useMutationState`. That machinery is retired in PR C:
   the settled label is instead derived from `useIsWatchlisted(item)` (R31), a
@@ -322,7 +323,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   state as originally specified; the swap is ~15 lines and is deliberate,
   bounded churn, not an oversight.
 
-  The rules that survive the swap: an already-there result is a *reasoned skip*,
+  The rules that survive the swap: an already-there result is a _reasoned skip_,
   not an `ok` (R16), and must settle the label like a success; a **mixed** report
   (one `ok`, one `error`) must not settle it, because the settled label would
   assert a completeness that is false and would double as a retry lock. A mixed
@@ -331,7 +332,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   because Trakt then reports `existing: 1`, AniList skips at branch 2, and
   Serializd's season filter re-derives from fresh progress. No tagline names a
   provider; no copy anywhere says "fan out". Provider names appear only in
-  *results*.
+  _results_.
 
 **Failure and idempotency**
 
@@ -353,13 +354,13 @@ and routing reads a single capability flag (`routing.ts:55`).
   already watched on Serializd"), rendered by U8's reasoned-skip family. Without
   that line the user asks to watchlist a show, gets one season, and — with no
   Serializd read leg (R32) — nothing ever corrects the impression. **Note the boundary:** R31's
-  `useIsWatchlisted` reads the *standing cached surface*; it is not a membership
+  `useIsWatchlisted` reads the _standing cached surface_; it is not a membership
   query and it never fetches. (Q3; KTD-3.)
 - R17. An unsupported or manual-declared target surfaces an **upfront manual
   row** — `providerItemUrl(provider, item) ?? providerHomeUrl(provider)`, per
   plan 0022 R4 — rendered before any tap, so Letterboxd-on-web is visible as a
   manual target rather than silently absent. A **failed** or reasoned-skip
-  *outcome* keeps `manualLinkForOutcome`'s existing semantics unchanged:
+  _outcome_ keeps `manualLinkForOutcome`'s existing semantics unchanged:
   `providerItemUrl` only, **no home-URL fallback**, and no link rendered when
   none can be built (`manual-log-links.ts:32-41` — that docblock is normative
   and this plan does not touch it). Reason-less skips get no link. Either way:
@@ -373,7 +374,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   misses. **The pending guard survives R14's truth-source swap unchanged** — it
   is about concurrency, not about evidence, and no read surface makes two
   simultaneous taps safe. Provider-side upsert semantics are load-bearing only
-  where they are *verified*: Trakt's `existing` and AniList's branch 2 are,
+  where they are _verified_: Trakt's `existing` and AniList's branch 2 are,
   Letterboxd's are not (KTD-6), Serializd's are inferred from convention (R16).
 
 **Agenda coherence**
@@ -402,7 +403,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   genuinely old film — the 1997 example — never does: `entryInstant`
   (`up-next/entry.ts:19`) yields nothing to place. Note the counterpart so no
   one "enforces" R20 with a filter: a film already out theatrically whose
-  *digital* release lands next Tuesday is `released` by `filmReleaseStatus` and
+  _digital_ release lands next Tuesday is `released` by `filmReleaseStatus` and
   still has a future instant, because Calendar sources both
   `/calendars/my/movies` and `/calendars/my/streaming` (`MOVIE_CALENDARS`,
   `state/queries/up-next.ts:174`) and both return watchlisted films. It
@@ -442,19 +443,19 @@ and routing reads a single capability flag (`routing.ts:55`).
      a prefix grant. **Do not assert `watchlist_v2/../login` → 404** — that case
      is a trap: `handleSerializdProxy` derives its sub-path from
      `new URL(request.url).pathname`, and the URL parser normalizes dot segments
-     *before* the handler sees them, so that request arrives as sub-path `login`,
+     _before_ the handler sees them, so that request arrives as sub-path `login`,
      matches the existing `login` POST rule and is **forwarded with a 200**.
      (`isUnsafePath`'s `..` check is unreachable through a normal pathname; the
      two existing traversal cases at `serializd-proxy.test.ts:79-92` pass only
-     because they normalize *outside* the `/api/serializd/` prefix and the slice
+     because they normalize _outside_ the `/api/serializd/` prefix and the slice
      yields `''`.) What blocks traversal here is URL normalization plus
      exact-match rules — say that, rather than asserting a 404 that is false.
   3. An amendment section in `docs/plans/0017-serializd-provider.md` (contents
      specified in U9).
   4. The one-parenthetical edit to AGENTS.md § Web & CORS's Serializd bullet,
      adding `watchlist_v2` and `watchlist/remove_v2` to the POST list, plus the
-     sentence *"Each addition is exact-match, never a prefix — `watchlist/random`
-     and `compare_watchlist/*` exist upstream and are deliberately not granted."*
+     sentence _"Each addition is exact-match, never a prefix — `watchlist/random`
+     and `compare_watchlist/*` exist upstream and are deliberately not granted."_
      That sentence is what stops the next widening from being a `startsWith`.
   5. `docs/solutions/serializd-watchlist-endpoints.md` recording the discovery
      method and the probe transcript, per AGENTS.md § Compound Knowledge — the
@@ -475,7 +476,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   with the platform search affordance (`_layout.tsx:50-52`). (KTD-11.)
 - R25. The home row (`YourWatchlistRow`, `feed-rows.tsx:67`) loses its
   `username` prop and its `provider="letterboxd"`, keeps `collapseKey
-  ="your-watchlist"`, and changes its mount gate from `letterboxdUsername != null`
+="your-watchlist"`, and changes its mount gate from `letterboxdUsername != null`
   (`src/app/(tabs)/index.tsx:191`) to "any connected provider contributes a
   watchlist read". Consequence worth naming: a Trakt-only or AniList-only user
   gets a watchlist row for the first time.
@@ -486,7 +487,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   is pure, unit-tested, no React and no Effect. Legs: **one** Trakt call,
   `type=all`, under one `settle`. (**Corrected 2026-07-28:** an earlier draft
   split movies and shows into two `settle` calls "so a shows outage cannot delete
-  every film" — but `/sync/watchlist` is *one* endpoint, so there is no
+  every film" — but `/sync/watchlist` is _one_ endpoint, so there is no
   independent shows outage to isolate; the split bought nothing and added a
   second request to the ~7-concurrent mount-time burst
   `docs/solutions/trakt-transient-network-errors.md` diagnoses. It is one leg.)
@@ -526,8 +527,8 @@ and routing reads a single capability flag (`routing.ts:55`).
   `worthMapping` all stay. PLANNING reaches the new surface through a **third
   selector over the same cached entry** — a sibling slice, never a widening of an
   existing consumer. The regression test is three-way and names the doc by file:
-  *"a PLANNING entry reaches the watchlist surface and nowhere in Up Next
-  (`anilist-shared-list-query-status-gate.md`)"* — it asserts `fetchPlannedAnime`
+  _"a PLANNING entry reaches the watchlist surface and nowhere in Up Next
+  (`anilist-shared-list-query-status-gate.md`)"_ — it asserts `fetchPlannedAnime`
   returns it, `computeUpNext` returns nothing for it, and `fetchCurrentAnime`'s
   output over the same fixture is byte-identical to before. That single test is
   what stops a future "simplification" from deleting the `compute.ts:233` gate on
@@ -537,7 +538,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   divergence from AGENTS.md § Loading & Error States, argued rather than slipped
   in: **dedupe requires every source in hand before anything can render**, so
   there is no per-source subtree to wrap. The home feed can give each row its own
-  boundary because each row *is* one provider; a merged grid cannot. So failures
+  boundary because each row _is_ one provider; a merged grid cannot. So failures
   are captured by `settle` and returned as `errors`, never thrown — one leg
   failing yields that leg's rows missing, not a blank grid — and a one-line
   inline notice above the wall reads `Couldn't load your Trakt watchlist.` with a
@@ -560,8 +561,8 @@ and routing reads a single capability flag (`routing.ts:55`).
   form**: return `rows` itself whenever the filter removed **nothing** — not
   merely when the hidden set is empty. That is `visibleEntries`'s contract today
   (`use-up-next-sections.ts:44`: `if (visible.length === entries.length) return
-  entries;`) and it is the load-bearing half — `visibleItems` short-circuits only
-  on `hidden.length === 0`, so adopting *that* weaker contract would hand Up Next
+entries;`) and it is the load-bearing half — `visibleItems` short-circuits only
+  on `hidden.length === 0`, so adopting _that_ weaker contract would hand Up Next
   a fresh array on every render as soon as the user hides one unrelated item
   anywhere, re-breaking exactly the React Compiler memoization plan 0024 KTD4
   fixed, on Continue Watching and Calendar — the two surfaces R28 promises to
@@ -576,12 +577,13 @@ and routing reads a single capability flag (`routing.ts:55`).
   **accepts** that — a hide is a statement about the item, not about a surface,
   which is the recorded preference — and asserts it in a test rather than leaving
   it to a bug report. (KTD-13.)
+
 - R31. **`useIsWatchlisted(item): boolean | undefined` is cache-only and never
   fetches.** It selects over the already-cached `watchlistQueryKeys.inputs()`
   entry, reusing `computeWatchlist`'s key derivation so "is this the same film"
-  is answered by one function and not two. Three-state, honestly: `true` → *On
-  your watchlist*; `false` → *Add to watchlist*; `undefined` (surface never
-  opened, cache cold) → *Add to watchlist*, i.e. today's behaviour. It must
+  is answered by one function and not two. Three-state, honestly: `true` → _On
+  your watchlist_; `false` → _Add to watchlist_; `undefined` (surface never
+  opened, cache cold) → _Add to watchlist_, i.e. today's behaviour. It must
   **never** trigger a fetch — an item-level membership fetch is precisely the
   per-item cost KTD-3 correctly rejected, and nothing here re-opens it.
   (KTD-14.)
@@ -611,21 +613,21 @@ and routing reads a single capability flag (`routing.ts:55`).
 **Removal**
 
 - R33. **NEW (2026-07-28), answering OQ-3.** Removal is in scope. **This
-  reverses the original Scope Boundary**, whose stated reason was: *"With no
+  reverses the original Scope Boundary**, whose stated reason was: _"With no
   membership read, a remove affordance cannot honestly know whether there is
-  anything to remove."* R24's surface supplies exactly that membership state, so
+  anything to remove."_ R24's surface supplies exactly that membership state, so
   the objection is discharged — and the owner's rationale is accepted: a
   cross-provider watchlist you can see but cannot remove from is a dead end.
   The capability declaration splits into two verbs on the same axis:
   `watchlistWrite` and `watchlistRemove`, each `'write' | 'manual' | 'none'`.
   The original Follow-Up anticipated `isManualWriteTarget` becoming verb-aware;
-  removal is a *second* verb on the same axis, so pre-splitting is now the
+  removal is a _second_ verb on the same axis, so pre-splitting is now the
   cheaper option. (KTD-15.)
 - R34. Removal endpoints, per provider:
   - **Trakt** — `POST /sync/watchlist/remove`, confirmed, symmetric with the add
     in every respect that matters: same body from the existing `idsFor(item)`
     (`trakt/writes.ts:26`), same `traktAuthedRequest` wrapper. `deleted.
-    {movies,shows} === 0` with `not_found` empty → the item was not on the list →
+{movies,shows} === 0` with `not_found` empty → the item was not on the list →
     a **reasoned skip**, the exact mirror of the add's `existing: 1`. **No 420 on
     remove** — the account-limit error is add-only.
   - **AniList** — `DeleteMediaListEntry(id: Int): Deleted`, confirmed by live
@@ -633,7 +635,7 @@ and routing reads a single capability flag (`routing.ts:55`).
     and nothing in the codebase selects it today; see R36.
   - **Serializd** — `POST watchlist/remove_v2 { show_id, season_ids, async }`,
     same allowlist edit as the add (R6). **NAMED RISK — remove is not assumed
-    hazard-free.** An earlier draft sent *all* season ids on the grounds that
+    hazard-free.** An earlier draft sent _all_ season ids on the grounds that
     "removal only clears watchlist flags"; that is an unevidenced assertion about
     the same API whose add-side semantics KTD-10 calls the single most important
     thing to probe. On a model where a season holds exactly one of
@@ -665,10 +667,11 @@ and routing reads a single capability flag (`routing.ts:55`).
   is **unknown** renders an **upfront manual `Remove on X` row** (R17's
   mechanism), and the settled `Removed` label is withheld whenever any applicable
   provider's membership was unknown. Only a provider with a healthy read leg that
-  did *not* return the item is treated as known-absent and skipped without a row.
+  did _not_ return the item is treated as known-absent and skipped without a row.
+
 - R36. **An AniList removal is destructive beyond the watchlist and carries the
   mirror of KTD-2's guard — including its freshness rule.**
-  `DeleteMediaListEntry` destroys the *whole* entry — score, notes, custom lists,
+  `DeleteMediaListEntry` destroys the _whole_ entry — score, notes, custom lists,
   progress — so it runs only against an entry that is **bare PLANNING with
   nothing in it**. Two corrections to an earlier draft, both because "the mirror
   of KTD-2" has to mean the whole of KTD-2:
@@ -686,31 +689,32 @@ and routing reads a single capability flag (`routing.ts:55`).
   2. **The refusal set is wider than status+progress.** A PLANNING entry with
      `progress: 0` can still carry a score, notes, `repeat`, `startedAt` and
      custom-list membership — which is exactly the entry shape KTD-2 refuses to
-     *write over* on the add side, so deleting it outright would be the same loss
+     _write over_ on the add side, so deleting it outright would be the same loss
      by another route. The fresh read therefore selects
      `mediaListEntry { id status progress repeat score notes startedAt
-     customLists }` and removal is refused — reasoned skip plus a manual
+customLists }` and removal is refused — reasoned skip plus a manual
      `Remove on AniList` link — for any non-zero score, non-empty notes, non-empty
      custom lists, `repeat > 0`, a `startedAt`, `progress > 0`, or a status other
      than `PLANNING`. AniList has no "un-status" that preserves an entry, so an
      entry carrying user content is a legitimately manual case, not a delete.
 
   **Cost, corrected:** an AniList remove is **1 read + 1 mutation**, the same as
-  the add. `entryId` carried onto `AniListCurrentEntry` (U12) is a *hint* that
+  the add. `entryId` carried onto `AniListCurrentEntry` (U12) is a _hint_ that
   saves nothing here and is never the guard's evidence; the widening of
   `getCurrentAnime`'s selection stays only because the surface benefits from
   having it, not as a cost argument.
+
 - R37. **Letterboxd removal is gated on U6's spike classifying the control, and
-  so is the add.** The site's control is a *toggle* ("Add to watchlist" / "In
+  so is the add.** The site's control is a _toggle_ ("Add to watchlist" / "In
   watchlist"), so the same endpoint plausibly removes on second invocation. If
   the spike shows a toggle, **both** Letterboxd verbs stay `'manual'` on all
   platforms by default. One narrow exception is permitted and must be argued in
-  the PR if taken: a toggle is *conditionally* safe from `/watchlist` **only**,
+  the PR if taken: a toggle is _conditionally_ safe from `/watchlist` **only**,
   where the row's presence is itself the membership evidence and the row
   disappears on success — but it stays banned on the add CTA, where
   `useIsWatchlisted` may legitimately be `undefined`. Taking that exception
-  requires the spike to have recorded how the response distinguishes *added* from
-  *removed*; without that, no. Web is banned regardless — no Worker POST rule
+  requires the spike to have recorded how the response distinguishes _added_ from
+  _removed_; without that, no. Web is banned regardless — no Worker POST rule
   (`docs/solutions/letterboxd-web-proxy.md`).
 - R38. Removal reuses the write verb's whole contract verbatim: one
   `runProviderWrites` call, per-provider outcomes in routing order, upfront manual
@@ -749,7 +753,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   on mobile data every time. **This is not truncation:** the grid still pages the
   whole list behind `onEndReached` exactly as `/watchlist/letterboxd` does today,
   and each fetched page re-enters the merge (R26/U14) — what is out of scope is
-  fetching them *eagerly*.
+  fetching them _eagerly_.
 - **Renaming the log path's mechanism word.** `todos/010` owns that; this plan
   deliberately leaves `fan-out.ts` and `fanOutLog`'s file path alone.
 
@@ -765,23 +769,23 @@ and routing reads a single capability flag (`routing.ts:55`).
   `provider.canWrite` at `routing.ts:55`. Four providers give four different
   answers to the watchlist verb — Trakt confirmed and transport-ready, AniList
   confirmed but guard-gated, Letterboxd endpoint-unverified and web-banned,
-  Serializd confirmed but guard-gated *and* proxy-gated — and none of those
+  Serializd confirmed but guard-gated _and_ proxy-gated — and none of those
   answers is derivable from `canWrite`. That is precisely the "providers are not
   assumed symmetric" case `types.ts:19-22` describes.
 
   **The field is three-state, not boolean** — `watchlistWrite: 'write' |
-  'manual' | 'none'` — because *applicability* and *transport* are different
+'manual' | 'none'` — because _applicability_ and _transport_ are different
   axes and the boolean conflates them. `canWrite` sits inside the target
   filter (`routing.ts:53-56`), so a `false` there deletes the provider before
   `splitLogTargets` (`:83-85`) ever sees it, and the manual split is derived
   from `isManualWriteTarget(platform)` alone. A boolean `watchlistWrite:false`
   would therefore make (if U6 fails) Letterboxd vanish from the report on every
   platform with no row and no link — the exact silent drop R17 and AGENTS.md
-  forbid, and it is this plan's *shipping default*. So:
+  forbid, and it is this plan's _shipping default_. So:
 
   - `providersForLog` generalizes to `providersForWrite(item, connected,
-    capability: WriteCapability)`, `WriteCapability = 'log' | 'watchlist' |
-    'watchlist-remove'` (the third member added by KTD-15).
+capability: WriteCapability)`, `WriteCapability = 'log' | 'watchlist' |
+'watchlist-remove'` (the third member added by KTD-15).
     For `'log'` line 55 reads `canWrite` unchanged; for the watchlist verbs it
     admits any provider whose declaration is **not** `'none'`.
   - `splitWriteTargets(item, connected, platform, capability)` then classifies
@@ -801,25 +805,24 @@ and routing reads a single capability flag (`routing.ts:55`).
   two different type rules, a divergence bug waiting for its first edit.
   **Platform axis:** `unsupportedWritePlatforms` stays one flat list consumed by
   `isManualWriteTarget(provider, platform)` (`routing.ts:66-69`) — Letterboxd's
-  watchlist write is blocked on web for the *same* reason as its diary write, so
-  sharing the field is true today. KTD-15 revisits the *verb* axis, not this one.
+  watchlist write is blocked on web for the _same_ reason as its diary write, so
+  sharing the field is true today. KTD-15 revisits the _verb_ axis, not this one.
 
 - **KTD-2. The AniList write is read-then-decide, and the decision is
-  *refuse*, never overwrite.** `MediaList.status` is a single enum-valued
+  _refuse_, never overwrite.** `MediaList.status` is a single enum-valued
   field (confirmed by live introspection of `graphql.anilist.co`, 2026-07-27,
   re-confirmed 2026-07-28: `MediaListStatus = CURRENT, PLANNING, COMPLETED,
-  DROPPED, PAUSED, REPEATING`) — exclusivity is a schema fact, not folklore, and
+DROPPED, PAUSED, REPEATING`) — exclusivity is a schema fact, not folklore, and
   `PLANNING` is the correct status for manga want-to-read too (one enum, no
   per-type variant). The guard reads `getEntryState(deps, { mediaId })` — already
-  implemented — and branches, in order, inside the effect:
-  0. **The guard read itself fails** (network, 429, 5xx) → `error` outcome for
-     AniList, message "could not check your AniList entry", mutation **never
-     issued**, R17's outcome link attached. This guard is **fail-closed**, and
-     that is a deliberate divergence: the log path's documented rule ("a failed
-     state read counts as 'doesn't have it': the write is the user's actual
-     intent", `use-log-media.ts:283-286`) is safe there because the worst case
-     is a duplicate history row, and catastrophic here because the worst case is
-     a status clobber. Do not transfer it.
+  implemented — and branches, in order, inside the effect: 0. **The guard read itself fails** (network, 429, 5xx) → `error` outcome for
+  AniList, message "could not check your AniList entry", mutation **never
+  issued**, R17's outcome link attached. This guard is **fail-closed**, and
+  that is a deliberate divergence: the log path's documented rule ("a failed
+  state read counts as 'doesn't have it': the write is the user's actual
+  intent", `use-log-media.ts:283-286`) is safe there because the worst case
+  is a duplicate history row, and catastrophic here because the worst case is
+  a status clobber. Do not transfer it.
   1. `entry == null` → write `SaveMediaListEntry(mediaId, status: PLANNING)`.
   2. `entry.status === 'PLANNING'` → skip, reason "already on your AniList
      planning list".
@@ -830,7 +833,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   So the rule is simply: **an entry that exists is never written over.** An
   earlier draft carved out branch 4 (`status == null, progress === 0`, an entry
   created by a score or a custom-list add) as writable; that is exactly the
-  entry whose *only* content is a score, notes, or custom-list membership, so
+  entry whose _only_ content is a score, notes, or custom-list membership, so
   it is the one branch that would exercise the unverified omit-field behaviour
   below — and it would destroy precisely the fields that entry exists for.
   Refusing it costs a user with a scored-but-unstarted entry one skip message;
@@ -840,8 +843,8 @@ and routing reads a single capability flag (`routing.ts:55`).
   want-to-watch write must never contradict.
 
   **NAMED RISK — omit-field semantics:** whether `SaveMediaListEntry(mediaId,
-  status)` with `progress`, `score`, `notes`, `startedAt`, `customLists`,
-  `private` and `repeat` *omitted* preserves or nulls those stored fields is
+status)` with `progress`, `score`, `notes`, `startedAt`, `customLists`,
+  `private` and `repeat` _omitted_ preserves or nulls those stored fields is
   UNVERIFIED; the schema cannot answer it (2026-07-28 introspection re-confirms
   every arg is nullable) and `docs.anilist.co` 403s to automated fetch. Fallback:
   with branch 3 as specified the mutation only ever runs against a
@@ -852,9 +855,9 @@ and routing reads a single capability flag (`routing.ts:55`).
 
   **Cost, stated honestly:** `getEntryState` called inside the effect is a
   fresh GraphQL request — it does not consult the TanStack cache; only the
-  *hook* layer does that (`use-log-media.ts:320-323`), and
+  _hook_ layer does that (`use-log-media.ts:320-323`), and
   `useAniListEntryStateQuery` sets no `staleTime` (`state/queries/anilist.ts
-  :244-250`) so even a `fetchQuery` against `entryState` would refetch. So an
+:244-250`) so even a `fetchQuery` against `entryState` would refetch. So an
   AniList watchlist add costs **1 read + 1 write**, and that is unavoidable.
   **Explicit prohibition:** the guard is always a fresh in-effect read — never
   `queryClient.getQueryData`/`fetchQuery` against `entryState`, whatever a cost
@@ -869,15 +872,15 @@ and routing reads a single capability flag (`routing.ts:55`).
   — two writes, a torn window between them, and it still moves a `COMPLETED`
   series out of Completed.
 
-- **KTD-3. The *write path* issues no membership read. Its cost premise for a
-  *standing read surface* was over-stated and is corrected here.**
+- **KTD-3. The _write path_ issues no membership read. Its cost premise for a
+  _standing read surface_ was over-stated and is corrected here.**
 
   The decision survives verbatim: no per-item membership query on the write
   path, idempotency reported from the write response. What a per-item membership
   read would cost, on top of each write: AniList 1 (KTD-2's guard is already
   paid, but it answers only AniList), Trakt 1–N against a whole-list endpoint
   with no per-item membership route, Letterboxd 0 for a page-1 heuristic that is
-  *wrong* for anything added more than ~28 films ago or 22+ sequential HTML
+  _wrong_ for anything added more than ~28 films ago or 22+ sequential HTML
   fetches ≈ 2.6 MB for a correct answer
   (`docs/solutions/letterboxd-watchlist-release-resolve-cost.md`), Serializd 1
   page. That is per item, on every tap, in the mount-time burst window
@@ -900,8 +903,8 @@ and routing reads a single capability flag (`routing.ts:55`).
     the persisted cache, which is the normal case. State it as cold-vs-warm, not
     as a single number.
 
-  These are different orders of magnitude: 1–N+1 requests *per item write*,
-  paid on every tap, versus 2–3 requests *per surface open*, amortized across
+  These are different orders of magnitude: 1–N+1 requests _per item write_,
+  paid on every tap, versus 2–3 requests _per surface open_, amortized across
   hundreds of items, off the write path entirely. That distinction is why R24 is
   affordable where a read-backed toggle was not, and it is written down here so
   KTD-3 does not read as contradicted by R24.
@@ -919,7 +922,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   `ProviderWriteReport { outcomes, succeeded, failed, skipped }`;
   `LogWriteResult` → `ProviderWriteResult`, `ProviderLogOutcome` →
   `ProviderWriteOutcome`, and `LogMediaResult = ProviderWriteReport & {
-  rewatch: boolean }` with `useLogMedia` splicing `plan.rewatch` back in — it
+rewatch: boolean }` with `useLogMedia` splicing `plan.rewatch` back in — it
   already holds it (`use-log-media.ts:559`). `fanOutLog` stays as a thin
   wrapper over `runProviderWrites` so `useLogMedia`'s import is untouched.
   Zero behaviour change, one line moved. **This pays off three times now, not
@@ -931,7 +934,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   (`:110-116`), both asserted in `fan-out.test.ts`. Re-deriving them in a second
   file is how a partial-failure contract silently diverges. **The file path and
   the symbol `fanOutLog` are left alone** so `todos/010`'s rename stays a
-  one-file exercise; every *new* shared identifier uses a neutral root that
+  one-file exercise; every _new_ shared identifier uses a neutral root that
   carries no mechanism word at all (`runProviderWrites`, `ProviderWriteReport`).
   A name like `fanOutWrites` would have defeated the point.
 
@@ -968,18 +971,18 @@ and routing reads a single capability flag (`routing.ts:55`).
   Then, and only then, `upNextQueryKeys.inputs()`, then
   `watchlistQueryKeys.inputs()`. **`invalidateAfterLog` gains one key too:**
   Trakt auto-removes watched items from the watchlist server-side (blueprint,
-  confirmed: *"watching 1 episode will remove the entire show or season"*), so
+  confirmed: _"watching 1 episode will remove the entire show or season"_), so
   logging must invalidate `traktQueryKeys.watchlistRoot()` — otherwise a user
   logs an episode and the show sits in Shinobu's watchlist surface for the full
   15-minute stale window despite being gone on Trakt. AniList is the opposite and
   self-corrects (`logToAniList` writes `CURRENT`/`COMPLETED`, `anilist/writes.ts
-  :82-86`, so the entry leaves PLANNING) — **but only if `plannedAnime()` is in
+:82-86`, so the entry leaves PLANNING) — **but only if `plannedAnime()` is in
   the invalidation list**, which is the third-derived-key trap again. Letterboxd
   auto-removal on diary-log is UNVERIFIED and needs no action: the scrape simply
   shows it gone on the next fetch.
 
   **No optimistic cache patch on any of this.** Inserting a synthetic row into a
-  *deduped merge* is hard to reverse on failure and can produce a phantom
+  _deduped merge_ is hard to reverse on failure and can produce a phantom
   duplicate if the real row comes back under a different key. Invalidate and let
   the refetch land — it is 2–3 requests and the surface is usually not even
   mounted at write time.
@@ -1009,7 +1012,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   channel, record in `docs/solutions/letterboxd-watchlist-write.md`.
 
   The capture must record **idempotency semantics**, not just the path and
-  payload: the site's own control is a *toggle* ("Add to watchlist" / "In
+  payload: the site's own control is a _toggle_ ("Add to watchlist" / "In
   watchlist"), so the same endpoint plausibly removes on second invocation. If it
   does, a repeat tap would silently delete the film from the user's real
   Letterboxd watchlist while Shinobu reported `ok` — user-data destruction from a
@@ -1022,7 +1025,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   Fallback if nothing can be captured, **or if the capture shows a toggle**:
   both Letterboxd verbs ship `'manual'` on all platforms — R17's link, not an
   error, and explicitly not the page-1 cache heuristic, which mispredicts and
-  would then *remove* rather than duplicate. R37 records the one narrow exception
+  would then _remove_ rather than duplicate. R37 records the one narrow exception
   (toggle invoked from `/watchlist` only, where the row is the evidence) and the
   conditions under which it may be taken. Rejected: adding a POST rule to
   `worker/letterboxd-proxy.ts` — the header comment states a POST rule may only
@@ -1030,8 +1033,8 @@ and routing reads a single capability flag (`routing.ts:55`).
 
 - **KTD-7. The watchlist payload is show-level and episode-blind, which
   deletes the entire plan-0027 chain.** `NormalizedMediaItem` has no episode
-  granularity (`types/media.ts:39-95`); episodes live only in the *write
-  variables* (`log-media-button.tsx:145-155`) and `RoutableItem` has never
+  granularity (`types/media.ts:39-95`); episodes live only in the _write
+  variables_ (`log-media-button.tsx:145-155`) and `RoutableItem` has never
   seen an episode number (`routing.ts:5`). So the watchlist routing call is a
   strictly simpler signature: no `nonSeasonOneEpisodes`, no `LogDomains`, no
   `translateEntryEpisodes`, no `mappingSkips`. Concrete payoff worth stating:
@@ -1041,13 +1044,13 @@ and routing reads a single capability flag (`routing.ts:55`).
 
   **Amended 2026-07-28 — one provider's transport is not episode-blind.**
   Serializd's watchlist is season-keyed, so `season_ids` is required on both
-  writes and "show-level" there means *all seasons*. The adapter therefore does
+  writes and "show-level" there means _all seasons_. The adapter therefore does
   `GET /show/{tmdbId}` to enumerate seasons (already allowlisted, and exactly
   what `client.py:172-176` does for `log_show`) and then writes — **2 requests
   minimum**, 3 once KTD-10's progress guard is included. This is contained
   entirely inside the Serializd adapter: `RoutableItem` is unchanged, the payload
   crossing the routing boundary is still `{ item }` (R3), and no other adapter
-  learns about seasons. Rejected: season-level watchlisting as a *user-facing*
+  learns about seasons. Rejected: season-level watchlisting as a _user-facing_
   affordance even though Trakt and Serializd both accept it — it forks the
   affordance across the season picker and the details screen for an intent users
   express at show level.
@@ -1058,18 +1061,18 @@ and routing reads a single capability flag (`routing.ts:55`).
   dated public diary artifact), and on latency (its own comment justifies
   itself against a multi-second reconcile round trip, `:431-432`). The
   watchlist payload is `{ item }` (R3), the entry is a reversible bookmark —
-  now *actually* reversible, per R33 — and the write is one small POST per
+  now _actually_ reversible, per R33 — and the write is one small POST per
   provider with no reconcile in front of it, so the sheet would be a modal whose
   only content is the button already tapped. The CTA is a `components/button`
   with `loading` (AGENTS.md mandates it for any awaiting button) plus a result
-  block. That block is *modelled on* `log-media-button.tsx:222-244` but is not
+  block. That block is _modelled on_ `log-media-button.tsx:222-244` but is not
   that block verbatim: dropping the sheet also drops the two plan-0022 renderers
   that live only inside `LogConfirmSheet` — `manualRowsFor`
   (`log-confirm-sheet.tsx:191`, the upfront manual rows) and
   `splitSkippedOutcomes` (`:318`, reasoned skips with their own links). The
   button block renders only `succeeded`, a lumped "already had it", `failed`, and
   `errorOutcomeLinks`, so reusing it as-is would leave Letterboxd-on-web —
-  a manual target that produces no outcome at all — rendering *nothing*, and
+  a manual target that produces no outcome at all — rendering _nothing_, and
   would strip reasoned skips of their links. So the watchlist CTA must render all
   three families: upfront manual rows, per-outcome errors, and reasoned skips
   (U8). **Removal reuses the same block** (R38) with different copy, which is a
@@ -1088,14 +1091,13 @@ and routing reads a single capability flag (`routing.ts:55`).
   - **(A) Serializd's own Next.js bundle**, verbatim:
     `a5=(e,a)=>l.post("/api/watchlist_v2",{season_ids:a,show_id:e})` and
     `a8=function(e,a){let t=…;return l.post("/api/watchlist/remove_v2",
-    {show_id:e,season_ids:a,async:t})}`.
+{show_id:e,season_ids:a,async:t})}`.
   - **(B) A Django `DEBUG=True` URLconf leak** — `GET /api/__nope__` returns the
     debug 404 listing all 251 patterns, including `api/watchlist_v2`,
     `api/watchlist/remove_v2` and `api/user/<username>/watchlistpage_v2/<page>`.
     Server-side ground truth for path existence.
   - **(C) Live unauthenticated probes** with controls — a real route answers
-    `401 {"message":"You must be logged in"}`, a non-route answers the Django HTML
-    404. `POST watchlist_v2 → 401`; `GET/PUT/DELETE watchlist_v2 → 405`;
+    `401 {"message":"You must be logged in"}`, a non-route answers the Django HTML 404. `POST watchlist_v2 → 401`; `GET/PUT/DELETE watchlist_v2 → 405`;
     `watchlist/remove` (no `_v2`) → 404.
 
   The grant, in `worker/serializd-proxy.ts`'s `RULES` (`:33-42`), is exactly two
@@ -1126,10 +1128,10 @@ and routing reads a single capability flag (`routing.ts:55`).
   **No rule is added for the read** (`user/{u}/watchlistpage_v2/{page}` already
   matches the `user/` GET prefix and `url.search` is already appended at `:110`);
   a redundant rule would be dead code that reads like a wider grant than it is.
-  `user_information` is *not* covered by that prefix and is not granted.
+  `user_information` is _not_ covered by that prefix and is not granted.
 
   **Invariant preservation, summarized** (full table in U9's deliverable):
-  every AGENTS.md § Web & CORS invariant is preserved *by construction*, because
+  every AGENTS.md § Web & CORS invariant is preserved _by construction_, because
   the edit touches one array and adds no code path. Serializd-only path+method →
   yes, two literals through the unchanged `isUnsafePath` (`:45-53`) and the
   unchanged `RULES.find`→404 / method-mismatch→405 flow (`:91-93`). No
@@ -1171,30 +1173,29 @@ and routing reads a single capability flag (`routing.ts:55`).
 
 - **KTD-10. NEW — Serializd's watchlist is mutually exclusive with watched, so
   the write is read-then-decide, exactly like KTD-2.** This is the hazard the
-  original plan did not know about, and it is the same *shape* as the AniList
+  original plan did not know about, and it is the same _shape_ as the AniList
   status clobber: a write that silently destroys state the user created.
 
   The evidence is Serializd's own copy, from the bundle:
   `'You can\'t mark a show / season as "Watched" and "Watchlisted" at the same
-  time'`, alongside `"Added {{count}} season(s) to watchlist!"`,
+time'`, alongside `"Added {{count}} season(s) to watchlist!"`,
   `"Removed all seasons from watchlist!"` and `"Specials not affected."`. Since
   `season_ids` is required and the site's show-level control is `addAllToWatchlist`
   (every season id), **writing all season ids to `watchlist_v2` on a partly-watched
   show plausibly clears those seasons' watched flags.**
 
-  The guard, drafted to mirror KTD-2's branch structure, inside the effect:
-  0. **The progress read fails** (network, 401, 5xx) → `error` outcome for
-     Serializd, message "could not check your Serializd progress", **no write
-     issued**, R17's outcome link attached. **Fail-closed**, for the same reason
-     KTD-2 is: the log path's "a failed state read counts as 'doesn't have it'"
-     rule is safe there and catastrophic here.
+  The guard, drafted to mirror KTD-2's branch structure, inside the effect: 0. **The progress read fails** (network, 401, 5xx) → `error` outcome for
+  Serializd, message "could not check your Serializd progress", **no write
+  issued**, R17's outcome link attached. **Fail-closed**, for the same reason
+  KTD-2 is: the log path's "a failed state read counts as 'doesn't have it'"
+  rule is safe there and catastrophic here.
   1. Enumerate seasons via `GET /show/{tmdbId}` (see the enumeration reader
      below); read progress via the **raw** `GET /user/{u}/show/{tmdbId}/progress`
      body — **not** `getWatchedEpisodeKeys`.
   2. `seasonIds = eligible seasons that are not watched`. Write
      `POST watchlist_v2 { show_id, season_ids: seasonIds }`.
   3. `seasonIds` empty → **skip**, reason "already watched on Serializd". Never
-     a write. A *partial* filter (some seasons dropped) is reported with its
+     a write. A _partial_ filter (some seasons dropped) is reported with its
      reason attached to the `ok`, per R16 — never a bare success.
 
   **"Not watched" is read from the raw progress body, and the helper cannot
@@ -1203,14 +1204,14 @@ and routing reads a single capability flag (`routing.ts:55`).
   `Set<'${season}-${episode}'>` and therefore **drops any season whose
   `watchedEpisodes` is empty or absent** — a season marked watched wholesale
   (Serializd's own season-level control is `POST /watched_v2 {season_ids,
-  show_id}`, plan 0017 Appendix L295, which writes no episode rows) is then
+show_id}`, plan 0017 Appendix L295, which writes no episode rows) is then
   indistinguishable from a season never touched, and the guard would send it and
   clear it. That is the guard failing **open** in the exact scenario it exists
   for. So a season counts as watched if **it appears in `watchedSeasons` at all**,
   or if its watched-episode count is ≥ the `episodeCount` the show payload reports
   for it. Only a season absent from `watchedSeasons` with zero watched episodes
   is eligible. **`seasonNumber` ↔ `id` is the join the guard depends on** —
-  progress is keyed by season *number*, the write by Serializd season *id* — and
+  progress is keyed by season _number_, the write by Serializd season _id_ — and
   it comes from the show payload.
 
   **Eligible-season set, specified rather than left implicit:** season 0 /
@@ -1222,8 +1223,8 @@ and routing reads a single capability flag (`routing.ts:55`).
 
   **The enumeration reader is a U9 deliverable, not an assumed one.** No
   show-details read exists in the repo — `src/lib/providers/serializd/` has only
-  `resolveSeasonId` (`season-id.ts:31`), one `GET /show/{tmdbId}/season/{n}` *per
-  season*. U9 must name and build the reader (function, file, `RawShowResponse`
+  `resolveSeasonId` (`season-id.ts:31`), one `GET /show/{tmdbId}/season/{n}` _per
+  season_. U9 must name and build the reader (function, file, `RawShowResponse`
   interface, test), and U10 must capture a real `GET /show/{tmdbId}` body to
   confirm it carries per-season **ids** and `episodeCount`. If it does not, the
   fallback is `resolveSeasonId` per season and the add costs **2 + N** requests
@@ -1231,7 +1232,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   and is a reason to reconsider, not a silent degradation.
 
   So the conservative rule is: **a season the user has any watched episode in is
-  never sent to the watchlist.** This is *more* conservative than the site's own
+  never sent to the watchlist.** This is _more_ conservative than the site's own
   show-level button, deliberately — the site is entitled to clear its own state
   because the user pressed its own control; Shinobu is not, because the user
   pressed a cross-provider "Add to watchlist" with no idea Serializd models it
@@ -1241,13 +1242,13 @@ and routing reads a single capability flag (`routing.ts:55`).
   It is inferred from product copy, not observed. Verification step in U10,
   mirroring U5's shape: on a throwaway account, mark S1 watched, watchlist S2 via
   the API, re-read progress, and report whether S1's watched flag survived; then
-  repeat with S1 *included* in `season_ids` to observe the destructive case
+  repeat with S1 _included_ in `season_ids` to observe the destructive case
   directly. **This is the single most important thing to probe before shipping
   PR B** and it is stop-condition (c). Fallback if the destructive behaviour is
-  confirmed *and* the season filter does not prevent it (e.g. the API clears at
+  confirmed _and_ the season filter does not prevent it (e.g. the API clears at
   show level regardless of `season_ids`): Serializd's declaration reverts to
   `'manual'` — the one-token rollback of KTD-9 — and PR B ships as documentation
-  plus inert Worker rules, or is dropped. Fallback if it is confirmed *harmless*:
+  plus inert Worker rules, or is dropped. Fallback if it is confirmed _harmless_:
   the season filter stays anyway, because it also produces the honest
   "already watched" skip in branch 3, which is better copy than a silent `ok`.
 
@@ -1270,11 +1271,11 @@ and routing reads a single capability flag (`routing.ts:55`).
 
   ```ts
   interface WatchlistEntry {
-    id: string;                 // stable list key — the canonical item's id
-    item: NormalizedMediaItem;  // the precedence winner
-    sources: ProviderId[];      // every provider holding it, routing order
-    sourceIds: string[];        // every contributing id, for R30's filter
-    addedAt?: string;           // Trakt listed_at / AniList createdAt; absent sorts last
+    id: string; // stable list key — the canonical item's id
+    item: NormalizedMediaItem; // the precedence winner
+    sources: ProviderId[]; // every provider holding it, routing order
+    sourceIds: string[]; // every contributing id, for R30's filter
+    addedAt?: string; // Trakt listed_at / AniList createdAt; absent sorts last
   }
   ```
 
@@ -1351,15 +1352,15 @@ and routing reads a single capability flag (`routing.ts:55`).
   section its own `SuspenseSection`. That default rests on an assumption this
   surface breaks: that each section can render independently. **Dedupe needs
   every source in hand before anything renders**, so there is no per-source
-  subtree to wrap — wrapping the *whole grid* in one boundary would blank it when
+  subtree to wrap — wrapping the _whole grid_ in one boundary would blank it when
   one provider fails, which is worse than the default, and wrapping per-source
   is not expressible. So the grid captures failures via `settle` and renders the
   rows it has, with an inline `Couldn't load your Trakt watchlist.` notice + retry
   above the wall. The notice names a provider **in a result**, which is where
-  AGENTS.md permits naming. The home *row* keeps its single `SuspenseSection`
+  AGENTS.md permits naming. The home _row_ keeps its single `SuspenseSection`
   unchanged — one row, one slot, the default applies there. This divergence is
   called out in the PR body and reviewed on its merits; it is not precedent for
-  dropping boundaries anywhere the sections *are* independent.
+  dropping boundaries anywhere the sections _are_ independent.
 
 - **KTD-13. NEW — `visibleByIds` is extracted, not copied a third time.** R30's
   filter is Up Next's `visibleEntries` (`use-up-next-sections.ts:36`) generalized
@@ -1367,8 +1368,10 @@ and routing reads a single capability flag (`routing.ts:55`).
 
   ```ts
   export function visibleByIds<T>(
-    rows: readonly T[], hidden, idsOf: (row: T) => readonly string[],
-  ): readonly T[]
+    rows: readonly T[],
+    hidden,
+    idsOf: (row: T) => readonly string[],
+  ): readonly T[];
   ```
 
   in `state/prefs/hidden-items.ts`, **preserving the identity contract in its
@@ -1388,7 +1391,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   `useMutationState` **pending** read stays exactly as specified — pressto's
   debounce is per-component-instance, a card and the sheet over it are two
   instances, and no read surface makes two simultaneous taps safe. What goes is
-  the *settled state* as cross-mount session evidence (R14 original): it is
+  the _settled state_ as cross-mount session evidence (R14 original): it is
   replaced by R31's cache-only `useIsWatchlisted`.
 
   What that buys, precisely: the label becomes **derived from data, not from a
@@ -1397,7 +1400,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   — none of which session-scoped state could ever be. It **retires** KTD-3's
   honest caveat ("it evaporates on app restart") rather than living with it, and
   it retires OQ-1(a)'s core complaint. The `morphLabel` morph stays and is in
-  fact *more* appropriate: it is now an in-place text change driven by user
+  fact _more_ appropriate: it is now an in-place text change driven by user
   state, which is exactly what AGENTS.md reserves `MorphText` for. R14's
   mixed-report rule stays but its reasoning simplifies — the label is no longer
   asserting completeness on the mutation's behalf, it reports what the cache
@@ -1413,12 +1416,12 @@ and routing reads a single capability flag (`routing.ts:55`).
   declaration pre-splits.** The original plan's Follow-Ups anticipated
   `isManualWriteTarget` becoming verb-aware "if the two write verbs' platform
   support ever diverges". Removal makes that concrete: Letterboxd's add and
-  remove are gated by the *same* spike but can legitimately resolve differently
+  remove are gated by the _same_ spike but can legitimately resolve differently
   (R37's toggle case makes remove safe from the surface and add unsafe), and
   Trakt's remove has no 420 while its add does. So `ProviderDescriptor` carries
   **two** three-state fields, `watchlistWrite` and `watchlistRemove`, and
   `WriteCapability` gains `'watchlist-remove'`. `unsupportedWritePlatforms`
-  stays one flat list — the *platform* axis has not diverged (Letterboxd is
+  stays one flat list — the _platform_ axis has not diverged (Letterboxd is
   web-banned for every write verb by the same fingerprint wall) — and
   `isManualWriteTarget(provider, platform)` stays one function. Verb splits;
   platform does not. Rejected: one `watchlistVerbs: Set<…>` field — a set at the
@@ -1515,7 +1518,7 @@ flowchart LR
   details-screen query is mounted. That sits inside the real 30 req/min
   (`docs/solutions/anilist-rate-limit-retry-storm.md`); it is not free, and the
   guard is never sourced from the cache to make it look free (KTD-2).
-- An AniList watchlist **read** costs **zero extra** requests *warm* — plan 0030
+- An AniList watchlist **read** costs **zero extra** requests _warm_ — plan 0030
   already widened `getCurrentAnime` to `status_in: [CURRENT, PLANNING]`
   (`reads.ts:96`) and `AniListCurrentEntry` already carries `status` through
   normalization, so it is one cached request with three slices — and **2 cold**
@@ -1604,7 +1607,7 @@ position is a silent drop) and **why they are two fields, not one** (KTD-15:
 R37 is a live day-one counterexample to symmetry). Initial declarations:
 Trakt `write`/`write`; AniList `write`/`write`; Serializd `manual`/`manual` in
 PR A, flipped to `write`/`write` by U9 in PR B; Letterboxd `manual`/`manual`
-until U6's spike, per R37. So the branch is shippable at any point *and* no
+until U6's spike, per R37. So the branch is shippable at any point _and_ no
 provider is ever absent from the report.
 Generalize `providersForLog` → `providersForWrite(item, connected,
 capability)` (for the watchlist verbs, admit any declaration other than
@@ -1618,7 +1621,7 @@ any call site — platform stays data, passed as `process.env.EXPO_OS`.
 Trakt, `manual` Letterboxd, on **both** platforms while Letterboxd is
 `'manual'`, and `writable` Trakt + Letterboxd on native / `manual` Letterboxd
 on web once it is `'write'`; a TV show → `writable` Trakt, Serializd per its
-declaration (present in one list or the other, never dropped); an anime *film*
+declaration (present in one list or the other, never dropped); an anime _film_
 → Trakt + AniList writable, Letterboxd per its declaration, Serializd absent
 (TV-only), mirroring the log routing for the same item; MANGA → AniList only,
 no manual rows; the `'watchlist-remove'` capability resolves independently of
@@ -1688,13 +1691,13 @@ set `status: CURRENT, progress: 5` **plus `score`, `notes`, `startedAt` and a
 custom list**; send `SaveMediaListEntry(mediaId, status: PLANNING)` with all of
 those omitted; re-query `mediaListEntry { status progress score notes
 startedAt customLists repeat }` and report each. The wider selection is the
-point: an entry that exists *only* because of a score or a custom-list add is
+point: an entry that exists _only_ because of a score or a custom-list add is
 the shape U4's collapsed branch 3 refuses, and if that refusal were ever
 relaxed this probe is the evidence it would have to be relaxed against.
 **This is a manual, account-bound step — it cannot be automated in CI.** If any
 field is nulled, note that U4 already refuses every case where it would matter
 (the mutation only ever runs with no entry present) and no code change follows;
-if all are preserved, note that a future softening of the guard is *still* not
+if all are preserved, note that a future softening of the guard is _still_ not
 permitted for the `COMPLETED` case.
 **Test scenarios:** none automatable — the deliverable is the recorded finding
 and a link to it from `writes.ts`'s guard docblock.
@@ -1720,7 +1723,7 @@ succeeds: turn `LetterboxdWebRequest` into a discriminated union
 filmPath, filmLid }`), branch `buildSubmitScript`, add siblings of
 `interpretDiaryResponse`, and flip the registry declarations.
 **NAMED RISK — idempotency semantics:** the spike must classify the endpoint as
-*add-only*, *toggle*, or *add + separate remove*, and record how the response
+_add-only_, _toggle_, or _add + separate remove_, and record how the response
 says which happened — the site's own control reads "Add to watchlist" / "In
 watchlist", so a toggle is the likelier shape. If it is a toggle, **both**
 Letterboxd verbs stay `'manual'` by default: a second tap on the add CTA would
@@ -1733,7 +1736,7 @@ the page-1 cache is acceptable as a heuristic pre-check, never a blocking
 full-list read. Web stays banned regardless — no Worker rule is added
 (`docs/solutions/letterboxd-web-proxy.md`).
 **Test scenarios:** with the declarations `'manual'`, a film on native yields
-Letterboxd as a *manual* row with an `Add on Letterboxd` link and no adapter
+Letterboxd as a _manual_ row with an `Add on Letterboxd` link and no adapter
 call; with them `'write'`, the bridge builds the watchlist script rather than the
 diary script and a diary write is byte-identical to today; on web Letterboxd
 is a manual target in both configurations; `getLetterboxdWebFetch()` returning
@@ -1764,7 +1767,7 @@ builder (KTD-5) — invalidating a per-window key would be a bug.
 `invalidateAfterWatchlist` **and** the notification refresh run inside
 `mutationFn` after `runProviderWrites`, never in `onSuccess` — for the reason
 `invalidate-after-log` already records (`use-log-media.ts:386`: they run on the
-*enriched* item), and for a second one this plan adds: the sheet entry point
+_enriched_ item), and for a second one this plan adds: the sheet entry point
 can unmount before `onSuccess` would fire, and a hook observer that is gone
 never runs its callback. Order is: provider keys, then
 `upNextQueryKeys.inputs()`, then — on native only, and **only when the added
@@ -1813,14 +1816,15 @@ behind one local, so the swap is the ~15 lines it should be.
 
 The result surface renders **three** families, because dropping the confirm
 sheet drops two of plan 0022's renderers (KTD-8):
+
 1. **Upfront manual rows** — `manualRowsFor(manual, item)` from
-   `splitWriteTargets(...).manual`, rendered *before any tap*, with
+   `splitWriteTargets(...).manual`, rendered _before any tap_, with
    `providerItemUrl ?? providerHomeUrl`. This is what makes Letterboxd-on-web
    (and Serializd, until U9 flips it) visible at all: they are excluded from the
    fan-out, so they produce no outcome, and without this row they would render
    nothing (R17).
 2. **Failed outcomes** — `Failed on …` plus `errorOutcomeLinks(result.outcomes,
-   item)` as `OutcomeLink verb="Add on"`.
+item)` as `OutcomeLink verb="Add on"`.
 3. **Reasoned skips** — `splitSkippedOutcomes(result.outcomes).reasonedSkips`
    as individual lines, each with its own `OutcomeLink verb="Add on"`, never
    lumped. The all-skip report (every applicable provider already had it) has
@@ -1885,19 +1889,19 @@ adapter** — the allowlist is the reviewed artifact, the adapter is the caller.
    the new show-enumeration reader → the **raw** progress read → filter to
    eligible, unwatched seasons →
    `serializdHttp(deps, '/watchlist_v2', { method: 'POST', auth: true, body:
-   { show_id, season_ids } })`. Empty filter → reasoned skip; partial filter →
+{ show_id, season_ids } })`. Empty filter → reasoned skip; partial filter →
    `ok` carrying the reason (R16). Failed progress read → `error`, fail-closed,
    **no write**.
    **New deliverable — the enumeration reader.** `getSerializdShow(deps,
-   { tmdbId })` in `src/lib/providers/serializd/show.ts` with a
+{ tmdbId })` in `src/lib/providers/serializd/show.ts` with a
    `RawShowResponse { seasons?: Array<{ id?: number; seasonNumber?: number;
-   episodeCount?: number }> }` interface and its own test; nothing in
+episodeCount?: number }> }` interface and its own test; nothing in
    `src/lib/providers/serializd/` reads show details today (only `resolveSeasonId`,
    one request per season), so this is a named unit deliverable, not an assumed
    helper. If U10's captured body lacks per-season ids, fall back to
    `resolveSeasonId` per season and record the 2 + N cost.
    `removeFromSerializdWatchlist` posts `watchlist/remove_v2 { show_id,
-   season_ids, async: true }` with the **same filtered set as the add** — remove
+season_ids, async: true }` with the **same filtered set as the add** — remove
    is not assumed hazard-free (R34's named risk), and U10 step 5 probes it. No
    `added`/`existing` signal exists, so success is boolean (R16).
 3. **Registry.** Flip Serializd's `watchlistWrite` from `'manual'` to `'write'`.
@@ -1911,7 +1915,7 @@ adapter** — the allowlist is the reviewed artifact, the adapter is the caller.
    (a) what changed and who authorised it — owner decision 2026-07-28 answering
    this plan's OQ-2; that this is the **second** widening of the plan-0017
    contract and still not a general licence; (b) the precise grant, quoted as the
-   diff, **plus** the explicit statement that the *read* path required no grant
+   diff, **plus** the explicit statement that the _read_ path required no grant
    because `user/{username}/watchlistpage_v2/{page}` was already inside the
    pre-existing `user/` GET prefix; (c) why the paths are trusted, since plan
    0017's Appendix was compiled from consumer projects and this one is not —
@@ -1958,8 +1962,8 @@ join and U9's enumeration reader both depend on it, and the fallback
 (`resolveSeasonId` per season, 2 + N requests) is chosen here or not at all;
 (1) mark S1 watched **using the site's season-level control** (not
 episode-by-episode) and record the **verbatim** `GET /user/{username}/show/
-{tmdbId}/progress` body — *"a season marked watched wholesale is visible in
-`/progress`"* is an explicit **precondition of stop-condition (c)**, because if
+{tmdbId}/progress` body — _"a season marked watched wholesale is visible in
+`/progress`"_ is an explicit **precondition of stop-condition (c)**, because if
 such a season is absent from `watchedSeasons` the guard has no input that can see
 it and fails open; (2) `POST watchlist_v2` with **only S2's id**; (3) re-read
 progress and report whether S1's watched state survived. Then, deliberately,
@@ -1974,7 +1978,7 @@ every write (Serializd's POSTs are boolean-success by convention, so whatever
 structure exists is worth capturing).
 **This is a manual, account-bound step — it cannot be automated in CI.**
 Outcomes: if (3) preserves S1 and (4) destroys it, KTD-10's filter is exactly
-right and ships as specified. If (3) *also* destroys S1 — i.e. the API clears at
+right and ships as specified. If (3) _also_ destroys S1 — i.e. the API clears at
 show level regardless of `season_ids` — the filter does not protect anything and
 **stop-condition (c) fires**: Serializd's declarations revert to `'manual'` by
 the one-token flip, and PR B ships as documentation plus inert Worker rules, or
@@ -2069,13 +2073,14 @@ for that reason. Never keyed on the cached `entryId` and never guarded by the
 cached surface — a stale guard here destroys the whole entry (R36).
 
 **Amendments, both required because tests cite these docs by name:**
-- Plan 0030 **R12** currently reads *"PLANNING entries reach Calendar **only**,
-  never Continue Watching and never the 'Your Anime' row."* That literal text is
-  now false. Amend to: *"PLANNING entries reach Calendar **and the
+
+- Plan 0030 **R12** currently reads _"PLANNING entries reach Calendar **only**,
+  never Continue Watching and never the 'Your Anime' row."_ That literal text is
+  now false. Amend to: _"PLANNING entries reach Calendar **and the
   cross-provider watchlist surface**; never Continue Watching and never the
-  'Your Anime' row."* Nothing else in plan 0030 changes.
+  'Your Anime' row."_ Nothing else in plan 0030 changes.
 - `docs/solutions/anilist-shared-list-query-status-gate.md` says PLANNING is
-  *for* Calendar; add the second consumer and restate the invariant in the
+  _for_ Calendar; add the second consumer and restate the invariant in the
   consumer-agnostic form: **the gate is about what PLANNING may reach, not about
   how many things read it.**
 
@@ -2119,6 +2124,7 @@ handling on the remove path.
 
 **Two cross-cutting registrations that belong here, in the unit that creates the
 key:**
+
 - `src/state/session/index.ts` — `useDisconnectProvider` purges
   `queryClient.removeQueries({ queryKey: [id] })` plus one explicit exception,
   because "every query root is a provider id" has exactly one violator today
@@ -2192,7 +2198,7 @@ open.
 `src/app/details/[id].tsx:517-522` resolves an id by scanning the feed slots and
 then the search / diary / TMDB caches, and anything unresolved renders the
 **"Not found"** screen (`:579-586`). Today every watchlist card resolves because
-`yourWatchlist` *is* a feed slot; after R25 the merged row carries Trakt- and
+`yourWatchlist` _is_ a feed slot; after R25 the merged row carries Trakt- and
 AniList-sourced items that belong to no slot and no other cache. So U14 adds a
 `findInWatchlistCache(queryClient, id)` sibling of `findInSearchCache` /
 `findInDiaryCache`, reading `watchlistQueryKeys.inputs()` and matching against
@@ -2247,8 +2253,8 @@ only — the `mutationKey` and the pending read stay).
 **Approach:** replace the single label-source expression U8 isolated with
 `useIsWatchlisted(item)`, mapping `true → 'On your watchlist'`, `false |
 undefined → 'Add to watchlist'` (or the read-intent copy). Delete the
-`useMutationState` *settled-result* derivation and its tests; **keep** the
-`useMutationState` *pending* read and its "second mounted instance" test
+`useMutationState` _settled-result_ derivation and its tests; **keep** the
+`useMutationState` _pending_ read and its "second mounted instance" test
 verbatim (KTD-14). R14's mixed-report rule survives with simpler reasoning: the
 label reports what the cache knows; the failed-provider line in the result block
 carries the rest. Update the button's docblock to name KTD-14 and the
@@ -2314,14 +2320,14 @@ between; no remove affordance renders on details, search, feed, person or studio
   1. U4's `CURRENT`-entry case asserting the AniList mutation is **never
      issued**, and U4's failed-guard-read case asserting the same.
   2. U9's partly-watched Serializd case asserting only unwatched season ids are
-     sent — including a season watched at *season level* (empty
+     sent — including a season watched at _season level_ (empty
      `watchedEpisodes`), which is the case `getWatchedEpisodeKeys` cannot see —
      and its failed-progress-read case asserting **no POST**.
   3. U12/U28's three-way regression — a mid-run PLANNING entry appears in
      `computeWatchlist`, in **neither** Up Next section, and **not** in
      `fetchCurrentAnime` — with
      `anilist-shared-list-query-status-gate.md` named in the test name.
-  4. U13's hidden-items case: hiding a merged entry by its *Letterboxd* id drops
+  4. U13's hidden-items case: hiding a merged entry by its _Letterboxd_ id drops
      the entry, so the Trakt twin cannot reappear.
   5. U16's AniList-remove refusals, which are R36's mirror of guard 1 —
      including the fresh-guard-read assertion (a stale cached `PLANNING`
@@ -2371,8 +2377,8 @@ between; no remove affordance renders on details, search, feed, person or studio
 ## Open Questions for the Owner
 
 - **OQ-1 — write-only, or a cross-provider watchlist read surface?**
-  **ANSWERED 2026-07-28 → (b), read + write.** Owner's words: *"Read+write we
-  will be updating your anime to be the planned anime"* — i.e. AniList's
+  **ANSWERED 2026-07-28 → (b), read + write.** Owner's words: _"Read+write we
+  will be updating your anime to be the planned anime"_ — i.e. AniList's
   contribution to the read surface is the PLANNING list. Recorded rather than
   deleted so the reasoning stays legible: option (a) was "accept that nothing
   shows the add back; the settled label is the only in-app evidence", and its
@@ -2384,10 +2390,10 @@ between; no remove affordance renders on details, search, feed, person or studio
   this must not re-open plan 0030's hole. Continue Watching, the "Your Anime"
   row and Calendar are behaviourally untouched; the PLANNING gate at
   `compute.ts:229-235` and the selector filter at `state/queries/anilist.ts
-  :153-160` stay exactly as they are, with a regression test naming the doc.
+:153-160` stay exactly as they are, with a regression test naming the doc.
 - **OQ-2 — Serializd a link, or a write?** **ANSWERED 2026-07-28 → write, widen
-  the Worker proxy.** Owner's words: *"Do what you have to do to make adding to
-  serializd watchlist work. If that means updating the proxy then do it."* R6 is
+  the Worker proxy.** Owner's words: _"Do what you have to do to make adding to
+  serializd watchlist work. If that means updating the proxy then do it."_ R6 is
   rewritten accordingly and the original R6 (`'manual'`) is recorded as reversed.
   One correction to the decision's premise, stated plainly rather than
   papered over: the cited spec — `Velocidensity/serializd-py` — **does not cover
@@ -2411,7 +2417,7 @@ between; no remove affordance renders on details, search, feed, person or studio
   one corner. **(a)** Ship the read surface anime-only in v1 and state the
   asymmetry in the PR — cheapest, and it is the plan's current assumption.
   **(b)** Pay **+1 request** for `MediaListCollection(type: MANGA, status_in:
-  [PLANNING])`, adding one request to the cold path (KTD-3's corrected table) and a fourth
+[PLANNING])`, adding one request to the cold path (KTD-3's corrected table) and a fourth
   leg to `fetchWatchlistInputs`. It is a real charge against the 30 req/min
   budget but a small one, and it is the only thing standing between "want-to-read
   is a supported verb" and "want-to-read is a write-only verb". This plan assumes
@@ -2437,7 +2443,7 @@ between; no remove affordance renders on details, search, feed, person or studio
   written against the exact `{ totalPages }` envelope. Cheapest of the four
   reads. Closes OQ-5's asymmetry.
 - **Manga PLANNING read** (OQ-4b): one `MediaListCollection(type: MANGA,
-  status_in: [PLANNING])` request and a fifth leg.
+status_in: [PLANNING])` request and a fifth leg.
 - **Letterboxd removal via the toggle exception** (R37), if U6's capture records
   response discrimination and the owner wants it — from `/watchlist` only.
 - **Trakt watchlist ordering** — `PUT /sync/watchlist/{list_item_id}` (notes) and
@@ -2448,7 +2454,7 @@ between; no remove affordance renders on details, search, feed, person or studio
   evidence Serializd versions by renaming and retiring. The standing rollback is
   the one-token registry flip (KTD-9); the re-probe instruction is in
   `docs/solutions/serializd-watchlist-endpoints.md`.
-- If the two write verbs' **platform** support ever diverges (the *verb* axis is
+- If the two write verbs' **platform** support ever diverges (the _verb_ axis is
   already split by KTD-15), `unsupportedWritePlatforms` becomes verb-aware at
   `isManualWriteTarget(provider, platform)` — one function, deliberately not
   pre-split now.

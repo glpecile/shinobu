@@ -57,9 +57,7 @@ const {
 } = await import('./tokens');
 const { watchlistOptions } = await import('@/state/queries/watchlist');
 const { upNextOptions } = await import('@/state/queries/up-next');
-const { getSimklAuthFlow, saveSimklAuthFlow } = await import(
-  '@/lib/providers/simkl/auth'
-);
+const { getSimklAuthFlow, saveSimklAuthFlow } = await import('@/lib/providers/simkl/auth');
 const { simklQueryKeys } = await import('@/state/queries/simkl');
 const { DIARY_QUERY_ROOT } = await import('@/state/queries/diary-pages');
 const { UP_NEXT_QUERY_ROOT } = await import('@/state/queries/up-next-cache');
@@ -97,9 +95,7 @@ describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
     expect(queryClient.getQueryData(watchlistKey)).toBeUndefined();
     expect(queryClient.getQueryData(upNextKey)).toBeUndefined();
     expect(queryClient.getQueryData(diaryKey)).toBeUndefined();
-    expect(queryClient.getQueryData(['trakt', 'viewer'])).toBe(
-      'unrelated' as never,
-    );
+    expect(queryClient.getQueryData(['trakt', 'viewer'])).toBe('unrelated' as never);
   });
 
   test('drops a pending PKCE flow with the session', () => {
@@ -153,37 +149,40 @@ describe('syncQueryCacheWithSessions', () => {
   test.each([
     ['watchlist', watchlistOptions],
     ['up-next', upNextOptions],
-  ] as const)('a new connect refetches the active %s gather with that provider; a token refresh does not', async (_, options) => {
-    // Session reads are client-only (`currentUsableProviders`).
-    (globalThis as { window?: unknown }).window = {};
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const unsubscribe = syncQueryCacheWithSessions(queryClient);
-    const observer = new QueryObserver<unknown>(queryClient, options(queryClient));
-    const idle = () =>
-      new Promise<QueryObserverResult>((resolve) => {
-        const stop = observer.subscribe((result) => {
-          if (result.fetchStatus === 'idle') {
-            stop();
-            resolve(result);
-          }
+  ] as const)(
+    'a new connect refetches the active %s gather with that provider; a token refresh does not',
+    async (_, options) => {
+      // Session reads are client-only (`currentUsableProviders`).
+      (globalThis as { window?: unknown }).window = {};
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const unsubscribe = syncQueryCacheWithSessions(queryClient);
+      const observer = new QueryObserver<unknown>(queryClient, options(queryClient));
+      const idle = () =>
+        new Promise<QueryObserverResult>((resolve) => {
+          const stop = observer.subscribe((result) => {
+            if (result.fetchStatus === 'idle') {
+              stop();
+              resolve(result);
+            }
+          });
         });
-      });
-    const stopObserving = observer.subscribe(() => {});
-    await idle();
+      const stopObserving = observer.subscribe(() => {});
+      await idle();
 
-    setProviderClientId('trakt', 'cid');
-    setProviderClientSecret('trakt', 'secret');
-    setProviderSession('trakt', { accessToken: 't-1' });
-    await idle();
-    expect(requested.some((url) => url.startsWith('https://api.trakt.tv/'))).toBe(true);
+      setProviderClientId('trakt', 'cid');
+      setProviderClientSecret('trakt', 'secret');
+      setProviderSession('trakt', { accessToken: 't-1' });
+      await idle();
+      expect(requested.some((url) => url.startsWith('https://api.trakt.tv/'))).toBe(true);
 
-    requested.length = 0;
-    setProviderSession('trakt', { accessToken: 't-2' });
-    expect(observer.getCurrentResult().fetchStatus).toBe('idle');
-    expect(requested).toEqual([]);
-    stopObserving();
-    unsubscribe();
-    queryClient.clear();
-    delete (globalThis as { window?: unknown }).window;
-  });
+      requested.length = 0;
+      setProviderSession('trakt', { accessToken: 't-2' });
+      expect(observer.getCurrentResult().fetchStatus).toBe('idle');
+      expect(requested).toEqual([]);
+      stopObserving();
+      unsubscribe();
+      queryClient.clear();
+      delete (globalThis as { window?: unknown }).window;
+    },
+  );
 });

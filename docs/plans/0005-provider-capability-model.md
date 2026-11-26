@@ -30,7 +30,7 @@ read-only. Raw reasoning in
 - **Notifications: local-only v1, door open** (resolves `todos/007`'s open question).
   Air dates are known in advance, so schedule local notifications on app foreground
   for the next ~7–14 days — no push server. Web gets in-app Up Next only. The only
-  permissible future server exception is a tiny *stateless* push relay, and only if
+  permissible future server exception is a tiny _stateless_ push relay, and only if
   staleness hurts in practice.
 - **Web CORS policy: a provider that blocks browser origins is native-only on web**
   ("connect on mobile") — never proxied. Verified per provider by spike

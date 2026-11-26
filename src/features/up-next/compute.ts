@@ -1,10 +1,6 @@
 import { Provider } from '@/lib/providers/types';
 import { hasAired, parseLocalInstant } from '@/lib/time/has-aired';
-import {
-  formatDayHeading,
-  localDayAt,
-  localDayOffset,
-} from '@/lib/time/relative-day';
+import { formatDayHeading, localDayAt, localDayOffset } from '@/lib/time/relative-day';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { isNewEpisode } from './badges';
@@ -24,14 +20,10 @@ const UP_NEXT_POOL_SIZE = 20;
 
 export const UP_NEXT_WINDOW_DAYS = 7;
 
-export function withinPremiereWindow(
-  date: string | null | undefined,
-  now: Date,
-): boolean {
+export function withinPremiereWindow(date: string | null | undefined, now: Date): boolean {
   const instant = date == null ? null : parseLocalInstant(date);
   return (
-    instant != null &&
-    now.getTime() - instant.getTime() <= UP_NEXT_WINDOW_DAYS * 24 * 60 * 60_000
+    instant != null && now.getTime() - instant.getTime() <= UP_NEXT_WINDOW_DAYS * 24 * 60 * 60_000
   );
 }
 
@@ -44,20 +36,11 @@ export function selectUpNextPool(
     .slice(0, Math.max(0, limit));
 }
 
-function entryId(
-  item: NormalizedMediaItem,
-  season: number | undefined,
-  number: number,
-) {
-  return season == null
-    ? `${item.id}-e${number}`
-    : `${item.id}-s${season}e${number}`;
+function entryId(item: NormalizedMediaItem, season: number | undefined, number: number) {
+  return season == null ? `${item.id}-e${number}` : `${item.id}-s${season}e${number}`;
 }
 
-function progressEntry(
-  input: ProgressUpNextInput,
-  now: Date,
-): UpNextEntry | null {
+function progressEntry(input: ProgressUpNextInput, now: Date): UpNextEntry | null {
   const next = input.nextEpisode;
   if (next == null) return null;
   const behind =
@@ -100,10 +83,7 @@ function progressEntry(
   };
 }
 
-function calendarEntry(
-  input: CalendarUpNextInput,
-  now: Date,
-): UpNextEntry | null {
+function calendarEntry(input: CalendarUpNextInput, now: Date): UpNextEntry | null {
   const { episode } = input;
   if (hasAired(episode.firstAired, now)) return null;
 
@@ -136,10 +116,7 @@ function releaseEntry(input: ReleaseUpNextInput): UpNextEntry {
 }
 
 /** AniList exposes only a single `nextAiringEpisode` pointer per series, not per-episode instants. */
-function classifyAnilistEntry(
-  input: AniListUpNextInput,
-  now: Date,
-): UpNextEntry | null {
+function classifyAnilistEntry(input: AniListUpNextInput, now: Date): UpNextEntry | null {
   if (input.item.isFilm === true) return null;
   const next = input.item.currentProgress + 1;
   const total = input.totalEpisodes;
@@ -181,16 +158,13 @@ function classifyAnilistEntry(
   };
 }
 
-function anilistEntry(
-  input: AniListUpNextInput,
-  now: Date,
-): UpNextEntry | null {
+function anilistEntry(input: AniListUpNextInput, now: Date): UpNextEntry | null {
   const entry = classifyAnilistEntry(input, now);
   if (entry == null) return null;
   if (input.status === 'PLANNING' && entry.status !== 'upcoming') {
     if (input.hasUnfinishedPrequel === true) return null;
-    const premiere = input.firstAired ??
-      (input.nextAiring?.episode === 1 ? input.nextAiring.airingAt : undefined);
+    const premiere =
+      input.firstAired ?? (input.nextAiring?.episode === 1 ? input.nextAiring.airingAt : undefined);
     if (premiere == null || !hasAired(premiere, now)) return null;
     if (!withinPremiereWindow(premiere, now)) return null;
   }
@@ -204,19 +178,14 @@ export interface UpNextDayGroup {
   entries: UpNextEntry[];
 }
 
-export function calendarWeek(
-  entries: readonly UpNextEntry[],
-  now: Date,
-): UpNextDayGroup[] {
+export function calendarWeek(entries: readonly UpNextEntry[], now: Date): UpNextDayGroup[] {
   return Array.from({ length: UP_NEXT_WINDOW_DAYS }, (_, offset) => {
     const date = localDayAt(offset, now);
     return {
       offset,
       date,
       label: formatDayHeading(offset, date),
-      entries: entries.filter(
-        (entry) => localDayOffset(entryInstant(entry), now) === offset,
-      ),
+      entries: entries.filter((entry) => localDayOffset(entryInstant(entry), now) === offset),
     };
   });
 }
@@ -257,9 +226,7 @@ function withTwins(winner: UpNextEntry, losers: readonly UpNextEntry[] | undefin
 }
 
 /** Simkl's anime calendar often omits `tmdb` and only provides `tvdb`/`imdb`/`mal`; namespace keys so numeric IDs across services cannot collide. */
-export function identityKeys(
-  ids: UpNextEntry['item']['externalIds'],
-): string[] {
+export function identityKeys(ids: UpNextEntry['item']['externalIds']): string[] {
   const keys: string[] = [];
   if (ids.tmdb != null) keys.push(`tmdb:${ids.tmdb}`);
   if (ids.tvdb != null) keys.push(`tvdb:${ids.tvdb}`);
@@ -343,10 +310,7 @@ function continueWatchingOrder(a: UpNextEntry, b: UpNextEntry, now: Date): numbe
 }
 
 /** Epoch ms of the next upcoming airing or local midnight. */
-export function nextSplitChange(
-  calendar: readonly UpNextEntry[],
-  now: Date,
-): number {
+export function nextSplitChange(calendar: readonly UpNextEntry[], now: Date): number {
   const airings = calendar.flatMap((entry) => {
     const instant = entryInstant(entry);
     const time = instant == null ? null : parseLocalInstant(instant)?.getTime();
@@ -359,8 +323,7 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
   const anilistPairs = inputs.anilist
     .map((input) => ({ input, entry: anilistEntry(input, now) }))
     .filter(
-      (pair): pair is { input: AniListUpNextInput; entry: UpNextEntry } =>
-        pair.entry != null,
+      (pair): pair is { input: AniListUpNextInput; entry: UpNextEntry } => pair.entry != null,
     );
   const anilistEntries = anilistPairs.map((pair) => pair.entry);
   const episodeEntries = dedupeTrackerEpisodes([

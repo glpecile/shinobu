@@ -13,27 +13,18 @@ import { useLoggedWatches } from '@/features/log-media/logged-context';
 import { useCatchUpControls } from '@/features/log-media/session/state';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import type { PendingLog } from '@/features/show-seasons/season-accordion';
-import {
-  formatRuntime,
-  seasonRuntimeMinutes,
-} from '@/features/show-seasons/runtime';
+import { formatRuntime, seasonRuntimeMinutes } from '@/features/show-seasons/runtime';
 import {
   useAniListEpisodesQuery,
   useAniListEntryStateQuery,
   useSuspenseAniListEpisodesQuery,
 } from '@/state/queries/anilist';
 import { DetailsList, type DetailsListProps } from '@/features/show-seasons/details-list';
-import {
-  EpisodeActionsSheet,
-  type EpisodePointer,
-} from '@/features/episode-details';
+import { EpisodeActionsSheet, type EpisodePointer } from '@/features/episode-details';
 import { usePushRoute } from '@/lib/navigation';
 import { placeInLayout } from '@/lib/providers/mapping/season-layout';
 import { routes } from '@/lib/routes';
-import {
-  useAniZipEpisodeMapQuery,
-  useSeasonLayoutQuery,
-} from '@/state/queries/mapping';
+import { useAniZipEpisodeMapQuery, useSeasonLayoutQuery } from '@/state/queries/mapping';
 import { useConnectedProviders } from '@/state/session';
 import { preAiringDisplay } from '@/features/log-media/release-gate';
 import { canonicalSeasonTitle } from './season-label';
@@ -66,13 +57,19 @@ function AnimeSeasonsHeading({ mediaId }: { mediaId: number }) {
     <Section>
       <Section.Header>
         <Section.Title>Seasons</Section.Title>
-        {runtime > 0 && <Section.Subtitle>{`${formatRuntime(runtime)} total runtime`}</Section.Subtitle>}
+        {runtime > 0 && (
+          <Section.Subtitle>{`${formatRuntime(runtime)} total runtime`}</Section.Subtitle>
+        )}
       </Section.Header>
     </Section>
   );
 }
 
-function AnimeDetailsList({ item, resetKey, ...page }: {
+function AnimeDetailsList({
+  item,
+  resetKey,
+  ...page
+}: {
   item: NormalizedMediaItem;
   resetKey?: unknown;
 } & DetailsListProps) {
@@ -90,7 +87,9 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
 
   const progress = entryState?.entry?.progress ?? item.currentProgress;
   const watched = withLoggedKeys(watchedKeys(progress), item, useLoggedWatches());
-  const aired = new Set(airedAnimeEpisodes(item, season?.episodes ?? [], null).map((episode) => episode.number));
+  const aired = new Set(
+    airedAnimeEpisodes(item, season?.episodes ?? [], null).map((episode) => episode.number),
+  );
   const isEpisodeAired = (episode: NormalizedEpisode) => aired.has(episode.number);
 
   const { data: episodeMap } = useAniZipEpisodeMapQuery(mediaId);
@@ -139,7 +138,10 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
           watched,
           heading: (
             <SuspenseSection
-              errorToast={{ title: 'Episodes unavailable', message: 'AniList didn’t respond — pull to refresh to try again.' }}
+              errorToast={{
+                title: 'Episodes unavailable',
+                message: 'AniList didn’t respond — pull to refresh to try again.',
+              }}
               fallback={<SeasonsSkeleton />}
               resetKey={resetKey}
             >
@@ -205,7 +207,6 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
         pointer={pressed?.pointer ?? null}
         watched={pressed != null && watched.has(`1-${pressed.entryNumber}`)}
       />
-
     </>
   );
 }
@@ -222,7 +223,5 @@ export function AnimeSeasonsSection({
     return <DetailsList {...layout} />;
   }
 
-  return (
-    <AnimeDetailsList {...layout} item={item} resetKey={resetKey} />
-  );
+  return <AnimeDetailsList {...layout} item={item} resetKey={resetKey} />;
 }

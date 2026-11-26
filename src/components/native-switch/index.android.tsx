@@ -7,7 +7,12 @@ import { useThemeColor } from '@/lib/theme-color';
 import type { NativeSwitchProps } from './index';
 
 /** Compose's Switch throws unless directly under Host and defaults to light scheme / Material blue. */
-export function NativeSwitch({ accessibilityLabel, disabled, onValueChange, value }: NativeSwitchProps) {
+export function NativeSwitch({
+  accessibilityLabel,
+  disabled,
+  onValueChange,
+  value,
+}: NativeSwitchProps) {
   const scheme = useColorScheme();
   const accent = useThemeColor('--color-accent');
   return (

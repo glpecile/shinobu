@@ -68,19 +68,14 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
 `src/state/queries/trakt.ts` today:
 
 ```ts
-export function useTraktMediaImages(
-  item: NormalizedMediaItem | undefined,
-): NormalizedMediaImages {
+export function useTraktMediaImages(item: NormalizedMediaItem | undefined): NormalizedMediaImages {
   const traktId = item?.externalIds.trakt;
   const type = item?.type ?? 'MOVIE';
   const missingArt = item != null && item.coverImage === '';
   const { data } = useQuery({
-    queryKey: traktQueryKeys.images(type, missingArt ? traktId ?? -1 : -1),
+    queryKey: traktQueryKeys.images(type, missingArt ? (traktId ?? -1) : -1),
     queryFn: ({ signal }) =>
-      Effect.runPromise(
-        getMediaImages(traktDeps(), { type, traktId: traktId ?? -1 }),
-        { signal },
-      ),
+      Effect.runPromise(getMediaImages(traktDeps(), { type, traktId: traktId ?? -1 }), { signal }),
     enabled: missingArt && traktId != null,
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -88,9 +83,7 @@ export function useTraktMediaImages(
   if (item == null || item.coverImage !== '') {
     return {
       coverImage: item?.coverImage ?? '',
-      ...(item?.backdropImage != null
-        ? { backdropImage: item.backdropImage }
-        : {}),
+      ...(item?.backdropImage != null ? { backdropImage: item.backdropImage } : {}),
     };
   }
   return data ?? { coverImage: '' };
@@ -110,11 +103,11 @@ goes through TanStack Query (AGENTS.md).
 
 ## Commands you will need
 
-| Purpose   | Command          | Expected on success |
-|-----------|------------------|---------------------|
-| Typecheck | `bun typecheck`  | exit 0              |
-| Lint      | `bun lint`       | exit 0              |
-| All tests | `bun run test`   | all pass (never plain `bun test`) |
+| Purpose   | Command         | Expected on success               |
+| --------- | --------------- | --------------------------------- |
+| Typecheck | `bun typecheck` | exit 0                            |
+| Lint      | `bun lint`      | exit 0                            |
+| All tests | `bun run test`  | all pass (never plain `bun test`) |
 
 ## Scope
 

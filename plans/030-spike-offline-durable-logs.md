@@ -66,7 +66,7 @@ a recent plan there. Cover:
 
 - **Smallest restart-safe unit**: a persisted "pending log" record (variables
   plus the connected account identity per provider plus a created-at), not a
-  dehydrated TanStack mutation, *or* the TanStack mechanism. Recommend one,
+  dehydrated TanStack mutation, _or_ the TanStack mechanism. Recommend one,
   with trade-offs: TanStack ties replay to `setMutationDefaults` and the hook's
   closure inputs (`connected` providers, `queryClient`).
 - **Account protection**: store each target provider's account identity at

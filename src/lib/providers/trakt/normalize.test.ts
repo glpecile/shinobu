@@ -66,15 +66,16 @@ describe('normalizeCrew', () => {
   };
 
   test('bills movie jobs ahead of supporting departments', () => {
-    const crew = normalizeCrew({
-      'made-up-department': [
-        { jobs: ['Wrangler'], person: person(3, 'Zed Last') },
-      ],
-      editing: [{ jobs: ['Editor'], person: person(2, 'Adam Bosman') }],
-      production: [{ jobs: ['Producer'], person: person(4, 'Producer') }],
-      camera: [{ jobs: ['Director of Photography'], person: person(5, 'DP') }],
-      directing: [director],
-    }, 'MOVIE');
+    const crew = normalizeCrew(
+      {
+        'made-up-department': [{ jobs: ['Wrangler'], person: person(3, 'Zed Last') }],
+        editing: [{ jobs: ['Editor'], person: person(2, 'Adam Bosman') }],
+        production: [{ jobs: ['Producer'], person: person(4, 'Producer') }],
+        camera: [{ jobs: ['Director of Photography'], person: person(5, 'DP') }],
+        directing: [director],
+      },
+      'MOVIE',
+    );
 
     expect(crew.map((member) => member.name)).toEqual([
       'Harry Bradbeer',
@@ -86,11 +87,14 @@ describe('normalizeCrew', () => {
   });
 
   test('bills a series by creators, then writers, then directors', () => {
-    const crew = normalizeCrew({
-      directing: [director],
-      writing: [{ jobs: ['Writer'], person: person(2, 'Jesse Armstrong') }],
-      'created by': [{ jobs: ['Creator'], person: person(3, 'Phoebe Waller-Bridge') }],
-    }, 'TV');
+    const crew = normalizeCrew(
+      {
+        directing: [director],
+        writing: [{ jobs: ['Writer'], person: person(2, 'Jesse Armstrong') }],
+        'created by': [{ jobs: ['Creator'], person: person(3, 'Phoebe Waller-Bridge') }],
+      },
+      'TV',
+    );
 
     expect(crew.map((member) => member.name)).toEqual([
       'Phoebe Waller-Bridge',
@@ -100,21 +104,25 @@ describe('normalizeCrew', () => {
   });
 
   test('merges one person credited across departments into a single entry', () => {
-    const crew = normalizeCrew({
-      directing: [director],
-      writing: [
-        { jobs: ['Writer', 'Director'], person: person(1, 'Harry Bradbeer') },
-      ],
-    }, 'MOVIE');
+    const crew = normalizeCrew(
+      {
+        directing: [director],
+        writing: [{ jobs: ['Writer', 'Director'], person: person(1, 'Harry Bradbeer') }],
+      },
+      'MOVIE',
+    );
 
     expect(crew).toHaveLength(1);
     expect(crew[0].job).toBe('Director, Writer');
   });
 
   test('supports legacy singular `job`', () => {
-    const crew = normalizeCrew({
-      camera: [{ job: 'Director of Photography', person: person(9, 'Giles Nuttgens') }],
-    }, 'MOVIE');
+    const crew = normalizeCrew(
+      {
+        camera: [{ job: 'Director of Photography', person: person(9, 'Giles Nuttgens') }],
+      },
+      'MOVIE',
+    );
 
     expect(crew[0].job).toBe('Director of Photography');
   });
@@ -198,15 +206,11 @@ describe('normalizeMovie release date', () => {
   const base: TraktMovie = { title: 'Dune', ids: { trakt: 7 } };
 
   test('carries `released` through as releaseDate', () => {
-    expect(
-      normalizeMovie({ ...base, released: '2026-12-18' }, NOW).releaseDate,
-    ).toBe('2026-12-18');
+    expect(normalizeMovie({ ...base, released: '2026-12-18' }, NOW).releaseDate).toBe('2026-12-18');
   });
 
   test('treats an empty string as no release date, not a blocked log', () => {
-    expect(
-      normalizeMovie({ ...base, released: '' }, NOW).releaseDate,
-    ).toBeUndefined();
+    expect(normalizeMovie({ ...base, released: '' }, NOW).releaseDate).toBeUndefined();
   });
 });
 
@@ -250,9 +254,7 @@ describe('normalizeSeason', () => {
   });
 
   test('season 0 is labelled "Specials"', () => {
-    expect(
-      normalizeSeason({ number: 0, ids: { trakt: 1 }, episodes: [] }).title,
-    ).toBe('Specials');
+    expect(normalizeSeason({ number: 0, ids: { trakt: 1 }, episodes: [] }).title).toBe('Specials');
   });
 });
 
@@ -290,15 +292,21 @@ describe('normalizeWatchedProgress', () => {
     // season number lives only on the enclosing season object.
     const progress: TraktShowProgress = {
       seasons: [
-        { number: 1, episodes: [
-          { number: 1, completed: true, last_watched_at: '2026-09-01T20:00:00.000Z' },
-          { number: 2, completed: 1 },
-          { number: 3, completed: false, last_watched_at: '2026-09-02T20:00:00.000Z' },
-        ] },
-        { number: 2, episodes: [
-          { number: 1, completed: 0 },
-          { number: 2, completed: true },
-        ] },
+        {
+          number: 1,
+          episodes: [
+            { number: 1, completed: true, last_watched_at: '2026-09-01T20:00:00.000Z' },
+            { number: 2, completed: 1 },
+            { number: 3, completed: false, last_watched_at: '2026-09-02T20:00:00.000Z' },
+          ],
+        },
+        {
+          number: 2,
+          episodes: [
+            { number: 1, completed: 0 },
+            { number: 2, completed: true },
+          ],
+        },
       ],
     };
     const result = normalizeWatchedProgress(progress);
@@ -511,9 +519,7 @@ describe('normalizeCalendarShowRow', () => {
 
     expect(entry?.item.id).toBe('trakt-300');
     expect(entry?.item.type).toBe('TV');
-    expect(entry?.item.coverImage).toBe(
-      'https://walter.trakt.tv/shows/300/poster.jpg',
-    );
+    expect(entry?.item.coverImage).toBe('https://walter.trakt.tv/shows/300/poster.jpg');
     expect(entry?.episode).toEqual({
       season: 2,
       number: 4,
@@ -572,9 +578,7 @@ describe('normalizeCalendarShowRow', () => {
     const airing = '2026-07-29T01:00:00.000Z';
     const episode = { season: 1, number: 1 };
 
-    expect(
-      normalizeCalendarShowRow({ first_aired: airing, episode }, NOW_ISO),
-    ).toBeNull();
+    expect(normalizeCalendarShowRow({ first_aired: airing, episode }, NOW_ISO)).toBeNull();
     // A show Trakt can't identify — the item id would be `trakt-undefined`.
     expect(
       normalizeCalendarShowRow(
@@ -601,14 +605,9 @@ describe('normalizeCalendarShowRow', () => {
         NOW_ISO,
       ),
     ).toBeNull();
+    expect(normalizeCalendarShowRow({ episode, show: CALENDAR_SHOW }, NOW_ISO)).toBeNull();
     expect(
-      normalizeCalendarShowRow({ episode, show: CALENDAR_SHOW }, NOW_ISO),
-    ).toBeNull();
-    expect(
-      normalizeCalendarShowRow(
-        { first_aired: '', episode, show: CALENDAR_SHOW },
-        NOW_ISO,
-      ),
+      normalizeCalendarShowRow({ first_aired: '', episode, show: CALENDAR_SHOW }, NOW_ISO),
     ).toBeNull();
   });
 });
@@ -629,15 +628,9 @@ describe('normalizeCalendarMovieRow', () => {
   });
 
   test('a malformed row drops instead of throwing', () => {
+    expect(normalizeCalendarMovieRow({ movie: CALENDAR_MOVIE }, 'theatrical', NOW_ISO)).toBeNull();
     expect(
-      normalizeCalendarMovieRow({ movie: CALENDAR_MOVIE }, 'theatrical', NOW_ISO),
-    ).toBeNull();
-    expect(
-      normalizeCalendarMovieRow(
-        { released: null, movie: CALENDAR_MOVIE },
-        'theatrical',
-        NOW_ISO,
-      ),
+      normalizeCalendarMovieRow({ released: null, movie: CALENDAR_MOVIE }, 'theatrical', NOW_ISO),
     ).toBeNull();
     // An instant is never truncated to a day — that would name the UTC day,
     // which is the wrong local day west of Greenwich.
@@ -648,9 +641,7 @@ describe('normalizeCalendarMovieRow', () => {
         NOW_ISO,
       ),
     ).toBeNull();
-    expect(
-      normalizeCalendarMovieRow({ released: '2026-07-31' }, 'theatrical', NOW_ISO),
-    ).toBeNull();
+    expect(normalizeCalendarMovieRow({ released: '2026-07-31' }, 'theatrical', NOW_ISO)).toBeNull();
     expect(
       normalizeCalendarMovieRow(
         { released: '2026-07-31', movie: { title: 'Untitled', ids: {} } },

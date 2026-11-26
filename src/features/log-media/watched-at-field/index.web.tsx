@@ -16,7 +16,12 @@ function toInputValue(date: Date): string {
 }
 
 /** Uses current time-of-day on picked dates so UTC conversion does not shift the local calendar day. */
-export function WatchedAtField({ value, onChange, label = 'Watched on', children }: WatchedAtFieldProps) {
+export function WatchedAtField({
+  value,
+  onChange,
+  label = 'Watched on',
+  children,
+}: WatchedAtFieldProps) {
   const today = toInputValue(new Date());
   return (
     <View className="mt-4 flex-row items-center gap-2">
@@ -37,9 +42,7 @@ export function WatchedAtField({ value, onChange, label = 'Watched on', children
             }
             const [year, month, day] = raw.split('-').map(Number);
             const now = new Date();
-            onChange(
-              new Date(year, month - 1, day, now.getHours(), now.getMinutes()),
-            );
+            onChange(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
           }}
           type="date"
           value={value != null ? toInputValue(value) : today}

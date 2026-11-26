@@ -2,11 +2,7 @@ import * as Clock from 'effect/Clock';
 import * as Effect from 'effect/Effect';
 
 import { Provider } from '@/lib/providers/types';
-import type {
-  NormalizedDiaryEntry,
-  NormalizedMediaItem,
-  PersonCreditRow,
-} from '@/types/media';
+import type { NormalizedDiaryEntry, NormalizedMediaItem, PersonCreditRow } from '@/types/media';
 import type { BridgeCandidate } from '@/lib/providers/reading-bridge';
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
 import {
@@ -70,9 +66,7 @@ export interface AniListViewer {
  * carries no username of its own, so the Manage Trackers card has no other way
  * to say *which* account is connected.
  */
-export function getViewer(
-  deps: AniListDeps,
-): Effect.Effect<AniListViewer, ProviderError> {
+export function getViewer(deps: AniListDeps): Effect.Effect<AniListViewer, ProviderError> {
   return anilistAuthedRequest<{ Viewer: AniListViewer }>(
     deps,
     `query { Viewer { id name avatar { medium } } }`,
@@ -462,10 +456,7 @@ function staffCreditRow(
   credits: Array<{ media: AniListMedia; detail: string }>,
   nowIso: string,
 ): PersonCreditRow | null {
-  const entries = new Map<
-    string,
-    { item: NormalizedMediaItem; details: string[] }
-  >();
+  const entries = new Map<string, { item: NormalizedMediaItem; details: string[] }>();
   for (const { media, detail } of credits) {
     const item = normalizeAniListMedia(media, nowIso);
     const existing = entries.get(item.id);
@@ -543,10 +534,8 @@ export function getAniListStaff(
     const occupation = staff.primaryOccupations?.find((job) => job != null) ?? null;
     const birthday = calendarDate(staff.dateOfBirth);
     const deathday = calendarDate(staff.dateOfDeath);
-    const biography =
-      staff.description == null ? '' : stripHtml(staff.description);
-    const biographyMarkdown =
-      staff.description == null ? '' : stripHtmlMarkup(staff.description);
+    const biography = staff.description == null ? '' : stripHtml(staff.description);
+    const biographyMarkdown = staff.description == null ? '' : stripHtmlMarkup(staff.description);
 
     const voiceRow = staffCreditRow(
       ACTING_ROLE,
@@ -631,7 +620,11 @@ interface ReadingWorksResponse {
       synonyms: Array<string | null> | null;
       staff: {
         nodes: Array<{
-          name: { full: string | null; native: string | null; alternative: Array<string | null> | null } | null;
+          name: {
+            full: string | null;
+            native: string | null;
+            alternative: Array<string | null> | null;
+          } | null;
         } | null> | null;
       } | null;
     } | null> | null;
@@ -664,14 +657,21 @@ export function searchReadingWorks(
     Effect.map((data) =>
       (data.Page?.media ?? []).flatMap((media) => {
         if (media == null) return [];
-        const titles = [media.title?.romaji, media.title?.english, media.title?.native, ...(media.synonyms ?? [])];
-        return [{
-          id: media.id,
-          format: media.format,
-          volumes: media.volumes,
-          titles: titles.filter((title): title is string => title != null && title !== ''),
-          staff: staffNames(media.staff?.nodes),
-        }];
+        const titles = [
+          media.title?.romaji,
+          media.title?.english,
+          media.title?.native,
+          ...(media.synonyms ?? []),
+        ];
+        return [
+          {
+            id: media.id,
+            format: media.format,
+            volumes: media.volumes,
+            titles: titles.filter((title): title is string => title != null && title !== ''),
+            staff: staffNames(media.staff?.nodes),
+          },
+        ];
       }),
     ),
   );
@@ -714,7 +714,12 @@ interface SeriesRelationsResponse {
     relations: {
       edges: Array<{
         relationType: string | null;
-        node: { id: number; type: string | null; format: string | null; episodes: number | null } | null;
+        node: {
+          id: number;
+          type: string | null;
+          format: string | null;
+          episodes: number | null;
+        } | null;
       } | null> | null;
     } | null;
   } | null;
@@ -746,7 +751,8 @@ export function getSeriesNeighbours(
     Effect.map((data) => {
       const edges = data.Media?.relations?.edges;
       const series = (edges ?? []).flatMap((edge) =>
-        edge?.node != null && edge.node.type === 'ANIME' &&
+        edge?.node != null &&
+        edge.node.type === 'ANIME' &&
         (edge.node.format === 'TV' || edge.node.format === 'ONA')
           ? [{ relation: edge.relationType, id: edge.node.id, episodes: edge.node.episodes }]
           : [],
@@ -840,24 +846,30 @@ export interface MediaEntryResponse {
   } | null;
 }
 
-export const ENTRY_FIELDS = 'id status progress progressVolumes repeat score notes startedAt { year month day } customLists';
+export const ENTRY_FIELDS =
+  'id status progress progressVolumes repeat score notes startedAt { year month day } customLists';
 
-export function normalizeEntryState(media: Partial<NonNullable<MediaEntryResponse['Media']>> | null): AniListEntryState {
+export function normalizeEntryState(
+  media: Partial<NonNullable<MediaEntryResponse['Media']>> | null,
+): AniListEntryState {
   const raw = media?.mediaListEntry ?? null;
   return {
     total: (media?.type === 'MANGA' ? media.chapters : media?.episodes) ?? null,
     volumes: media?.volumes ?? null,
-    entry: raw == null ? null : {
-      id: raw.id ?? null,
-      status: raw.status,
-      progress: raw.progress ?? 0,
-      progressVolumes: raw.progressVolumes ?? 0,
-      repeat: raw.repeat ?? 0,
-      score: raw.score ?? 0,
-      notes: raw.notes ?? null,
-      startedAt: raw.startedAt ?? null,
-      customLists: readCustomLists(raw.customLists),
-    },
+    entry:
+      raw == null
+        ? null
+        : {
+            id: raw.id ?? null,
+            status: raw.status,
+            progress: raw.progress ?? 0,
+            progressVolumes: raw.progressVolumes ?? 0,
+            repeat: raw.repeat ?? 0,
+            score: raw.score ?? 0,
+            notes: raw.notes ?? null,
+            startedAt: raw.startedAt ?? null,
+            customLists: readCustomLists(raw.customLists),
+          },
   };
 }
 
@@ -903,7 +915,5 @@ export function getEntryState(
       }
     }`,
     { variables: { mediaId: params.mediaId } },
-  ).pipe(
-    Effect.map((data) => normalizeEntryState(data.Media)),
-  );
+  ).pipe(Effect.map((data) => normalizeEntryState(data.Media)));
 }

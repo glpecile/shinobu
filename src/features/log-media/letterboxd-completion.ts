@@ -10,13 +10,25 @@ export function letterboxdCompletionRequest(
   watched: ReadonlySet<string>,
   confirmed: readonly { season?: number; number: number }[] = [],
 ): LogRequest | null {
-  if (show.type !== 'TV' || show.externalIds.tmdb == null ||
-    film?.externalIds.letterboxd == null || film.tmdbTvVariant !== show.externalIds.tmdb ||
-    catalogue?.seriesEnded !== true || (catalogue.totalEpisodes ?? 0) <= 0) return null;
-  const episodes = (seasons ?? []).filter((season) => season.number > 0)
+  if (
+    show.type !== 'TV' ||
+    show.externalIds.tmdb == null ||
+    film?.externalIds.letterboxd == null ||
+    film.tmdbTvVariant !== show.externalIds.tmdb ||
+    catalogue?.seriesEnded !== true ||
+    (catalogue.totalEpisodes ?? 0) <= 0
+  )
+    return null;
+  const episodes = (seasons ?? [])
+    .filter((season) => season.number > 0)
     .flatMap((season) => season.episodes.map((episode) => ({ ...episode, season: season.number })));
-  if (episodes.length < catalogue.totalEpisodes! || !episodes.every((episode) => hasAired(episode.firstAired))) return null;
-  const complete = (keys: ReadonlySet<string>) => episodes.every((episode) => keys.has(`${episode.season}-${episode.number}`));
+  if (
+    episodes.length < catalogue.totalEpisodes! ||
+    !episodes.every((episode) => hasAired(episode.firstAired))
+  )
+    return null;
+  const complete = (keys: ReadonlySet<string>) =>
+    episodes.every((episode) => keys.has(`${episode.season}-${episode.number}`));
   if (confirmed.length > 0 && complete(watched)) return null;
   const after = new Set(watched);
   for (const episode of confirmed) {

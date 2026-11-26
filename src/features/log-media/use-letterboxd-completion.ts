@@ -18,17 +18,31 @@ import { letterboxdCompletionRequest } from './letterboxd-completion';
 export function useLetterboxdCompletion(item: NormalizedMediaItem) {
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();
-  const twin = item.type === 'TV' && connected.includes(Provider.Letterboxd)
-    ? findLetterboxdTwinInCache(queryClient, item) : undefined;
+  const twin =
+    item.type === 'TV' && connected.includes(Provider.Letterboxd)
+      ? findLetterboxdTwinInCache(queryClient, item)
+      : undefined;
   const enabled = twin != null;
   const film = useLetterboxdFilmQuery(twin?.externalIds.letterboxd ?? null);
   const details = useMediaDetailsQuery(enabled ? item : undefined);
   const source = useShowSeasonsSource(item);
   const seasons = useShowSeasonsQuery(enabled ? source : null);
-  const trakt = useTraktShowProgressQuery({ traktId: item.externalIds.trakt, enabled: enabled && connected.includes(Provider.Trakt) });
-  const simkl = useSimklEpisodeStateQuery({ item, enabled: enabled && connected.includes(Provider.Simkl) });
-  const serializd = useSerializdProgressQuery(item.externalIds.tmdb, enabled && connected.includes(Provider.Serializd) ? getSerializdUsername() : null);
-  const anilist = useAniListEpisodeWatchedQuery({ item, enabled: enabled && connected.includes(Provider.AniList) && item.externalIds.anilist != null });
+  const trakt = useTraktShowProgressQuery({
+    traktId: item.externalIds.trakt,
+    enabled: enabled && connected.includes(Provider.Trakt),
+  });
+  const simkl = useSimklEpisodeStateQuery({
+    item,
+    enabled: enabled && connected.includes(Provider.Simkl),
+  });
+  const serializd = useSerializdProgressQuery(
+    item.externalIds.tmdb,
+    enabled && connected.includes(Provider.Serializd) ? getSerializdUsername() : null,
+  );
+  const anilist = useAniListEpisodeWatchedQuery({
+    item,
+    enabled: enabled && connected.includes(Provider.AniList) && item.externalIds.anilist != null,
+  });
 
   return (confirmed: readonly { season?: number; number: number }[] = []) => {
     if (!enabled || film.isError || details.isError || seasons.isError) return null;
@@ -36,12 +50,28 @@ export function useLetterboxdCompletion(item: NormalizedMediaItem) {
     for (const season of seasons.data ?? []) {
       for (const episode of season.episodes) {
         const key = `${season.number}-${episode.number}`;
-        if ((connected.includes(Provider.Trakt) && !trakt.isError && trakt.data?.watchedKeys.has(key)) ||
-          (connected.includes(Provider.Simkl) && !simkl.isError && simklEpisodeIsWatched(simkl.data, season.number, episode.number, episode.firstAired)) ||
-          (connected.includes(Provider.Serializd) && !serializd.isError && serializd.data?.has(key)) ||
-          (connected.includes(Provider.AniList) && !anilist.isError && anilist.data.has(key))) watched.add(key);
+        if (
+          (connected.includes(Provider.Trakt) &&
+            !trakt.isError &&
+            trakt.data?.watchedKeys.has(key)) ||
+          (connected.includes(Provider.Simkl) &&
+            !simkl.isError &&
+            simklEpisodeIsWatched(simkl.data, season.number, episode.number, episode.firstAired)) ||
+          (connected.includes(Provider.Serializd) &&
+            !serializd.isError &&
+            serializd.data?.has(key)) ||
+          (connected.includes(Provider.AniList) && !anilist.isError && anilist.data.has(key))
+        )
+          watched.add(key);
       }
     }
-    return letterboxdCompletionRequest(item, film.data, details.data?.catalogue, seasons.data, watched, confirmed);
+    return letterboxdCompletionRequest(
+      item,
+      film.data,
+      details.data?.catalogue,
+      seasons.data,
+      watched,
+      confirmed,
+    );
   };
 }

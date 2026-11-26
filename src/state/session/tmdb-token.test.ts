@@ -2,7 +2,9 @@ import { expect, mock, test } from 'bun:test';
 
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
-    getString: () => { throw new Error('Storage is unavailable during server rendering'); },
+    getString: () => {
+      throw new Error('Storage is unavailable during server rendering');
+    },
   }),
 }));
 

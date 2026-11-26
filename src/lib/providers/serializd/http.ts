@@ -48,9 +48,7 @@ export function serializdHttp<A>(
           method: options.method ?? 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...(token != null && token !== ''
-              ? { Authorization: `Bearer ${token}` }
-              : {}),
+            ...(token != null && token !== '' ? { Authorization: `Bearer ${token}` } : {}),
           },
           ...(options.body != null ? { body: JSON.stringify(options.body) } : {}),
         }),

@@ -31,7 +31,9 @@ const RULES: Array<{ match: (path: string) => boolean }> = [
   { match: (p) => /^film\/(?=.{1,200}\/$)[a-z0-9]+(?:-[a-z0-9]+)*\/$/.test(p) },
   // Exact public identities and member watch records, never authenticated AJAX.
   { match: (p) => /^tmdb\/[1-9][0-9]{0,14}\/$/.test(p) },
-  { match: (p) => /^[A-Za-z0-9_-]{1,39}\/film\/(?=.{1,200}\/$)[a-z0-9]+(?:-[a-z0-9]+)*\/$/.test(p) },
+  {
+    match: (p) => /^[A-Za-z0-9_-]{1,39}\/film\/(?=.{1,200}\/$)[a-z0-9]+(?:-[a-z0-9]+)*\/$/.test(p),
+  },
   // A public watchlist also permits the same path with a page/N suffix.
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/watchlist\/(page\/[1-9][0-9]{0,3}\/)?$/.test(p) },
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/rss\/$/.test(p) },
@@ -42,7 +44,10 @@ const RULES: Array<{ match: (path: string) => boolean }> = [
   // challenged bare URL. No filtered/detail/edit/likes or API subpaths.
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/lists\/(page\/[1-9][0-9]{0,3}\/)?$/.test(p) },
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/likes\/lists\/page\/[1-9][0-9]{0,3}\/$/.test(p) },
-  { match: (p) => /^[A-Za-z0-9_-]{1,39}\/list\/[a-z0-9-]{1,200}\/(page\/[1-9][0-9]{0,3}\/)?$/.test(p) },
+  {
+    match: (p) =>
+      /^[A-Za-z0-9_-]{1,39}\/list\/[a-z0-9-]{1,200}\/(page\/[1-9][0-9]{0,3}\/)?$/.test(p),
+  },
 ];
 
 /** Reject traversal, protocol-relative, and absolute-URL sub-paths outright. */

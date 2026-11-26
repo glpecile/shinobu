@@ -20,9 +20,15 @@ export function LikeButton({
 }) {
   let buttonVariant: ButtonVariant;
   switch (variant) {
-    case 'quiet': buttonVariant = liked ? 'quiet-accent' : 'quiet'; break;
-    case 'ghost': buttonVariant = liked ? 'accent-ghost' : 'ghost'; break;
-    case 'outline': buttonVariant = liked ? 'outline' : 'quiet'; break;
+    case 'quiet':
+      buttonVariant = liked ? 'quiet-accent' : 'quiet';
+      break;
+    case 'ghost':
+      buttonVariant = liked ? 'accent-ghost' : 'ghost';
+      break;
+    case 'outline':
+      buttonVariant = liked ? 'outline' : 'quiet';
+      break;
   }
   return (
     <Button

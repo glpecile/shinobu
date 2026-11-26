@@ -14,7 +14,17 @@ import { useThemeColor } from '@/lib/theme-color';
  * and the input has `min-w-0` so Firefox lets it shrink (docs/solutions/android-pressable-over-textinput.md,
  * docs/solutions/firefox-flex-input-wont-shrink.md).
  */
-export function SearchField({ value, onChangeText, onClear, loading, placeholder, accessibilityLabel, autoFocus, ref, className }: {
+export function SearchField({
+  value,
+  onChangeText,
+  onClear,
+  loading,
+  placeholder,
+  accessibilityLabel,
+  autoFocus,
+  ref,
+  className,
+}: {
   value: string;
   onChangeText: (value: string) => void;
   onClear?: () => void;
@@ -43,7 +53,11 @@ export function SearchField({ value, onChangeText, onClear, loading, placeholder
     >
       <View className="ps-4">
         <View className="size-5 items-center justify-center">
-          {loading ? <Spinner accessibilityLabel="Searching" /> : <Ionicons color={muted} name="search-outline" size={18} />}
+          {loading ? (
+            <Spinner accessibilityLabel="Searching" />
+          ) : (
+            <Ionicons color={muted} name="search-outline" size={18} />
+          )}
         </View>
       </View>
       <TextInput

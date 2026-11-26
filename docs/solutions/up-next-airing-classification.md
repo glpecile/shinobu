@@ -18,7 +18,7 @@ Two behaviors of that endpoint matter for Up Next:
 
 - The **stats** (`aired`/`completed` and the `seasons` breakdown) ignore future
   and air-date-less episodes — but `next_episode` itself does point at an
-  *upcoming* episode once the user is caught up on everything aired. That is
+  _upcoming_ episode once the user is caught up on everything aired. That is
   precisely the Calendar population: filtering the pool to "shows the user is
   behind on" would structurally empty it.
 - Progress episodes still carry no `season` of their own
@@ -34,19 +34,19 @@ would need a day it doesn't have.
 
 `nextAiringEpisode { episode airingAt }` (added to the currently-watching read
 so airing data costs zero extra requests against the 30 req/min budget) is the
-*only* air instant AniList gives per series. There is no per-episode instant for
+_only_ air instant AniList gives per series. There is no per-episode instant for
 episodes that already aired, so classification is a precedence, not a compare:
 
-| next unwatched (`progress + 1`) vs pointer | classification |
-|---|---|
-| below the pointer | **aired by construction** — no instant exists, and demanding one would hide every back episode |
-| at the pointer | `airingAt` is its instant → `hasAired` decides, and **wins over the arithmetic** (a stale cached pointer whose time has passed resolves aired) |
-| above the pointer | excluded — the schedule doesn't reach that far |
-| no pointer, total known | aired while `progress + 1 <= episodes` |
-| no pointer, no total | excluded — hiatus/unconfirmed is unknowable, not "available" |
+| next unwatched (`progress + 1`) vs pointer | classification                                                                                                                                 |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| below the pointer                          | **aired by construction** — no instant exists, and demanding one would hide every back episode                                                 |
+| at the pointer                             | `airingAt` is its instant → `hasAired` decides, and **wins over the arithmetic** (a stale cached pointer whose time has passed resolves aired) |
+| above the pointer                          | excluded — the schedule doesn't reach that far                                                                                                 |
+| no pointer, total known                    | aired while `progress + 1 <= episodes`                                                                                                         |
+| no pointer, no total                       | excluded — hiatus/unconfirmed is unknowable, not "available"                                                                                   |
 
 Note the asymmetry with Trakt: a missing instant excludes a Trakt entry and
-*includes* an AniList back-episode. Both follow from the same rule — never
+_includes_ an AniList back-episode. Both follow from the same rule — never
 guess — because for Trakt the instant is expected and absent, while for AniList
 it is never present for past episodes in the first place.
 
@@ -66,6 +66,6 @@ local-time constructors, so the suite means the same thing in any timezone:
   calendar dates.
 - A date-only `first_aired` is local midnight, never UTC midnight
   (`parseLocalInstant`).
-- The Calendar window is *calendar days*, not 7×24h: an instant 40 minutes
+- The Calendar window is _calendar days_, not 7×24h: an instant 40 minutes
   from now that crosses local midnight is "Tomorrow", and day 7 is out of the
   window while day 6 ("In 6 days") is the last one in.

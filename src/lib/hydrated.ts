@@ -9,5 +9,9 @@ const subscribeNever = () => () => {};
  * HTML (docs/solutions/web-hydration-error-418.md).
  */
 export function useHydrated(): boolean {
-  return useSyncExternalStore(subscribeNever, () => true, () => false);
+  return useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
 }

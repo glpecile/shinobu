@@ -3,8 +3,7 @@ import { placeInLayout, type SeasonLayout } from './season-layout';
 
 /** Translate entry-relative numbers without guessing across gaps or known season boundaries. */
 export type EpisodeTranslation =
-  | { ok: true; episodes: AniZipCanonicalEpisode[] }
-  | { ok: false; reason: string };
+  { ok: true; episodes: AniZipCanonicalEpisode[] } | { ok: false; reason: string };
 
 /**
  * How far past the mapping table's last known episode an extrapolation may
@@ -73,9 +72,7 @@ function describeTable(map: AniZipEpisodeMap): MappedTable | string {
     spansSeasons,
     lastEntryNumber,
     lastCanonicalNumber: lastCanonical.number,
-    ...(lastCanonical.absolute != null
-      ? { lastAbsoluteNumber: lastCanonical.absolute }
-      : {}),
+    ...(lastCanonical.absolute != null ? { lastAbsoluteNumber: lastCanonical.absolute } : {}),
   };
 }
 
@@ -195,9 +192,7 @@ function extrapolate(
   return {
     season: table.season,
     number: table.lastCanonicalNumber + gap,
-    ...(table.lastAbsoluteNumber != null
-      ? { absolute: table.lastAbsoluteNumber + gap }
-      : {}),
+    ...(table.lastAbsoluteNumber != null ? { absolute: table.lastAbsoluteNumber + gap } : {}),
   };
 }
 

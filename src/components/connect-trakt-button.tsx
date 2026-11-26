@@ -4,12 +4,7 @@ import { openAuthSessionAsync } from 'expo-web-browser';
 import { useState } from 'react';
 import { Controller, useForm, type Control } from 'react-hook-form';
 import { z } from 'zod';
-import {
-  Linking,
-  Platform,
-  Text,
-  View,
-} from 'react-native';
+import { Linking, Platform, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
@@ -59,9 +54,7 @@ function CopyValue({ value, hint }: { value: string; hint?: string }) {
           {value}
         </Text>
       </View>
-      {hint != null && (
-        <Text className="text-muted font-sans text-xs">{hint}</Text>
-      )}
+      {hint != null && <Text className="text-muted font-sans text-xs">{hint}</Text>}
     </View>
   );
 }
@@ -96,8 +89,7 @@ function CredentialInput({
 }
 
 export function useTraktConnect() {
-  const [credentials, saveCredentials, clearCredentials] =
-    useProviderCredentials(Provider.Trakt);
+  const [credentials, saveCredentials, clearCredentials] = useProviderCredentials(Provider.Trakt);
   const [status, setStatus] = useState<ConnectionStatus>('idle');
 
   const clientId = credentials?.clientId ?? '';
@@ -170,14 +162,8 @@ export function useTraktConnect() {
 }
 
 export function ConnectTraktButton() {
-  const {
-    connect,
-    status,
-    credentials,
-    saveCredentials,
-    clearCredentials,
-    redirectUri,
-  } = useTraktConnect();
+  const { connect, status, credentials, saveCredentials, clearCredentials, redirectUri } =
+    useTraktConnect();
 
   const {
     control,
@@ -203,20 +189,20 @@ export function ConnectTraktButton() {
     return (
       <View className="w-full gap-4">
         <Text className="text-muted font-sans text-sm">
-          Shinobu talks to Trakt through your own (free) Trakt API app —
-          one-time setup, about a minute.
+          Shinobu talks to Trakt through your own (free) Trakt API app — one-time setup, about a
+          minute.
         </Text>
 
         <Collapsible label="How to create the Trakt app">
           <Steps>
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Create an app at{" "}
+                Create an app at{' '}
                 <Text
                   className="text-accent font-sans-semibold underline"
                   onPress={() => Linking.openURL(TRAKT_CREATE_APP_URL)}
                 >
-                  {TRAKT_CREATE_APP_URL.replace("https://", "")}
+                  {TRAKT_CREATE_APP_URL.replace('https://', '')}
                 </Text>
                 . Name and description can be anything (e.g. "Shinobu").
               </Text>
@@ -224,13 +210,12 @@ export function ConnectTraktButton() {
 
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                In <Text className="text-foreground font-sans-semibold">Redirect
-                uri</Text>, paste all of these (one per line) so the same app
-                works on every device:
+                In <Text className="text-foreground font-sans-semibold">Redirect uri</Text>, paste
+                all of these (one per line) so the same app works on every device:
               </Text>
               {redirectUris.map((uri) => (
                 <CopyValue
-                  hint={uri === redirectUri ? "← this device" : undefined}
+                  hint={uri === redirectUri ? '← this device' : undefined}
                   key={uri}
                   value={uri}
                 />
@@ -239,8 +224,11 @@ export function ConnectTraktButton() {
 
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                In <Text className="text-foreground font-sans-semibold">
-                Javascript (cors) origins</Text> (needed for the web app):
+                In{' '}
+                <Text className="text-foreground font-sans-semibold">
+                  Javascript (cors) origins
+                </Text>{' '}
+                (needed for the web app):
               </Text>
               {TRAKT_CORS_ORIGINS.map((origin) => (
                 <CopyValue key={origin} value={origin} />
@@ -249,30 +237,19 @@ export function ConnectTraktButton() {
 
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Under <Text className="text-foreground font-sans-semibold">
-                Permissions</Text>, tick{" "}
-                <Text className="text-foreground font-sans-semibold">
-                  /scrobble
-                </Text>
-                {" "}(required for logging watches).{" "}
-                <Text className="text-foreground font-sans-semibold">
-                  /checkin
-                </Text>
-                {" "}is optional.
+                Under <Text className="text-foreground font-sans-semibold">Permissions</Text>, tick{' '}
+                <Text className="text-foreground font-sans-semibold">/scrobble</Text> (required for
+                logging watches).{' '}
+                <Text className="text-foreground font-sans-semibold">/checkin</Text> is optional.
               </Text>
             </Steps.Item>
 
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Save the app, then copy its{" "}
-                <Text className="text-foreground font-sans-semibold">
-                  Client ID
-                </Text>
-                {" "}and{" "}
-                <Text className="text-foreground font-sans-semibold">
-                  Client Secret
-                </Text>
-                {" "}— connecting needs both — and paste them below.
+                Save the app, then copy its{' '}
+                <Text className="text-foreground font-sans-semibold">Client ID</Text> and{' '}
+                <Text className="text-foreground font-sans-semibold">Client Secret</Text> —
+                connecting needs both — and paste them below.
               </Text>
             </Steps.Item>
           </Steps>
@@ -285,9 +262,7 @@ export function ConnectTraktButton() {
           placeholder="Trakt Client ID"
         />
         {errors.clientId != null && (
-          <Text className="text-accent font-sans text-xs">
-            {errors.clientId.message}
-          </Text>
+          <Text className="text-accent font-sans text-xs">{errors.clientId.message}</Text>
         )}
         <CredentialInput
           control={control}
@@ -296,9 +271,7 @@ export function ConnectTraktButton() {
           placeholder="Trakt Client Secret"
         />
         {errors.clientSecret != null && (
-          <Text className="text-accent font-sans text-xs">
-            {errors.clientSecret.message}
-          </Text>
+          <Text className="text-accent font-sans text-xs">{errors.clientSecret.message}</Text>
         )}
         <Button
           icon={<Button.Icon name="link-outline" />}

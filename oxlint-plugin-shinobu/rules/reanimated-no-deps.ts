@@ -7,7 +7,13 @@ export default defineRule({
     schema: [],
   },
   create(context) {
-    const arity: Record<string, number> = { useAnimatedStyle: 1, useAnimatedProps: 1, useDerivedValue: 1, useAnimatedScrollHandler: 1, useAnimatedReaction: 2 };
+    const arity: Record<string, number> = {
+      useAnimatedStyle: 1,
+      useAnimatedProps: 1,
+      useDerivedValue: 1,
+      useAnimatedScrollHandler: 1,
+      useAnimatedReaction: 2,
+    };
     return {
       CallExpression(node) {
         if (node.callee.type !== 'Identifier') return;

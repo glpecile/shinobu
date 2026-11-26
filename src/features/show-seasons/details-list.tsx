@@ -57,7 +57,9 @@ export function DetailsList({
     toggle(season);
   }
   const rows: (SeasonRow | typeof FOOTER_ROW)[] = [
-    ...(episodeSection == null ? [] : seasonRows(episodeSection.seasons, expanded, episodeSection.isEpisodeAired)),
+    ...(episodeSection == null
+      ? []
+      : seasonRows(episodeSection.seasons, expanded, episodeSection.isEpisodeAired)),
     FOOTER_ROW,
   ];
 
@@ -80,10 +82,16 @@ export function DetailsList({
         </View>
       }
       sharedValues={process.env.EXPO_OS === 'web' ? undefined : { scrollOffset: scrollY }}
-      onScroll={process.env.EXPO_OS === 'web' ? (event) => {
-        scrollY.set(event.nativeEvent.contentOffset.y);
-        if (unfolding != null) setUnfolding(null);
-      } : unfolding == null ? undefined : () => setUnfolding(null)}
+      onScroll={
+        process.env.EXPO_OS === 'web'
+          ? (event) => {
+              scrollY.set(event.nativeEvent.contentOffset.y);
+              if (unfolding != null) setUnfolding(null);
+            }
+          : unfolding == null
+            ? undefined
+            : () => setUnfolding(null)
+      }
       onScrollBeginDrag={() => setUnfolding(null)}
       scrollEventThrottle={16}
       renderScrollComponent={(props) => (
@@ -120,7 +128,10 @@ export function DetailsList({
                   aired={episodeSection.isEpisodeAired?.(row.episode)}
                   season={row.season}
                   episode={row.episode}
-                  isWatched={episodeSection.watched?.has(`${row.season.number}-${row.episode.number}`) === true}
+                  isWatched={
+                    episodeSection.watched?.has(`${row.season.number}-${row.episode.number}`) ===
+                    true
+                  }
                   onActions={
                     episodeSection.onEpisodeActions == null
                       ? undefined
@@ -136,17 +147,22 @@ export function DetailsList({
               </View>
             );
         }
-        const order = row.kind === 'mark' ? 0 : row.kind === 'episode' ? row.index + 1 : UNFOLD_ROWS;
+        const order =
+          row.kind === 'mark' ? 0 : row.kind === 'episode' ? row.index + 1 : UNFOLD_ROWS;
         return (
           <AnimatedView
             className="w-full max-w-4xl self-center px-6"
-            style={row.season.number === unfolding && order < UNFOLD_ROWS ? {
-              animationName: reduceMotion ? UNFOLD_FADE : UNFOLD,
-              animationDuration: DURATION.swap,
-              animationDelay: order * UNFOLD_STAGGER,
-              animationFillMode: 'backwards',
-              animationTimingFunction: EASE_OUT,
-            } : undefined}
+            style={
+              row.season.number === unfolding && order < UNFOLD_ROWS
+                ? {
+                    animationName: reduceMotion ? UNFOLD_FADE : UNFOLD,
+                    animationDuration: DURATION.swap,
+                    animationDelay: order * UNFOLD_STAGGER,
+                    animationFillMode: 'backwards',
+                    animationTimingFunction: EASE_OUT,
+                  }
+                : undefined
+            }
           >
             {content}
           </AnimatedView>

@@ -13,21 +13,14 @@ const CARD_WIDTH = 160;
 const CARD_GAP = 12;
 
 function SkeletonCard({ index }: { index: number }) {
-  return (
-    <Skeleton
-      className="w-40 h-60 rounded-lg mr-3"
-      delay={staggerDelay(index)}
-    />
-  );
+  return <Skeleton className="w-40 h-60 rounded-lg mr-3" delay={staggerDelay(index)} />;
 }
 
 function SkeletonRow({ cardCount, hasAction = false }: { cardCount: number; hasAction?: boolean }) {
   return (
     <View className="mb-6">
       <SkeletonSectionHeader hasAction={hasAction} widthClass="w-40" />
-      <Rail
-        className="px-4"
-      >
+      <Rail className="px-4">
         {Array.from({ length: cardCount }).map((_, index) => (
           <SkeletonCard index={index} key={index} />
         ))}
@@ -45,7 +38,13 @@ export function FeedRowSkeleton({ hasAction = false }: { hasAction?: boolean }) 
 
 const LANDSCAPE_WIDTH = 256;
 
-function SkeletonLandscapeCard({ index, hasAction = false }: { index: number; hasAction?: boolean }) {
+function SkeletonLandscapeCard({
+  index,
+  hasAction = false,
+}: {
+  index: number;
+  hasAction?: boolean;
+}) {
   const delay = staggerDelay(index);
   return (
     <View className="w-64 mr-3">
@@ -65,10 +64,21 @@ export function LandscapeRowSkeleton() {
   const { width, fontScale } = useWindowDimensions();
   const cardCount = Math.ceil(width / (LANDSCAPE_WIDTH + CARD_GAP)) + 1;
   return (
-    <CollapsibleSection collapseKey="serializd-coming-soon" leading={<ProviderIcon id={Provider.Serializd} size={16} />} title="Coming Soon">
-      <View style={{ height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2), paddingTop: STACK_OFFSET * 2 }}>
+    <CollapsibleSection
+      collapseKey="serializd-coming-soon"
+      leading={<ProviderIcon id={Provider.Serializd} size={16} />}
+      title="Coming Soon"
+    >
+      <View
+        style={{
+          height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2),
+          paddingTop: STACK_OFFSET * 2,
+        }}
+      >
         <Rail className="px-4">
-          {Array.from({ length: cardCount }).map((_, index) => <SkeletonLandscapeCard index={index} key={index} />)}
+          {Array.from({ length: cardCount }).map((_, index) => (
+            <SkeletonLandscapeCard index={index} key={index} />
+          ))}
         </Rail>
       </View>
     </CollapsibleSection>
@@ -81,7 +91,11 @@ export function ReadingRowSkeleton() {
   const { width, fontScale } = useWindowDimensions();
   const cardCount = Math.ceil(width / (READING_WIDTH + CARD_GAP)) + 1;
   return (
-    <CollapsibleSection collapseKey="continue-reading" leading={<CollapsibleSection.Icon name="book-outline" />} title="Continue Reading">
+    <CollapsibleSection
+      collapseKey="continue-reading"
+      leading={<CollapsibleSection.Icon name="book-outline" />}
+      title="Continue Reading"
+    >
       <View style={{ height: episodeCardRailHeight(fontScale, 48) }}>
         <Rail className="px-4">
           {Array.from({ length: cardCount }).map((_, index) => {
@@ -111,7 +125,13 @@ function SkeletonDayCell({ index }: { index: number }) {
   );
 }
 
-function SkeletonSectionHeader({ widthClass, hasAction = false }: { widthClass: string; hasAction?: boolean }) {
+function SkeletonSectionHeader({
+  widthClass,
+  hasAction = false,
+}: {
+  widthClass: string;
+  hasAction?: boolean;
+}) {
   return (
     <View className={cn('justify-center mb-3 mx-4', hasAction && 'min-h-11')}>
       <Skeleton className={cn('h-7', widthClass, 'rounded')} />
@@ -127,7 +147,11 @@ export function UpNextSectionSkeleton() {
 
   return (
     <View>
-      <CollapsibleSection collapseKey="up-next-continue" leading={<CollapsibleSection.Icon name="play-circle-outline" />} title="Continue Watching">
+      <CollapsibleSection
+        collapseKey="up-next-continue"
+        leading={<CollapsibleSection.Icon name="play-circle-outline" />}
+        title="Continue Watching"
+      >
         <View style={{ height: cardRailHeight }}>
           <Rail className="px-4">
             {Array.from({ length: cardCount }).map((_, index) => (
@@ -137,18 +161,24 @@ export function UpNextSectionSkeleton() {
         </View>
       </CollapsibleSection>
 
-      <CollapsibleSection collapseKey="up-next-calendar" leading={<CollapsibleSection.Icon name="calendar-outline" />} title="This week">
-        <Rail
-          className="px-4"
-        >
+      <CollapsibleSection
+        collapseKey="up-next-calendar"
+        leading={<CollapsibleSection.Icon name="calendar-outline" />}
+        title="This week"
+      >
+        <Rail className="px-4">
           {Array.from({ length: dayCount }).map((_, index) => (
             <SkeletonDayCell index={index} key={index} />
           ))}
         </Rail>
-        <View className="mt-3" style={{ height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2), paddingTop: STACK_OFFSET * 2 }}>
-          <Rail
-            className="px-4"
-          >
+        <View
+          className="mt-3"
+          style={{
+            height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2),
+            paddingTop: STACK_OFFSET * 2,
+          }}
+        >
+          <Rail className="px-4">
             {Array.from({ length: cardCount }).map((_, index) => (
               <SkeletonLandscapeCard index={index} key={index} />
             ))}

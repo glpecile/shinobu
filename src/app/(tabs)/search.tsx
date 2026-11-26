@@ -7,7 +7,13 @@ import { SafeAreaView } from 'react-native-screens/experimental';
 
 import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
-import { Keyboard, type ScrollViewInstance, Text, type TextInputInstance, View } from 'react-native';
+import {
+  Keyboard,
+  type ScrollViewInstance,
+  Text,
+  type TextInputInstance,
+  View,
+} from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
@@ -48,20 +54,14 @@ import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
-import {
-  useAniListSearchQuery,
-  useAniListStaffSearchQuery,
-} from '@/state/queries/anilist';
+import { useAniListSearchQuery, useAniListStaffSearchQuery } from '@/state/queries/anilist';
 import { useHardcoverBookSearchQuery } from '@/state/queries/hardcover';
 import {
   useTmdbPersonSearchQuery,
   useTmdbSearchQuery,
   useTmdbStudioSearchQuery,
 } from '@/state/queries/tmdb';
-import {
-  SEARCH_MIN_QUERY_LENGTH,
-  useTraktSearchQuery,
-} from '@/state/queries/trakt';
+import { SEARCH_MIN_QUERY_LENGTH, useTraktSearchQuery } from '@/state/queries/trakt';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import { useConnectedProviders } from '@/state/session';
 import { getClientIdForProvider } from '@/state/session/provider-config';
@@ -119,7 +119,9 @@ function SearchResultRow({
   return (
     <ActionableRow
       accessibility={{
-        accessibilityLabel: [item.title, byline, resultMeta(item)].filter((part) => part != null && part !== '').join(', '),
+        accessibilityLabel: [item.title, byline, resultMeta(item)]
+          .filter((part) => part != null && part !== '')
+          .join(', '),
         accessibilityRole: 'button',
       }}
       className="px-6 py-2.5"
@@ -129,10 +131,7 @@ function SearchResultRow({
         <>
           <SmallPoster recyclingKey={item.id} size="md" uri={item.coverImage} />
           <View className="shrink ml-4">
-            <Text
-              className="text-foreground font-sans-semibold text-base"
-              numberOfLines={1}
-            >
+            <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
               {item.title}
             </Text>
             {byline != null && byline !== '' && (
@@ -183,10 +182,7 @@ function EntityResultRow({
       ) : (
         <PosterPlaceholder className="w-12 h-12 rounded" />
       )}
-      <Text
-        className="shrink ml-4 text-foreground font-sans-semibold text-base"
-        numberOfLines={1}
-      >
+      <Text className="shrink ml-4 text-foreground font-sans-semibold text-base" numberOfLines={1}>
         {row.name}
       </Text>
     </PresstableScale>
@@ -216,13 +212,7 @@ function ResultsSkeleton() {
   );
 }
 
-function SectionHeader({
-  provider,
-  label,
-}: {
-  provider: IconSourceId;
-  label: string;
-}) {
+function SectionHeader({ provider, label }: { provider: IconSourceId; label: string }) {
   return (
     <View className="flex-row items-center gap-2 px-6 pt-4 pb-1.5">
       <ProviderIcon id={provider} size={14} />
@@ -359,9 +349,7 @@ function SearchScreen() {
     : getClientIdForProvider(Provider.Trakt) !== ''
       ? Provider.Trakt
       : null;
-  const scopes = SCOPES.filter(
-    (entry) => entry.value !== 'studios' || tmdbAvailable,
-  );
+  const scopes = SCOPES.filter((entry) => entry.value !== 'studios' || tmdbAvailable);
   const scope = scopes.find((entry) => entry.value === selectedScope) ?? SCOPES[0];
   const reading = scope.value === 'reading';
   const titleSearch = scope.value === 'titles' || reading;
@@ -402,82 +390,81 @@ function SearchScreen() {
   const placeholder = reading ? `Search ${readingLabel}` : scope.placeholder;
   const searchable = query.trim().length >= SEARCH_MIN_QUERY_LENGTH;
   const animeSeason = animeSeasonAt(new Date());
-  const sections =
-    titleSearch
+  const sections = titleSearch
+    ? [
+        ...(reading || moviesTvSource == null
+          ? []
+          : [
+              {
+                search: moviesTvSearch,
+                rows: sectionRows(moviesTvSource, 'Movies & TV', moviesTvSearch, titleRow),
+              },
+            ]),
+        {
+          search: anilistSearch,
+          rows: sectionRows(
+            Provider.AniList,
+            reading ? 'Manga & light novels' : 'Anime',
+            anilistSearch,
+            titleRow,
+          ),
+        },
+        ...(reading && booksSearchable
+          ? [
+              {
+                search: bookSearch,
+                rows: sectionRows(Provider.Hardcover, 'Books', bookSearch, (hit): SearchRow => ({
+                  kind: 'result',
+                  key: hit.item.id,
+                  item: hit.item,
+                  byline: hit.authors.slice(0, 2).join(', '),
+                })),
+              },
+            ]
+          : []),
+      ]
+    : scope.value === 'people'
       ? [
-          ...(reading || moviesTvSource == null
-            ? []
-            : [
-                {
-                  search: moviesTvSearch,
-                  rows: sectionRows(moviesTvSource, 'Movies & TV', moviesTvSearch, titleRow),
-                },
-              ]),
-          {
-            search: anilistSearch,
-            rows: sectionRows(
-              Provider.AniList,
-              reading ? 'Manga & light novels' : 'Anime',
-              anilistSearch,
-              titleRow,
-            ),
-          },
-          ...(reading && booksSearchable
+          ...(tmdbAvailable
             ? [
                 {
-                  search: bookSearch,
-                  rows: sectionRows(Provider.Hardcover, 'Books', bookSearch, (hit): SearchRow => ({
-                    kind: 'result',
-                    key: hit.item.id,
-                    item: hit.item,
-                    byline: hit.authors.slice(0, 2).join(', '),
+                  search: personSearch,
+                  rows: sectionRows('tmdb', 'Movies & TV', personSearch, (hit) => ({
+                    kind: 'entity',
+                    key: `tmdb-person-${hit.tmdbId}`,
+                    name: hit.name,
+                    image: hit.image,
+                    shape: 'face',
+                    href: routes.person(hit.tmdbId),
                   })),
                 },
               ]
             : []),
+          {
+            search: staffSearch,
+            rows: sectionRows(Provider.AniList, 'Anime & Manga', staffSearch, (hit) => ({
+              kind: 'entity',
+              key: `anilist-staff-${hit.id}`,
+              name: hit.name,
+              image: hit.image ?? '',
+              shape: 'face',
+              href: routes.anilistPerson(hit.id),
+            })),
+          },
         ]
-      : scope.value === 'people'
-        ? [
-            ...(tmdbAvailable
-              ? [
-                  {
-                    search: personSearch,
-                    rows: sectionRows('tmdb', 'Movies & TV', personSearch, (hit) => ({
-                      kind: 'entity',
-                      key: `tmdb-person-${hit.tmdbId}`,
-                      name: hit.name,
-                      image: hit.image,
-                      shape: 'face',
-                      href: routes.person(hit.tmdbId),
-                    })),
-                  },
-                ]
-              : []),
-            {
-              search: staffSearch,
-              rows: sectionRows(Provider.AniList, 'Anime & Manga', staffSearch, (hit) => ({
-                kind: 'entity',
-                key: `anilist-staff-${hit.id}`,
-                name: hit.name,
-                image: hit.image ?? '',
-                shape: 'face',
-                href: routes.anilistPerson(hit.id),
-              })),
-            },
-          ]
-        : [
-            {
-              search: studioSearch,
-              rows: sectionRows('tmdb', 'Studios', studioSearch, (hit) => ({
-                kind: 'entity',
-                key: `tmdb-studio-${hit.tmdbId}`,
-                name: hit.name,
-                image: hit.image,
-                shape: 'logo',
-                href: routes.studio(hit.tmdbId),
-              })),
-            },
-          ];
+      : [
+          {
+            search: studioSearch,
+            rows: sectionRows('tmdb', 'Studios', studioSearch, (hit) => ({
+              kind: 'entity',
+              key: `tmdb-studio-${hit.tmdbId}`,
+              name: hit.name,
+              image: hit.image,
+              shape: 'logo',
+              href: routes.studio(hit.tmdbId),
+            })),
+          },
+        ];
   const rows = sections.flatMap((section) => section.rows);
   const fetching = searchable && sections.some((section) => section.search.isFetching);
 
@@ -575,8 +562,11 @@ function SearchScreen() {
                       <Text className="text-5xl text-muted mb-4">忍</Text>
                       <Text className="text-2xl font-display text-foreground">Search</Text>
                       <Text className="text-base font-sans text-muted mt-3 max-w-sm leading-relaxed">
-                        Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
-                        {tmdbAvailable ? ' reading, cast & crew, or studios.' : ' reading or cast & crew.'}
+                        Find any movie, show, anime, or manga — open its details or log it to your
+                        trackers. The button in the corner switches to
+                        {tmdbAvailable
+                          ? ' reading, cast & crew, or studios.'
+                          : ' reading or cast & crew.'}
                       </Text>
                     </View>
                   </View>
@@ -615,11 +605,7 @@ function SearchScreen() {
                 <AnimatedView
                   className="flex-1"
                   style={{
-                    opacity: sections.some(
-                      (section) => section.search.isPlaceholderData,
-                    )
-                      ? 0.6
-                      : 1,
+                    opacity: sections.some((section) => section.search.isPlaceholderData) ? 0.6 : 1,
                     transitionProperty: 'opacity',
                     transitionDuration: DURATION.swap,
                     transitionTimingFunction: EASE_OUT,
@@ -650,7 +636,9 @@ function SearchScreen() {
                         <RowSkeleton />
                       ) : (
                         <View className="px-6 py-2 flex-row items-center justify-between gap-3">
-                          <Text className="shrink text-muted font-sans text-sm">Search failed for this source.</Text>
+                          <Text className="shrink text-muted font-sans text-sm">
+                            Search failed for this source.
+                          </Text>
                           <Button
                             icon={<Button.Icon name="refresh" />}
                             label="Try again"
@@ -695,11 +683,7 @@ function SearchScreen() {
           />
         ))}
       </PickerSheet>
-      <CardActionsSheet
-        {...sheetProps}
-        canHide={false}
-        providerLinks="connected"
-      />
+      <CardActionsSheet {...sheetProps} canHide={false} providerLinks="connected" />
     </View>
   );
 }

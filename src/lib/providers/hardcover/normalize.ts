@@ -17,12 +17,18 @@ export const hardcoverBookFields = {
   rating: optionalNullable(numeric),
   ratings_count: optionalNullable(numeric),
   image: optionalNullable(Schema.Struct({ url: optionalNullable(Schema.String) })),
-  contributions: optionalNullable(Schema.Array(Schema.Struct({
-    author: optionalNullable(Schema.Struct({ name: optionalNullable(Schema.String) })),
-  }))),
-  featured_book_series: optionalNullable(Schema.Struct({
-    series: optionalNullable(Schema.Struct({ name: optionalNullable(Schema.String) })),
-  })),
+  contributions: optionalNullable(
+    Schema.Array(
+      Schema.Struct({
+        author: optionalNullable(Schema.Struct({ name: optionalNullable(Schema.String) })),
+      }),
+    ),
+  ),
+  featured_book_series: optionalNullable(
+    Schema.Struct({
+      series: optionalNullable(Schema.Struct({ name: optionalNullable(Schema.String) })),
+    }),
+  ),
 };
 
 export const HardcoverBook = Schema.Struct(hardcoverBookFields);
@@ -44,12 +50,14 @@ export function normalizeHardcoverBook(book: HardcoverBook, nowIso: string): Nor
     ...(book.release_year != null ? { year: book.release_year } : {}),
     ...(book.rating != null && book.rating > 0
       ? {
-          ratings: [{
-            source: Provider.Hardcover,
-            value: book.rating,
-            scale: 5,
-            ...(book.ratings_count != null ? { votes: book.ratings_count } : {}),
-          }],
+          ratings: [
+            {
+              source: Provider.Hardcover,
+              value: book.rating,
+              scale: 5,
+              ...(book.ratings_count != null ? { votes: book.ratings_count } : {}),
+            },
+          ],
         }
       : {}),
     type: 'BOOK',
@@ -62,7 +70,9 @@ export function normalizeHardcoverBook(book: HardcoverBook, nowIso: string): Nor
       ? {
           readingCredits: {
             people: book.contributions.flatMap((credit) => credit.author?.name ?? []),
-            ...(book.featured_book_series?.series?.name != null ? { series: book.featured_book_series.series.name } : {}),
+            ...(book.featured_book_series?.series?.name != null
+              ? { series: book.featured_book_series.series.name }
+              : {}),
           },
         }
       : {}),
@@ -84,11 +94,13 @@ export const HardcoverLibraryRow = Schema.Struct({
   updated_at: optionalNullable(Schema.String),
   edition: editionPages,
   book: HardcoverBook,
-  user_book_reads: Schema.Array(Schema.Struct({
-    progress_pages: optionalNullable(Schema.Number),
-    progress_seconds: optionalNullable(Schema.Number),
-    edition: editionPages,
-  })),
+  user_book_reads: Schema.Array(
+    Schema.Struct({
+      progress_pages: optionalNullable(Schema.Number),
+      progress_seconds: optionalNullable(Schema.Number),
+      edition: editionPages,
+    }),
+  ),
 });
 export type HardcoverLibraryRow = typeof HardcoverLibraryRow.Type;
 
@@ -98,14 +110,19 @@ export interface HardcoverLibraryEntry {
   item: NormalizedMediaItem;
 }
 
-export function normalizeHardcoverLibraryRow(row: HardcoverLibraryRow): HardcoverLibraryEntry | null {
+export function normalizeHardcoverLibraryRow(
+  row: HardcoverLibraryRow,
+): HardcoverLibraryEntry | null {
   const addedAt = isoInstant(row.created_at);
   if (addedAt == null) return null;
   const open = row.user_book_reads[0];
   const pagesRead = open?.progress_pages ?? 0;
   const audio = open?.progress_seconds != null && pagesRead <= 0;
   const pages = audio ? undefined : (open?.edition?.pages ?? row.edition?.pages ?? row.book.pages);
-  const item = normalizeHardcoverBook({ ...row.book, pages }, isoInstant(row.updated_at) ?? addedAt);
+  const item = normalizeHardcoverBook(
+    { ...row.book, pages },
+    isoInstant(row.updated_at) ?? addedAt,
+  );
   return { statusId: row.status_id, addedAt, item: { ...item, currentProgress: pagesRead } };
 }
 
@@ -116,12 +133,14 @@ export const HardcoverJournalRow = Schema.Struct({
   action_at: Schema.String,
   journal_date: optionalNullable(Schema.String),
   book: optionalNullable(HardcoverBook),
-  metadata: optionalNullable(Schema.Struct({
-    progress: optionalNullable(numeric),
-    progress_was: optionalNullable(numeric),
-    progress_pages: optionalNullable(numeric),
-    progress_pages_was: optionalNullable(numeric),
-  })),
+  metadata: optionalNullable(
+    Schema.Struct({
+      progress: optionalNullable(numeric),
+      progress_was: optionalNullable(numeric),
+      progress_pages: optionalNullable(numeric),
+      progress_pages_was: optionalNullable(numeric),
+    }),
+  ),
 });
 export type HardcoverJournalRow = typeof HardcoverJournalRow.Type;
 
@@ -159,7 +178,12 @@ export function normalizeHardcoverJournal(row: HardcoverJournalRow): NormalizedD
       ? { pages: { from: (progressed?.progress_pages_was ?? 0) + 1, to: toPage } }
       : {}),
     ...(toPercent != null && toPercent > 0
-      ? { percent: { from: wholePercent(progressed?.progress_was ?? 0), to: wholePercent(toPercent) } }
+      ? {
+          percent: {
+            from: wholePercent(progressed?.progress_was ?? 0),
+            to: wholePercent(toPercent),
+          },
+        }
       : {}),
   };
 }

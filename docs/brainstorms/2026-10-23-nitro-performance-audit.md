@@ -32,12 +32,12 @@ stay compatible.
 
 ## Installed packages and update check
 
-| Package | Installed | Latest stable checked | Decision |
-| --- | --- | --- | --- |
-| react-native-nitro-fetch | 1.8.0 | 1.9.0 | Next native upgrade candidate |
-| react-native-mmkv | 4.3.2 | 4.3.2 | Current |
-| react-native-nitro-modules | 0.37.1 | 0.37.1 | Current |
-| nitro-webview | Git commit `275e9185` | npm 0.2.2 | Keep Git pin, which matches upstream main |
+| Package                    | Installed             | Latest stable checked | Decision                                  |
+| -------------------------- | --------------------- | --------------------- | ----------------------------------------- |
+| react-native-nitro-fetch   | 1.8.0                 | 1.9.0                 | Next native upgrade candidate             |
+| react-native-mmkv          | 4.3.2                 | 4.3.2                 | Current                                   |
+| react-native-nitro-modules | 0.37.1                | 0.37.1                | Current                                   |
+| nitro-webview              | Git commit `275e9185` | npm 0.2.2             | Keep Git pin, which matches upstream main |
 
 [Nitro Fetch 1.9.0](https://github.com/margelo/react-native-nitro-fetch/releases/tag/v1.9.0)
 improves Android HTTP body reads, buffer allocation, UTF-8 decoding and Cronet

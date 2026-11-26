@@ -12,17 +12,18 @@ import { setMediaSort, type MediaSortScope } from '@/state/prefs/media-sort';
 export function SortingLoadedNotice() {
   const muted = useThemeColor('--color-muted');
   return (
-    <View accessible accessibilityLabel="Sorting loaded titles. This is not the full list." className="flex-row items-center gap-1.5">
+    <View
+      accessible
+      accessibilityLabel="Sorting loaded titles. This is not the full list."
+      className="flex-row items-center gap-1.5"
+    >
       <Ionicons color={muted} name="information-circle-outline" size={16} />
       <Text className="font-sans text-sm text-muted">Sorting loaded titles</Text>
     </View>
   );
 }
 
-export function MediaSortControl({ scope, sort }: {
-  scope: MediaSortScope;
-  sort: MediaSort;
-}) {
+export function MediaSortControl({ scope, sort }: { scope: MediaSortScope; sort: MediaSort }) {
   const [open, setOpen] = useState(false);
   const options: { value: MediaSort; label: string }[] = [
     { value: 'default', label: scope === 'watchlist' ? 'Recently added' : 'List order' },
@@ -59,8 +60,16 @@ export function MediaSortControl({ scope, sort }: {
         />
       </NativePickerMenu>
       {Platform.OS === 'web' && (
-        <PickerSheet onClose={() => setOpen(false)} onSelect={select} open={open} title="Sort titles" value={sort}>
-          {options.map((option) => <PickerSheet.Option key={option.value} {...option} />)}
+        <PickerSheet
+          onClose={() => setOpen(false)}
+          onSelect={select}
+          open={open}
+          title="Sort titles"
+          value={sort}
+        >
+          {options.map((option) => (
+            <PickerSheet.Option key={option.value} {...option} />
+          ))}
         </PickerSheet>
       )}
     </>

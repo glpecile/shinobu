@@ -29,9 +29,7 @@ export function captureLoginFromCookies(
   cookies: readonly CookiePair[],
   userAgent?: string,
 ): CapturedLetterboxdLogin | null {
-  const present = cookies.filter(
-    (cookie) => cookie.name !== '' && cookie.value !== '',
-  );
+  const present = cookies.filter((cookie) => cookie.name !== '' && cookie.value !== '');
 
   const byName = new Map(present.map((cookie) => [cookie.name, cookie.value]));
   const username = byName.get(LETTERBOXD_SIGNED_IN_COOKIE);
@@ -40,9 +38,7 @@ export function captureLoginFromCookies(
     return null;
   }
 
-  const cookie = present
-    .map(({ name, value }) => `${name}=${value}`)
-    .join('; ');
+  const cookie = present.map(({ name, value }) => `${name}=${value}`).join('; ');
 
   // Username may arrive percent-encoded in the cookie; decode defensively but
   // never let a malformed value throw the capture away.

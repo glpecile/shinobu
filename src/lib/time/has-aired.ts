@@ -2,10 +2,7 @@
  * Compare ISO air instants with their offsets. Treat date-only airings as midnight in the
  * user's timezone.
  */
-export function hasAired(
-  firstAired: string | null | undefined,
-  now: Date = new Date(),
-): boolean {
+export function hasAired(firstAired: string | null | undefined, now: Date = new Date()): boolean {
   if (firstAired == null || firstAired === '') return false;
   const airInstant = parseLocalInstant(firstAired);
   if (airInstant == null) return false;

@@ -1,7 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { useController, useForm, useWatch, type Control, type UseFormGetValues } from 'react-hook-form';
+import {
+  useController,
+  useForm,
+  useWatch,
+  type Control,
+  type UseFormGetValues,
+} from 'react-hook-form';
 import type { TextInputInstance } from 'react-native';
 import { Text, View } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
@@ -12,7 +18,10 @@ import { LikeButton } from '@/components/like-button';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
-import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
+import {
+  useLetterboxdUserscript,
+  useLetterboxdUserscriptUntrusted,
+} from '@/lib/providers/letterboxd/userscript-bridge';
 import { letterboxdScriptHint } from '@/lib/install-letterboxd-script';
 import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
@@ -103,13 +112,13 @@ export function LogFormFields({
   const pushRoute = usePushRoute();
   const userscriptLikes = useLetterboxdUserscript('like');
   const scriptUntrusted = useLetterboxdUserscriptUntrusted();
-  const diaryProviders = DIARY_PROVIDERS.filter((id) =>
-    selectedProviders.includes(id),
-  );
+  const diaryProviders = DIARY_PROVIDERS.filter((id) => selectedProviders.includes(id));
   const showTagsField = onTagsChange != null && diaryProviders.length > 0;
   const showDateField = selectedProviders.some((id) => !UNDATED_PROVIDERS.includes(id));
-  const needsScriptUpdate = process.env.EXPO_OS === 'web' &&
-    diaryProviders.includes(Provider.Letterboxd) && !userscriptLikes;
+  const needsScriptUpdate =
+    process.env.EXPO_OS === 'web' &&
+    diaryProviders.includes(Provider.Letterboxd) &&
+    !userscriptLikes;
 
   function toggleProvider(id: ProviderId) {
     onSelectedProvidersChange(
@@ -133,9 +142,7 @@ export function LogFormFields({
         className={cn(pending && 'opacity-50')}
         style={{ pointerEvents: pending ? 'none' : 'auto' }}
       >
-        <FieldLabel className="mt-5 mb-2">
-          Write to
-        </FieldLabel>
+        <FieldLabel className="mt-5 mb-2">Write to</FieldLabel>
         <ProviderPicker
           onConnect={() => {
             (onDismiss ?? onClose)();
@@ -151,7 +158,9 @@ export function LogFormFields({
           item={item}
           manual={[...manualTargets, ...unmatchedTargets]}
           reasons={{
-            ...(process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : {}),
+            ...(process.env.EXPO_OS === 'web'
+              ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') }
+              : {}),
             ...Object.fromEntries(unmatchedTargets.map((id) => [id, unmatchedWriteReason(item)])),
           }}
         />
@@ -179,10 +188,7 @@ export function LogFormFields({
         {showTagsField && (
           <View className="mt-4">
             <FieldLabel className="mb-2" onPress={() => tagsInput.current?.focus()}>
-              Tags{' '}
-              <Text className="text-muted font-sans text-xs">
-                ({labels(diaryProviders)})
-              </Text>
+              Tags <Text className="text-muted font-sans text-xs">({labels(diaryProviders)})</Text>
             </FieldLabel>
             <TextField
               ref={tagsInput}
@@ -201,7 +207,13 @@ export function LogFormFields({
   );
 }
 
-function ThroughChapterField({ control, getValues, from, total, pending }: {
+function ThroughChapterField({
+  control,
+  getValues,
+  from,
+  total,
+  pending,
+}: {
   control: Control<ThroughChapterForm>;
   getValues: UseFormGetValues<ThroughChapterForm>;
   from: number;
@@ -229,7 +241,13 @@ function ThroughChapterField({ control, getValues, from, total, pending }: {
   );
 }
 
-export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenRequest }: {
+export function LogConfirmForm({
+  request,
+  open,
+  onClose,
+  onDismiss,
+  onOpenRequest,
+}: {
   request: LogRequest;
   open: boolean;
   onClose: () => void;
@@ -240,7 +258,12 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const { fontScale } = useWindowDimensions();
   const repeat = isReadIntent(item) ? 'reread' : 'rewatch';
   const range = request.chapterRange;
-  const { control, getValues, handleSubmit, formState: { errors } } = useForm<ThroughChapterForm>({
+  const {
+    control,
+    getValues,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ThroughChapterForm>({
     defaultValues: { through: range == null ? '' : String(range.from) },
     mode: 'onChange',
     delayError: 500,
@@ -260,24 +283,37 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const { trackBusy, trackLog } = useCatchUpControls();
   const queryClient = useQueryClient();
   const logMedia = useLogMedia();
-  const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
+  const {
+    writable: targets,
+    manual: manualTargets,
+    unmatched: unmatchedTargets,
+  } = useLogTargetsSplit(item);
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
   const [selectedProviders, setSelectedProviders] = useTargetSelection(targets);
-  const [watchedAt, setWatchedAt] = useState<Date | null>(() => request.watchedAt == null ? null : new Date(request.watchedAt));
+  const [watchedAt, setWatchedAt] = useState<Date | null>(() =>
+    request.watchedAt == null ? null : new Date(request.watchedAt),
+  );
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);
-  const [retryOf, setRetryOf] = useState<{ rewatch: boolean; unanswered: ProviderId[] } | null>(null);
-  useLogReconcileQuery({
-    item,
-    episodes: request.episodes,
-    entryEpisodes: request.entryEpisodes,
-    providers: selectedProviders,
-  }, open);
+  const [retryOf, setRetryOf] = useState<{ rewatch: boolean; unanswered: ProviderId[] } | null>(
+    null,
+  );
+  useLogReconcileQuery(
+    {
+      item,
+      episodes: request.episodes,
+      entryEpisodes: request.entryEpisodes,
+      providers: selectedProviders,
+    },
+    open,
+  );
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;
-    return () => { openRef.current = false; };
+    return () => {
+      openRef.current = false;
+    };
   }, [open]);
 
   function confirm() {
@@ -299,7 +335,11 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       providers: selectedProviders,
       liked,
       ...(reading != null
-        ? { reading: reading.finished ? { finished: true } : { finished: false, page: reading.page } }
+        ? {
+            reading: reading.finished
+              ? { finished: true }
+              : { finished: false, page: reading.page },
+          }
         : {}),
       ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
       ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
@@ -321,9 +361,11 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       settleKeys.length === 0
         ? write
         : write.then(() =>
-            Promise.all(settleKeys.map((queryKey) =>
-              queryClient.invalidateQueries({ queryKey }, { cancelRefetch: false }),
-            )),
+            Promise.all(
+              settleKeys.map((queryKey) =>
+                queryClient.invalidateQueries({ queryKey }, { cancelRefetch: false }),
+              ),
+            ),
           ),
     );
     void write.then(
@@ -343,7 +385,12 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
         if (isCleanWriteReport(outcome)) {
           const followUp = request.episodes?.length ? completion(request.episodes) : null;
           if (followUp != null) {
-            setCompletionOffer({ ...followUp, watchedAt: watchedAt?.toISOString(), tags: parsedTags, liked });
+            setCompletionOffer({
+              ...followUp,
+              watchedAt: watchedAt?.toISOString(),
+              tags: parsedTags,
+              liked,
+            });
             return;
           }
           const copy = logToastCopy(outcome, repeat, span);
@@ -359,8 +406,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   }
   const result = logMedia.data;
   const pending = logMedia.isPending;
-  const reported =
-    logMedia.isError || (result != null && !isCleanWriteReport(result));
+  const reported = logMedia.isError || (result != null && !isCleanWriteReport(result));
   const retryable = logMedia.isError || (result?.failed.length ?? 0) > 0;
 
   function retry() {
@@ -379,11 +425,16 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
     logMedia.reset();
   }
 
-  if (completionOffer != null) return (
-    <WriteSheet.Step key="completion">
-      <LetterboxdCompletionOffer request={completionOffer} onClose={onClose} onOpenRequest={onOpenRequest} />
-    </WriteSheet.Step>
-  );
+  if (completionOffer != null)
+    return (
+      <WriteSheet.Step key="completion">
+        <LetterboxdCompletionOffer
+          request={completionOffer}
+          onClose={onClose}
+          onOpenRequest={onOpenRequest}
+        />
+      </WriteSheet.Step>
+    );
 
   return (
     <WriteSheet.Step key={reported ? 'report' : 'form'}>
@@ -402,9 +453,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
               `${result?.rewatch ? `Logged ${repeat} to` : 'Logged to'} ${labels(succeeded)}.`
             }
           />
-          {logMedia.isError && (
-            <WriteSheet.Error>Could not log. Try again.</WriteSheet.Error>
-          )}
+          {logMedia.isError && <WriteSheet.Error>Could not log. Try again.</WriteSheet.Error>}
           {retryable && (
             <WriteSheet.Actions>
               <Button
@@ -460,7 +509,9 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
               label={title}
               loading={pending}
               loadingLabel="Logging…"
-              morphLabel={(range != null || (reading != null && reading.total == null)) && fontScale <= 1}
+              morphLabel={
+                (range != null || (reading != null && reading.total == null)) && fontScale <= 1
+              }
               onPress={confirm}
             />
           </WriteSheet.Actions>

@@ -10,15 +10,9 @@ import { Collapsible } from '@/components/collapsible';
 import { Steps } from '@/components/steps';
 import { TextField } from '@/components/text-field';
 import { SIMKL_CREATE_APP_URL } from '@/lib/providers/external-urls';
-import {
-  beginSimklAuthFlow,
-  clearSimklAuthFlow,
-} from '@/lib/providers/simkl/auth';
+import { beginSimklAuthFlow, clearSimklAuthFlow } from '@/lib/providers/simkl/auth';
 import { simklClientId } from '@/lib/providers/simkl/config';
-import {
-  getSimklRedirectUri,
-  SIMKL_REDIRECT_URIS,
-} from '@/lib/providers/simkl/redirect-uri';
+import { getSimklRedirectUri, SIMKL_REDIRECT_URIS } from '@/lib/providers/simkl/redirect-uri';
 import { Provider } from '@/lib/providers/types';
 import { exchangeSimklCode } from '@/state/queries/simkl';
 import {
@@ -107,14 +101,8 @@ export function useSimklConnect() {
 }
 
 export function ConnectSimklButton() {
-  const {
-    connect,
-    status,
-    clientId,
-    embeddedClientId,
-    storedClientId,
-    setStoredClientId,
-  } = useSimklConnect();
+  const { connect, status, clientId, embeddedClientId, storedClientId, setStoredClientId } =
+    useSimklConnect();
 
   const {
     control,
@@ -134,8 +122,8 @@ export function ConnectSimklButton() {
     return (
       <View className="w-full gap-4">
         <Text className="text-muted font-sans text-sm">
-          This build ships no Simkl client id — connect through your own (free)
-          Simkl app instead. One-time setup, under a minute, no secret needed.
+          This build ships no Simkl client id — connect through your own (free) Simkl app instead.
+          One-time setup, under a minute, no secret needed.
         </Text>
 
         <Collapsible label="How to create the Simkl app">
@@ -155,10 +143,7 @@ export function ConnectSimklButton() {
 
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Add every{' '}
-                <Text className="text-foreground font-sans-semibold">
-                  Redirect URI
-                </Text>{' '}
+                Add every <Text className="text-foreground font-sans-semibold">Redirect URI</Text>{' '}
                 below to the app, each exactly as written:
               </Text>
               {SIMKL_REDIRECT_URIS.map((uri) => (
@@ -176,10 +161,8 @@ export function ConnectSimklButton() {
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
                 Save, then copy the app's{' '}
-                <Text className="text-foreground font-sans-semibold">
-                  Client ID
-                </Text>{' '}
-                (a long hex string) and paste it below.
+                <Text className="text-foreground font-sans-semibold">Client ID</Text> (a long hex
+                string) and paste it below.
               </Text>
             </Steps.Item>
           </Steps>
@@ -200,9 +183,7 @@ export function ConnectSimklButton() {
           )}
         />
         {errors.clientId != null && (
-          <Text className="text-accent font-sans text-xs">
-            {errors.clientId.message}
-          </Text>
+          <Text className="text-accent font-sans text-xs">{errors.clientId.message}</Text>
         )}
         <Button
           icon={<Button.Icon name="link-outline" />}
@@ -218,8 +199,8 @@ export function ConnectSimklButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        You sign in on Simkl's own site, and Shinobu keeps only the resulting
-        access token on this device — your password is never sent to Shinobu.
+        You sign in on Simkl's own site, and Shinobu keeps only the resulting access token on this
+        device — your password is never sent to Shinobu.
       </Text>
       {status === 'error' && (
         <Text className="text-accent font-sans text-xs">

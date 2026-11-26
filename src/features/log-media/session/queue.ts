@@ -18,8 +18,7 @@ export interface CatchUpEvidence {
 
 const MAX_CHAIN = 200;
 
-const key = (episode: { season: number; number: number }) =>
-  `${episode.season}-${episode.number}`;
+const key = (episode: { season: number; number: number }) => `${episode.season}-${episode.number}`;
 
 export function airedAnimeEpisodes(
   item: NormalizedMediaItem,
@@ -27,28 +26,38 @@ export function airedAnimeEpisodes(
   airedCount: number | null,
 ): readonly NormalizedEpisode[] {
   const scheduled = episodes.filter((episode) => episode.firstAired != null);
-  const knownAired = Math.max(0, ...scheduled.filter((episode) => hasAired(episode.firstAired)).map((episode) => episode.number));
-  return episodes.filter((episode) => episode.firstAired != null
-    ? hasAired(episode.firstAired)
-    : airedCount != null
-      ? episode.number <= airedCount
-      : scheduled.length > 0
-        ? episode.number <= knownAired
-        : hasStartedAiring(item, episodes));
+  const knownAired = Math.max(
+    0,
+    ...scheduled.filter((episode) => hasAired(episode.firstAired)).map((episode) => episode.number),
+  );
+  return episodes.filter((episode) =>
+    episode.firstAired != null
+      ? hasAired(episode.firstAired)
+      : airedCount != null
+        ? episode.number <= airedCount
+        : scheduled.length > 0
+          ? episode.number <= knownAired
+          : hasStartedAiring(item, episodes),
+  );
 }
 
 export function catalogueCatchUpQueue(
   first: CatchUpEpisode,
   candidates: readonly CatchUpEpisode[],
 ): CatchUpEpisode[] {
-  return [first, ...candidates.filter((episode) =>
-    first.season == null
-      ? episode.season == null && episode.number > first.number
-      : first.season > 0 && episode.season != null &&
-        (episode.season > first.season ||
-          (episode.season === first.season && episode.number > first.number)),
-  ).sort((a, b) => (a.season ?? 0) - (b.season ?? 0) || a.number - b.number)]
-    .slice(0, MAX_CHAIN);
+  return [
+    first,
+    ...candidates
+      .filter((episode) =>
+        first.season == null
+          ? episode.season == null && episode.number > first.number
+          : first.season > 0 &&
+            episode.season != null &&
+            (episode.season > first.season ||
+              (episode.season === first.season && episode.number > first.number)),
+      )
+      .sort((a, b) => (a.season ?? 0) - (b.season ?? 0) || a.number - b.number),
+  ].slice(0, MAX_CHAIN);
 }
 
 export function catchUpQueue(
@@ -143,8 +152,7 @@ function layoutWalk(
 
   const queue: CatchUpEpisode[] = [first];
   let number = first.number;
-  let absolute =
-    seasons.slice(0, slot).reduce((sum, s) => sum + s.episodeCount, 0) + number;
+  let absolute = seasons.slice(0, slot).reduce((sum, s) => sum + s.episodeCount, 0) + number;
   let steps = 0;
   while (queue.length < behind && queue.length < MAX_CHAIN && steps < MAX_CHAIN) {
     steps += 1;

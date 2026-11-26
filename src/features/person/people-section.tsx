@@ -30,10 +30,7 @@ function PersonCardContent({ credit }: { credit: PersonCredit }) {
         {credit.name}
       </Text>
       {credit.role !== '' && (
-        <Text
-          className="text-muted font-sans text-xs text-center mt-0.5"
-          numberOfLines={2}
-        >
+        <Text className="text-muted font-sans text-xs text-center mt-0.5" numberOfLines={2}>
           {credit.role}
         </Text>
       )}
@@ -130,7 +127,9 @@ export function PeopleSection({
               ) : (
                 <View className="w-24 mr-4">
                   <PresstableScale
-                    accessibilityLabel={credit.role === '' ? credit.name : `${credit.name} / ${credit.role}`}
+                    accessibilityLabel={
+                      credit.role === '' ? credit.name : `${credit.name} / ${credit.role}`
+                    }
                     className="items-center"
                     onPress={() => pushRoute(creditRoute(credit))}
                   >
@@ -165,18 +164,9 @@ export function PeopleRailSkeleton() {
       <View className="flex-row overflow-hidden">
         {Array.from({ length: 10 }).map((_, index) => (
           <View className="w-24 items-center mr-4" key={index}>
-            <Skeleton
-              className="w-20 h-20 rounded-full"
-              delay={staggerDelay(index)}
-            />
-            <Skeleton
-              className="h-3 w-16 rounded mt-2"
-              delay={staggerDelay(index)}
-            />
-            <Skeleton
-              className="h-2.5 w-12 rounded mt-1.5"
-              delay={staggerDelay(index)}
-            />
+            <Skeleton className="w-20 h-20 rounded-full" delay={staggerDelay(index)} />
+            <Skeleton className="h-3 w-16 rounded mt-2" delay={staggerDelay(index)} />
+            <Skeleton className="h-2.5 w-12 rounded mt-1.5" delay={staggerDelay(index)} />
           </View>
         ))}
       </View>

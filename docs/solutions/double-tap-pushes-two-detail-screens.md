@@ -32,7 +32,7 @@ this button's own action twice". The navigation stack is **global**, so a second
 push can arrive without anyone pressing the same pressable twice:
 
 - **Two instances of one item.** A show renders as a Continue Watching card
-  *and* as today's cell in the Calendar strip (`up-next-section.tsx` feeds
+  _and_ as today's cell in the Calendar strip (`up-next-section.tsx` feeds
   `calendarWeek` both sections), and a film can appear in more than one home
   carousel. Two components, two refs, one stack.
 - **Stacked surfaces.** The card-actions sheet's "View details" sits directly

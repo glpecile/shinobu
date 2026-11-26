@@ -5,6 +5,7 @@
 The details screen (`src/app/details/[id].tsx`) renders cast/crew as static `PersonCard`s. Goal: pressing a person card opens a **person route** showing who they are plus their previous work in horizontal rows grouped by role (Acting, Directing, Writing, …). Additionally (mid-session request): pressing the poster on the details page — and the headshot on the new person page — zooms the image via [`@nandorojo/galeria`](https://github.com/nandorojo/galeria).
 
 **User decisions:**
+
 - **TMDB is the single source of truth** for the person route (bio + credits). The route is keyed by TMDB person id only — no `anilist-person-*` / `trakt-person-*` union handling in the view.
 - **AniList-sourced people** (anime voice actors/staff, which carry no TMDB id) **resolve by name search** on TMDB when tapped.
 - Galeria zoom on the details poster and the person headshot.
