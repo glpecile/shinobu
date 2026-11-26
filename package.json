@@ -102,7 +102,7 @@
     "test": "bun test --isolate",
     "check:links": "bun scripts/check-external-urls.ts",
     "release:bump": "bun scripts/bump-version.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "oxlint",
     "build:web": "expo export --platform web --clear --max-workers 2 && sed 's/__EXPO_ROUTER_HYDRATE__=true;/__EXPO_ROUTER_HYDRATE__=false;/' 'dist/+not-found.html' > dist/404.html && grep -q '__EXPO_ROUTER_HYDRATE__=false;' dist/404.html",
     "deploy:web": "bun run build:web && wrangler deploy"

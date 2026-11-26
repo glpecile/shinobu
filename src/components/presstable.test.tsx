@@ -1,6 +1,5 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterAll, expect, mock, spyOn, test } from 'bun:test';
-import { createElement, type ComponentProps } from 'react';
 
 GlobalRegistrator.register();
 afterAll(() => GlobalRegistrator.unregister());
@@ -47,8 +46,7 @@ for (const Pressable of [PresstableOpacity, PresstableScale]) {
     let now = 1000;
     const clock = spyOn(Date, 'now').mockImplementation(() => now);
     const onPress = mock(() => {});
-    const props = { onPress } as ComponentProps<typeof PresstableOpacity>;
-    const view = render(createElement(Pressable, props));
+    const view = render(<Pressable onPress={onPress} />);
     try {
       const button = view.getByRole('button');
       fireEvent.click(button);
@@ -59,7 +57,7 @@ for (const Pressable of [PresstableOpacity, PresstableScale]) {
       fireEvent.click(button);
       expect(onPress).toHaveBeenCalledTimes(2);
 
-      view.rerender(createElement(Pressable, { ...props, pressBehavior: 'immediate' }));
+      view.rerender(<Pressable onPress={onPress} pressBehavior="immediate" />);
       fireEvent.click(button);
       now += 100;
       fireEvent.click(button);
