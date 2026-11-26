@@ -50,7 +50,7 @@ function Option({ children, value }: { children: ReactNode; value: string }) {
       accessibilityRole={process.env.EXPO_OS === 'web' ? 'button' : 'radio'}
       accessibilityState={{ checked }}
       aria-pressed={process.env.EXPO_OS === 'web' ? checked : undefined}
-      className="flex-1 items-center gap-2 rounded-2xl web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2"
+      className="flex-1 items-center gap-2 rounded-xl web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2"
       onPress={() => group.select(value)}
       pressBehavior="immediate"
     >
@@ -62,10 +62,10 @@ function Option({ children, value }: { children: ReactNode; value: string }) {
 function Preview({ children, className }: { children: ReactNode; className?: string }) {
   const checked = useContext(CheckedContext);
   return (
-    <View className={cn('w-full rounded-2xl border-2 border-transparent p-0.5', checked && 'border-foreground')}>
-      <View className={cn('w-full overflow-hidden rounded-xl', className)}>
+    <View className={cn('w-full rounded-xl border-2 border-transparent p-0.5', checked && 'border-foreground')}>
+      <View className={cn('w-full overflow-hidden rounded-lg', className)}>
         {children}
-        <View className="absolute inset-0 rounded-xl border border-border" style={{ pointerEvents: 'none' }} />
+        <View className="absolute inset-0 rounded-lg border border-border" style={{ pointerEvents: 'none' }} />
       </View>
     </View>
   );
