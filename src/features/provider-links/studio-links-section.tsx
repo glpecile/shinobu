@@ -1,5 +1,6 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
+import { FieldLabel } from '@/components/field-label';
 import { LinkPill } from '@/components/link-pill';
 import { ProviderIcon } from '@/components/provider-icon';
 import { openExternalUrl } from '@/lib/open-external-url';
@@ -46,9 +47,9 @@ export function StudioLinksSection({
 
   return (
     <View className="mt-6">
-      <Text className="text-foreground font-sans-semibold text-sm mb-2">
+      <FieldLabel className="mb-2">
         View on
-      </Text>
+      </FieldLabel>
       <LinkPill.Rail>
         {links.map(({ provider, url }) => (
           <LinkPill

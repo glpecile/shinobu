@@ -7,6 +7,7 @@ import { Text, View } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { Button } from '@/components/button';
+import { FieldLabel } from '@/components/field-label';
 import { LikeButton } from '@/components/like-button';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
@@ -132,9 +133,9 @@ export function LogFormFields({
         className={cn(pending && 'opacity-50')}
         style={{ pointerEvents: pending ? 'none' : 'auto' }}
       >
-        <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
+        <FieldLabel className="mt-5 mb-2">
           Write to
-        </Text>
+        </FieldLabel>
         <ProviderPicker
           onConnect={() => {
             (onDismiss ?? onClose)();
@@ -177,15 +178,12 @@ export function LogFormFields({
         )}
         {showTagsField && (
           <View className="mt-4">
-            <Text
-              className="text-foreground font-sans-semibold text-sm mb-2"
-              onPress={() => tagsInput.current?.focus()}
-            >
+            <FieldLabel className="mb-2" onPress={() => tagsInput.current?.focus()}>
               Tags{' '}
               <Text className="text-muted font-sans text-xs">
                 ({labels(diaryProviders)})
               </Text>
-            </Text>
+            </FieldLabel>
             <TextField
               ref={tagsInput}
               accessibilityLabel={`Tags (${labels(diaryProviders)})`}

@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { FieldLabel } from '@/components/field-label';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { failedOnSentence, providerLabelList } from '@/features/watchlist-media/copy';
 import { useWriteTargetsSplit } from '@/features/watchlist-media/targets';
@@ -83,7 +84,7 @@ export function TrackingStatusPicker({
       </WriteSheet.Description>
 
       <View className={cn(pending && 'opacity-50')} style={{ pointerEvents: pending ? 'none' : 'auto' }}>
-        <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">Change on</Text>
+        <FieldLabel className="mt-5 mb-2">Change on</FieldLabel>
         {writable.length > 0 && (
           <ProviderToggleList
             details={labels}

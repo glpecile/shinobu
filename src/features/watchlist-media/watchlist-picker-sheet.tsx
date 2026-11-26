@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { FieldLabel } from '@/components/field-label';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
@@ -141,9 +142,9 @@ export function WatchlistAddPicker({
         className={cn(pending && 'opacity-50')}
         style={{ pointerEvents: pending ? 'none' : 'auto' }}
       >
-        <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
+        <FieldLabel className="mt-5 mb-2">
           Write to
-        </Text>
+        </FieldLabel>
         {writable.length > 0 && (
           <ProviderToggleList
             onSelectAll={selectAll}
@@ -345,9 +346,9 @@ export function WatchlistRemovePicker({
         className={cn(pending && 'opacity-50')}
         style={{ pointerEvents: pending ? 'none' : 'auto' }}
       >
-        <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
+        <FieldLabel className="mt-5 mb-2">
           Remove from
-        </Text>
+        </FieldLabel>
         {split.targets.length > 0 && (
           <ProviderToggleList
             onSelectAll={selectAll}
