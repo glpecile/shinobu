@@ -7,13 +7,12 @@ import { ActionableRow } from '@/components/actionable-row';
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
-import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { LoadMoreFooter } from '@/components/load-more-footer';
 import { MorphText } from '@/components/morph-text';
-import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProgressRing } from '@/components/progress-ring';
 import { RefreshControl } from '@/components/refresh-control';
+import { SmallPoster } from '@/components/small-poster';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { Tooltip } from '@/components/tooltip';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -108,7 +107,7 @@ export function HardcoverListItems({ id }: { id: number }) {
                 leading={
                   <>
                     {list.ranked && <Text className="text-muted font-display text-base w-8 mr-3 text-right tabular-nums">{entry.position}</Text>}
-                    {entry.item.coverImage === '' ? <PosterPlaceholder className="w-12 h-18 rounded" /> : <Image className="w-12 h-18 rounded" contentFit="cover" recyclingKey={entry.id} source={{ uri: entry.item.coverImage }} />}
+                    <SmallPoster recyclingKey={entry.id} size="md" uri={entry.item.coverImage} />
                     <View className="shrink ml-4">
                       <Text className="font-sans-semibold text-foreground text-base" numberOfLines={2}>{entry.item.title}</Text>
                       <Text className="font-sans text-muted text-xs mt-1" numberOfLines={2}>{subtitle(entry)}</Text>
