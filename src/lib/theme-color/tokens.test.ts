@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs';
 import { THEME_COLOR_TOKENS } from './tokens';
 
 const names = (block: string) =>
-  [...block.matchAll(/(--color-[a-z-]+):/g)].map((m) => m[1]);
+  [...block.replaceAll(/\/\*[\s\S]*?\*\//g, '').matchAll(/(--color-[a-z0-9-]+):/g)].map(
+    (m) => m[1],
+  );
 
 test('the typed tokens are the ones global.css declares in both themes', () => {
   const css = readFileSync(new URL('../../global.css', import.meta.url), 'utf8');
@@ -15,5 +17,7 @@ test('the typed tokens are the ones global.css declares in both themes', () => {
 
 test('DESIGN.md gives every token a role', () => {
   const design = readFileSync(new URL('../../../DESIGN.md', import.meta.url), 'utf8');
-  expect(THEME_COLOR_TOKENS.filter((token) => !design.includes(`\`${token}\``))).toEqual([]);
+  expect([...new Set(design.match(/--color-[a-z0-9-]+/g))].sort()).toEqual(
+    [...THEME_COLOR_TOKENS].sort(),
+  );
 });

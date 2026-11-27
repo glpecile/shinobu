@@ -26,10 +26,8 @@ export function PosterStack({
         return (
           <View
             className={cn(
-              'absolute inset-y-0 rounded-md overflow-hidden border',
-              film == null
-                ? 'bg-surface/60 border-hairline'
-                : 'bg-surface border-hairline shadow-md',
+              'absolute inset-y-0 rounded-md overflow-hidden border border-hairline',
+              film == null ? 'bg-surface/60' : 'bg-surface shadow-md',
             )}
             key={film == null ? `empty-${index}` : `${film.id}/${index}`}
             style={{ left: `${index * STEP}%`, width: `${POSTER_WIDTH}%`, zIndex: SLOTS - index }}

@@ -17,7 +17,6 @@
 /*
  * Uniwind requires every variable in both `light` and `dark`.
  * `--color-logo-tile` stays light in dark mode because TMDB company logos are dark/colored transparent PNGs.
- * `hairline` edges posters and nested cards; `scrim` darkens an image under `on-scrim` text.
  */
 @layer theme {
   :root {

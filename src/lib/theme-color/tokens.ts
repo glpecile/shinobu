@@ -1,4 +1,4 @@
-/* oxlint-disable shinobu/log-color-only -- this lists token names; it styles nothing. */
+/* oxlint-disable shinobu/log-color-only */
 /** Every `--color-*` token declared in `src/global.css`; `tokens.test.ts` keeps the two in sync. */
 export const THEME_COLOR_TOKENS = [
   '--color-background',

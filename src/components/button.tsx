@@ -42,15 +42,12 @@ const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
   ghost: { on: 'text-foreground', off: 'text-muted' },
 };
 
-// A toggle that is on (a liked heart) keeps its variant's frame and turns its
-// label and glyphs accent. Filled variants have no room for a second colour.
 const SELECTABLE: Record<ButtonVariant, boolean> = {
   log: false,
   primary: false,
   quiet: true,
   ghost: true,
 };
-const SELECTED_LABEL = { on: 'text-accent', off: 'text-accent/60' };
 
 const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
   log: '--color-log-foreground',
@@ -203,11 +200,15 @@ export function Button({
 }: ButtonProps) {
   const reduceMotion = useReducedMotion();
   const unavailable = disabled || loading;
-  const selected = pressed === true && SELECTABLE[variant];
-  const labelClass = selected ? SELECTED_LABEL : LABEL[variant];
-  const glyphToken: ThemeColorToken = selected ? '--color-accent' : SPINNER_TOKEN[variant];
-  const spinnerToken = useThemeColor(glyphToken);
-  const spinnerColor = spinnerToken;
+  const pressedState = SELECTABLE[variant] ? pressed : undefined;
+  const selected = pressedState === true;
+  const tonalSelected = selected && !iconOnly;
+  const glyphToken: ThemeColorToken = tonalSelected
+    ? '--color-accent-on-tonal'
+    : selected
+      ? '--color-accent'
+      : SPINNER_TOKEN[variant];
+  const spinnerColor = useThemeColor(glyphToken);
   const LabelText = morphLabel ? MorphText : Text;
   const shownLabel = loading ? (loadingLabel ?? label) : label;
   const overlay = loading && loadingLabel == null;
@@ -222,7 +223,7 @@ export function Button({
     <PresstableOpacity
       accessibilityLabel={accessibilityLabel ?? (iconOnly ? label : undefined)}
       accessibilityRole="button"
-      accessibilityState={{ busy: loading, disabled: unavailable, selected: pressed }}
+      accessibilityState={{ busy: loading, disabled: unavailable, selected: pressedState }}
       // Border must live on the inner View: Android RNGH buttons replace the
       // background drawable and drop borders (docs/solutions/pressto-border-not-drawn-on-android.md).
       className={cn(
@@ -236,7 +237,7 @@ export function Button({
       // (docs/solutions/pressto-accessibility-state-not-mapped-on-web.md).
       aria-busy={loading}
       aria-disabled={unavailable}
-      aria-pressed={pressed}
+      aria-pressed={pressedState}
       disabled={unavailable}
       onPress={onPress}
       pressBehavior={pressBehavior}
@@ -250,7 +251,15 @@ export function Button({
             iconOnly
               ? cn(size === 'sm' ? 'size-9.5' : 'size-11', 'shrink-0')
               : SIZE[size].container,
-            unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
+            tonalSelected
+              ? cn(
+                  'bg-accent-tonal',
+                  variant === 'quiet' && 'border border-border',
+                  unavailable && 'opacity-60',
+                )
+              : unavailable
+                ? CONTAINER[variant].off
+                : CONTAINER[variant].on,
           )}
           layout={BOX_LAYOUT}
           style={COLOR_TRANSITION}
@@ -317,7 +326,11 @@ export function Button({
                   'font-sans-semibold',
                   morphLabel ? 'self-center' : align === 'start' ? undefined : 'text-center',
                   SIZE[size].label,
-                  unavailable ? labelClass.off : labelClass.on,
+                  tonalSelected
+                    ? 'text-accent-on-tonal'
+                    : unavailable
+                      ? LABEL[variant].off
+                      : LABEL[variant].on,
                 )}
               >
                 {shownLabel}

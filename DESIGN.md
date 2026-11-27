@@ -20,13 +20,13 @@ spinner, goes through `useThemeColor` from `@/lib/theme-color` with a
 | `--color-hairline` | The edge around a poster, still, or nested card. |
 | `--color-accent` | Red for links, a selected toggle, the caret, and other small marks. Never a filled button. |
 | `--color-accent-foreground` | Text and glyphs on a solid `accent` fill. |
-| `--color-accent-tonal` | A soft red background, such as an accent badge or an error toast. |
+| `--color-accent-tonal` | A soft red background, such as an accent badge, a selected labelled toggle, or an error toast. |
 | `--color-accent-on-tonal` | The text on `accent-tonal`. |
 | `--color-log` | The log action and its confirm and retry, nothing else (`shinobu/log-color-only`). |
 | `--color-log-foreground` | Text and glyphs on `log`. |
 | `--color-success` | A confirmed write: its glyph or text. |
 | `--color-success-tonal` | The soft background of a confirmed write. |
-| `--color-scrim` | The dark layer under text on an image. |
+| `--color-scrim` | The dark layer under text on an image, or a sheet backdrop. |
 | `--color-on-scrim` | Text on `scrim`, and text over a poster gradient. |
 | `--color-toast-surface` | Toasts and web tooltips only. |
 | `--color-toast-shadow` | The shadow of toasts and web tooltips only. |
@@ -56,9 +56,9 @@ component, not its classes.
 
 | Role | Component | Classes it applies |
 |---|---|---|
-| Sheet or notice title | `SheetHeader`, `CenteredNotice.Title` | `font-display text-2xl text-foreground` |
+| Sheet or notice title | `SheetHeader.Title`, `CenteredNotice.Title` | `font-display text-2xl text-foreground` |
 | Section title | `Section.Title` | `font-display text-xl text-foreground` |
-| Compact header title | `ScrolledTitle` | `font-display text-lg text-foreground` |
+| Compact header title | `ScrolledTitle.Bar` | `font-display text-lg text-foreground` |
 | Overline | `Eyebrow` | `font-sans-semibold text-xs uppercase tracking-wider` |
 | Field label | `FieldLabel` | `text-foreground font-sans-semibold text-sm` |
 | Secondary line | `MetaLine` | `text-muted font-sans text-sm` |
