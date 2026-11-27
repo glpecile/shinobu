@@ -640,9 +640,8 @@ export function upNextOptions(queryClient: QueryClient) {
   return {
     queryKey: upNextQueryKeys.inputs(),
     queryFn: streamedQuery<UpNextInputs, UpNextInputs>({
-      streamFn: (context) => {
-        // Reading the signal lets streamedQuery stop cache writes after a purge.
-        void context.signal;
+      // Reading the signal lets streamedQuery stop cache writes after a purge.
+      streamFn: ({ signal: _signal }) => {
         return streamUpNextInputs(queryClient, currentUsableProviders());
       },
       reducer: (_previous, partial) => partial,

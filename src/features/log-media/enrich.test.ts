@@ -1,4 +1,4 @@
-import type { QueryClient } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { ProviderId } from '@/lib/providers/types';
@@ -91,7 +91,7 @@ function chao(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem
 }
 
 const ALL: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
-const client = {} as QueryClient;
+const client = new QueryClient();
 
 describe('enrichExternalIds — anime film AniList fallback', () => {
   beforeEach(() => {
