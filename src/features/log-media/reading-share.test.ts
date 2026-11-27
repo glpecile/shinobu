@@ -21,4 +21,7 @@ test('a step moves one unit and stays on the book', () => {
   expect(stepPage(10, 50, -1, false)).toBe(9);
   expect(stepPage(0, 204, -1, false)).toBe(0);
   expect(stepPage(204, 204, 1, true)).toBe(204);
+  expect(stepPage(1, 4, 10, false)).toBe(2);
+  expect(stepPage(1, 9, -10, false)).toBe(0);
+  expect(stepPage(8, 9, 10, false)).toBe(9);
 });

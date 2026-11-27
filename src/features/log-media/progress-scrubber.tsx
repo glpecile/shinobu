@@ -9,7 +9,7 @@ import {
 
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
-import { pageAt, percentRead } from './reading-share';
+import { pageAt, percentRead, stepPage } from './reading-share';
 
 const MARKS = [25, 50, 75];
 const SNAP = 2;
@@ -42,7 +42,7 @@ export function ProgressScrubber({
   }
 
   function jump(by: number) {
-    onChange(pageAt(Math.min(100, Math.max(0, percent + by)), total));
+    onChange(stepPage(page, total, by, false));
   }
 
   const tap = useTapGesture({
