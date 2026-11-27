@@ -256,8 +256,8 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
 function PosterFan({ item }: { item: NormalizedMediaItem }) {
   return (
     <View className="w-11.5 h-13.5 flex-none">
-      <View className="absolute left-2.5 top-0.75 w-9 h-12 rounded bg-surface border border-border/40" />
-      <View className="absolute left-1.25 top-0.25 w-9 h-13 rounded bg-surface border border-border/50" />
+      <View className="absolute left-2.5 top-0.75 w-9 h-12 rounded bg-surface border border-hairline" />
+      <View className="absolute left-1.25 top-0.25 w-9 h-13 rounded bg-surface border border-hairline" />
       <View className="absolute left-0 top-0">
         <DiaryPoster item={item} />
       </View>

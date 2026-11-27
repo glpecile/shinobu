@@ -173,7 +173,7 @@ function TimelineEntry({
             ) : (
               <Image
                 source={{ uri: item.coverImage }}
-                className={cn(POSTER, 'bg-surface border border-border/50')}
+                className={cn(POSTER, 'bg-surface border border-hairline')}
                 contentFit="cover"
                 recyclingKey={item.id}
               />

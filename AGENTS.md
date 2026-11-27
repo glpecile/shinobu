@@ -251,64 +251,12 @@ only HTML tags and a PNG. Never pass user sessions or arbitrary text through it.
 Local web dev needs `bun run dev:worker` next to `bun web`. Restart `bun web`
 after editing `metro.config.js`.
 
-## Theming and typography
+## Design system
 
-Colors are tokens in `src/global.css`, never hex in a component. Add a token to
-both the light and dark variants. `accent` is `#DC2626` in both. Reserve solid
-red action buttons for logging (`#DC2625`, `--color-log`, `variant="log"`),
-including its confirm/retry actions. Other primary actions are neutral.
-Keep the red loading logo and existing softer red tints. `shinobu/log-color-only`
-enforces the logging button variant and rejects solid red control fills outside
-logging. Dark is the designed mode, but light must render correctly.
-
-A color passed as a string, such as to an icon or spinner, goes through
-`useThemeColor` from `@/lib/theme-color`. The exception is a composed color like
-`${background}00`, commented and lint-disabled on that line
-(`docs/solutions/web-prerender-bakes-js-resolved-colors.md`).
-
-Titles use Space Grotesk (`font-display`) and body text uses Inter
-(`font-sans`, `font-sans-semibold`). React Native doesn't synthesize weights, so
-never pair `font-bold` or `font-semibold` with a custom font. Add a weight token
-instead. The 忍 kanji uses the OS font on purpose.
-
-## Class names and buttons
-
-Every visible heading, control, and status line earns its space. Don't render
-something because a provider or API exposes it, don't repeat context the screen
-already shows, and give each intent one control.
-
-Compose every `className` with `cn()` from `@/lib/cn`, never a template literal,
-so a caller's class replaces the default instead of competing with it.
-
-Disclosures use `pressBehavior="immediate"` on `PresstableOpacity`,
-`PresstableScale`, `PressableCard`, or `ActionableRow`, so every press toggles. Other actions
-default to `prevent-repeat`, which drops repeat presses within 500 ms.
-`shinobu/immediate-disclosures` enforces this for expanded accessibility states.
-
-Prefer Uniwind's `ios:`, `android:`, and `web:` variants for platform-specific
-styling. Use platform files only when the implementation differs or a native-only
-import requires them; don't split a component just to vary its classes.
-
-FABs use `components/fab`. Size is a fixed `size="sm"` (44) or `"md"` (56,
-the default) on every platform. Shape is `shape="squircle"` by default, with
-`"circle"` available. Color is independent: `variant="outline"` (default),
-`"filled"` (neutral), or `"log"` (red logging action). Never size, stretch, or
-reshape a FAB through `className`; it takes positioning and margins only.
-Use the same component for floating episode actions.
-
-Buttons are `components/button`, never a hand-built pressable and `Text`. Use
-its `variant`, `size`, and `align`, and keep `className` to layout. An action
-that awaits passes `loading`. A label that changes from user state uses
-`morphLabel`. Every button has an `icon` from the list in `Button.Icon`'s
-docblock. When the button lacks a shape you need, add a prop to it. Cards, rows
-that navigate, and rows with a subtitle stay their own pressable.
-
-`MorphText` animates text that changes from user state, like progress counts.
-Don't use it for static text or text that changes constantly.
-
-Sheets are `components/sheet`, over `@swmansion/react-native-bottom-sheet`.
-Don't swap it for `@expo/ui`'s `BottomSheet` or `@gorhom/bottom-sheet`. Both are
-native-only, and web needs the Modal fallback.
+`DESIGN.md` holds the visual rules: tokens, type, which component and which
+`Button` variant to pick, with correct and incorrect examples. Read it before
+you add or restyle UI. A rule it states that lint or types can enforce is
+enforced there.
 
 ## Long lists
 

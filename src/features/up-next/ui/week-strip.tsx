@@ -34,7 +34,7 @@ export function WeekStrip({
         <View className="absolute inset-0 flex-row" style={{ pointerEvents: 'none' }}>
           {days.map((day) => (
             <View
-              className="w-14 mr-2 rounded-md border border-border/60 bg-surface"
+              className="w-14 mr-2 rounded-md border border-hairline bg-surface"
               key={day.offset}
             />
           ))}

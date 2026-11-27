@@ -1,8 +1,9 @@
 // oxlint-disable-next-line no-restricted-imports -- this *is* the wrapper the rule points at.
 import { useCSSVariable } from 'uniwind';
 
-/** A `--color-*` token declared in `src/global.css`. */
-export type ThemeColorToken = `--color-${string}`;
+import type { ThemeColorToken } from './tokens';
+
+export type { ThemeColorToken } from './tokens';
 
 /**
  * A theme token for the props that take a color *string* — an icon glyph, a

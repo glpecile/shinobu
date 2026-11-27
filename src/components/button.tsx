@@ -19,8 +19,7 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
-export type ButtonVariant =
-  'log' | 'primary' | 'outline' | 'quiet' | 'quiet-accent' | 'ghost' | 'accent-ghost';
+export type ButtonVariant = 'log' | 'primary' | 'quiet' | 'ghost';
 export type ButtonSize = 'sm' | 'md';
 
 const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
@@ -29,34 +28,32 @@ const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
     on: 'border border-foreground bg-foreground',
     off: 'border border-transparent bg-foreground/40',
   },
-  outline: { on: 'border border-accent', off: 'border border-accent/40' },
   quiet: {
     on: 'border border-border web:hover:bg-border/40',
     off: 'border border-border opacity-60',
   },
-  'quiet-accent': { on: 'border border-border', off: 'border border-border opacity-60' },
   ghost: { on: 'web:hover:bg-border/40', off: 'opacity-60' },
-  'accent-ghost': { on: '', off: 'opacity-60' },
 };
 
 const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
   log: { on: 'text-log-foreground', off: 'text-log-foreground' },
   primary: { on: 'text-background', off: 'text-background' },
-  outline: { on: 'text-accent', off: 'text-accent/60' },
   quiet: { on: 'text-foreground', off: 'text-muted' },
-  'quiet-accent': { on: 'text-accent', off: 'text-accent/60' },
   ghost: { on: 'text-foreground', off: 'text-muted' },
-  'accent-ghost': { on: 'text-accent', off: 'text-accent/60' },
+};
+
+const SELECTABLE: Record<ButtonVariant, boolean> = {
+  log: false,
+  primary: false,
+  quiet: true,
+  ghost: true,
 };
 
 const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
   log: '--color-log-foreground',
   primary: '--color-background',
-  outline: '--color-accent',
   quiet: '--color-foreground',
-  'quiet-accent': '--color-accent',
   ghost: '--color-foreground',
-  'accent-ghost': '--color-accent',
 };
 
 const BOX_LAYOUT = Platform.OS === 'web' ? undefined : LinearTransition.duration(DURATION.swap);
@@ -202,9 +199,16 @@ export function Button({
   className,
 }: ButtonProps) {
   const reduceMotion = useReducedMotion();
-  const spinnerToken = useThemeColor(SPINNER_TOKEN[variant]);
-  const spinnerColor = spinnerToken;
   const unavailable = disabled || loading;
+  const pressedState = SELECTABLE[variant] ? pressed : undefined;
+  const selected = pressedState === true;
+  const tonalSelected = selected && !iconOnly;
+  const glyphToken: ThemeColorToken = tonalSelected
+    ? '--color-accent-on-tonal'
+    : selected
+      ? '--color-accent'
+      : SPINNER_TOKEN[variant];
+  const spinnerColor = useThemeColor(glyphToken);
   const LabelText = morphLabel ? MorphText : Text;
   const shownLabel = loading ? (loadingLabel ?? label) : label;
   const overlay = loading && loadingLabel == null;
@@ -219,7 +223,7 @@ export function Button({
     <PresstableOpacity
       accessibilityLabel={accessibilityLabel ?? (iconOnly ? label : undefined)}
       accessibilityRole="button"
-      accessibilityState={{ busy: loading, disabled: unavailable, selected: pressed }}
+      accessibilityState={{ busy: loading, disabled: unavailable, selected: pressedState }}
       // Border must live on the inner View: Android RNGH buttons replace the
       // background drawable and drop borders (docs/solutions/pressto-border-not-drawn-on-android.md).
       className={cn(
@@ -233,7 +237,7 @@ export function Button({
       // (docs/solutions/pressto-accessibility-state-not-mapped-on-web.md).
       aria-busy={loading}
       aria-disabled={unavailable}
-      aria-pressed={pressed}
+      aria-pressed={pressedState}
       disabled={unavailable}
       onPress={onPress}
       pressBehavior={pressBehavior}
@@ -247,7 +251,15 @@ export function Button({
             iconOnly
               ? cn(size === 'sm' ? 'size-9.5' : 'size-11', 'shrink-0')
               : SIZE[size].container,
-            unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
+            tonalSelected
+              ? cn(
+                  'bg-accent-tonal',
+                  variant === 'quiet' && 'border border-border',
+                  unavailable && 'opacity-60',
+                )
+              : unavailable
+                ? CONTAINER[variant].off
+                : CONTAINER[variant].on,
           )}
           layout={BOX_LAYOUT}
           style={COLOR_TRANSITION}
@@ -292,7 +304,7 @@ export function Button({
                 style={contentTransition}
               >
                 <ButtonIconContext.Provider
-                  value={{ token: SPINNER_TOKEN[variant], size: SIZE[size].icon }}
+                  value={{ token: glyphToken, size: SIZE[size].icon }}
                 >
                   {icon}
                 </ButtonIconContext.Provider>
@@ -314,7 +326,11 @@ export function Button({
                   'font-sans-semibold',
                   morphLabel ? 'self-center' : align === 'start' ? undefined : 'text-center',
                   SIZE[size].label,
-                  unavailable ? LABEL[variant].off : LABEL[variant].on,
+                  tonalSelected
+                    ? 'text-accent-on-tonal'
+                    : unavailable
+                      ? LABEL[variant].off
+                      : LABEL[variant].on,
                 )}
               >
                 {shownLabel}
@@ -328,7 +344,7 @@ export function Button({
               style={COLOR_TRANSITION}
             >
               <ButtonIconContext.Provider
-                value={{ token: SPINNER_TOKEN[variant], size: TRAILING_ICON[size] }}
+                value={{ token: glyphToken, size: TRAILING_ICON[size] }}
               >
                 {trailingIcon}
               </ButtonIconContext.Provider>

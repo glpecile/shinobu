@@ -21,7 +21,7 @@ export function SmallPoster({
   return (
     <Image
       source={{ uri }}
-      className={cn(SIZE[size], 'bg-surface border border-border/50')}
+      className={cn(SIZE[size], 'bg-surface border border-hairline')}
       contentFit="cover"
       recyclingKey={recyclingKey}
     />

@@ -131,7 +131,7 @@ export function ConnectTmdbTokenSection() {
             label="Remove"
             onPress={clear}
             size="md"
-            variant="outline"
+            variant="quiet"
           />
         )}
       </SettingsRail.Row>

@@ -9,13 +9,13 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Badge
     <View
       className={cn(
         'shrink-0 max-w-full rounded px-1.5 py-0.5',
-        accent ? 'bg-accent-tonal' : 'bg-black/60 border border-border/60',
+        accent ? 'bg-accent-tonal' : 'bg-scrim border border-hairline',
       )}
     >
       <Text
         className={cn(
           'font-sans text-xs',
-          accent ? 'text-accent-on-tonal' : 'text-accent-foreground',
+          accent ? 'text-accent-on-tonal' : 'text-on-scrim',
         )}
         numberOfLines={1}
       >

@@ -26,6 +26,9 @@
       --color-foreground: #0a0a0a;
       --color-muted: #666666;
       --color-border: #e5e5e5;
+      --color-hairline: #e5e5e580;
+      --color-scrim: #00000099;
+      --color-on-scrim: #ffffff;
       --color-accent: #dc2626;
       --color-accent-foreground: #ffffff;
       --color-accent-tonal: #fee2e2;
@@ -51,6 +54,9 @@
       --color-foreground: #ffffff;
       --color-muted: #aaaaaa;
       --color-border: #333333;
+      --color-hairline: #33333380;
+      --color-scrim: #00000099;
+      --color-on-scrim: #ffffff;
       --color-accent: #dc2626;
       --color-accent-foreground: #ffffff;
       --color-accent-tonal: #450a0a;

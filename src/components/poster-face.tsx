@@ -38,7 +38,7 @@ export function PosterFace({
         />
       )}
       {marks.length > 0 && (
-        <View className="absolute bottom-1.5 right-1.5 flex-row gap-1 p-1 rounded-full bg-surface/95 border border-border/40">
+        <View className="absolute bottom-1.5 right-1.5 flex-row gap-1 p-1 rounded-full bg-surface/95 border border-hairline">
           {marks.map((id) => (
             <ProviderIcon id={id} key={id} size={12} />
           ))}

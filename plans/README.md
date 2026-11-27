@@ -586,3 +586,41 @@ Confirmed in code, but each needs a device, a design, or an owner decision.
 - Runtime behaviour. No profiler, no device, no browser. React Compiler
   claims come from its compiled output.
 - Categories other than performance.
+
+## Round 7: design system definition (2026-11-27)
+
+Owner request: apply "define the system" (semantic tokens, a strict component
+API, design docs) to the codebase, hand the plans to executor subagents, and
+ship with `agy`. Written against commit `1361fa74`. The advisor audited
+`src/global.css`, `src/components/button.tsx`, the lint config, and every
+call site of the Button variants and translucent token classes. No device was used.
+
+| Plan                                                    | Title                                                              | Category  | Priority | Effort | Risk | Depends on | Status |
+| ------------------------------------------------------- | ------------------------------------------------------------------ | --------- | -------- | ------ | ---- | ---------- | ------ |
+| [047](047-button-variants-are-roles-not-states.md)      | Button has four variants, and `pressed` draws the selected state   | tech-debt | P2       | S      | LOW  | —          | DONE (review passed; ships with round 7) |
+| [048](048-hairline-and-scrim-tokens.md)                 | Hairlines and scrims are tokens, and only declared tokens typecheck | tech-debt | P2       | M      | LOW  | —          | DONE (review passed; ships with round 7) |
+| [049](049-design-md.md)                                 | DESIGN.md says which token, component, and variant to pick         | docs      | P2       | M      | LOW  | 047, 048   | DONE (review passed after one revision; ships with round 7) |
+
+047 and 048 touch different files and run in parallel. 049 documents the
+result of both, so it runs on a branch that has them.
+
+### Findings not yet planned (round 7)
+
+- Arbitrary font sizes (`text-[9px]` to `text-[16px]`, 10 sites in badges and
+  dense diary rows). `DESIGN.md` names the type roles; a `--text-*` scale
+  token is worth it only if a new screen reaches for another size.
+- Other alpha modifiers (`text-accent/60`, `bg-surface/95`, the diary heat
+  scale `bg-accent/25…75`). They are states and a ramp, not missing roles.
+- Validate the system: once 049 lands, ask a fresh agent for one real screen
+  from a one-sentence prompt and fix each mistake in `DESIGN.md` or lint, not
+  in the screen.
+
+### Considered and rejected (round 7)
+
+- Renaming `muted`, `accent`, `surface`: common names agents already read
+  correctly; a rename churns every screen for no new rule.
+- A primitive palette layer under the tokens: one hex per role per theme is
+  already the whole palette; a second layer adds names without a decision.
+- Banning raw `Text` like Polar bans HTML: hundreds of call sites, and the
+  type-role components already cover the repeated roles.
+- Per-component `.md` files: one `DESIGN.md` is enough at this size.

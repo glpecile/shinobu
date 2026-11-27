@@ -86,7 +86,7 @@ function VariantPoster({ item, variant }: { item: NormalizedMediaItem; variant: 
     <View className="w-28" style={{ aspectRatio: 2 / 3 }}>
       <PresstableScale
         accessibilityLabel={`${preview?.title ?? item.title} on ${LABELS[variant.source]}`}
-        className="w-full h-full rounded-lg overflow-hidden border border-border/50 bg-surface"
+        className="w-full h-full rounded-lg overflow-hidden border border-hairline bg-surface"
         onPress={() => pushRoute(routes.details(variant.id, variant.type ?? item.type))}
       >
         <PosterFace marks={[variant.source]} uri={preview?.coverImage || item.coverImage} />

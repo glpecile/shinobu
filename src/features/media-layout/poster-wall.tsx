@@ -88,13 +88,13 @@ export function PosterCell({
       />
       <View className="pl-2 pr-8 pb-1.5 pt-6">
         <Text
-          className="text-accent-foreground font-sans-semibold text-xs leading-tight"
+          className="text-on-scrim font-sans-semibold text-xs leading-tight"
           numberOfLines={2}
         >
           {item.title}
         </Text>
         {item.year != null && (
-          <Text className="text-accent-foreground/70 font-sans text-xs mt-0.5">{item.year}</Text>
+          <Text className="text-on-scrim/70 font-sans text-xs mt-0.5">{item.year}</Text>
         )}
       </View>
     </View>
@@ -105,7 +105,7 @@ export function PosterCell({
         style={{ bottom: 0, height: NOTE_SCRIM_HEIGHT, left: 0, position: 'absolute', right: 0 }}
       />
       <Text
-        className="text-accent-foreground font-sans-semibold text-xs px-2 pb-1.5"
+        className="text-on-scrim font-sans-semibold text-xs px-2 pb-1.5"
         numberOfLines={1}
       >
         {note}
@@ -123,7 +123,7 @@ export function PosterCell({
       >
         <PresstableScale
           accessibilityLabel={accessibilityLabel}
-          className="w-full h-full rounded-lg overflow-hidden border border-border/50 bg-surface"
+          className="w-full h-full rounded-lg overflow-hidden border border-hairline bg-surface"
           onLongPress={() => onActions(item)}
           onPress={() => {
             prefetchDetails(item);

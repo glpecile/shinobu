@@ -18,12 +18,12 @@ const SIZE: Record<OverlayActionsButtonSize, { box: string; icon: number }> = {
 };
 
 const SURFACE: Record<OverlayActionsButtonTone, string> = {
-  overlay: 'bg-black/60',
-  surface: 'bg-surface/95 border border-border/40',
+  overlay: 'bg-scrim',
+  surface: 'bg-surface/95 border border-hairline',
 };
 
 const ICON_TOKEN: Record<OverlayActionsButtonTone, ThemeColorToken> = {
-  overlay: '--color-accent-foreground',
+  overlay: '--color-on-scrim',
   surface: '--color-foreground',
 };
 

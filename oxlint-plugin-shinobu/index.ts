@@ -8,6 +8,7 @@ import reactCompilerBailout from './rules/react-compiler-bailout.ts';
 import reanimatedNoDeps from './rules/reanimated-no-deps.ts';
 import viewToggleProps from './rules/view-toggle-props.ts';
 import webSafeEasing from './rules/web-safe-easing.ts';
+import noAdhocTints from './rules/no-adhoc-tints.ts';
 import noPointerEventsProp from './rules/no-pointer-events-prop.ts';
 import noProviderLiterals from './rules/no-provider-literals.ts';
 
@@ -25,6 +26,7 @@ export default definePlugin({
     'reanimated-no-deps': reanimatedNoDeps,
     'view-toggle-props': viewToggleProps,
     'web-safe-easing': webSafeEasing,
+    'no-adhoc-tints': noAdhocTints,
     'no-pointer-events-prop': noPointerEventsProp,
     'no-provider-literals': noProviderLiterals,
     'effect-boundary': effectBoundary,

@@ -57,7 +57,7 @@ export default function LetterboxdWatchlistSpikeScreen() {
             label="Load"
             onPress={() => setUri(`${LETTERBOXD_BASE_URL}/film/${slug}/`)}
             size="sm"
-            variant="outline"
+            variant="quiet"
           />
         </View>
       </View>
@@ -88,7 +88,7 @@ export default function LetterboxdWatchlistSpikeScreen() {
           label="Print report"
           onPress={() => console.log(captureReport(captures))}
           size="sm"
-          variant="outline"
+          variant="quiet"
         />
       </View>
 

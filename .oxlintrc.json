@@ -110,7 +110,7 @@
           },
           {
             "name": "cn",
-            "message": "Import { cn } from @/lib/cn \u2014 the wrapper is the one swap point for the class-name composer (AGENTS.md: Class Names)."
+            "message": "Import { cn } from @/lib/cn \u2014 the wrapper is the one swap point for the class-name composer (DESIGN.md)."
           },
           {
             "name": "react-native",
@@ -169,7 +169,7 @@
           {
             "name": "uniwind",
             "importNames": ["useCSSVariable"],
-            "message": "Import { useThemeColor } from @/lib/theme-color \u2014 the web build is a static export and reading a CSS variable in JS there resolves to nothing at prerender time, which React then never repaints (AGENTS.md: Theming). A colour that gets composed rather than painted is the one exception; say so in a comment and disable this rule on the line."
+            "message": "Import { useThemeColor } from @/lib/theme-color \u2014 the web build is a static export and reading a CSS variable in JS there resolves to nothing at prerender time, which React then never repaints (DESIGN.md). A colour that gets composed rather than painted is the one exception; say so in a comment and disable this rule on the line."
           },
           {
             "name": "react-native",
@@ -345,6 +345,7 @@
         "shinobu/no-unguarded-push": "error",
         "shinobu/no-hardcoded-routes": "error",
         "shinobu/log-color-only": "error",
+        "shinobu/no-adhoc-tints": "error",
         "shinobu/no-pointer-events-prop": "error",
         "shinobu/no-provider-literals": "error",
         "shinobu/reanimated-no-deps": "error",
