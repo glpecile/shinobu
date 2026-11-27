@@ -31,6 +31,7 @@ const ICON_TOKEN: Record<OverlayActionsButtonTone, ThemeColorToken> = {
 export function OverlayActionsButton({
   label,
   onPress,
+  onFocusChange,
   size = 'md',
   tone = 'overlay',
   visible = true,
@@ -38,6 +39,7 @@ export function OverlayActionsButton({
 }: {
   label: string;
   onPress: () => void;
+  onFocusChange?: (focused: boolean) => void;
   size?: OverlayActionsButtonSize;
   tone?: OverlayActionsButtonTone;
   visible?: boolean;
@@ -49,8 +51,14 @@ export function OverlayActionsButton({
   return (
     <AnimatedView
       className={cn(className)}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      onFocus={() => {
+        setFocused(true);
+        onFocusChange?.(true);
+      }}
+      onBlur={() => {
+        setFocused(false);
+        onFocusChange?.(false);
+      }}
       style={{
         opacity: shown ? 1 : 0,
         pointerEvents: shown ? 'auto' : 'none',

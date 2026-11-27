@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
+import { AnimatedView } from '@/components/animated-view';
 import { Image } from '@/components/image';
 import { MorphText } from '@/components/morph-text';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
@@ -11,6 +12,7 @@ import { usePointerHover } from '@/components/use-pointer-hover';
 import type { CardBadge } from '@/features/up-next/badges';
 import { episodeHref } from '@/features/up-next/entry';
 import { groupLabel, type UpNextGroup } from '@/features/up-next/group';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { usePushRoute } from '@/lib/navigation';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -45,8 +47,9 @@ export function EpisodeCard({
   const stacked = entries.length > 1;
   const href = stacked ? undefined : episodeHref(lead);
   const { hovered, hoverProps } = usePointerHover();
+  const [actionsFocused, setActionsFocused] = useState(false);
   const hasActionsButton = onActionsPress != null && process.env.EXPO_OS === 'web';
-  const showActionsButton = hasActionsButton && hovered;
+  const hideCountBadge = hasActionsButton && (hovered || actionsFocused);
 
   return (
     <View className={className}>
@@ -106,18 +109,27 @@ export function EpisodeCard({
             )}
           </View>
 
-          {stacked && !showActionsButton && (
-            <View className="absolute top-2 right-2 rounded-full bg-scrim border border-hairline px-2 py-0.5">
+          {stacked && (
+            <AnimatedView
+              className="pointer-events-none absolute top-2 right-2 rounded-full bg-scrim border border-hairline px-2 py-0.5"
+              style={{
+                opacity: hideCountBadge ? 0 : 1,
+                transitionProperty: 'opacity',
+                transitionDuration: actionsFocused ? 0 : DURATION.exit,
+                transitionTimingFunction: EASE_OUT,
+              }}
+            >
               <Text className="text-on-scrim font-sans-semibold text-xs">
                 {entries.length}
               </Text>
-            </View>
+            </AnimatedView>
           )}
         </PresstableScale>
         {hasActionsButton && (
           <OverlayActionsButton
             className="absolute top-2 right-2"
             label={`More options for ${title}`}
+            onFocusChange={setActionsFocused}
             onPress={() => onActionsPress(lead.item)}
             size="md"
             visible={hovered}
