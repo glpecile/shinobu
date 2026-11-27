@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Modal, Platform, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   NitroWebView,
@@ -54,6 +55,7 @@ export function ProviderSigninWebView<T>({
   const webViewRef = useRef<NitroWebViewType | null>(null);
   const capturedRef = useRef(false);
   const userAgentRef = useRef<string | undefined>(undefined);
+  const reduceMotion = useReducedMotion();
   const injectUserAgent = captureUserAgent && Platform.OS === 'ios';
 
   const tryCapture = async () => {
@@ -110,7 +112,7 @@ export function ProviderSigninWebView<T>({
 
   return (
     <Modal
-      animationType="slide"
+      animationType={reduceMotion ? 'fade' : 'slide'}
       onRequestClose={onClose}
       presentationStyle="pageSheet"
       visible={visible}
