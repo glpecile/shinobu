@@ -5,3 +5,7 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Strict-Transport-Security: max-age=15552000
+
+# Export file names carry a content hash, so a cached copy never goes stale.
+/_expo/static/*
+  Cache-Control: public, max-age=31536000, immutable
