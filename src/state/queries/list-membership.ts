@@ -16,6 +16,7 @@ import {
   updateHardcoverList,
   type HardcoverListDraft,
 } from '@/lib/providers/hardcover/list-writes';
+import type { HardcoverList } from '@/lib/providers/hardcover/lists';
 import { searchTitlesFuzzy } from '@/lib/providers/tmdb/fuzzy-search';
 import { searchMedia } from '@/lib/providers/trakt/reads';
 import {
@@ -34,7 +35,7 @@ import {
 import { Provider } from '@/lib/providers/types';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
-import { hardcoverDeps, hardcoverQueryKeys } from './hardcover';
+import { hardcoverDeps, hardcoverListQuery, hardcoverQueryKeys } from './hardcover';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { serializdDeps, serializdQueryKeys } from './serializd';
 import { tmdbDeps, tmdbQueryKeys } from './tmdb';
@@ -301,10 +302,27 @@ export function useCreateList(username: string) {
         case Provider.Serializd:
           return client.invalidateQueries({ queryKey: serializdQueryKeys.listsRoot() });
         case Provider.Hardcover:
-          return client.invalidateQueries({ queryKey: hardcoverQueryKeys.listsRoot() });
+          return client
+            .invalidateQueries({ queryKey: hardcoverQueryKeys.listsRoot() })
+            .then(() => addCreatedHardcoverList(client, result.id));
       }
     },
   });
+}
+
+/**
+ * Hardcover can answer `me.lists` without a list it has just created. The
+ * list's own read, which its screen needs next anyway, fills the gap.
+ */
+async function addCreatedHardcoverList(client: QueryClient, id: string) {
+  const key = hardcoverQueryKeys.lists('created');
+  if (client.getQueryData<HardcoverList[]>(key)?.some((list) => list.id === id) !== false) return;
+  const pages = await client.fetchInfiniteQuery(hardcoverListQuery(Number(id))).catch(() => null);
+  const created = pages?.pages[0]?.list;
+  if (created == null) return;
+  client.setQueryData<HardcoverList[]>(key, (lists) =>
+    lists == null || lists.some((list) => list.id === id) ? lists : [created, ...lists],
+  );
 }
 
 /** Reuses the search tab's cache and provider fallback. */
