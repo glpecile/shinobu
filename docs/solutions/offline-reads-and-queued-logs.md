@@ -21,6 +21,9 @@ window's events.
 - Every mutation runs with `networkMode: 'always'` (`query-client.ts`). A
   write never waits in memory for a connection. Offline, it fails with its
   per-provider links, and a log goes to the queue below.
+- `components/offline-banner.tsx` shows on Home and Diary while the app
+  counts as offline. It reads the same `onlineManager` state that pauses
+  reads, so on web it shows only after the window's `offline` event.
 - No mutation enters the persisted snapshot (`shouldDehydrateMutation` in
   `persist.ts`). `networkMode: 'always'` does not make this redundant: a
   mutation that waits in its `scope` is paused too, and a restored one has no

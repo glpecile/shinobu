@@ -6,6 +6,7 @@ import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
+import { OfflineBanner } from '@/components/offline-banner';
 import { homeHeaderClassName, homeHeaderTitleSize } from '@/components/screen-header-spacing';
 import { SectionEnter } from '@/components/section-enter';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -154,6 +155,7 @@ function DiaryScreen() {
           {filter}
         </View>
       </DiaryHeader>
+      <OfflineBanner />
       <SectionEnter className="flex-1" key={diary.isLoading ? 'skeleton' : 'content'}>
         {content}
       </SectionEnter>

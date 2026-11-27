@@ -17,6 +17,7 @@ import { homeHeaderClassName, homeHeaderTitleSize } from '@/components/screen-he
 import { GestureScrollView } from '@/components/animated-view';
 import { ConnectTrackerButton } from '@/components/connect-tracker-button';
 import { COPY_STAGGER, HeroEnter, HeroProviders } from '@/components/hero-enter';
+import { OfflineBanner } from '@/components/offline-banner';
 import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -142,6 +143,7 @@ function FeedScreen() {
 
   return (
     <View className="flex-1">
+      <OfflineBanner />
       <CollapsibleSection.Scroll
         className="flex-1"
         ref={scrollRef}
