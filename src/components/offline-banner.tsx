@@ -13,16 +13,22 @@ export function OfflineBanner() {
     () => true,
   );
   const muted = useThemeColor('--color-muted');
-  if (online) return null;
   return (
-    <View
-      accessibilityLiveRegion="polite"
-      className="mx-4 mb-3 flex-row items-center gap-2 rounded-xl bg-surface px-3 py-2"
-    >
-      <Ionicons color={muted} name="cloud-offline-outline" size={16} />
-      <Text className="flex-1 font-sans text-sm text-muted">
-        You are offline. Logs wait on this device until you are back online.
-      </Text>
+    <View accessibilityLiveRegion="polite">
+      {!online && (
+        <View className="mx-4 mb-3 flex-row items-center gap-2 rounded-xl bg-surface px-3 py-2">
+          <View
+            accessibilityElementsHidden
+            aria-hidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <Ionicons color={muted} name="cloud-offline-outline" size={16} />
+          </View>
+          <Text className="flex-1 font-sans text-sm text-muted">
+            You are offline. Logs wait on this device until you are back online.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
