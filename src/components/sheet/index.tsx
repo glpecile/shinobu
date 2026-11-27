@@ -7,13 +7,23 @@ import {
   useKeyboardState,
   useReanimatedKeyboardAnimation,
 } from 'react-native-keyboard-controller';
-import { createAnimatedComponent, useAnimatedStyle } from 'react-native-reanimated';
+import {
+  createAnimatedComponent,
+  useAnimatedStyle,
+  useReducedMotion,
+} from 'react-native-reanimated';
 
 import { RailFadeColor } from '@/components/rail';
+import { DURATION } from '@/lib/motion';
 
 import { sheetScrollMetrics } from './metrics';
 import { SheetCloseContext } from './context';
 import { SheetDismissHeader } from './header';
+
+const SHEET_ENTER_MS = DURATION.toggle;
+const SHEET_EXIT_MS = 150;
+// One frame at 60 Hz; stays at or above the lib's 10 ms seconds-unit dev warning threshold.
+const SHEET_REDUCED_MS = 16;
 
 export interface SheetProps {
   open: boolean;
@@ -24,9 +34,17 @@ export interface SheetProps {
 }
 
 export function Sheet({ open, onClose, children }: SheetProps) {
+  const reduceMotion = useReducedMotion();
   // Negative while the keyboard is up, tracked per frame on the UI thread.
   const keyboard = useReanimatedKeyboardAnimation();
   const lift = useAnimatedStyle(() => ({ bottom: open ? -keyboard.height.get() : 0 }));
+  // Android applies `settleDuration` before `index` (`onAfterUpdateTransaction`), so close settles
+  // faster than open. iOS applies `index` first in `updateProps`, which would invert them.
+  const settleDuration = reduceMotion
+    ? SHEET_REDUCED_MS
+    : open || process.env.EXPO_OS !== 'android'
+      ? SHEET_ENTER_MS
+      : SHEET_EXIT_MS;
   // Android drag-to-close leaves the keyboard up after `Keyboard.dismiss()`; `KeyboardController.dismiss()` hides it natively.
   function close() {
     void KeyboardController.dismiss();
@@ -34,8 +52,12 @@ export function Sheet({ open, onClose, children }: SheetProps) {
   }
   return (
     <ModalBottomSheet
+      animateContentHeight={!reduceMotion}
+      animateIn={!reduceMotion}
       detents={[0, 'content']}
       index={open ? 1 : 0}
+      // Unmount while closed so `SheetContent` never starts an open spring from a stale closed height.
+      lazy
       // Keep `windowOverlay` off: reparenting into a window dialog outside the gesture-handler root breaks pressto presses on Android.
       onCloseRequest={close}
       // A drag to the closed detent is the one dismissal that never asks.
@@ -43,7 +65,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
         if (index === 0) close();
       }}
       scrimColor="rgba(0, 0, 0, 0.6)"
-      settleDuration={300}
+      settleDuration={settleDuration}
       // Resize the host above the keyboard, never the content, which crashes Fabric
       // (docs/solutions/bottom-sheet-content-detent-clips-tall-content.md). The lib
       // types `style` as static, but `wrapNativeView` forwards animated styles to it.
