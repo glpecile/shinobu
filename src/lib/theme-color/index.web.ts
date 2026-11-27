@@ -1,5 +1,6 @@
-/** A `--color-*` token declared in `src/global.css`. */
-export type ThemeColorToken = `--color-${string}`;
+import type { ThemeColorToken } from './tokens';
+
+export type { ThemeColorToken } from './tokens';
 
 /**
  * Return a CSS variable so the browser can resolve theme color after static prerender. CSS
