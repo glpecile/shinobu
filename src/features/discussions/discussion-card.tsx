@@ -73,7 +73,7 @@ export function DiscussionCard({
       {/* A 288pt card needs 336pt with the detail screen's two 24pt gutters. */}
       <View
         className={cn(
-          'min-h-28 flex-row rounded-xl overflow-hidden bg-surface border border-border/60',
+          'min-h-28 flex-row rounded-xl overflow-hidden bg-surface border border-hairline',
           width < 336 ? 'w-64' : 'w-72',
         )}
       >

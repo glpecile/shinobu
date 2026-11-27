@@ -89,7 +89,7 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
     );
 
   const content = (
-    <View className="w-full h-full rounded-lg overflow-hidden border border-border/50">
+    <View className="w-full h-full rounded-lg overflow-hidden border border-hairline">
       {zoom ? <Link.AppleZoom>{poster}</Link.AppleZoom> : poster}
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.85)']}
@@ -97,13 +97,13 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
       />
       <View className="absolute bottom-0 left-0 right-0 p-3">
         <Text
-          className="text-accent-foreground font-sans-semibold text-sm leading-tight"
+          className="text-on-scrim font-sans-semibold text-sm leading-tight"
           numberOfLines={2}
         >
           {item.title}
         </Text>
         <View className="flex-row items-center mt-1.5">
-          <Text className="text-accent-foreground/70 text-xs font-sans flex-1" numberOfLines={1}>
+          <Text className="text-on-scrim/70 text-xs font-sans flex-1" numberOfLines={1}>
             {item.type}
             {progress != null ? ` · ${progress}` : ''}
           </Text>
@@ -114,7 +114,7 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
           )}
         </View>
         {subtitle != null && subtitle !== '' && (
-          <Text className="text-accent-foreground/70 text-xs font-sans mt-0.5" numberOfLines={1}>
+          <Text className="text-on-scrim/70 text-xs font-sans mt-0.5" numberOfLines={1}>
             {subtitle}
           </Text>
         )}

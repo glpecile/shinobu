@@ -65,7 +65,7 @@ export function ReadingCard({
             pushRoute(routes.details(item.id, item.type));
           }}
         >
-          <View className="w-32 h-48 rounded-lg overflow-hidden border border-border/50">
+          <View className="w-32 h-48 rounded-lg overflow-hidden border border-hairline">
             <PosterPlaceholder className="absolute inset-0 border-0" />
             {item.coverImage !== '' && (
               <Image

@@ -69,13 +69,13 @@ export function EpisodeCard({
           {stacked && (
             <>
               <View
-                className="absolute inset-0 rounded-lg border border-border/50 bg-surface opacity-30"
+                className="absolute inset-0 rounded-lg border border-hairline bg-surface opacity-30"
                 style={{
                   transform: [{ translateX: STACK_OFFSET * 2 }, { translateY: -STACK_OFFSET * 2 }],
                 }}
               />
               <View
-                className="absolute inset-0 rounded-lg border border-border/50 bg-surface opacity-60"
+                className="absolute inset-0 rounded-lg border border-hairline bg-surface opacity-60"
                 style={{
                   transform: [{ translateX: STACK_OFFSET }, { translateY: -STACK_OFFSET }],
                 }}
@@ -83,7 +83,7 @@ export function EpisodeCard({
             </>
           )}
 
-          <View className="w-full h-full rounded-lg overflow-hidden border border-border/50">
+          <View className="w-full h-full rounded-lg overflow-hidden border border-hairline">
             <PosterPlaceholder className="w-full h-full border-0" />
             {art !== '' && (
               <Image
@@ -106,8 +106,8 @@ export function EpisodeCard({
           </View>
 
           {stacked && !showActionsButton && (
-            <View className="absolute top-2 right-2 rounded-full bg-black/70 border border-border/60 px-2 py-0.5">
-              <Text className="text-accent-foreground font-sans-semibold text-xs">
+            <View className="absolute top-2 right-2 rounded-full bg-scrim border border-hairline px-2 py-0.5">
+              <Text className="text-on-scrim font-sans-semibold text-xs">
                 {entries.length}
               </Text>
             </View>
