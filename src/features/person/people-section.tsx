@@ -48,7 +48,6 @@ function PersonCard({
   onActions: (credit: PersonCredit) => void;
 }) {
   const { hovered, hoverProps } = usePointerHover();
-  const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
 
   const content = <PersonCardContent credit={credit} />;
 
@@ -76,12 +75,13 @@ function PersonCard({
           {content}
         </PresstableScale>
       )}
-      {showActionsButton && (
+      {process.env.EXPO_OS === 'web' && (
         <OverlayActionsButton
           className="absolute top-0 right-0"
           label={`More about ${credit.name}`}
           onPress={() => onActions(credit)}
           size="sm"
+          visible={hovered}
         />
       )}
     </View>
