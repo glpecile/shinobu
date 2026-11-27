@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'expo-router';
+import { usePreventRemove, useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Switch, Text, View } from 'react-native';
@@ -17,6 +17,7 @@ import { Sheet } from '@/components/sheet';
 import { SmallPoster } from '@/components/small-poster';
 import { TextField } from '@/components/text-field';
 import { TagPicker } from '@/features/log-media/tag-picker';
+import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { haptics } from '@/lib/haptics';
 import { installLetterboxdScript, letterboxdScriptHint } from '@/lib/install-letterboxd-script';
 import { usePushRoute } from '@/lib/navigation';
@@ -179,7 +180,7 @@ export function NewListForm({
     handleSubmit,
     getValues,
     setValue,
-    formState: { errors, isSubmitted },
+    formState: { errors, dirtyFields, isSubmitted },
   } = useForm<NewListFormValues, unknown, NewList>({
     defaultValues: {
       provider: initialProvider,
@@ -200,6 +201,8 @@ export function NewListForm({
   });
   const [searching, setSearching] = useState(false);
   const [unlisted, setUnlisted] = useState<{ name: string; url: string } | null>(null);
+  const [leave, setLeave] = useState<(() => void) | null>(null);
+  const [discarded, setDiscarded] = useState(false);
   const username = providers.find((entry) => entry.provider === provider)!.username;
   const mutation = useCreateList(username);
   const hasLetterboxdSession = useHasLetterboxdWriteSession();
@@ -215,9 +218,19 @@ export function NewListForm({
     provider !== Provider.Letterboxd ||
     (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
   const busy = mutation.isPending;
+  // Picking where to save loses nothing. Off once the create starts, so its
+  // success can replace this screen.
+  const edited = Object.keys(dirtyFields).some((field) => field !== 'provider');
+  usePreventRemove(
+    edited && (mutation.isIdle || mutation.isError) && !discarded,
+    ({ repeat }) => setLeave(() => repeat),
+  );
 
   function setItems(next: (current: NormalizedMediaItem[]) => NormalizedMediaItem[]) {
-    setValue('items', next(getValues('items')), { shouldValidate: isSubmitted });
+    setValue('items', next(getValues('items')), {
+      shouldDirty: true,
+      shouldValidate: isSubmitted,
+    });
   }
 
   function sharingField() {
@@ -614,6 +627,36 @@ export function NewListForm({
             }
             target={{ provider, title: name.trim() || 'New list', url: recoveryUrl }}
           />
+        )}
+      </Sheet>
+      <Sheet onClose={() => setLeave(null)} open={leave != null}>
+        {leave != null && (
+          <WriteSheet.Step>
+            <WriteSheet.Header>
+              <WriteSheet.Title>Discard list?</WriteSheet.Title>
+            </WriteSheet.Header>
+            <WriteSheet.Description>
+              {`This list isn’t on ${label} yet. If you leave, you lose it.`}
+            </WriteSheet.Description>
+            <WriteSheet.Actions>
+              <Button
+                icon={<Button.Icon name="trash-outline" />}
+                label="Discard list"
+                onPress={() => {
+                  haptics.destructive();
+                  setDiscarded(true);
+                  setLeave(null);
+                  leave();
+                }}
+              />
+              <Button
+                icon={<Button.Icon name="close" />}
+                label="Keep editing"
+                onPress={() => setLeave(null)}
+                variant="quiet"
+              />
+            </WriteSheet.Actions>
+          </WriteSheet.Step>
         )}
       </Sheet>
     </>
