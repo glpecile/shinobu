@@ -33,7 +33,7 @@
   }
 
   [data-shinobu-tooltip][data-instant] {
-    transition-duration: 0ms;
+    transition: none;
   }
 
   @media (prefers-reduced-motion: reduce) {

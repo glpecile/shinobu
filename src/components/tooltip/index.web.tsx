@@ -86,7 +86,10 @@ export function Tooltip({
     if (popover.dataset.side !== side) {
       popover.dataset.side = side;
       if (!instant) {
+        popover.toggleAttribute('data-instant', true);
         popover.hidePopover();
+        void popover.offsetHeight;
+        popover.toggleAttribute('data-instant', false);
         popover.showPopover();
       }
     }
@@ -94,14 +97,14 @@ export function Tooltip({
     watchScroll();
   }
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const popover = bubble.current;
+    return () => {
       clearTimeout(pending.current);
       cancelScroll();
-      if (activePopover === bubble.current) activePopover = null;
-    },
-    [],
-  );
+      if (activePopover === popover) activePopover = null;
+    };
+  }, []);
 
   return (
     <div
