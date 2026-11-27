@@ -1,6 +1,7 @@
 import { expect, mock, spyOn, test } from 'bun:test';
 
 const stored = new Map<string, string>();
+let saved = 0;
 let sessionChanged: (key: string) => void;
 mock.module('@/state/session/tokens', () => ({
   isTokenKey: (key: string) => key === 'session.trakt',
@@ -20,9 +21,14 @@ mock.module('react-native-mmkv', () => ({
 mock.module('react-native-nitro-modules', () => ({
   NitroModules: {
     createHybridObject: () => ({
-      getSecureString: (key: string) => stored.get(key),
-      setSecureString: (key: string, value: string) => stored.set(key, value),
-      removeSecureString: (key: string) => stored.delete(key),
+      saveAutoPrefetchEntry: async (entry: string) => {
+        saved += 1;
+        const { prefetchKey } = JSON.parse(entry) as { prefetchKey: string };
+        stored.set(prefetchKey, entry);
+      },
+      removeFromAutoPrefetch: async (key: string) => {
+        stored.delete(key);
+      },
     }),
     box: (value: unknown) => value,
   },
@@ -83,7 +89,8 @@ test('claims replay once, stops after writes, and drops pending credentials on s
     pending.resolve(new Response('{}'));
     await oldRead;
     await new Promise<void>((resolve) => setImmediate(resolve));
-    expect([...stored.values()].flatMap((value) => JSON.parse(value))).toEqual([]);
+    expect(saved).toBeGreaterThan(0);
+    expect([...stored.values()]).toEqual([]);
     expect(timers).toHaveLength(1);
 
     endLaunchReplay();

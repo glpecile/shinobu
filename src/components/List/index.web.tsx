@@ -17,23 +17,18 @@ export type { LegendListRef } from '@legendapp/list/react-native';
  * vertical lists need explicit flex sizing to avoid mounting at height 0.
  */
 export function List<T>({
-  keyboardShouldPersistTaps,
-  keyboardDismissMode,
-  nestedScrollEnabled,
+  keyboardShouldPersistTaps: _keyboardShouldPersistTaps,
+  keyboardDismissMode: _keyboardDismissMode,
+  nestedScrollEnabled: _nestedScrollEnabled,
   scrollEnabled,
   recycleItems = false,
   onStartReachedThreshold = 0,
   itemLayoutAnimation,
-  sharedValues,
+  sharedValues: _sharedValues,
   style,
   ...props
 }: ListProps<T>): ReactElement {
   const focused = useIsFocused();
-  void keyboardShouldPersistTaps;
-  void keyboardDismissMode;
-  void nestedScrollEnabled;
-  void scrollEnabled;
-  void sharedValues;
   const ListComponent = itemLayoutAnimation == null ? LegendList : AnimatedLegendList;
   return (
     <Activity mode={focused ? 'visible' : 'hidden'}>
