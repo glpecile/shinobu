@@ -20,9 +20,8 @@ import { sheetScrollMetrics } from './metrics';
 import { SheetCloseContext } from './context';
 import { SheetDismissHeader } from './header';
 
-const SHEET_ENTER_MS = DURATION.toggle;
 const SHEET_EXIT_MS = 150;
-// One frame at 60 Hz; stays at or above the lib's 10 ms seconds-unit dev warning threshold.
+// The library warns below 10 ms.
 const SHEET_REDUCED_MS = 16;
 
 export interface SheetProps {
@@ -38,12 +37,12 @@ export function Sheet({ open, onClose, children }: SheetProps) {
   // Negative while the keyboard is up, tracked per frame on the UI thread.
   const keyboard = useReanimatedKeyboardAnimation();
   const lift = useAnimatedStyle(() => ({ bottom: open ? -keyboard.height.get() : 0 }));
-  // Android applies `settleDuration` before `index` (`onAfterUpdateTransaction`), so close settles
-  // faster than open. iOS applies `index` first in `updateProps`, which would invert them.
+  // Only Android applies `settleDuration` before `index`, so a controlled dismissal
+  // can use a shorter duration than opening.
   const settleDuration = reduceMotion
     ? SHEET_REDUCED_MS
     : open || process.env.EXPO_OS !== 'android'
-      ? SHEET_ENTER_MS
+      ? DURATION.toggle
       : SHEET_EXIT_MS;
   // Android drag-to-close leaves the keyboard up after `Keyboard.dismiss()`; `KeyboardController.dismiss()` hides it natively.
   function close() {
@@ -53,11 +52,8 @@ export function Sheet({ open, onClose, children }: SheetProps) {
   return (
     <ModalBottomSheet
       animateContentHeight={!reduceMotion}
-      animateIn={!reduceMotion}
       detents={[0, 'content']}
       index={open ? 1 : 0}
-      // Unmount while closed so `SheetContent` never starts an open spring from a stale closed height.
-      lazy
       // Keep `windowOverlay` off: reparenting into a window dialog outside the gesture-handler root breaks pressto presses on Android.
       onCloseRequest={close}
       // A drag to the closed detent is the one dismissal that never asks.
