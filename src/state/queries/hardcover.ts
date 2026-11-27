@@ -1,4 +1,5 @@
 import {
+  infiniteQueryOptions,
   keepPreviousData,
   useQuery,
   useSuspenseInfiniteQuery,
@@ -116,7 +117,7 @@ export const hardcoverQueryKeys = {
   lists: (kind: HardcoverListKind) => [...hardcoverQueryKeys.listsRoot(), kind] as const,
   listRoot: () => [...hardcoverQueryKeys.all, 'list'] as const,
   list: (id: number) => [...hardcoverQueryKeys.listRoot(), id] as const,
-  bookLists: (bookId: number) => [...hardcoverQueryKeys.all, 'book-lists', bookId] as const,
+  bookLists: (bookId: number) => [...hardcoverQueryKeys.listsRoot(), 'book', bookId] as const,
 };
 
 /** Catalog records change rarely, and each read costs the per-token budget. */
@@ -278,8 +279,8 @@ export function useSuspenseHardcoverListsQuery(kind: HardcoverListKind) {
 }
 
 /** One list's books, 100 a page, each with the viewer's status for it. */
-export function useSuspenseHardcoverListQuery(id: number) {
-  return useSuspenseInfiniteQuery({
+export function hardcoverListQuery(id: number) {
+  return infiniteQueryOptions({
     queryKey: hardcoverQueryKeys.list(id),
     queryFn: async ({ client, pageParam, signal }) => {
       const viewer = await client.fetchQuery(hardcoverViewerQuery());
@@ -292,6 +293,10 @@ export function useSuspenseHardcoverListQuery(id: number) {
     getNextPageParam: (lastPage, _pages, page) => (lastPage.hasNextPage ? page + 1 : undefined),
     staleTime: LISTS_STALE_MS,
   });
+}
+
+export function useSuspenseHardcoverListQuery(id: number) {
+  return useSuspenseInfiniteQuery(hardcoverListQuery(id));
 }
 
 /** The most-liked public lists that include a book. */
