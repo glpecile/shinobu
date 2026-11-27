@@ -4,7 +4,6 @@ import {
   findAniListProgress,
   findProgressRow,
   indexLibrary,
-  indexLibraryOnce,
   mergeMediaProgress,
   sameProgressItem,
   type MediaProgress,
@@ -85,9 +84,9 @@ test('movie/TV ID collisions and sibling anime cours never share progress', () =
 test('a snapshot is indexed once', () => {
   const a = [film];
   const b = [film];
-  const index = indexLibraryOnce(a, itemOf);
-  expect(indexLibraryOnce(a, itemOf)).toBe(index);
-  expect(indexLibraryOnce(b, itemOf)).not.toBe(index);
+  const index = indexLibrary(a, itemOf);
+  expect(indexLibrary(a, itemOf)).toBe(index);
+  expect(indexLibrary(b, itemOf)).not.toBe(index);
 });
 
 test('an indexed lookup returns the earliest matching row, as a scan would', () => {

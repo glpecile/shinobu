@@ -55,10 +55,16 @@ export interface LibraryIndex<T> {
 const valueOf = (item: NormalizedMediaItem, key: IdKey | 'year') =>
   key === 'year' ? item.year : item.externalIds[key];
 
+const indexes = new WeakMap<readonly unknown[], LibraryIndex<unknown>>();
+
+/** Build once per snapshot array and share across every reader of it. */
 export function indexLibrary<T>(
   rows: readonly T[],
   itemOf: (row: T) => NormalizedMediaItem,
 ): LibraryIndex<T> {
+  const snapshotIndexes = indexes as WeakMap<readonly T[], LibraryIndex<T>>;
+  const known = snapshotIndexes.get(rows);
+  if (known != null) return known;
   const columns = {} as Record<IdKey | 'year', Column>;
   for (const key of [...ID_KEYS, 'year'] as const) {
     const order: number[] = [];
@@ -72,20 +78,7 @@ export function indexLibrary<T>(
     order.sort((a, b) => (values[a] < values[b] ? -1 : values[a] > values[b] ? 1 : a - b));
     columns[key] = { values: order.map((index) => values[index]), rows: Int32Array.from(order) };
   }
-  return { rows, itemOf, columns };
-}
-
-const indexes = new WeakMap<readonly unknown[], LibraryIndex<unknown>>();
-
-/** `indexLibrary`, built once per snapshot array and shared by every reader of it. */
-export function indexLibraryOnce<T>(
-  rows: readonly T[],
-  itemOf: (row: T) => NormalizedMediaItem,
-): LibraryIndex<T> {
-  const snapshotIndexes = indexes as WeakMap<readonly T[], LibraryIndex<T>>;
-  const known = snapshotIndexes.get(rows);
-  if (known != null) return known;
-  const index = indexLibrary(rows, itemOf);
+  const index = { rows, itemOf, columns };
   snapshotIndexes.set(rows, index);
   return index;
 }

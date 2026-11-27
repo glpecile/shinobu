@@ -3,7 +3,7 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import {
   findAniListProgress,
   findProgressRow,
-  indexLibraryOnce,
+  indexLibrary,
   mergeMediaProgress,
   type MediaProgress,
 } from '@/lib/media-progress';
@@ -53,11 +53,11 @@ export function useProgressLibraries(items: readonly NormalizedMediaItem[]) {
     serializdUsername,
     queries: { movies, shows, simkl, anilist, serializd },
     indexes: {
-      movies: movies.data == null ? null : indexLibraryOnce(movies.data, self),
-      shows: shows.data == null ? null : indexLibraryOnce(shows.data, self),
+      movies: movies.data == null ? null : indexLibrary(movies.data, self),
+      shows: shows.data == null ? null : indexLibrary(shows.data, self),
       simkl: simkl.data ?? null,
-      anilist: anilist.data == null ? null : indexLibraryOnce(anilist.data, entryItem),
-      serializd: serializd.data == null ? null : indexLibraryOnce(serializd.data, entryItem),
+      anilist: anilist.data == null ? null : indexLibrary(anilist.data, entryItem),
+      serializd: serializd.data == null ? null : indexLibrary(serializd.data, entryItem),
     },
   };
 }
