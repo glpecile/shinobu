@@ -63,6 +63,7 @@ export function WeekStrip({
                 onPress={() => {
                   if (!selected) onChange(day.offset);
                 }}
+                pressBehavior="immediate"
               >
                 <View className="w-14 py-2 items-center">
                   <AnimatedText
