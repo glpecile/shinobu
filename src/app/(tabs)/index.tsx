@@ -160,14 +160,14 @@ function FeedScreen() {
             <UpNextSection onItemActions={openActions} onItemPress={openDetails} />
           </SuspenseSection>
         )}
-        {watchlistConnected && (
-          <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
-            <YourWatchlistRow onItemActions={openActions} />
-          </SuspenseSection>
-        )}
         {continueReadingProviders(connected).length > 0 && (
           <SuspenseSection fallback={<ReadingRowSkeleton />} resetKey={refreshCount}>
             <ContinueReadingRow onItemActions={openActions} />
+          </SuspenseSection>
+        )}
+        {watchlistConnected && (
+          <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
+            <YourWatchlistRow onItemActions={openActions} />
           </SuspenseSection>
         )}
         {serializdUsername != null && (
