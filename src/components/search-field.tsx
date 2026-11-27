@@ -81,6 +81,9 @@ export function SearchField({
           accessibilityLabel="Clear search"
           accessibilityRole="button"
           className="w-11 h-11 items-center justify-center"
+          // Keeps focus and the caret in the input on web; refocusing after a
+          // blur flashes the border and closes a phone keyboard.
+          onMouseDown={(event) => event.preventDefault()}
           onPress={() => {
             if (onClear) onClear();
             else onChangeText('');
