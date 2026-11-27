@@ -98,7 +98,7 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `eye-outline` / `eye` | log a watch — filled once it's already in your history |
  * | `eye-off-outline` | hide from a feed |
  * | `bookmark-outline` / `bookmark` | watchlist — filled once it's on the list |
- * | `trash-outline` | deletes stored data |
+ * | `trash-outline` | deletes stored data or an unsaved draft |
  * | `refresh` | retry |
  * | `open-outline` | leaves this screen (a route, an external page) |
  * | `share-outline` | share this screen's link |
