@@ -136,4 +136,17 @@ row ticks. This replaces plan 0019 KTD-6 ("nothing advances optimistically").
   reads, never against this.
 - Films, books, the Diary feed and the watchlist are not drawn ahead.
 
-Not built: queued watchlist, list, pause and drop writes.
+## Writes that do not wait
+
+Watchlist, list, pause and drop writes do not queue. Offline, they fail with
+their provider links. This is a decision, not a gap (plan 0116, open question
+5):
+
+- An unattended replay of these writes has no read that can check it. A log
+  replay reads the provider's watch state first. A remove or a status change
+  has no such read.
+- A Simkl watchlist remove deletes the item's history
+  (`simkl-watchlist-remove-deletes-history.md`). A replay must never send it
+  without the user.
+- The user is in the app when they make these changes, so the link is a
+  working path. Offline demand is for logs, which `pending-logs.ts` covers.
