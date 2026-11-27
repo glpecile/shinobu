@@ -2,6 +2,12 @@ import { useId, useRef, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 const GAP = 6;
+const OPEN_DELAY = 500;
+const WARM_WINDOW = 300;
+
+// Shared by every tooltip: once one has shown, the next opens at once, so a
+// sweep across a toolbar doesn't wait 500ms on each button.
+let warmUntil = 0;
 
 export function Tooltip({
   label,
@@ -14,6 +20,10 @@ export function Tooltip({
 }) {
   const id = useId();
   const bubble = useRef<HTMLDivElement>(null);
+  const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // A press means the label was read; it stays closed until the pointer leaves.
+  const pressed = useRef(false);
+  const lastTouch = useRef(0);
 
   function show(target: HTMLDivElement) {
     const popover = bubble.current;
@@ -27,24 +37,48 @@ export function Tooltip({
     popover.style.top = `${above >= GAP ? above : bounds.bottom + GAP}px`;
   }
 
+  function hide() {
+    clearTimeout(pending.current);
+    const popover = bubble.current;
+    if (popover?.matches(':popover-open') !== true) return;
+    popover.hidePopover();
+    warmUntil = Date.now() + WARM_WINDOW;
+  }
+
   return (
     <div
       aria-describedby={id}
       onPointerEnter={(event) => {
-        if (event.pointerType !== 'touch') show(event.currentTarget);
+        // iOS follows a tap with an emulated mouse enter.
+        if (event.pointerType === 'touch' || Date.now() - lastTouch.current < 50) return;
+        if (pressed.current) return;
+        const target = event.currentTarget;
+        window.addEventListener('scroll', hide, { capture: true, once: true });
+        if (Date.now() < warmUntil) show(target);
+        else pending.current = setTimeout(() => show(target), OPEN_DELAY);
+      }}
+      onPointerDown={() => {
+        pressed.current = true;
+        hide();
+      }}
+      onPointerUp={(event) => {
+        if (event.pointerType === 'touch') lastTouch.current = Date.now();
       }}
       onPointerLeave={(event) => {
-        if (!event.currentTarget.contains(document.activeElement)) bubble.current?.hidePopover();
+        pressed.current = false;
+        window.removeEventListener('scroll', hide, { capture: true });
+        if (!event.currentTarget.contains(document.activeElement)) hide();
+        else clearTimeout(pending.current);
       }}
       onFocus={(event) => {
         if (event.target instanceof HTMLElement && event.target.matches(':focus-visible'))
           show(event.currentTarget);
       }}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) bubble.current?.hidePopover();
+        if (!event.currentTarget.contains(event.relatedTarget)) hide();
       }}
       onKeyDown={(event) => {
-        if (event.key === 'Escape') bubble.current?.hidePopover();
+        if (event.key === 'Escape') hide();
       }}
       // A column like RN's View: in a row, RN Web's unshrinkable child would
       // take its one-line width and spill past a narrow parent.

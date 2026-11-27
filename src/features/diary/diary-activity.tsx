@@ -203,7 +203,7 @@ function monthGrid(month: string) {
   return { keys, weeks };
 }
 
-const CELL = 'flex-1 min-h-11 aspect-square rounded-md';
+const CELL = 'flex-1 min-h-11 aspect-square';
 const SHADE_TRANSITION: CSSTransitionProperties = {
   transitionProperty: 'backgroundColor',
   transitionDuration: DURATION.swap,
@@ -234,8 +234,8 @@ export function DiaryMonth({
     <View className={cn('pt-1 pb-2', tight ? 'px-0' : 'px-6', className)}>
       <Eyebrow className={cn('mb-3', tight && 'mx-6')}>{title}</Eyebrow>
       <View className={cn('gap-5', !stacked && 'sm:flex-row sm:gap-10')}>
-        <View className={cn('w-full max-w-96', !tight && 'gap-1')}>
-          <View className={cn('flex-row', !tight && 'gap-1')}>
+        <View className="w-full max-w-96">
+          <View className={cn('flex-row', !tight && 'gap-1 mb-0.5')}>
             {WEEKDAY_INITIALS.map((initial, index) => (
               <Text
                 className="flex-1 text-center text-muted font-sans text-[10px] leading-3"
@@ -245,71 +245,78 @@ export function DiaryMonth({
               </Text>
             ))}
           </View>
-          {weeks.map((week, row) => (
-            <View className={cn('flex-row', !tight && 'gap-1')} key={row}>
-              {week.map((key, column) => {
-                if (key == null) return <View className={CELL} key={column} />;
-                const future = key > props.today;
-                const units = loading ? null : dayUnits(key, props);
-                const shade = units == null ? null : level(units);
-                const cell = (
-                  <AnimatedView
-                    style={SHADE_TRANSITION}
-                    className={cn(
-                      'flex-1 rounded-md items-center justify-center',
-                      shade != null && LEVELS[shade],
-                      key === props.today && 'border border-accent',
-                    )}
-                  >
-                    {loading && !future && <Skeleton className="absolute inset-0 rounded-md" />}
-                    <Text
+          {/* Spacing lives inside each cell's Tooltip/pressable so sweeping across days hits no dead gap. */}
+          <View className={cn(!tight && '-mx-0.5')}>
+            {weeks.map((week, row) => (
+              <View className="flex-row" key={row}>
+                {week.map((key, column) => {
+                  if (key == null) return <View className={CELL} key={column} />;
+                  const future = key > props.today;
+                  const units = loading ? null : dayUnits(key, props);
+                  const shade = units == null ? null : level(units);
+                  const cell = (
+                    <AnimatedView
+                      style={SHADE_TRANSITION}
                       className={cn(
-                        'font-sans text-[11px]',
-                        shade === 4
-                          ? 'text-accent-foreground'
-                          : shade === 3
-                            ? 'text-foreground dark:text-accent-foreground'
-                            : shade != null && shade > 0
-                              ? 'text-foreground'
-                              : 'text-muted',
-                        units == null && !loading && 'opacity-40',
+                        'flex-1 rounded-md items-center justify-center',
+                        shade != null && LEVELS[shade],
+                        key === props.today && 'border border-accent',
                       )}
                     >
-                      {Number(key.slice(8))}
-                    </Text>
-                  </AnimatedView>
-                );
-                if (future || loading)
+                      {loading && !future && <Skeleton className="absolute inset-0 rounded-md" />}
+                      <Text
+                        className={cn(
+                          'font-sans text-[11px]',
+                          shade === 4
+                            ? 'text-accent-foreground'
+                            : shade === 3
+                              ? 'text-foreground dark:text-accent-foreground'
+                              : shade != null && shade > 0
+                                ? 'text-foreground'
+                                : 'text-muted',
+                          units == null && !loading && 'opacity-40',
+                        )}
+                      >
+                        {Number(key.slice(8))}
+                      </Text>
+                    </AnimatedView>
+                  );
+                  if (future || loading)
+                    return (
+                      <View className={cn(CELL, !tight && 'p-0.5')} key={key}>
+                        {cell}
+                      </View>
+                    );
+                  const label = dayTooltip(key, units, props);
+                  const onSelectDay = props.onSelectDay;
                   return (
                     <View className={CELL} key={key}>
-                      {cell}
+                      <Tooltip fill label={label}>
+                        {units != null && units > 0 && onSelectDay != null ? (
+                          <PresstableOpacity
+                            accessibilityLabel={label}
+                            accessibilityRole="button"
+                            className={cn('flex-1', !tight && 'p-0.5')}
+                            onPress={() => onSelectDay(key)}
+                          >
+                            {cell}
+                          </PresstableOpacity>
+                        ) : (
+                          <View
+                            accessible
+                            accessibilityLabel={label}
+                            className={cn('flex-1', !tight && 'p-0.5')}
+                          >
+                            {cell}
+                          </View>
+                        )}
+                      </Tooltip>
                     </View>
                   );
-                const label = dayTooltip(key, units, props);
-                const onSelectDay = props.onSelectDay;
-                return (
-                  <View className={CELL} key={key}>
-                    <Tooltip fill label={label}>
-                      {units != null && units > 0 && onSelectDay != null ? (
-                        <PresstableOpacity
-                          accessibilityLabel={label}
-                          accessibilityRole="button"
-                          className="flex-1"
-                          onPress={() => onSelectDay(key)}
-                        >
-                          {cell}
-                        </PresstableOpacity>
-                      ) : (
-                        <View accessible accessibilityLabel={label} className="flex-1">
-                          {cell}
-                        </View>
-                      )}
-                    </Tooltip>
-                  </View>
-                );
-              })}
-            </View>
-          ))}
+                })}
+              </View>
+            ))}
+          </View>
         </View>
         <View className={cn(!stacked && 'sm:shrink sm:pt-4', tight && 'px-6')}>
           <View className={cn(stacked ? 'gap-3' : 'flex-row flex-wrap gap-6 sm:flex-col sm:gap-3')}>
