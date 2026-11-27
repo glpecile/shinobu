@@ -50,6 +50,31 @@ function input(item: NormalizedMediaItem, source: WatchlistInput['source']): Wat
 }
 
 describe('watchlistSourcesFor (owner report 2026-08-01)', () => {
+  test("a second lookup does not rebuild the inputs' keys", () => {
+    let reads = 0;
+    const counted = (item: NormalizedMediaItem): NormalizedMediaItem =>
+      Object.defineProperty({ ...item }, 'externalIds', {
+        get() {
+          reads += 1;
+          return item.externalIds;
+        },
+        enumerable: true,
+      });
+    const inputs = [
+      input(counted(film('letterboxd-heat', { externalIds: { tmdb: 949 } })), 'letterboxd'),
+      input(counted(film('trakt-heat', { externalIds: { tmdb: 949 } })), 'trakt'),
+      input(counted(film('simkl-ronin', { title: 'Ronin', year: 1998 })), 'simkl'),
+    ];
+    expect(
+      watchlistSourcesFor(inputs, film('tmdb-949', { externalIds: { tmdb: 949 } })),
+    ).toEqual(['letterboxd', 'trakt']);
+    reads = 0;
+    expect(watchlistSourcesFor(inputs, film('tmdb-9', { title: 'Ronin', year: 1998 }))).toEqual([
+      'simkl',
+    ]);
+    expect(reads).toBe(0);
+  });
+
   test('names every provider whose row matches, across id spaces', () => {
     const inputs = [
       input(film('letterboxd-heat-1995', { externalIds: { tmdb: 949 } }), 'letterboxd'),

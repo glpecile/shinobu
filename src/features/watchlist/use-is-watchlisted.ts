@@ -12,17 +12,32 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { watchlistMergeKeys } from './compute';
 import type { WatchlistInput } from './types';
 
+// Never mutate a cached snapshot in place: its membership index would go stale.
+const indexes = new WeakMap<readonly WatchlistInput[], Map<string, number[]>>();
+
 export function watchlistSourcesFor(
   inputs: readonly WatchlistInput[],
   item: NormalizedMediaItem,
 ): ProviderId[] {
-  const keys = new Set(watchlistMergeKeys(item));
+  let index = indexes.get(inputs);
+  if (index == null) {
+    index = new Map<string, number[]>();
+    for (const [position, input] of inputs.entries()) {
+      for (const key of [`id:${input.item.id}`, ...watchlistMergeKeys(input.item)]) {
+        const positions = index.get(key);
+        if (positions == null) index.set(key, [position]);
+        else positions.push(position);
+      }
+    }
+    indexes.set(inputs, index);
+  }
+  const positions = [`id:${item.id}`, ...watchlistMergeKeys(item)].flatMap(
+    (key) => index.get(key) ?? [],
+  );
+  const ordered = new Set(positions.sort((a, b) => a - b));
   const sources = new Set<ProviderId>();
-  for (const input of inputs) {
-    const matches =
-      input.item.id === item.id ||
-      (keys.size > 0 && watchlistMergeKeys(input.item).some((key) => keys.has(key)));
-    if (matches) sources.add(input.source);
+  for (const position of ordered) {
+    sources.add(inputs[position].source);
   }
   return [...sources];
 }
