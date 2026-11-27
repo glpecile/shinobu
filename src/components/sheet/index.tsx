@@ -1,10 +1,10 @@
 import { BottomSheetProvider, ModalBottomSheet } from '@swmansion/react-native-bottom-sheet';
-import { useState, type ReactNode } from 'react';
+import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ScrollView, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 import {
   KeyboardController,
-  useKeyboardState,
+  KeyboardEvents,
   useReanimatedKeyboardAnimation,
 } from 'react-native-keyboard-controller';
 import {
@@ -69,7 +69,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
       wrapNativeView={createAnimatedComponent}
       surface={<View className="absolute inset-0 bg-surface rounded-t-3xl border border-border" />}
     >
-      <SheetContent>
+      <SheetContent open={open}>
         <SheetCloseContext.Provider value={close}>
           <RailFadeColor value="--color-surface">{children}</RailFadeColor>
         </SheetCloseContext.Provider>
@@ -86,14 +86,30 @@ const MAX_SHEET_FRACTION = 0.85;
 
 const HEIGHT_EPSILON = 1;
 
+function subscribeKeyboard(onChange: () => void) {
+  const subscriptions = (['keyboardWillShow', 'keyboardDidHide'] as const).map((event) =>
+    KeyboardEvents.addListener(event, onChange),
+  );
+  return () => subscriptions.forEach((subscription) => subscription.remove());
+}
+
+function subscribeNothing() {
+  return () => {};
+}
+
 /**
  * Keeps one `ScrollView` mounted with an explicit measured height: a `ScrollView`
  * without an explicit height pins the native `'content'` detent to full cap, and
  * swapping between `ScrollView` and `View` unmounts children into a layout loop
  * (docs/solutions/sheet-scroller-swap-render-loop.md).
  */
-function SheetContent({ children }: { children: ReactNode }) {
-  const keyboardVisible = useKeyboardState((state) => state.isVisible);
+function SheetContent({ open, children }: { open: boolean; children: ReactNode }) {
+  // Closed sheets stay mounted, so only the open one listens: otherwise a
+  // keyboard re-renders and recommits every sheet on the screen.
+  const keyboardVisible = useSyncExternalStore(
+    open ? subscribeKeyboard : subscribeNothing,
+    () => open && KeyboardController.isVisible(),
+  );
   const maxHeight = Math.round(useWindowDimensions().height * MAX_SHEET_FRACTION);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
 
