@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import type { PointerEvent } from 'react-native';
 
-const NO_HOVER_PROPS = {};
+const NO_HOVER_PROPS: {
+  onPointerMove?: (event: PointerEvent) => void;
+  onPointerLeave?: () => void;
+} = {};
 
 /**
  * Web hover for a card that reveals chrome. Spread `hoverProps` on a wrapper that

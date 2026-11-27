@@ -20,8 +20,9 @@ function setupPopover(el: HTMLElement, width = 120, height = 28) {
   el.hidePopover = () => {
     open = false;
   };
-  spyOn(el, 'matches').mockImplementation((selector) =>
-    selector === ':popover-open' ? open : origMatches(selector),
+  spyOn(el, 'matches').mockImplementation(
+    ((selector: string) =>
+      selector === ':popover-open' ? open : origMatches(selector)) as HTMLElement['matches'],
   );
   Object.defineProperty(el, 'offsetWidth', { configurable: true, value: width });
   Object.defineProperty(el, 'offsetHeight', { configurable: true, value: height });
@@ -98,8 +99,9 @@ test('web tooltip warms only on pointer leave, closes focused popovers on scroll
 
     // Keyboard focus opens instantly and closes on scroll.
     const origBtnMatches = firstBtn.matches.bind(firstBtn);
-    spyOn(firstBtn, 'matches').mockImplementation((sel) =>
-      sel === ':focus-visible' ? true : origBtnMatches(sel),
+    spyOn(firstBtn, 'matches').mockImplementation(
+      ((sel: string) =>
+        sel === ':focus-visible' ? true : origBtnMatches(sel)) as HTMLElement['matches'],
     );
     fireEvent.focus(firstBtn);
     expect(isFirstOpen()).toBe(true);
