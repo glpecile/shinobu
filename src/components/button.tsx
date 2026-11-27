@@ -19,8 +19,7 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
-export type ButtonVariant =
-  'log' | 'primary' | 'outline' | 'quiet' | 'quiet-accent' | 'ghost' | 'accent-ghost';
+export type ButtonVariant = 'log' | 'primary' | 'quiet' | 'ghost';
 export type ButtonSize = 'sm' | 'md';
 
 const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
@@ -29,34 +28,35 @@ const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
     on: 'border border-foreground bg-foreground',
     off: 'border border-transparent bg-foreground/40',
   },
-  outline: { on: 'border border-accent', off: 'border border-accent/40' },
   quiet: {
     on: 'border border-border web:hover:bg-border/40',
     off: 'border border-border opacity-60',
   },
-  'quiet-accent': { on: 'border border-border', off: 'border border-border opacity-60' },
   ghost: { on: 'web:hover:bg-border/40', off: 'opacity-60' },
-  'accent-ghost': { on: '', off: 'opacity-60' },
 };
 
 const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
   log: { on: 'text-log-foreground', off: 'text-log-foreground' },
   primary: { on: 'text-background', off: 'text-background' },
-  outline: { on: 'text-accent', off: 'text-accent/60' },
   quiet: { on: 'text-foreground', off: 'text-muted' },
-  'quiet-accent': { on: 'text-accent', off: 'text-accent/60' },
   ghost: { on: 'text-foreground', off: 'text-muted' },
-  'accent-ghost': { on: 'text-accent', off: 'text-accent/60' },
 };
+
+// A toggle that is on (a liked heart) keeps its variant's frame and turns its
+// label and glyphs accent. Filled variants have no room for a second colour.
+const SELECTABLE: Record<ButtonVariant, boolean> = {
+  log: false,
+  primary: false,
+  quiet: true,
+  ghost: true,
+};
+const SELECTED_LABEL = { on: 'text-accent', off: 'text-accent/60' };
 
 const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
   log: '--color-log-foreground',
   primary: '--color-background',
-  outline: '--color-accent',
   quiet: '--color-foreground',
-  'quiet-accent': '--color-accent',
   ghost: '--color-foreground',
-  'accent-ghost': '--color-accent',
 };
 
 const BOX_LAYOUT = Platform.OS === 'web' ? undefined : LinearTransition.duration(DURATION.swap);
@@ -202,9 +202,12 @@ export function Button({
   className,
 }: ButtonProps) {
   const reduceMotion = useReducedMotion();
-  const spinnerToken = useThemeColor(SPINNER_TOKEN[variant]);
-  const spinnerColor = spinnerToken;
   const unavailable = disabled || loading;
+  const selected = pressed === true && SELECTABLE[variant];
+  const labelClass = selected ? SELECTED_LABEL : LABEL[variant];
+  const glyphToken: ThemeColorToken = selected ? '--color-accent' : SPINNER_TOKEN[variant];
+  const spinnerToken = useThemeColor(glyphToken);
+  const spinnerColor = spinnerToken;
   const LabelText = morphLabel ? MorphText : Text;
   const shownLabel = loading ? (loadingLabel ?? label) : label;
   const overlay = loading && loadingLabel == null;
@@ -292,7 +295,7 @@ export function Button({
                 style={contentTransition}
               >
                 <ButtonIconContext.Provider
-                  value={{ token: SPINNER_TOKEN[variant], size: SIZE[size].icon }}
+                  value={{ token: glyphToken, size: SIZE[size].icon }}
                 >
                   {icon}
                 </ButtonIconContext.Provider>
@@ -314,7 +317,7 @@ export function Button({
                   'font-sans-semibold',
                   morphLabel ? 'self-center' : align === 'start' ? undefined : 'text-center',
                   SIZE[size].label,
-                  unavailable ? LABEL[variant].off : LABEL[variant].on,
+                  unavailable ? labelClass.off : labelClass.on,
                 )}
               >
                 {shownLabel}
@@ -328,7 +331,7 @@ export function Button({
               style={COLOR_TRANSITION}
             >
               <ButtonIconContext.Provider
-                value={{ token: SPINNER_TOKEN[variant], size: TRAILING_ICON[size] }}
+                value={{ token: glyphToken, size: TRAILING_ICON[size] }}
               >
                 {trailingIcon}
               </ButtonIconContext.Provider>

@@ -1,4 +1,4 @@
-import { Button, type ButtonSize, type ButtonVariant } from '@/components/button';
+import { Button, type ButtonSize } from '@/components/button';
 import { haptics } from '@/lib/haptics';
 
 export function LikeButton({
@@ -8,7 +8,7 @@ export function LikeButton({
   loading = false,
   disabled = false,
   size = 'md',
-  variant = 'outline',
+  variant = 'quiet',
 }: {
   liked: boolean | undefined;
   onChange: (liked: boolean) => void;
@@ -16,20 +16,8 @@ export function LikeButton({
   loading?: boolean;
   disabled?: boolean;
   size?: ButtonSize;
-  variant?: 'outline' | 'ghost' | 'quiet';
+  variant?: 'quiet' | 'ghost';
 }) {
-  let buttonVariant: ButtonVariant;
-  switch (variant) {
-    case 'quiet':
-      buttonVariant = liked ? 'quiet-accent' : 'quiet';
-      break;
-    case 'ghost':
-      buttonVariant = liked ? 'accent-ghost' : 'ghost';
-      break;
-    case 'outline':
-      buttonVariant = liked ? 'outline' : 'quiet';
-      break;
-  }
   return (
     <Button
       disabled={disabled}
@@ -43,7 +31,7 @@ export function LikeButton({
       }}
       pressed={liked}
       size={size}
-      variant={buttonVariant}
+      variant={variant}
     />
   );
 }

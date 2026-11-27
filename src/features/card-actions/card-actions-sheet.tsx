@@ -344,7 +344,7 @@ export function CardActionsSheet({
               icon={<Button.Icon name="trash-outline" />}
               label="Remove from list"
               onPress={() => setMode('list-remove')}
-              variant="quiet-accent"
+              variant="quiet"
             />
           )}
           {canHide && (
