@@ -41,6 +41,10 @@ export function ProgressScrubber({
     onChange(pageAt(mark ?? at, total));
   }
 
+  function jump(by: number) {
+    onChange(pageAt(Math.min(100, Math.max(0, percent + by)), total));
+  }
+
   const tap = useTapGesture({
     runOnJS: true,
     enabled: !disabled,
@@ -81,14 +85,23 @@ export function ProgressScrubber({
         }}
         onKeyDown={(event) => {
           if (disabled) return;
-          switch (event.nativeEvent.key) {
+          const { key, shiftKey } = event.nativeEvent;
+          switch (key) {
             case 'ArrowRight':
             case 'ArrowUp':
-              onStep(1);
+              if (shiftKey) jump(10);
+              else onStep(1);
               break;
             case 'ArrowLeft':
             case 'ArrowDown':
-              onStep(-1);
+              if (shiftKey) jump(-10);
+              else onStep(-1);
+              break;
+            case 'PageUp':
+              jump(10);
+              break;
+            case 'PageDown':
+              jump(-10);
               break;
             case 'Home':
               onChange(0);
