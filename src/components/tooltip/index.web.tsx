@@ -15,6 +15,7 @@ const MOTION_VARS = {
 } as CSSProperties;
 
 let warmUntil = 0;
+let activePopover: HTMLDivElement | null = null;
 
 export function Tooltip({
   label,
@@ -30,17 +31,19 @@ export function Tooltip({
   const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
   const scrollCleanup = useRef<AbortController | null>(null);
   const lastTouch = useRef(0);
+  const lastHeight = useRef(30);
 
   function cancelScroll() {
     scrollCleanup.current?.abort();
     scrollCleanup.current = null;
   }
 
-  function hide(warm = false) {
+  function hide(warm = false, instant = true) {
     clearTimeout(pending.current);
     cancelScroll();
     const popover = bubble.current;
     if (popover?.matches(':popover-open') !== true) return;
+    popover.toggleAttribute('data-instant', instant);
     popover.hidePopover();
     if (warm) warmUntil = Date.now() + WARM_WINDOW;
   }
@@ -60,15 +63,34 @@ export function Tooltip({
     clearTimeout(pending.current);
     const popover = bubble.current;
     if (popover == null || label === '') return;
+    if (activePopover != null && activePopover !== popover) {
+      activePopover.toggleAttribute('data-instant', true);
+      if (activePopover.matches(':popover-open')) activePopover.hidePopover();
+    }
+    const bounds = target.getBoundingClientRect();
+    popover.dataset.side = bounds.top - lastHeight.current - GAP >= GAP ? 'top' : 'bottom';
     popover.toggleAttribute('data-instant', instant);
     popover.showPopover();
-    const bounds = target.getBoundingClientRect();
     const { offsetWidth: width, offsetHeight: height } = popover;
-    const left = bounds.left + bounds.width / 2 - width / 2;
+    lastHeight.current = height;
     const above = bounds.top - height - GAP;
-    popover.dataset.side = above >= GAP ? 'top' : 'bottom';
-    popover.style.left = `${Math.max(GAP, Math.min(left, window.innerWidth - width - GAP))}px`;
-    popover.style.top = `${above >= GAP ? above : bounds.bottom + GAP}px`;
+    const side = above >= GAP ? 'top' : 'bottom';
+    const clampedLeft = Math.max(
+      GAP,
+      Math.min(bounds.left + bounds.width / 2 - width / 2, window.innerWidth - width - GAP),
+    );
+    popover.style.left = `${clampedLeft}px`;
+    popover.style.top = `${side === 'top' ? above : bounds.bottom + GAP}px`;
+    const originX = Math.min(width, Math.max(0, bounds.left + bounds.width / 2 - clampedLeft));
+    popover.style.transformOrigin = `${originX}px ${side === 'top' ? '100%' : '0%'}`;
+    if (popover.dataset.side !== side) {
+      popover.dataset.side = side;
+      if (!instant) {
+        popover.hidePopover();
+        popover.showPopover();
+      }
+    }
+    activePopover = popover;
     watchScroll();
   }
 
@@ -76,6 +98,7 @@ export function Tooltip({
     () => () => {
       clearTimeout(pending.current);
       cancelScroll();
+      if (activePopover === bubble.current) activePopover = null;
     },
     [],
   );
@@ -96,7 +119,7 @@ export function Tooltip({
         if (event.pointerType === 'touch') lastTouch.current = Date.now();
       }}
       onPointerLeave={(event) => {
-        if (!event.currentTarget.contains(document.activeElement)) hide(true);
+        if (!event.currentTarget.contains(document.activeElement)) hide(true, false);
         else clearTimeout(pending.current);
       }}
       onFocus={(event) => {

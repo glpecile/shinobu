@@ -84,17 +84,21 @@ test('web tooltip warms only on pointer leave, closes focused popovers on scroll
     for (const fn of timers.values()) fn();
     timers.clear();
     expect(isSecondOpen()).toBe(true);
-    // Pointer leave warms the next tooltip within 300ms (and skips animation).
+    // Pointer leave warms the next tooltip within 300ms (exit fades, next opens instant and snaps previous closed).
     fireEvent.pointerLeave(secondWrap);
     expect(isSecondOpen()).toBe(false);
+    expect(secondTip.hasAttribute('data-instant')).toBe(false);
     now += 100;
     fireEvent.pointerEnter(firstWrap, { pointerType: 'mouse' });
     expect(isFirstOpen()).toBe(true);
     expect(firstTip.hasAttribute('data-instant')).toBe(true);
+    expect(secondTip.hasAttribute('data-instant')).toBe(true);
 
-    // Escape closes without warming.
+    // Escape closes instantly without warming (even on a cold-opened tooltip).
+    firstTip.removeAttribute('data-instant');
     fireEvent.keyDown(firstWrap, { key: 'Escape' });
     expect(isFirstOpen()).toBe(false);
+    expect(firstTip.hasAttribute('data-instant')).toBe(true);
     now += 400;
 
     // Keyboard focus opens instantly and closes on scroll.

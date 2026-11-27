@@ -18,11 +18,7 @@
   [data-shinobu-tooltip]:popover-open {
     opacity: 1;
     transform: translateY(0) scale(1);
-    transition:
-      opacity var(--tooltip-enter) var(--tooltip-ease),
-      transform var(--tooltip-enter) var(--tooltip-ease),
-      overlay var(--tooltip-enter) allow-discrete,
-      display var(--tooltip-enter) allow-discrete;
+    transition-duration: var(--tooltip-enter);
   }
 
   @starting-style {
