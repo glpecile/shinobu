@@ -34,9 +34,6 @@ export interface SheetProps {
 
 export function Sheet({ open, onClose, children }: SheetProps) {
   const reduceMotion = useReducedMotion();
-  // Negative while the keyboard is up, tracked per frame on the UI thread. A
-  // transform, not `bottom`: Reanimated applies it without a shadow-tree commit
-  // and relayout each frame (docs/solutions/sheet-keyboard-lift-commits-every-frame.md).
   const keyboard = useReanimatedKeyboardAnimation();
   const lift = useAnimatedStyle(() => ({
     transform: [{ translateY: open ? keyboard.height.get() : 0 }],
@@ -115,7 +112,6 @@ function SheetContent({ open, children }: { open: boolean; children: ReactNode }
     () => (open && KeyboardController.isVisible() ? KeyboardController.state().height : 0),
   );
   const keyboardVisible = keyboardHeight > 0;
-  // The lift moves the sheet without shrinking it, so a tall sheet caps above the keyboard.
   const maxHeight = Math.round(
     (useWindowDimensions().height - keyboardHeight) * MAX_SHEET_FRACTION,
   );
