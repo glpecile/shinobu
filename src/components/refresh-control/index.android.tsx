@@ -33,7 +33,18 @@ type RefreshControlProps = Omit<
 };
 
 const HOLD = 64;
-const FRICTION = 0.5;
+// iOS rubber band: follows the finger at 0.55, less with every pixel. STRETCH is
+// the curve's dimension, about a phone list's height, so the trigger still sits
+// near a 150 px drag.
+const STRETCH = 600;
+function stretch(drag: number) {
+  'worklet';
+  return (1 - 1 / ((drag * 0.55) / STRETCH + 1)) * STRETCH;
+}
+function stretchSlope(drag: number) {
+  'worklet';
+  return 0.55 / ((drag * 0.55) / STRETCH + 1) ** 2;
+}
 const settle = { duration: DURATION.toggle, easing: TIMING_EASE_IN_OUT };
 function release(velocity: number) {
   'worklet';
@@ -99,8 +110,8 @@ export function RefreshControl({
       if (refreshing) return;
       if (dragged.get() === 0 && (offset.get() > 0 || event.changeY <= 0)) return;
       dragged.set(Math.max(0, dragged.get() + event.changeY));
-      fling.set(event.velocityY * FRICTION);
-      pull.set(dragged.get() * FRICTION);
+      fling.set(event.velocityY * stretchSlope(dragged.get()));
+      pull.set(stretch(dragged.get()));
       // The list would scroll up under a finger pushing the pull back.
       scrollTo(scrollRef, 0, 0, false);
     },
