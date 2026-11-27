@@ -72,6 +72,10 @@ applied on the overflow branch, where being slightly under the native cap is
 harmless (the scroller appears a little early rather than the sheet clipping),
 and the hugging branch — the common one — uses no magic number at all.
 
+**Keyboard (2026-11-27, supersedes the keyboard notes below).** The lift is now a
+`translateY`, and `SheetContent` lowers its cap by the keyboard height
+(docs/solutions/sheet-keyboard-lift-commits-every-frame.md).
+
 **Keyboard (2026-11-02).** The host lift below applies to both native platforms.
 The previous Android-only gate left iOS's manga chapter field and confirm button
 behind the number pad: the native sheet does not avoid it automatically. Apply
