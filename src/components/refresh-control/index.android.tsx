@@ -33,9 +33,7 @@ type RefreshControlProps = Omit<
 };
 
 const HOLD = 64;
-// iOS rubber band: follows the finger at 0.55, less with every pixel. STRETCH is
-// the curve's dimension, about a phone list's height, so the trigger still sits
-// near a 150 px drag.
+// Rubber-band dimension in px.
 const STRETCH = 600;
 function stretch(drag: number) {
   'worklet';

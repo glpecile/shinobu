@@ -2,9 +2,6 @@ import { haptics } from '@/lib/haptics';
 
 import { showToast } from './sonner';
 
-/** Milliseconds. 4000 is long enough to read a title and message; an error
- *  gets 6000 because the reader also decides where to go next. Both hosts
- *  pause while the toast is pressed or the app is hidden. */
 const DURATION_MS = { success: 4000, error: 6000 } as const;
 
 /**

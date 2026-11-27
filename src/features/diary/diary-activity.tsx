@@ -245,7 +245,6 @@ export function DiaryMonth({
               </Text>
             ))}
           </View>
-          {/* Spacing lives inside each cell's Tooltip/pressable so sweeping across days hits no dead gap. */}
           <View className={cn(!tight && '-mx-0.5')}>
             {weeks.map((week, row) => (
               <View className="flex-row" key={row}>

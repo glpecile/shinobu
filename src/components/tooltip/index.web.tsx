@@ -5,8 +5,6 @@ const GAP = 6;
 const OPEN_DELAY = 500;
 const WARM_WINDOW = 300;
 
-// Shared by every tooltip: once one has shown, the next opens at once, so a
-// sweep across a toolbar doesn't wait 500ms on each button.
 let warmUntil = 0;
 
 export function Tooltip({
@@ -21,7 +19,6 @@ export function Tooltip({
   const id = useId();
   const bubble = useRef<HTMLDivElement>(null);
   const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // A press means the label was read; it stays closed until the pointer leaves.
   const pressed = useRef(false);
   const lastTouch = useRef(0);
 
@@ -49,7 +46,6 @@ export function Tooltip({
     <div
       aria-describedby={id}
       onPointerEnter={(event) => {
-        // iOS follows a tap with an emulated mouse enter.
         if (event.pointerType === 'touch' || Date.now() - lastTouch.current < 50) return;
         if (pressed.current) return;
         const target = event.currentTarget;
