@@ -2,13 +2,14 @@ import { haptics } from '@/lib/haptics';
 
 import { showToast } from './sonner';
 
-/** Errors linger longer: "Failed on Letterboxd" earns a beat more reading time.
- *  Milliseconds — sonner's unit (burnt used seconds). */
-const DURATION_MS = { success: 2000, error: 3500 } as const;
+/** Milliseconds. 4000 is long enough to read a title and message; an error
+ *  gets 6000 because the reader also decides where to go next. Both hosts
+ *  pause while the toast is pressed or the app is hidden. */
+const DURATION_MS = { success: 4000, error: 6000 } as const;
 
 /**
  * Mount ToastHost once in the layout. This wrapper also plays the haptic, so call sites only
- * send the toast.
+ * send the toast. A repeat of a toast still on screen replaces it instead of stacking.
  */
 export const toast = {
   /** The committed action succeeded — ephemeral, no recourse needed (R7). */

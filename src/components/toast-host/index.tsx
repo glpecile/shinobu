@@ -25,5 +25,7 @@ const EXIT = new Keyframe({
 export function ToastHost() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' || colorScheme === 'light' ? colorScheme : 'system';
-  return <Toaster theme={theme} animation={{ enter: ENTER, exit: EXIT }} />;
+  return (
+    <Toaster theme={theme} animation={{ enter: ENTER, exit: EXIT }} pauseWhenPageIsHidden />
+  );
 }

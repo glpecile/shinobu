@@ -18,6 +18,6 @@ export function showToast(
       { style: { marginHorizontal: 16 } },
       createElement(ToastCard, { kind, title, message }),
     ),
-    { duration },
+    { duration, id: `${kind}:${title}:${message ?? ''}` },
   );
 }
