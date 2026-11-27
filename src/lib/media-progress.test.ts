@@ -30,6 +30,7 @@ const anime = {
   externalIds: { anilist: 732 },
   totalEpisodes: 1,
 };
+const itemOf = (row: NormalizedMediaItem) => row;
 
 test('completed AniList films match Letterboxd titles without a shared tracker ID', () => {
   const match = findAniListProgress(film, [{ item: anime, status: 'COMPLETED' }]);
@@ -78,6 +79,14 @@ test('movie/TV ID collisions and sibling anime cours never share progress', () =
       { ...anime, isFilm: false, externalIds: { anilist: 2, tmdb: 42 } },
     ),
   ).toBe(false);
+});
+
+test('a snapshot is indexed once', () => {
+  const a = [film];
+  const b = [film];
+  const index = indexLibrary(a, itemOf);
+  expect(indexLibrary(a, itemOf)).toBe(index);
+  expect(indexLibrary(b, itemOf)).not.toBe(index);
 });
 
 test('an indexed lookup returns the earliest matching row, as a scan would', () => {

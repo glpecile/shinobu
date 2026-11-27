@@ -52,8 +52,6 @@ export function useProgressLibraries(items: readonly NormalizedMediaItem[]) {
     letterboxdUsername,
     serializdUsername,
     queries: { movies, shows, simkl, anilist, serializd },
-    // React Compiler rebuilds each index only when its snapshot changes. Simkl's
-    // entry is the snapshot itself: `simkl.ts` indexes it once per snapshot.
     indexes: {
       movies: movies.data == null ? null : indexLibrary(movies.data, self),
       shows: shows.data == null ? null : indexLibrary(shows.data, self),

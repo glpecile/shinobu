@@ -1,6 +1,6 @@
 import { Provider } from '@/lib/providers/types';
 import type { NormalizedDiaryEntry } from '@/types/media';
-import type { SimklLibrary, SimklLibraryEntry } from './normalize';
+import type { SimklLibrary, SimklLibraryEntry, SimklWatchedEpisode } from './normalize';
 
 const provider = Provider.Simkl;
 
@@ -19,9 +19,17 @@ const provider = Provider.Simkl;
 const SIMKL_DIARY_WINDOW = 500;
 
 /** Ordering key — Simkl instants are ISO-with-Z; unparseable sinks last. */
-function entryMs(entry: NormalizedDiaryEntry): number {
-  const ms = Date.parse(entry.watchedAt);
+function instantMs(watchedAt: string): number {
+  const ms = Date.parse(watchedAt);
   return Number.isNaN(ms) ? 0 : ms;
+}
+
+interface DiaryCandidate {
+  entry: SimklLibraryEntry;
+  episode?: SimklWatchedEpisode;
+  includeSeason: boolean;
+  watchedAt: string;
+  ms: number;
 }
 
 /**
@@ -33,22 +41,19 @@ function entryMs(entry: NormalizedDiaryEntry): number {
  * (AniDB convention), so "Ep 5" is the truthful detail line, matching how
  * AniList's leg renders the same log — not "S1E5".
  */
-function episodeEntries(entry: SimklLibraryEntry, includeSeason: boolean): NormalizedDiaryEntry[] {
-  const entries: NormalizedDiaryEntry[] = [];
+function episodeCandidates(entry: SimklLibraryEntry, includeSeason: boolean): DiaryCandidate[] {
+  const candidates: DiaryCandidate[] = [];
   for (const episode of entry.watchedEpisodes) {
     if (episode.watchedAt == null) continue;
-    entries.push({
-      // `item.id` is already `simkl-${simklId}` — the suffix makes the log id
-      // stable per (item, episode), the `${provider}-${nativeLogId}` contract.
-      id: `${entry.item.id}-s${episode.season}e${episode.number}`,
-      provider,
+    candidates.push({
+      entry,
+      episode,
+      includeSeason,
       watchedAt: episode.watchedAt,
-      item: entry.item,
-      episodes: [episode.number],
-      ...(includeSeason ? { season: episode.season } : {}),
+      ms: instantMs(episode.watchedAt),
     });
   }
-  return entries;
+  return candidates;
 }
 
 /**
@@ -58,12 +63,12 @@ function episodeEntries(entry: SimklLibraryEntry, includeSeason: boolean): Norma
  * instant → no entry: Simkl records only the latest play, and an undated one
  * has no diary day to land on.
  */
-function playEntry(entry: SimklLibraryEntry): NormalizedDiaryEntry | undefined {
+function playCandidate(entry: SimklLibraryEntry): DiaryCandidate | undefined {
   const watchedAt =
     entry.lastWatchedAt ??
     entry.watchedEpisodes.find((episode) => episode.watchedAt != null)?.watchedAt;
   if (watchedAt == null) return undefined;
-  return { id: entry.item.id, provider, watchedAt, item: entry.item };
+  return { entry, includeSeason: false, watchedAt, ms: instantMs(watchedAt) };
 }
 
 /**
@@ -73,21 +78,36 @@ function playEntry(entry: SimklLibraryEntry): NormalizedDiaryEntry | undefined {
  * `features/diary/merge.ts` downstream of it.
  */
 export function simklDiaryEntries(library: SimklLibrary): NormalizedDiaryEntry[] {
-  const entries: NormalizedDiaryEntry[] = [];
+  const candidates: DiaryCandidate[] = [];
   for (const entry of library.shows) {
-    entries.push(...episodeEntries(entry, true));
+    candidates.push(...episodeCandidates(entry, true));
   }
   for (const entry of library.anime) {
     if (entry.item.isFilm === true) {
-      const play = playEntry(entry);
-      if (play != null) entries.push(play);
+      const play = playCandidate(entry);
+      if (play != null) candidates.push(play);
     } else {
-      entries.push(...episodeEntries(entry, false));
+      candidates.push(...episodeCandidates(entry, false));
     }
   }
   for (const entry of library.movies) {
-    const play = playEntry(entry);
-    if (play != null) entries.push(play);
+    const play = playCandidate(entry);
+    if (play != null) candidates.push(play);
   }
-  return entries.sort((a, b) => entryMs(b) - entryMs(a)).slice(0, SIMKL_DIARY_WINDOW);
+  return candidates
+    .sort((a, b) => b.ms - a.ms)
+    .slice(0, SIMKL_DIARY_WINDOW)
+    .map(({ entry, episode, includeSeason, watchedAt }) => {
+      if (episode == null) {
+        return { id: entry.item.id, provider, watchedAt, item: entry.item };
+      }
+      return {
+        id: `${entry.item.id}-s${episode.season}e${episode.number}`,
+        provider,
+        watchedAt,
+        item: entry.item,
+        episodes: [episode.number],
+        ...(includeSeason ? { season: episode.season } : {}),
+      };
+    });
 }

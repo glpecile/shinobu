@@ -121,12 +121,23 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     client.clear();
   });
 
-  test('a successful book log refreshes the read status on cached lists', () => {
+  test('a book log refreshes only the cached lists that hold the book', () => {
     const client = new QueryClient();
-    const key = hardcoverQueryKeys.list(42);
-    client.setQueryData(key, {});
-    invalidateAfterLog(client, { ...ITEM, type: 'BOOK' }, ['hardcover']);
-    expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+    client.setQueryData(hardcoverQueryKeys.list(42), {
+      pages: [{ entries: [{ item: { externalIds: { hardcover: 7 } } }] }],
+      pageParams: [1],
+    });
+    client.setQueryData(hardcoverQueryKeys.list(43), {
+      pages: [{ entries: [{ item: { externalIds: { hardcover: 8 } } }] }],
+      pageParams: [1],
+    });
+    invalidateAfterLog(
+      client,
+      { ...ITEM, type: 'BOOK', externalIds: { hardcover: 7 } },
+      ['hardcover'],
+    );
+    expect(client.getQueryState(hardcoverQueryKeys.list(42))?.isInvalidated).toBe(true);
+    expect(client.getQueryState(hardcoverQueryKeys.list(43))?.isInvalidated).toBe(false);
     client.clear();
   });
 

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 import { simklDiaryEntries } from './diary';
@@ -152,6 +152,24 @@ describe('simklDiaryEntries — plays (movies & anime films)', () => {
 });
 
 describe('simklDiaryEntries — window', () => {
+  test('parses each instant once', () => {
+    const watchedEpisodes: SimklWatchedEpisode[] = Array.from({ length: 600 }, (_, index) => ({
+      season: 1,
+      number: index + 1,
+      watchedAt: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+    }));
+    const snapshot = library({
+      shows: [libraryEntry({ item: item({ id: 'simkl-100' }), watchedEpisodes })],
+    });
+    const parse = spyOn(Date, 'parse');
+    try {
+      simklDiaryEntries(snapshot);
+      expect(parse.mock.calls.length).toBeLessThanOrEqual(600);
+    } finally {
+      parse.mockRestore();
+    }
+  });
+
   test('caps the projection at the 500 newest entries', () => {
     const watchedEpisodes: SimklWatchedEpisode[] = Array.from({ length: 510 }, (_, index) => ({
       season: 1,

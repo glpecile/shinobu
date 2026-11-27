@@ -3,6 +3,7 @@ import {
   useInfiniteQuery,
   useQuery,
   useQueryClient,
+  type InfiniteData,
   type QueryClient,
 } from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
@@ -248,6 +249,27 @@ async function fetchDiaryPage(
   return { slices: Object.fromEntries(slices) };
 }
 
+/** Everything the feed derives from its pages alone. */
+function selectDiaryFeed(data: InfiniteData<DiaryPage, DiaryCursor>) {
+  const states = diaryStates(data.pages);
+  const merged = mergeDiaryEntries(states);
+  return {
+    states,
+    merged,
+    anilistIds: unbridgedAniListIds(merged),
+    hasBook: merged.some((entry) => entry.item.type === 'BOOK'),
+  };
+}
+
+const NO_STATES: ReturnType<typeof diaryStates> = [];
+const NO_ENTRIES: NormalizedDiaryEntry[] = [];
+const NO_ANILIST_IDS: number[] = [];
+
+/** Read on every render. */
+function useDeviceTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
 /**
  * Merge independently paged providers behind a watermark to keep the diary in reverse
  * chronological order.
@@ -256,7 +278,7 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();
   // Device-local zone drives day grouping + headers (plan 0016 R4).
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const timeZone = useDeviceTimeZone();
 
   const readable = providersForFeed(connected);
   // The server snapshot has no readable providers, keeping username reads out of SSR.
@@ -277,13 +299,14 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     queryFn: ({ pageParam, signal }) => fetchDiaryPage(queryClient, pageParam, signal),
     initialPageParam: Object.fromEntries(active.map((provider) => [provider, 1])) as DiaryCursor,
     getNextPageParam: (_last, pages) => nextDiaryCursor(pages),
+    select: selectDiaryFeed,
     staleTime: DIARY_STALE_MS,
     enabled: active.length > 0,
   });
 
-  const states = diaryStates(query.data?.pages ?? []);
-  const merged = mergeDiaryEntries(states);
-  const anilistIds = unbridgedAniListIds(merged);
+  const states = query.data?.states ?? NO_STATES;
+  const merged = query.data?.merged ?? NO_ENTRIES;
+  const anilistIds = query.data?.anilistIds ?? NO_ANILIST_IDS;
   const { data: tmdbByAniList } = useQuery({
     queryKey: diaryQueryKeys.showTmdbIds(anilistIds),
     queryFn: () => showTmdbIds(queryClient, anilistIds),
@@ -296,23 +319,24 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   // Shares Continue Reading's manga list read and its cache entry, and fetches
   // it only once a loaded page holds a book to bridge.
   const mangaList = useMangaListQuery({
-    fetch: active.includes(Provider.AniList) && merged.some((entry) => entry.item.type === 'BOOK'),
+    fetch: active.includes(Provider.AniList) && (query.data?.hasBook ?? false),
   });
 
+  const bridged = withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList);
+  const allFailed = active.length > 0 && states.every((state) => state.failed);
+  const errors = states.flatMap((state) =>
+    state.error == null ? [] : [{ provider: state.provider, message: state.error }],
+  );
+
+  const days = groupDiaryEntries(bridged, timeZone);
   return {
-    days: groupDiaryEntries(
-      withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList),
-      timeZone,
-    ),
+    days,
     timeZone,
     activeProviders: active,
     entryCount: merged.length,
     isLoading: query.isLoading,
-    allFailed: active.length > 0 && states.every((state) => state.failed),
-    // A provider's initial *or* pagination failure — its latest slice's error.
-    errors: states.flatMap((state) =>
-      state.error == null ? [] : [{ provider: state.provider, message: state.error }],
-    ),
+    allFailed,
+    errors,
     hasNextPage: query.hasNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
     fetchNextPage: () => {

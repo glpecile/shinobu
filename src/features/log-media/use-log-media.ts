@@ -727,7 +727,28 @@ export function invalidateAfterLog(
   }
   if (succeeded.includes(Provider.Hardcover)) {
     invalidate({ queryKey: hardcoverQueryKeys.libraryRoot() });
-    invalidate({ queryKey: hardcoverQueryKeys.listRoot() });
+    const bookId = item.externalIds.hardcover;
+    invalidate({
+      queryKey: hardcoverQueryKeys.listRoot(),
+      predicate: ({ state }) => {
+        if (bookId == null) return true;
+        const data = state.data as
+          | { pages?: { entries?: { item?: NormalizedMediaItem }[] }[] }
+          | undefined;
+        return (
+          !Array.isArray(data?.pages) ||
+          data.pages.some(
+            (page) =>
+              !Array.isArray(page?.entries) ||
+              page.entries.some(
+                (entry) =>
+                  typeof entry?.item?.externalIds?.hardcover !== 'number' ||
+                  entry.item.externalIds.hardcover === bookId,
+              ),
+          )
+        );
+      },
+    });
   }
   if (succeeded.includes(Provider.Serializd)) {
     const username = getSerializdUsername();
