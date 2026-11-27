@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import { RailHead } from '@/components/rail-head';
 import { SectionEnter } from '@/components/section-enter';
@@ -43,15 +43,16 @@ export function ProviderCardsSection() {
     setSheetOpen(true);
   }
 
-  const autoClose = shouldAutoCloseSheet({
-    open: sheetOpen,
-    sheetId,
-    openedConnected: sheetWasConnected,
-    connectedIds,
-  });
-  useEffect(() => {
-    if (autoClose) setSheetOpen(false);
-  }, [autoClose]);
+  if (
+    shouldAutoCloseSheet({
+      open: sheetOpen,
+      sheetId,
+      openedConnected: sheetWasConnected,
+      connectedIds,
+    })
+  ) {
+    setSheetOpen(false);
+  }
 
   function reconnectReason(id: ProviderId): string | undefined {
     switch (id) {
