@@ -102,8 +102,6 @@ export function simklDiaryEntries(library: SimklLibrary): NormalizedDiaryEntry[]
         return { id: entry.item.id, provider, watchedAt, item: entry.item };
       }
       return {
-        // `item.id` is already `simkl-${simklId}` — the suffix makes the log id
-        // stable per (item, episode), the `${provider}-${nativeLogId}` contract.
         id: `${entry.item.id}-s${episode.season}e${episode.number}`,
         provider,
         watchedAt,

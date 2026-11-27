@@ -249,7 +249,7 @@ async function fetchDiaryPage(
   return { slices: Object.fromEntries(slices) };
 }
 
-/** Everything the feed derives from its pages alone. Module scope, so TanStack runs it once per data change. */
+/** Everything the feed derives from its pages alone. */
 function selectDiaryFeed(data: InfiniteData<DiaryPage, DiaryCursor>) {
   const states = diaryStates(data.pages);
   const merged = mergeDiaryEntries(states);
@@ -265,7 +265,7 @@ const NO_STATES: ReturnType<typeof diaryStates> = [];
 const NO_ENTRIES: NormalizedDiaryEntry[] = [];
 const NO_ANILIST_IDS: number[] = [];
 
-/** Read on every render: a hook's result is frozen, so React Compiler can memoize what takes it. */
+/** Read on every render. */
 function useDeviceTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
@@ -324,7 +324,6 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
 
   const bridged = withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList);
   const allFailed = active.length > 0 && states.every((state) => state.failed);
-  // A provider's initial *or* pagination failure — its latest slice's error.
   const errors = states.flatMap((state) =>
     state.error == null ? [] : [{ provider: state.provider, message: state.error }],
   );

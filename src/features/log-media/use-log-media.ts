@@ -728,7 +728,6 @@ export function invalidateAfterLog(
   if (succeeded.includes(Provider.Hardcover)) {
     invalidate({ queryKey: hardcoverQueryKeys.libraryRoot() });
     const bookId = item.externalIds.hardcover;
-    // Only a list that holds the book shows its read status.
     invalidate({
       queryKey: hardcoverQueryKeys.listRoot(),
       ...(bookId == null

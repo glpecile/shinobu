@@ -52,8 +52,6 @@ export function useProgressLibraries(items: readonly NormalizedMediaItem[]) {
     letterboxdUsername,
     serializdUsername,
     queries: { movies, shows, simkl, anilist, serializd },
-    // Each index is built once per snapshot and shared by every screen. Simkl's
-    // entry is the snapshot itself, indexed in `simkl.ts`.
     indexes: {
       movies: movies.data == null ? null : indexLibraryOnce(movies.data, self),
       shows: shows.data == null ? null : indexLibraryOnce(shows.data, self),

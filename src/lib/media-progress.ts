@@ -75,8 +75,6 @@ export function indexLibrary<T>(
   return { rows, itemOf, columns };
 }
 
-// Never mutate a snapshot in place: its index would go stale. A refetch or
-// `setQueryData` gives a new array. One snapshot always takes the same `itemOf`.
 const indexes = new WeakMap<readonly unknown[], LibraryIndex<unknown>>();
 
 /** `indexLibrary`, built once per snapshot array and shared by every reader of it. */

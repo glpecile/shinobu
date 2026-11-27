@@ -12,7 +12,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { watchlistMergeKeys } from './compute';
 import type { WatchlistInput } from './types';
 
-// Never mutate a cached snapshot in place: its membership index would go stale.
 const indexes = new WeakMap<readonly WatchlistInput[], Map<string, number[]>>();
 
 export function watchlistSourcesFor(
