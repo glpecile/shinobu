@@ -258,6 +258,7 @@ export function DiaryMonth({
                       style={SHADE_TRANSITION}
                       className={cn(
                         'flex-1 rounded-md items-center justify-center',
+                        !tight && 'm-0.5',
                         shade != null && LEVELS[shade],
                         key === props.today && 'border border-accent',
                       )}
@@ -282,7 +283,7 @@ export function DiaryMonth({
                   );
                   if (future || loading)
                     return (
-                      <View className={cn(CELL, !tight && 'p-0.5')} key={key}>
+                      <View className={CELL} key={key}>
                         {cell}
                       </View>
                     );
@@ -295,17 +296,13 @@ export function DiaryMonth({
                           <PresstableOpacity
                             accessibilityLabel={label}
                             accessibilityRole="button"
-                            className={cn('flex-1', !tight && 'p-0.5')}
+                            className="flex-1"
                             onPress={() => onSelectDay(key)}
                           >
                             {cell}
                           </PresstableOpacity>
                         ) : (
-                          <View
-                            accessible
-                            accessibilityLabel={label}
-                            className={cn('flex-1', !tight && 'p-0.5')}
-                          >
+                          <View accessible accessibilityLabel={label} className="flex-1">
                             {cell}
                           </View>
                         )}
