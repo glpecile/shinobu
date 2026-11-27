@@ -4,7 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/ui": "~58.0.29",
-    "@glpecile/norph": "^0.1.0",
+    "@glpecile/norph": "^0.1.1",
     "@hookform/resolvers": "^5.9.1",
     "@hzblj/expo-app-icons": "0.1.4",
     "@legendapp/list": "^3.6.0",
