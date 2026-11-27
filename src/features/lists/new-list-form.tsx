@@ -180,7 +180,7 @@ export function NewListForm({
     handleSubmit,
     getValues,
     setValue,
-    formState: { errors, isDirty, isSubmitted },
+    formState: { errors, dirtyFields, isSubmitted },
   } = useForm<NewListFormValues, unknown, NewList>({
     defaultValues: {
       provider: initialProvider,
@@ -218,9 +218,11 @@ export function NewListForm({
     provider !== Provider.Letterboxd ||
     (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
   const busy = mutation.isPending;
-  // Off once the create starts, so its success can replace this screen.
+  // Picking where to save loses nothing. Off once the create starts, so its
+  // success can replace this screen.
+  const edited = Object.keys(dirtyFields).some((field) => field !== 'provider');
   usePreventRemove(
-    isDirty && (mutation.isIdle || mutation.isError) && !discarded,
+    edited && (mutation.isIdle || mutation.isError) && !discarded,
     ({ repeat }) => setLeave(() => repeat),
   );
 
@@ -634,12 +636,12 @@ export function NewListForm({
               <WriteSheet.Title>Discard list?</WriteSheet.Title>
             </WriteSheet.Header>
             <WriteSheet.Description>
-              {`This list isn’t on ${label} yet. Leaving now loses it.`}
+              {`This list isn’t on ${label} yet. If you leave, you lose it.`}
             </WriteSheet.Description>
             <WriteSheet.Actions>
               <Button
-                icon={<Button.Icon name="close" />}
-                label="Discard"
+                icon={<Button.Icon name="trash-outline" />}
+                label="Discard list"
                 onPress={() => {
                   haptics.destructive();
                   setDiscarded(true);
@@ -648,7 +650,7 @@ export function NewListForm({
                 }}
               />
               <Button
-                icon={<Button.Icon name="create-outline" />}
+                icon={<Button.Icon name="close" />}
                 label="Keep editing"
                 onPress={() => setLeave(null)}
                 variant="quiet"
