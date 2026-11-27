@@ -2,6 +2,8 @@ import type { ComponentProps } from 'react';
 import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
+import { CSS_EASE_OUT, DURATION } from '@/lib/motion';
+
 import { usePressHandler, type PressBehaviorProps } from './press-behavior';
 
 export { longPressAction, type PressBehavior } from './press-behavior';
@@ -15,9 +17,9 @@ const ACTIVE_OPACITY = 0.5;
 const MIN_SCALE = 0.96;
 // react-native's types lack CSS transitions; react-native-web applies them.
 const FEEDBACK = {
-  transitionDuration: '250ms',
+  transitionDuration: `${DURATION.enter}ms`,
   transitionProperty: 'opacity, transform',
-  transitionTimingFunction: 'ease',
+  transitionTimingFunction: CSS_EASE_OUT,
   userSelect: 'none',
 } as ViewStyle;
 
