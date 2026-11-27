@@ -200,8 +200,9 @@ never `pod update` (`docs/solutions/pod-install-stale-podfile-lock.md`).
   (`docs/solutions/offline-reads-and-queued-logs.md`). No other write waits:
   mutations run with `networkMode: 'always'` and fail offline with their links.
 - A confirmed episode log is drawn at once, before a provider read shows it
-  (`features/log-media/optimistic.ts`). `useOptimistic` holds it while the
-  write runs, and the pending queue holds it offline. A card moves only to an
+  (`features/log-media/optimistic.ts`). A mutation of its own holds it while
+  the write runs, never an async transition, which React 19 joins with every
+  other one. The pending queue holds it offline. A card moves only to an
   episode the data proves, and a failed write puts it back. The log path never
   reconciles against this state.
 - Never a dead-end error. A write the platform can't do

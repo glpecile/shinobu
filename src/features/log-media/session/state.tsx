@@ -1,12 +1,5 @@
-import {
-  createContext,
-  startTransition,
-  useContext,
-  useOptimistic,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useMutation, useMutationState } from '@tanstack/react-query';
+import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
 
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import type { LogRequest } from '@/features/log-media/log-request';
@@ -28,6 +21,13 @@ const StateContext = createContext<{
 
 const NONE: readonly LoggedWatch[] = [];
 
+const LOGGED_WATCH_KEY = ['logged-watch'] as const;
+
+interface HeldWatch {
+  watch: LoggedWatch;
+  work: Promise<unknown>;
+}
+
 const ControlContext = createContext<{
   openCatchUp: (entry: UpNextEpisodeEntry) => void;
   openLog: (request: LogRequest) => void;
@@ -48,10 +48,14 @@ export function CatchUpLogProvider({ children }: { children: ReactNode }) {
   const open = session != null && openId === session.id;
   const [busy, setBusy] = useState<ReadonlyMap<string, number>>(new Map());
   const idRef = useRef(0);
-  const [inFlight, addInFlight] = useOptimistic(NONE, (current, watch: LoggedWatch) => [
-    ...current,
-    watch,
-  ]);
+  const { mutate: holdWatch } = useMutation({
+    mutationKey: LOGGED_WATCH_KEY,
+    mutationFn: ({ work }: HeldWatch) => work,
+  });
+  const inFlight = useMutationState({
+    filters: { mutationKey: LOGGED_WATCH_KEY, status: 'pending' },
+    select: (mutation) => (mutation.state.variables as HeldWatch).watch,
+  });
   const queued = usePendingLogs().flatMap((record) =>
     Object.values(record.legs).some((leg) => leg.state !== 'failed')
       ? (loggedWatch(record.variables) ?? [])
@@ -94,11 +98,7 @@ export function CatchUpLogProvider({ children }: { children: ReactNode }) {
   };
 
   const trackLog = (watch: LoggedWatch | null, work: Promise<unknown>) => {
-    if (watch == null) return;
-    startTransition(async () => {
-      addInFlight(watch);
-      await work.catch(() => {});
-    });
+    if (watch != null) holdWatch({ watch, work });
   };
 
   return (

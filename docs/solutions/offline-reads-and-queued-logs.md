@@ -21,6 +21,9 @@ window's events.
 - Every mutation runs with `networkMode: 'always'` (`query-client.ts`). A
   write never waits in memory for a connection. Offline, it fails with its
   per-provider links, and a log goes to the queue below.
+- `components/offline-banner.tsx` shows on Home and Diary while the app
+  counts as offline. It reads the same `onlineManager` state that pauses
+  reads, so on web it shows only after the window's `offline` event.
 - No mutation enters the persisted snapshot (`shouldDehydrateMutation` in
   `persist.ts`). `networkMode: 'always'` does not make this redundant: a
   mutation that waits in its `scope` is paused too, and a restored one has no
@@ -112,19 +115,38 @@ is dropped silently.
 any provider read shows it: its Continue Watching card moves and its season
 row ticks. This replaces plan 0019 KTD-6 ("nothing advances optimistically").
 
-- Two sources feed it. `useOptimistic` in `CatchUpLogProvider` holds a log
-  while its write and its refetches run (`LogMediaResult.settled`). The pending
-  queue holds a log that waits offline.
+- Two sources feed it. A `logged-watch` mutation in `CatchUpLogProvider`
+  holds a log while its write and its refetches run (`LogMediaResult.settled`),
+  one mutation per log. It is not `useOptimistic`, because React 19 joins
+  concurrent async transitions (`react-async-transitions-are-entangled.md`).
+  The pending queue holds a log that waits offline.
 - A failed write ends the optimistic state, so the card and the tick go back.
   A queued record whose legs all stopped is not drawn as watched.
 - A card moves only to an episode the data proves: the catch-up chain's next
   episode, or the next number of an unseasoned entry (AniList, Simkl anime)
   while its backlog count lasts. Otherwise the card leaves the rail until the
   refetch. A seasoned entry can't count forward, because the next number may
-  belong to another season. Offline, a Trakt or Simkl TV card therefore leaves
-  the rail while its log waits.
+  belong to another season.
+- A queued record keeps the chain's next episode (`LogMediaVariables.next`),
+  so a Trakt or Simkl TV card moves there while its log waits. The chain needs
+  its evidence. Trakt show progress is in the snapshot. The Simkl library and
+  the season layout are not, so after an offline launch a Simkl TV chain has
+  one episode and its card leaves the rail.
 - It is display state only. The log path still reconciles against provider
   reads, never against this.
 - Films, books, the Diary feed and the watchlist are not drawn ahead.
 
-Not built: queued watchlist, list, pause and drop writes.
+## Writes that do not wait
+
+Watchlist, list, pause and drop writes do not queue. Offline, they fail with
+their provider links. This is a decision, not a gap (plan 0116, open question
+5):
+
+- An unattended replay of these writes has no read that can check it. A log
+  replay reads the provider's watch state first. A remove or a status change
+  has no such read.
+- A Simkl watchlist remove deletes the item's history
+  (`simkl-watchlist-remove-deletes-history.md`). A replay must never send it
+  without the user.
+- The user is in the app when they make these changes, so the link is a
+  working path. Offline demand is for logs, which `pending-logs.ts` covers.
