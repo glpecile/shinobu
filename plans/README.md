@@ -467,3 +467,122 @@ decision before a plan is honest.
   (module counts, font sizes, write cost, build times). Only #423 was read.
 - Runtime behaviour. No profiler, no device, no browser. All findings are
   from reading code and, for React Compiler claims, its compiled output.
+
+## Round 6: performance audit (2026-11-26)
+
+Owner request: a performance audit, with the fixes handed to `codex` and
+shipped by `agy`. Written against commit `6f8c3aad`. Four read-only auditors
+covered requests and invalidation, lists and render cost, cold start and
+bundle, and CPU loops and Effect. They weighted the code written since round
+5 (the offline log queue, pause and drop, reading, list forms). The advisor
+opened each cited file before a finding counted. No device, profiler or
+browser was used. Each plan claims less work, not more speed.
+
+Selection rule: confirmed in code, small, and checkable without a device. The
+owner was not asked to choose; the top seven by leverage were planned.
+
+| Plan                                                         | Title                                                              | `PERF.md` section | Priority | Effort | Risk | Status |
+| ------------------------------------------------------------ | ------------------------------------------------------------------ | ----------------- | -------- | ------ | ---- | ------ |
+| [040](040-diary-feed-derives-once-per-data-change.md)        | The diary feed derives its days once per data change               | Data layout       | P2       | S      | LOW  | DONE (review passed; PR pending) |
+| [041](041-web-hashed-assets-cache-immutable.md)              | Hashed web assets are cached as immutable                          | Cold start        | P2       | S      | LOW  | DONE (review passed; PR pending) |
+| [042](042-simkl-diary-parses-each-instant-once.md)           | The Simkl diary projection parses each instant once                | Data layout       | P3       | S      | LOW  | DONE (review passed; PR pending) |
+| [043](043-simkl-calendar-grouped-once-per-gather.md)         | Up Next groups the Simkl calendar by show once per gather          | Data layout       | P3       | S      | LOW  | DONE (review passed; PR pending) |
+| [044](044-book-log-refreshes-only-lists-with-the-book.md)    | A book log refreshes only the Hardcover lists that hold the book   | Invalidation      | P3       | S      | LOW  | DONE (review passed; PR pending) |
+| [045](045-library-indexes-built-once-per-snapshot.md)        | Watched-library indexes are built once per snapshot                | Lists             | P3       | S      | LOW  | DONE (review passed; PR pending) |
+| [046](046-watchlist-membership-indexes-inputs-once.md)       | Watchlist membership indexes the gathered inputs once per snapshot | Data layout       | P3       | S      | LOW  | DONE (review passed; PR pending) |
+
+The plans touch different files and have no dependencies. They ship as one
+branch (`perf/round-6`), one commit each. `codex` executed all seven. The
+advisor read each diff against its plan and re-ran the gates: typecheck and
+lint exit 0, 1,812 tests pass, and the plan 040 compile check prints
+`MEMOIZED`. Plan 040 was revised once during execution: the time zone read
+blocked the compiler memo, so it now goes through `useDeviceTimeZone`.
+
+### Findings not yet planned (round 6)
+
+Confirmed in code, but each needs a device, a design, or an owner decision.
+
+- **A pending-log replay invalidates once per queued log.**
+  `features/log-media/pending-log-replayer.tsx` `drain` sends each record
+  through `useLogMedia`, and each runs `invalidateAfterLog` in full. Five
+  queued episodes cause five rounds of library, diary, Up Next and watchlist
+  refetches, and each round cancels the last. A replay also reads each
+  provider's state fresh per record (`'strict'` reads). Batching both per
+  drain is M effort and touches the reconcile path that decides skip versus
+  log. Needs a design, not an S plan.
+- **A Serializd log always re-reads the Paused and Dropped lists and
+  invalidates all three status lists and Coming Soon**
+  (`serializd/writes.ts` → `resumeOnSerializd`, `use-log-media.ts`
+  Serializd branch). Gating the invalidation on "the show moved" needs the
+  write result to carry that fact. It is unknown whether the server changes
+  Currently Watching on a log (`docs/solutions/tracking-status-provider-support.md`).
+- **A Simkl or Serializd pause or drop downloads its status source twice**
+  (`features/tracking-status/use-tracking-status.ts` reads outside the shared
+  query key, then invalidates it). Rare action, low cost.
+- **A Hardcover- or Serializd-only pause or drop regathers Up Next**, which
+  reads neither provider (`features/watchlist-media/invalidate.ts`). Same
+  family as the round 5 item about manga logs.
+- **Closed native sheets keep their content mounted**
+  (`components/sheet/index.tsx` does not pass `lazy`). A closed card-actions
+  sheet keeps about 10 query observers per host screen, and every log
+  refetches the film-plays read of the last item each sheet showed. `lazy`
+  changes mount timing and resets sheet state on reopen. Needs device QA.
+- **The progress scrubber re-renders `LogConfirmForm` on every touch move**
+  (`features/log-media/progress-scrubber.tsx`, `reading-progress-field.tsx`
+  `setPage` returns a new object even when the page did not change). M effort
+  and a visible behaviour to check on a device.
+- **`serializd-list-detail.tsx` rebuilds its rows on every owner render**
+  (the derivation sits between hooks; `letterboxd-list-detail.tsx` already
+  fixed this by calling the hooks first). `new-list-form.tsx` watches `items`
+  together with `name`, so each keystroke re-renders the picked rows. Both
+  can use the compile check from plan 040.
+- **Two episode push sites skip the TMDB episode prefetch**
+  (`anime-seasons-section.tsx`, `episode-actions-sheet.tsx`). Not confirmed
+  that the anime episode screen resolves the same TMDB id.
+- **zod ships 60 unused locales in the web `__common` chunk** (about 93 KB
+  gzip for all of zod, 39 KB of it locales; 8 small form schemas use it).
+  Effect Schema is already bundled and `@hookform/resolvers/standard-schema`
+  is installed. M effort, and validation messages must be checked per form.
+- **The web boot splash waits on Inter Italic** (106 KB, 30 % of the preloaded
+  fonts), which only markdown `em` uses. Removing it from the preload shows a
+  fallback italic for a moment. Owner decision.
+- **Two oversized images**: `public/splash-icon.png` is 1024 px for a 200 px
+  mark (77 KB), and the "Orion" icon preview in Settings requires the 1.7 MB
+  icon source. Both need a new image asset.
+- **Unhashed `/fonts/*` and the splash image are served with `max-age=0`.**
+  Plan 041 covers only hashed files. A lifetime for unhashed files is an
+  owner decision.
+- **Native fonts load at runtime before the first render** (`useFonts` gates
+  `appReady`). Embedding them through the `expo-font` plugin needs a Perfetto
+  timing first, and it is a native change.
+- **`nextDiaryCursor` runs on every Diary render** through
+  `getNextPageParam`. Plan 040 leaves it.
+- **`entryNumberFor` scans the whole ani.zip map per episode**
+  (`lib/providers/mapping/episode-translation.ts`). Only long-runner batch
+  logs pay for it.
+
+### Considered and rejected (round 6)
+
+- **Effect usage**: all 20 `Effect.fn("…")` sites are top-level reads or
+  writes, every `forEach`/`all` over a collection has a numeric
+  `concurrency`, and there is no layer, retry or schedule in `src/`. Nothing
+  to fix.
+- **CI caching**: a CI run takes about 28 s and `bun install` takes 4 s.
+- **Effect barrel imports, `export *` barrels on the launch path**: none.
+- **`PendingLogReplayer` at root mount**: one MMKV read when the queue is
+  empty.
+- **The Ionicons glyph map on web**: about 8 KB gzip.
+- **`tag-picker.tsx` re-renders 24 chips per keystroke**: too small without
+  a trace.
+- **Nested scans in `dedupeByTmdb`, `withLoggedEpisodes`, notification
+  dedupe, `traktHasFilm`**: tens × tens, or once per log.
+- **`wikidata.ts`, `continue-reading.ts`, `reading-bridge.ts`,
+  `hardcover/reads.ts`, `add-to-list-picker.tsx`**: one request per read and
+  scoped invalidations.
+
+### Not audited in round 6
+
+- Native code, `src/app/dev/*`, `src/app/up-next-demo.tsx`, `worker/` proxies.
+- Runtime behaviour. No profiler, no device, no browser. React Compiler
+  claims come from its compiled output.
+- Categories other than performance.
