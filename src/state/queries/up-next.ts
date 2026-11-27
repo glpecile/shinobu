@@ -258,10 +258,10 @@ function simklAiredByCount(entry: SimklLibraryEntry): boolean {
 /** When the progress snapshot has no next pointer, use the aired calendar entry. */
 function calendarPointer(
   entry: SimklLibraryEntry,
-  airingsByShow: ReadonlyMap<number, SimklCalendarEntry[]> | undefined,
+  airingsByShow: ReadonlyMap<number, SimklCalendarEntry[]>,
 ): SimklNextToWatch | undefined {
   const simklId = entry.item.externalIds.simkl;
-  const airings = simklId == null ? [] : (airingsByShow?.get(simklId) ?? []);
+  const airings = simklId == null ? [] : (airingsByShow.get(simklId) ?? []);
   const [next] = airings
     .filter(
       (airing) =>
@@ -285,7 +285,7 @@ function calendarPointer(
 
 function simklProgressInput(
   entry: SimklLibraryEntry,
-  airingsByShow: ReadonlyMap<number, SimklCalendarEntry[]> | undefined,
+  airingsByShow: ReadonlyMap<number, SimklCalendarEntry[]>,
 ): ProgressUpNextInput {
   const next = entry.nextToWatch ?? calendarPointer(entry, airingsByShow);
   if (next == null) return { item: entry.item, source: Provider.Simkl };
@@ -351,13 +351,11 @@ async function simklInputs(queryClient: QueryClient): Promise<ProgressUpNextInpu
         () => [],
       )
     : [];
-  const airingsByShow = airings.length > 0 ? new Map<number, SimklCalendarEntry[]>() : undefined;
-  if (airingsByShow != null) {
-    for (const airing of airings) {
-      const bucket = airingsByShow.get(airing.simklId);
-      if (bucket == null) airingsByShow.set(airing.simklId, [airing]);
-      else bucket.push(airing);
-    }
+  const airingsByShow = new Map<number, SimklCalendarEntry[]>();
+  for (const airing of airings) {
+    const bucket = airingsByShow.get(airing.simklId);
+    if (bucket == null) airingsByShow.set(airing.simklId, [airing]);
+    else bucket.push(airing);
   }
   return entries.map((entry) => simklProgressInput(entry, airingsByShow));
 }
