@@ -6,16 +6,16 @@ export interface LoggedWatch {
   item: NormalizedMediaItem;
   episodes: readonly { season: number; number: number }[];
   entryEpisodes: readonly number[];
-  next?: Pick<UpNextEpisode, 'season' | 'number' | 'title'>;
+  next?: LogMediaVariables['next'];
 }
 
 export function loggedWatch(
-  variables: Pick<LogMediaVariables, 'item' | 'episode' | 'episodes' | 'entryEpisodes'>,
-  next?: LoggedWatch['next'],
+  variables: Pick<LogMediaVariables, 'item' | 'episode' | 'episodes' | 'entryEpisodes' | 'next'>,
 ): LoggedWatch | null {
   const episodes = variables.episodes ?? (variables.episode != null ? [variables.episode] : []);
   const entryEpisodes = variables.entryEpisodes ?? [];
   if (episodes.length + entryEpisodes.length === 0) return null;
+  const { next } = variables;
   return { item: variables.item, episodes, entryEpisodes, ...(next != null ? { next } : {}) };
 }
 

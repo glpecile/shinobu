@@ -376,12 +376,12 @@ function CatchUpForm({
     return rows;
   }
 
-  function fire(episode: CatchUpEpisode, variables: LogMediaVariables, next?: CatchUpEpisode) {
+  function fire(episode: CatchUpEpisode, variables: LogMediaVariables) {
     const episodeCode = capitalize(catchUpEpisodeCode(episode));
     record(episode, { status: 'pending' });
     const write = logMedia.mutateAsync(variables);
     trackLog(
-      loggedWatch(variables, next),
+      loggedWatch(variables),
       write.then((result) => result.settled),
     );
 
@@ -441,7 +441,8 @@ function CatchUpForm({
           sequelEpochRef.current = providerSessionEpoch(Provider.AniList);
       }
     }
-    fire(episode, variablesFor(episode), plan[index + 1]);
+    const next = plan[index + 1];
+    fire(episode, { ...variablesFor(episode), ...(next != null ? { next } : {}) });
 
     if (index >= plan.length - 1) return;
     setIndex(index + 1);

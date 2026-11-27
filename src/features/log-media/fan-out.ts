@@ -1,4 +1,5 @@
 import { ProviderNetworkError, ProviderRateLimitError } from '@/lib/providers/errors';
+import type { UpNextEpisode } from '@/features/up-next/types';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -33,6 +34,11 @@ export interface LogMediaVariables {
   };
   /** Pending-log record id; skips targets whose watch-state read gets no answer. */
   replay?: string;
+  /**
+   * The episode the catch-up chain proved comes next. Display only: the Up
+   * Next card moves to it while the log runs or waits offline.
+   */
+  next?: Pick<UpNextEpisode, 'season' | 'number' | 'title'>;
 }
 
 export type ProviderWriteResult =

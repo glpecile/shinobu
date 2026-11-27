@@ -56,10 +56,11 @@ describe('withLoggedEpisodes', () => {
 
   test('a seasoned card moves to the episode the catch-up chain proved', () => {
     const logged = [
-      loggedWatch(
-        { item: traktShow, episodes: [{ season: 1, number: 12 }] },
-        { season: 2, number: 1 },
-      )!,
+      loggedWatch({
+        item: traktShow,
+        episodes: [{ season: 1, number: 12 }],
+        next: { season: 2, number: 1 },
+      })!,
     ];
 
     expect(withLoggedEpisodes([seasoned], logged)).toMatchObject([

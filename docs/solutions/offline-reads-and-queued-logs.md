@@ -123,8 +123,12 @@ row ticks. This replaces plan 0019 KTD-6 ("nothing advances optimistically").
   episode, or the next number of an unseasoned entry (AniList, Simkl anime)
   while its backlog count lasts. Otherwise the card leaves the rail until the
   refetch. A seasoned entry can't count forward, because the next number may
-  belong to another season. Offline, a Trakt or Simkl TV card therefore leaves
-  the rail while its log waits.
+  belong to another season.
+- A queued record keeps the chain's next episode (`LogMediaVariables.next`),
+  so a Trakt or Simkl TV card moves there while its log waits. The chain needs
+  its evidence. Trakt show progress is in the snapshot. The Simkl library and
+  the season layout are not, so after an offline launch a Simkl TV chain has
+  one episode and its card leaves the rail.
 - It is display state only. The log path still reconciles against provider
   reads, never against this.
 - Films, books, the Diary feed and the watchlist are not drawn ahead.
