@@ -345,6 +345,7 @@
         "shinobu/no-unguarded-push": "error",
         "shinobu/no-hardcoded-routes": "error",
         "shinobu/log-color-only": "error",
+        "shinobu/no-adhoc-tints": "error",
         "shinobu/no-pointer-events-prop": "error",
         "shinobu/no-provider-literals": "error",
         "shinobu/reanimated-no-deps": "error",
