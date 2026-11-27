@@ -88,7 +88,7 @@ export function Tooltip({
       if (!instant) {
         popover.toggleAttribute('data-instant', true);
         popover.hidePopover();
-        void popover.offsetHeight;
+        popover.getBoundingClientRect();
         popover.toggleAttribute('data-instant', false);
         popover.showPopover();
       }
