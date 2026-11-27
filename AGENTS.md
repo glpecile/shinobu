@@ -406,4 +406,6 @@ Props that describe state, like `disabled`, are fine.
   `NNN-status-priority-title.md`.
 - `.agents/skills/` holds vendored skills pinned in `skills-lock.json`. Add one
   with `bunx skills add <repo> --skill <name> -y -a claude-code` and never edit
-  it by hand. If a skill contradicts this file, remove the skill.
+  it by hand. If a skill contradicts this file, remove the skill. A skill
+  missing from `skills-lock.json`, such as `release`, belongs to this repo.
+  Edit it like code.
