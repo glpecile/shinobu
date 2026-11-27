@@ -41,8 +41,8 @@ git tag vX.Y.Z
 git push --atomic origin main vX.Y.Z
 ```
 
-`--atomic` keeps a rejected `main` from publishing the tag alone. Never push
-`--tags`, force-push, rebase, or move a tag. A rejected push is a blocker.
+Never push `--tags`, force-push, rebase, or move a tag. A rejected push is a
+blocker.
 
 ## 4. Watch the workflow
 
