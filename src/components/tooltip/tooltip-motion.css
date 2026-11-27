@@ -1,0 +1,53 @@
+@media (hover: hover) and (pointer: fine) {
+  [data-shinobu-tooltip] {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+    transform-origin: 50% 100%;
+    transition:
+      opacity var(--tooltip-exit) var(--tooltip-ease),
+      transform var(--tooltip-exit) var(--tooltip-ease),
+      overlay var(--tooltip-exit) allow-discrete,
+      display var(--tooltip-exit) allow-discrete;
+  }
+
+  [data-shinobu-tooltip][data-side='bottom'] {
+    transform: translateY(-4px) scale(0.97);
+    transform-origin: 50% 0%;
+  }
+
+  [data-shinobu-tooltip]:popover-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition-duration: var(--tooltip-enter);
+  }
+
+  @starting-style {
+    [data-shinobu-tooltip]:popover-open {
+      opacity: 0;
+      transform: translateY(4px) scale(0.97);
+    }
+
+    [data-shinobu-tooltip][data-side='bottom']:popover-open {
+      transform: translateY(-4px) scale(0.97);
+    }
+  }
+
+  [data-shinobu-tooltip][data-instant] {
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-shinobu-tooltip],
+    [data-shinobu-tooltip][data-side='bottom'],
+    [data-shinobu-tooltip]:popover-open {
+      transform: none;
+    }
+
+    @starting-style {
+      [data-shinobu-tooltip]:popover-open,
+      [data-shinobu-tooltip][data-side='bottom']:popover-open {
+        transform: none;
+      }
+    }
+  }
+}

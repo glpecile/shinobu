@@ -39,7 +39,7 @@
     "expo-task-manager": "~58.0.14",
     "expo-web-browser": "~58.1.0",
     "nitro-webview": "github:l2hyunwoo/nitro-webview#275e9185a7d969ec08e96368d3825db70e796acb",
-    "pressto": "^0.7.0",
+    "pressto": "^0.8.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-error-boundary": "^6.1.6",

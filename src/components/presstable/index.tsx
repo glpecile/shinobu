@@ -1,6 +1,8 @@
 import { createAnimatedPressable, PressableOpacity } from 'pressto';
 import type { ComponentProps, MouseEventHandler } from 'react';
 import { interpolate, useReducedMotion } from 'react-native-reanimated';
+
+import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { withUniwind } from '@/lib/with-uniwind';
 
 import { longPressAction, usePressHandler, type PressBehaviorProps } from './press-behavior';
@@ -14,6 +16,7 @@ export { longPressAction, type PressBehavior } from './press-behavior';
 // (docs/solutions/android-ripple-ignores-child-radius.md). `'transparent'` skips
 // `createSelectableDrawable` entirely, whereas `undefined` falls back to the theme ripple.
 const RIPPLE_COLOR = 'transparent';
+const PRESS_ANIMATION = { duration: DURATION.enter, easing: KEYFRAME_EASE_OUT };
 
 const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion?: boolean }>(
   (progress, { config, metadata }) => {
@@ -34,11 +37,6 @@ const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion
     };
   },
 );
-/*
- * Neither wrapper takes `onPressIn`: pressto 0.7 fires it from gesture-handler
- * 2's `onBegan`, which gesture-handler 3's button renamed to `onBegin`, so it
- * would never run.
- */
 const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
 
@@ -58,6 +56,8 @@ export function PresstableScale({
   // Android refresh pulls can leave the button without activating a scroll gesture.
   return (
     <UniwindPressableScale
+      animationConfig={PRESS_ANIMATION}
+      animationType="timing"
       rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
       {...longPressAction(onLongPress)}
@@ -72,6 +72,7 @@ export function PresstableScale({
 export function PresstableOpacity({
   onPress,
   onLongPress,
+  onMouseDown: _onMouseDown,
   pressBehavior = 'prevent-repeat',
   ...rest
 }: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn' | 'onLongPress'> &
@@ -83,6 +84,8 @@ export function PresstableOpacity({
   const handlePress = usePressHandler(onPress, pressBehavior);
   return (
     <UniwindPressableOpacity
+      animationConfig={PRESS_ANIMATION}
+      animationType="timing"
       rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
       {...longPressAction(onLongPress)}

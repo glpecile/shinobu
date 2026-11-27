@@ -81,6 +81,7 @@ export function SearchField({
           accessibilityLabel="Clear search"
           accessibilityRole="button"
           className="w-11 h-11 items-center justify-center"
+          onMouseDown={(event) => event.preventDefault()}
           onPress={() => {
             if (onClear) onClear();
             else onChangeText('');

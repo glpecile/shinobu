@@ -12,5 +12,6 @@ export function showToast(
 ) {
   toast.custom(() => createElement(ToastCard, { kind, title, message }), {
     duration,
+    id: `${kind}:${title}:${message ?? ''}`,
   });
 }

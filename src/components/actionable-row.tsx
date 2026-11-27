@@ -1,9 +1,10 @@
-import { useState, type ComponentProps, type ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PresstableScale } from '@/components/presstable';
 import { useNewTabPress } from '@/components/use-new-tab-press';
+import { usePointerHover } from '@/components/use-pointer-hover';
 import { cn } from '@/lib/cn';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -73,7 +74,7 @@ export function ActionableRow({
   accessibility,
   showActions = false,
 }: ActionableRowProps) {
-  const [hovered, setHovered] = useState(false);
+  const { hovered, hoverProps } = usePointerHover(item.id);
   const newTab = useNewTabPress(href);
 
   const pressProps = {
@@ -109,8 +110,7 @@ export function ActionableRow({
     <View
       className={cn('flex-row items-center', className)}
       onPointerDown={newTab.onPointerDown}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      {...hoverProps}
     >
       <PresstableScale
         className={cn('flex-row items-center shrink min-w-0', showActions && 'flex-1')}

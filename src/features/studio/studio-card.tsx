@@ -1,11 +1,11 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PresstableScale } from '@/components/presstable';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { usePointerHover } from '@/components/use-pointer-hover';
 import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedStudio } from '@/types/media';
 
@@ -20,14 +20,12 @@ export function StudioCard({
   onActions?: () => void;
 }) {
   const muted = useThemeColor('--color-muted');
-  // JS hover state: uniwind has no `group-hover:`.
-  const [hovered, setHovered] = useState(false);
+  const { hovered, hoverProps } = usePointerHover();
 
   return (
     <View
       className="w-32 relative"
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      {...hoverProps}
     >
       <PresstableScale
         accessibilityLabel={studio.name}

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
@@ -7,6 +6,7 @@ import { MorphText } from '@/components/morph-text';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableScale } from '@/components/presstable';
+import { usePointerHover } from '@/components/use-pointer-hover';
 import { ReadingLogButton } from '@/features/log-media/reading-log-button';
 import { percentRead } from '@/features/log-media/reading-share';
 import { usePushRoute } from '@/lib/navigation';
@@ -45,15 +45,11 @@ export function ReadingCard({
   const progress = readingProgress(item, inPages);
   const pushRoute = usePushRoute();
   const prefetchDetails = usePrefetchMediaDetails();
-  const [hovered, setHovered] = useState(false);
+  const { hovered, hoverProps } = usePointerHover(item.id);
 
   return (
     <View className="w-32">
-      <View
-        className="w-32 h-48"
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
-      >
+      <View className="w-32 h-48" {...hoverProps}>
         <PresstableScale
           accessibilityLabel={[title, progress].filter(Boolean).join(', ')}
           accessibilityRole="button"

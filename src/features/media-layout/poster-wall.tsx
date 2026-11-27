@@ -1,5 +1,4 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 
@@ -7,6 +6,7 @@ import { List } from '@/components/List';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterFace } from '@/components/poster-face';
 import { PresstableScale } from '@/components/presstable';
+import { usePointerHover } from '@/components/use-pointer-hover';
 import { RefreshControl } from '@/components/refresh-control';
 import { WatchedMark } from '@/components/watched-mark';
 import type { MediaProgress } from '@/lib/media-progress';
@@ -60,13 +60,7 @@ export function PosterCell({
   note?: string;
 }) {
   const prefetchDetails = usePrefetchMediaDetails();
-  // Uniwind has no group-hover:, so web hover uses RN-web pointer events.
-  const [hovered, setHovered] = useState(false);
-  const [hoveredId, setHoveredId] = useState(item.id);
-  if (hoveredId !== item.id) {
-    setHoveredId(item.id);
-    setHovered(false);
-  }
+  const { hovered, hoverProps } = usePointerHover(item.id);
   const showChrome = process.env.EXPO_OS === 'web' && hovered;
   const label = item.year == null ? item.title : `${item.title} (${item.year})`;
   const providers = sources.map((id) => PROVIDERS[id].label).join(', ');
@@ -117,8 +111,7 @@ export function PosterCell({
     <View style={{ padding: GAP / 2 }}>
       <View
         className="w-full relative"
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
+        {...hoverProps}
         style={{ aspectRatio: POSTER_ASPECT }}
       >
         <PresstableScale

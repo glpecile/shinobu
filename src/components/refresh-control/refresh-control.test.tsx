@@ -16,6 +16,7 @@ let pan: {
 };
 let doubleTap: () => void;
 const offset = shared(0);
+const withSpring = mock((value: number) => value);
 const withTiming = mock((value: number) => value);
 const failGesture = mock((_tag: number) => {});
 function View({ children }: PropsWithChildren) {
@@ -44,7 +45,7 @@ mock.module('react-native-reanimated', () => ({
   useDerivedValue: (get: () => number) => ({ get }),
   useAnimatedStyle: () => ({}),
   useAnimatedReaction: () => {},
-  withSpring: (value: number) => value,
+  withSpring,
   withTiming,
   scrollTo: () => {},
 }));
@@ -132,6 +133,31 @@ test('an active pull cannot start another refresh after a tab double-tap', async
     withTiming.mockImplementationOnce(() => 100);
     act(() => doubleTap());
     act(() => pan.onFinalize({ canceled: false }));
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  } finally {
+    await act(async () => {
+      pending.resolve();
+    });
+    view.unmount();
+  }
+});
+
+test('re-grabbing a pull mid-spring continues from the current pull offset', async () => {
+  const pending = Promise.withResolvers<void>();
+  const onRefresh = mock(() => pending.promise);
+  const view = render(<RefreshControl onRefresh={onRefresh} />);
+  try {
+    withSpring.mockImplementationOnce(() => 50);
+    act(() => {
+      pan.onUpdate({ changeY: 20, velocityY: 0 });
+      pan.onFinalize({ canceled: false });
+    });
+    expect(onRefresh).toHaveBeenCalledTimes(0);
+
+    act(() => {
+      pan.onUpdate({ changeY: 60, velocityY: 0 });
+      pan.onFinalize({ canceled: false });
+    });
     expect(onRefresh).toHaveBeenCalledTimes(1);
   } finally {
     await act(async () => {

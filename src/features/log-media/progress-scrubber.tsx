@@ -9,7 +9,7 @@ import {
 
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
-import { pageAt, percentRead } from './reading-share';
+import { pageAt, percentRead, stepPage } from './reading-share';
 
 const MARKS = [25, 50, 75];
 const SNAP = 2;
@@ -39,6 +39,10 @@ export function ProgressScrubber({
     if (mark != null && mark !== snapped.current) haptics.selection();
     snapped.current = mark;
     onChange(pageAt(mark ?? at, total));
+  }
+
+  function jump(by: number) {
+    onChange(stepPage(page, total, by, false));
   }
 
   const tap = useTapGesture({
@@ -81,14 +85,23 @@ export function ProgressScrubber({
         }}
         onKeyDown={(event) => {
           if (disabled) return;
-          switch (event.nativeEvent.key) {
+          const { key, shiftKey } = event.nativeEvent;
+          switch (key) {
             case 'ArrowRight':
             case 'ArrowUp':
-              onStep(1);
+              if (shiftKey) jump(10);
+              else onStep(1);
               break;
             case 'ArrowLeft':
             case 'ArrowDown':
-              onStep(-1);
+              if (shiftKey) jump(-10);
+              else onStep(-1);
+              break;
+            case 'PageUp':
+              jump(10);
+              break;
+            case 'PageDown':
+              jump(-10);
               break;
             case 'Home':
               onChange(0);

@@ -48,7 +48,7 @@ No phone measurement was made, and no signed-in screens were measured.
 - Profile Gecko with the `nomarkerstacks` feature. Without it, the profiler
   captures a stack for each DOM style write. That made `style.touchAction`
   look like 45 % of the main thread. A timed loop showed about 1 µs per write.
-- pressto 0.7 passes `onBegan` and `onEnded`, which gesture handler 3's
-  `BaseButton` renamed. So a held press shows no feedback on web, checked in
-  Firefox, and the same code path runs on native. pressto 0.8.2 dims the
-  button.
+- pressto 0.7 passed `onBegan` and `onEnded`, which gesture handler 3's
+  `BaseButton` renamed, so a held press showed no feedback on native either.
+  pressto 0.8.2 renders gesture handler 3's `Touchable`, which reports press-in
+  and press-out.

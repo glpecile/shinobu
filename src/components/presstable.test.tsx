@@ -62,6 +62,11 @@ mock.module('react-native-reanimated', () => ({
     output[0] + value * (output[1] - output[0]),
   useReducedMotion: () => reduceMotion,
 }));
+mock.module('@/lib/motion', () => ({
+  CSS_EASE_OUT: 'cubic-bezier(0.23, 1, 0.32, 1)',
+  DURATION: { enter: 160 },
+  KEYFRAME_EASE_OUT: 'ease-out',
+}));
 mock.module('@/lib/with-uniwind', () => ({ withUniwind: (component: unknown) => component }));
 mock.module('react-native', () => require('react-native-web'));
 const { PresstableOpacity, PresstableScale } = await import('./presstable');
