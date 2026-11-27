@@ -33,12 +33,7 @@ export function watchlistSourcesFor(
   const positions = [`id:${item.id}`, ...watchlistMergeKeys(item)].flatMap(
     (key) => index.get(key) ?? [],
   );
-  const ordered = new Set(positions.sort((a, b) => a - b));
-  const sources = new Set<ProviderId>();
-  for (const position of ordered) {
-    sources.add(inputs[position].source);
-  }
-  return [...sources];
+  return [...new Set(positions.sort((a, b) => a - b).map((position) => inputs[position].source))];
 }
 
 function isWatchlistedIn(inputs: readonly WatchlistInput[], item: NormalizedMediaItem): boolean {
