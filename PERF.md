@@ -117,7 +117,7 @@ The vendored `effect-ts` skill covers only setup. These rules come from the Effe
 - In an accordion, keep the header height stable. Animate only the first rows of the section that opens. (#287)
 - Play an entrance animation once. Clear its marker on scroll and on remount. (#287, #328)
 - Do not animate row positions on web. (#239)
-- Animate a keyboard-driven position with a transform, not `bottom` or padding. With `ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS`, Reanimated applies a transform without a shadow-tree commit. The sheet's keyboard lift went from 3 missed frames to 0.5 (median) on a Pixel 8 Pro release build. (PR TBD)
+- Animate a keyboard-driven position with a transform, not `bottom` or padding. With `ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS`, Reanimated applies a transform without a shadow-tree commit. The sheet's keyboard lift went from 3 missed frames to 0.5 (median) on a Pixel 8 Pro release build. (PR #520)
 
 ## Build
 
