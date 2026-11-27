@@ -25,10 +25,12 @@ const { warmProviderConnections } = await import('./warm-connections');
 test('native connection warmups reach the transport once per session', async () => {
   warmProviderConnections(['simkl']);
   await new Promise<void>((resolve) => setImmediate(resolve));
-  expect(requests).toHaveLength(queued.length);
-  expect(requests.length).toBeGreaterThan(0);
+  const initialCount = queued.length;
+  expect(requests).toHaveLength(initialCount);
+  expect(initialCount).toBeGreaterThan(0);
 
   warmProviderConnections(['simkl']);
   await new Promise<void>((resolve) => setImmediate(resolve));
-  expect(requests).toHaveLength(queued.length);
+  expect(requests).toHaveLength(initialCount);
+  expect(queued).toHaveLength(initialCount);
 });

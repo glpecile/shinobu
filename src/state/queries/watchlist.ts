@@ -236,9 +236,8 @@ export function watchlistOptions(queryClient: QueryClient) {
     queryKey: watchlistQueryKeys.inputs(),
     queryFn: streamedQuery<WatchlistInputs, WatchlistInputs>({
       // Reading the signal lets streamedQuery stop cache writes after a purge.
-      streamFn: ({ signal: _signal }) => {
-        return streamWatchlistInputs(queryClient, currentUsableProviders());
-      },
+      streamFn: ({ signal: _signal }) =>
+        streamWatchlistInputs(queryClient, currentUsableProviders()),
       reducer: (_previous, partial) => partial,
       initialValue: NO_WATCHLIST_INPUTS,
       refetchMode: 'replace',
