@@ -12,3 +12,8 @@ test('the typed tokens are the ones global.css declares in both themes', () => {
   expect(names(dark)).toEqual([...THEME_COLOR_TOKENS]);
   expect([...names(light)].sort()).toEqual([...THEME_COLOR_TOKENS].sort());
 });
+
+test('DESIGN.md gives every token a role', () => {
+  const design = readFileSync(new URL('../../../DESIGN.md', import.meta.url), 'utf8');
+  expect(THEME_COLOR_TOKENS.filter((token) => !design.includes(`\`${token}\``))).toEqual([]);
+});
