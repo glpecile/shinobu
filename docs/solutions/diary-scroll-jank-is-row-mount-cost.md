@@ -96,13 +96,9 @@ changes) and draw two poster rows / four list rows ahead. This also covers
 
 ## Still open
 
-`useDiaryFeedQuery` re-runs `mergeDiaryEntries` + `groupDiaryEntries` on every
-render: each provider slice is built with `(query.data?.pages ?? []).flat()`, so
-the `states` array embeds query objects whose identity changes every render and
-React Compiler cannot hold the memo below it. Costs ~20ms per `DiaryScreen`
-render. It does **not** fire while dragging — only on page fetch and refresh —
-which is why it was left out of this pass. Fixing it means rebuilding `states`
-from stable primitives plus the already-memoized entry slices.
+`useDiaryFeedQuery` derives its feed in the infinite query's `select` and after
+the last hook, so the derivation runs once per data change. `nextDiaryCursor`
+still runs per render through `getNextPageParam`.
 
 `collapseDay`'s bucket lookup is `buckets.find(…)`, i.e. O(n²) in a day's
 entries. Harmless at four logs a day; the test corpus contains a **94-entry
