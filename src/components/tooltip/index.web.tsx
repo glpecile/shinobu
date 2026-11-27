@@ -1,4 +1,4 @@
-import { useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 const GAP = 6;
@@ -19,51 +19,73 @@ export function Tooltip({
   const id = useId();
   const bubble = useRef<HTMLDivElement>(null);
   const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const pressed = useRef(false);
+  const scrollCleanup = useRef<AbortController | null>(null);
   const lastTouch = useRef(0);
 
-  function show(target: HTMLDivElement) {
+  function cancelScroll() {
+    scrollCleanup.current?.abort();
+    scrollCleanup.current = null;
+  }
+
+  function hide(warm = false) {
+    clearTimeout(pending.current);
+    cancelScroll();
     const popover = bubble.current;
-    if (popover == null) return;
+    if (popover?.matches(':popover-open') !== true) return;
+    popover.hidePopover();
+    if (warm) warmUntil = Date.now() + WARM_WINDOW;
+  }
+
+  function watchScroll() {
+    cancelScroll();
+    const controller = new AbortController();
+    scrollCleanup.current = controller;
+    window.addEventListener('scroll', () => hide(), {
+      capture: true,
+      once: true,
+      signal: controller.signal,
+    });
+  }
+
+  function show(target: HTMLDivElement) {
+    clearTimeout(pending.current);
+    const popover = bubble.current;
+    if (popover == null || label === '') return;
     popover.showPopover();
     const bounds = target.getBoundingClientRect();
     const { offsetWidth: width, offsetHeight: height } = popover;
     const left = bounds.left + bounds.width / 2 - width / 2;
     const above = bounds.top - height - GAP;
-    popover.style.left = `${Math.min(Math.max(left, GAP), window.innerWidth - width - GAP)}px`;
+    popover.style.left = `${Math.max(GAP, Math.min(left, window.innerWidth - width - GAP))}px`;
     popover.style.top = `${above >= GAP ? above : bounds.bottom + GAP}px`;
+    watchScroll();
   }
 
-  function hide() {
-    clearTimeout(pending.current);
-    const popover = bubble.current;
-    if (popover?.matches(':popover-open') !== true) return;
-    popover.hidePopover();
-    warmUntil = Date.now() + WARM_WINDOW;
-  }
+  useEffect(
+    () => () => {
+      clearTimeout(pending.current);
+      cancelScroll();
+    },
+    [],
+  );
 
   return (
     <div
       aria-describedby={id}
       onPointerEnter={(event) => {
         if (event.pointerType === 'touch' || Date.now() - lastTouch.current < 50) return;
-        if (pressed.current) return;
+        clearTimeout(pending.current);
         const target = event.currentTarget;
-        window.addEventListener('scroll', hide, { capture: true, once: true });
+        watchScroll();
         if (Date.now() < warmUntil) show(target);
         else pending.current = setTimeout(() => show(target), OPEN_DELAY);
       }}
-      onPointerDown={() => {
-        pressed.current = true;
-        hide();
-      }}
+      onPointerDown={() => hide()}
       onPointerUp={(event) => {
         if (event.pointerType === 'touch') lastTouch.current = Date.now();
       }}
       onPointerLeave={(event) => {
-        pressed.current = false;
-        window.removeEventListener('scroll', hide, { capture: true });
-        if (!event.currentTarget.contains(document.activeElement)) hide();
+        if (!event.currentTarget.contains(document.activeElement)) hide(true);
         else clearTimeout(pending.current);
       }}
       onFocus={(event) => {
@@ -100,9 +122,10 @@ export function Tooltip({
           background: 'transparent',
           overflow: 'visible',
           pointerEvents: 'none',
+          maxWidth: `calc(100vw - ${GAP * 2}px)`,
         }}
       >
-        <View className="bg-toast-surface border border-border rounded-lg px-2.5 py-1.5 shadow-md">
+        <View className="max-w-full bg-toast-surface border border-border rounded-lg px-2.5 py-1.5 shadow-md">
           <Text className="text-foreground font-sans text-xs" numberOfLines={1}>
             {label}
           </Text>
