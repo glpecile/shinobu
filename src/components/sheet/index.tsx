@@ -34,9 +34,10 @@ export interface SheetProps {
 
 export function Sheet({ open, onClose, children }: SheetProps) {
   const reduceMotion = useReducedMotion();
-  // Negative while the keyboard is up, tracked per frame on the UI thread.
   const keyboard = useReanimatedKeyboardAnimation();
-  const lift = useAnimatedStyle(() => ({ bottom: open ? -keyboard.height.get() : 0 }));
+  const lift = useAnimatedStyle(() => ({
+    transform: [{ translateY: open ? keyboard.height.get() : 0 }],
+  }));
   // Only Android applies `settleDuration` before `index`, so a controlled dismissal
   // can use a shorter duration than opening.
   const settleDuration = reduceMotion
@@ -62,7 +63,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
       }}
       scrimColor="rgba(0, 0, 0, 0.6)"
       settleDuration={settleDuration}
-      // Resize the host above the keyboard, never the content, which crashes Fabric
+      // Move the host above the keyboard, never the content, which crashes Fabric
       // (docs/solutions/bottom-sheet-content-detent-clips-tall-content.md). The lib
       // types `style` as static, but `wrapNativeView` forwards animated styles to it.
       style={lift as unknown as ViewStyle}
@@ -106,11 +107,14 @@ function subscribeNothing() {
 function SheetContent({ open, children }: { open: boolean; children: ReactNode }) {
   // Closed sheets stay mounted, so only the open one listens: otherwise a
   // keyboard re-renders and recommits every sheet on the screen.
-  const keyboardVisible = useSyncExternalStore(
+  const keyboardHeight = useSyncExternalStore(
     open ? subscribeKeyboard : subscribeNothing,
-    () => open && KeyboardController.isVisible(),
+    () => (open && KeyboardController.isVisible() ? KeyboardController.state().height : 0),
   );
-  const maxHeight = Math.round(useWindowDimensions().height * MAX_SHEET_FRACTION);
+  const keyboardVisible = keyboardHeight > 0;
+  const maxHeight = Math.round(
+    (useWindowDimensions().height - keyboardHeight) * MAX_SHEET_FRACTION,
+  );
   const [contentHeight, setContentHeight] = useState<number | null>(null);
 
   function measure(event: LayoutChangeEvent) {
@@ -127,7 +131,7 @@ function SheetContent({ open, children }: { open: boolean; children: ReactNode }
     </View>
   );
 
-  // Enable scroll when the keyboard shrinks the lifted host; otherwise keep short iOS sheets draggable-to-dismiss.
+  // Enable scroll while the keyboard is up; otherwise keep short iOS sheets draggable-to-dismiss.
   const scroller = (
     <ScrollView
       keyboardShouldPersistTaps="handled"

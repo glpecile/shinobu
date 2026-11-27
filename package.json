@@ -85,6 +85,11 @@
   },
   "private": true,
   "packageManager": "bun@1.4.4",
+  "reanimated": {
+    "staticFeatureFlags": {
+      "ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS": true
+    }
+  },
   "enriched-markdown": {
     "enableCodeHighlight": false,
     "enableMath": false
