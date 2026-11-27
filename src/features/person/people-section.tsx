@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 
@@ -8,6 +7,7 @@ import { PresstableScale } from '@/components/presstable';
 import { useRailFade } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { usePointerHover } from '@/components/use-pointer-hover';
 import { usePushRoute } from '@/lib/navigation';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 
@@ -47,8 +47,7 @@ function PersonCard({
   onPress?: () => void;
   onActions: (credit: PersonCredit) => void;
 }) {
-  // Uniwind has no group-hover:, so web hover uses RN-web pointer events.
-  const [hovered, setHovered] = useState(false);
+  const { hovered, hoverProps } = usePointerHover();
   const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
 
   const content = <PersonCardContent credit={credit} />;
@@ -57,8 +56,7 @@ function PersonCard({
     // Sibling, not child: nested gesture-handler buttons bubble presses into the card.
     <View
       className="w-24 mr-4 relative"
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      {...hoverProps}
     >
       {onPress == null ? (
         <PresstableScale

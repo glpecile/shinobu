@@ -326,7 +326,9 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
           return (
             <AnimatedView
               key={column}
-              onPointerEnter={() => setHovered(column)}
+              onPointerMove={(event) => {
+                if (event.nativeEvent.pointerType === 'mouse') setHovered(column);
+              }}
               onPointerLeave={() => setHovered((current) => (current === column ? null : current))}
               style={{
                 marginTop: -rhythm.offset * (size.height + size.gap),

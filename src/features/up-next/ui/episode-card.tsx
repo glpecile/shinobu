@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
@@ -7,6 +7,7 @@ import { MorphText } from '@/components/morph-text';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableScale } from '@/components/presstable';
+import { usePointerHover } from '@/components/use-pointer-hover';
 import type { CardBadge } from '@/features/up-next/badges';
 import { episodeHref } from '@/features/up-next/entry';
 import { groupLabel, type UpNextGroup } from '@/features/up-next/group';
@@ -43,15 +44,15 @@ export function EpisodeCard({
   const label = groupLabel(group);
   const stacked = entries.length > 1;
   const href = stacked ? undefined : episodeHref(lead);
-  const [hovered, setHovered] = useState(false);
-  const showActionsButton = onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
+  const { hovered, hoverProps } = usePointerHover();
+  const hasActionsButton = onActionsPress != null && process.env.EXPO_OS === 'web';
+  const showActionsButton = hasActionsButton && hovered;
 
   return (
     <View className={className}>
       <View
         className="w-full h-36"
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
+        {...hoverProps}
       >
         <PresstableScale
           accessibilityLabel={[title, label, ...badges.map((badge) => badge.label)].join(', ')}
@@ -113,12 +114,13 @@ export function EpisodeCard({
             </View>
           )}
         </PresstableScale>
-        {showActionsButton && (
+        {hasActionsButton && (
           <OverlayActionsButton
             className="absolute top-2 right-2"
             label={`More options for ${title}`}
             onPress={() => onActionsPress(lead.item)}
             size="md"
+            visible={hovered}
           />
         )}
       </View>

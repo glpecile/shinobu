@@ -1,11 +1,11 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PresstableScale } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useNewTabPress } from '@/components/use-new-tab-press';
+import { usePointerHover } from '@/components/use-pointer-hover';
 import { Provider } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 import { listMeta, type ListSummary } from './list-summary';
@@ -23,13 +23,11 @@ export function ListCard({
   onActions: (list: ListSummary) => void;
 }) {
   const newTab = useNewTabPress(list.href);
-  // JS hover, as the person card's: uniwind has no `group-hover:`.
-  const [hovered, setHovered] = useState(false);
+  const { hovered, hoverProps } = usePointerHover();
   return (
     <View
       onPointerDown={newTab.onPointerDown}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      {...hoverProps}
     >
       <PresstableScale
         accessibilityLabel={`${list.title}. ${listMeta(list)}`}

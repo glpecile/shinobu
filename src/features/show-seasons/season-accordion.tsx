@@ -1,5 +1,4 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 
@@ -8,6 +7,7 @@ import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PressableCard } from '@/components/pressable-card';
 import { PresstableOpacity } from '@/components/presstable';
+import { usePointerHover } from '@/components/use-pointer-hover';
 import { cn } from '@/lib/cn';
 import { formatAirDate } from '@/features/episode-details/episode-label';
 import { useThemeColor } from '@/lib/theme-color';
@@ -51,7 +51,7 @@ export function EpisodeRow({
   const muted = useThemeColor('--color-muted');
   const foreground = useThemeColor('--color-foreground');
   // Uniwind has no `group-hover:`, so web hover uses pointer events.
-  const [hovered, setHovered] = useState(false);
+  const { hovered, hoverProps } = usePointerHover();
   const compact = useWindowDimensions().width < 640;
   const hasActionsButton = process.env.EXPO_OS === 'web' && onActions != null;
   const airsOn = episode.firstAired == null ? null : formatAirDate(episode.firstAired);
@@ -86,8 +86,7 @@ export function EpisodeRow({
     // children — nesting gesture-handler buttons lets a press bubble through.
     <View
       className="flex-row items-center pr-4 border-b border-border"
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      {...hoverProps}
     >
       {onOpen == null ? (
         <View className="flex-1 flex-row items-center pl-4 py-3">{label}</View>

@@ -12,6 +12,7 @@ import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { longPressAction, PresstableScale } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useNewTabPress } from '@/components/use-new-tab-press';
+import { usePointerHover } from '@/components/use-pointer-hover';
 import { cn } from '@/lib/cn';
 import { allowRoutePush, usePushRoute } from '@/lib/navigation';
 import { sourceProviderOf } from '@/lib/providers/provider-links';
@@ -53,8 +54,7 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
   const sourceLabel = source == null ? null : source === 'tmdb' ? 'TMDB' : PROVIDERS[source].label;
   // Trakt's watched feed omits artwork; fetch it for visible cards.
   const { coverImage } = useTraktMediaImages(item);
-  // Uniwind has no group-hover support.
-  const [hovered, setHovered] = useState(false);
+  const { hovered, hoverProps } = usePointerHover();
   const pushRoute = usePushRoute();
   const reduceMotion = useReducedMotion();
   const [displayedUri, setDisplayedUri] = useState<string | null>(null);
@@ -133,8 +133,7 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
     <View
       className={cn('w-40 h-60 relative', className)}
       onPointerDown={newTab.onPointerDown}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      {...hoverProps}
     >
       {process.env.EXPO_OS === 'ios' ? (
         <Link
