@@ -112,9 +112,11 @@ is dropped silently.
 any provider read shows it: its Continue Watching card moves and its season
 row ticks. This replaces plan 0019 KTD-6 ("nothing advances optimistically").
 
-- Two sources feed it. `useOptimistic` in `CatchUpLogProvider` holds a log
-  while its write and its refetches run (`LogMediaResult.settled`). The pending
-  queue holds a log that waits offline.
+- Two sources feed it. A `logged-watch` mutation in `CatchUpLogProvider`
+  holds a log while its write and its refetches run (`LogMediaResult.settled`),
+  one mutation per log. It is not `useOptimistic`, because React 19 joins
+  concurrent async transitions (`react-async-transitions-are-entangled.md`).
+  The pending queue holds a log that waits offline.
 - A failed write ends the optimistic state, so the card and the tick go back.
   A queued record whose legs all stopped is not drawn as watched.
 - A card moves only to an episode the data proves: the catch-up chain's next
