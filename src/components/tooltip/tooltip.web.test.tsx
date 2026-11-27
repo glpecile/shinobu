@@ -4,6 +4,10 @@ import { afterAll, expect, mock, spyOn, test } from 'bun:test';
 GlobalRegistrator.register();
 afterAll(() => GlobalRegistrator.unregister());
 mock.module('react-native', () => require('react-native-web'));
+mock.module('@/lib/motion', () => ({
+  CSS_EASE_OUT: 'cubic-bezier(0.23, 1, 0.32, 1)',
+  DURATION: { enter: 160, exit: 120 },
+}));
 const { fireEvent, render } = await import('@testing-library/react');
 const { Tooltip } = await import('./index.web');
 
@@ -64,6 +68,7 @@ test('web tooltip warms only on pointer leave, closes focused popovers on scroll
     for (const fn of timers.values()) fn();
     timers.clear();
     expect(isFirstOpen()).toBe(true);
+    expect(firstTip.hasAttribute('data-instant')).toBe(false);
     expect(Number.parseFloat(firstTip.style.left)).toBeGreaterThanOrEqual(6);
 
     // Scroll hides without warming the second tooltip.
@@ -78,25 +83,27 @@ test('web tooltip warms only on pointer leave, closes focused popovers on scroll
     for (const fn of timers.values()) fn();
     timers.clear();
     expect(isSecondOpen()).toBe(true);
-    // Pointer leave warms the next tooltip within 300ms.
+    // Pointer leave warms the next tooltip within 300ms (and skips animation).
     fireEvent.pointerLeave(secondWrap);
     expect(isSecondOpen()).toBe(false);
     now += 100;
     fireEvent.pointerEnter(firstWrap, { pointerType: 'mouse' });
     expect(isFirstOpen()).toBe(true);
+    expect(firstTip.hasAttribute('data-instant')).toBe(true);
 
     // Escape closes without warming.
     fireEvent.keyDown(firstWrap, { key: 'Escape' });
     expect(isFirstOpen()).toBe(false);
     now += 400;
 
-    // Keyboard focus opens and closes on scroll.
+    // Keyboard focus opens instantly and closes on scroll.
     const origBtnMatches = firstBtn.matches.bind(firstBtn);
     spyOn(firstBtn, 'matches').mockImplementation((sel) =>
       sel === ':focus-visible' ? true : origBtnMatches(sel),
     );
     fireEvent.focus(firstBtn);
     expect(isFirstOpen()).toBe(true);
+    expect(firstTip.hasAttribute('data-instant')).toBe(true);
     fireEvent.scroll(window);
     expect(isFirstOpen()).toBe(false);
 

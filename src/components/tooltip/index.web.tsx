@@ -1,9 +1,18 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
+
+import { CSS_EASE_OUT, DURATION } from '@/lib/motion';
+
+import './tooltip-motion.css';
 
 const GAP = 6;
 const OPEN_DELAY = 500;
 const WARM_WINDOW = 300;
+const MOTION_VARS = {
+  '--tooltip-enter': `${DURATION.enter}ms`,
+  '--tooltip-exit': `${DURATION.exit}ms`,
+  '--tooltip-ease': CSS_EASE_OUT,
+} as CSSProperties;
 
 let warmUntil = 0;
 
@@ -47,15 +56,17 @@ export function Tooltip({
     });
   }
 
-  function show(target: HTMLDivElement) {
+  function show(target: HTMLDivElement, instant: boolean) {
     clearTimeout(pending.current);
     const popover = bubble.current;
     if (popover == null || label === '') return;
+    popover.toggleAttribute('data-instant', instant);
     popover.showPopover();
     const bounds = target.getBoundingClientRect();
     const { offsetWidth: width, offsetHeight: height } = popover;
     const left = bounds.left + bounds.width / 2 - width / 2;
     const above = bounds.top - height - GAP;
+    popover.dataset.side = above >= GAP ? 'top' : 'bottom';
     popover.style.left = `${Math.max(GAP, Math.min(left, window.innerWidth - width - GAP))}px`;
     popover.style.top = `${above >= GAP ? above : bounds.bottom + GAP}px`;
     watchScroll();
@@ -77,8 +88,8 @@ export function Tooltip({
         clearTimeout(pending.current);
         const target = event.currentTarget;
         watchScroll();
-        if (Date.now() < warmUntil) show(target);
-        else pending.current = setTimeout(() => show(target), OPEN_DELAY);
+        if (Date.now() < warmUntil) show(target, true);
+        else pending.current = setTimeout(() => show(target, false), OPEN_DELAY);
       }}
       onPointerDown={() => hide()}
       onPointerUp={(event) => {
@@ -90,7 +101,7 @@ export function Tooltip({
       }}
       onFocus={(event) => {
         if (event.target instanceof HTMLElement && event.target.matches(':focus-visible'))
-          show(event.currentTarget);
+          show(event.currentTarget, true);
       }}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) hide();
@@ -108,12 +119,14 @@ export function Tooltip({
     >
       {children}
       <div
+        data-shinobu-tooltip=""
         id={id}
         popover="manual"
         ref={bubble}
         role="tooltip"
         // Clears the UA popover box (centred, bordered, canvas-coloured).
         style={{
+          ...MOTION_VARS,
           position: 'fixed',
           inset: 'auto',
           margin: 0,
