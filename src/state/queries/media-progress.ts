@@ -3,7 +3,7 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import {
   findAniListProgress,
   findProgressRow,
-  indexLibrary,
+  indexLibraryOnce,
   mergeMediaProgress,
   type MediaProgress,
 } from '@/lib/media-progress';
@@ -52,14 +52,14 @@ export function useProgressLibraries(items: readonly NormalizedMediaItem[]) {
     letterboxdUsername,
     serializdUsername,
     queries: { movies, shows, simkl, anilist, serializd },
-    // React Compiler rebuilds each index only when its snapshot changes. Simkl's
-    // entry is the snapshot itself: `simkl.ts` indexes it once per snapshot.
+    // Each index is built once per snapshot and shared by every screen. Simkl's
+    // entry is the snapshot itself, indexed in `simkl.ts`.
     indexes: {
-      movies: movies.data == null ? null : indexLibrary(movies.data, self),
-      shows: shows.data == null ? null : indexLibrary(shows.data, self),
+      movies: movies.data == null ? null : indexLibraryOnce(movies.data, self),
+      shows: shows.data == null ? null : indexLibraryOnce(shows.data, self),
       simkl: simkl.data ?? null,
-      anilist: anilist.data == null ? null : indexLibrary(anilist.data, entryItem),
-      serializd: serializd.data == null ? null : indexLibrary(serializd.data, entryItem),
+      anilist: anilist.data == null ? null : indexLibraryOnce(anilist.data, entryItem),
+      serializd: serializd.data == null ? null : indexLibraryOnce(serializd.data, entryItem),
     },
   };
 }

@@ -75,6 +75,23 @@ export function indexLibrary<T>(
   return { rows, itemOf, columns };
 }
 
+// Never mutate a snapshot in place: its index would go stale. A refetch or
+// `setQueryData` gives a new array. One snapshot always takes the same `itemOf`.
+const indexes = new WeakMap<readonly unknown[], LibraryIndex<unknown>>();
+
+/** `indexLibrary`, built once per snapshot array and shared by every reader of it. */
+export function indexLibraryOnce<T>(
+  rows: readonly T[],
+  itemOf: (row: T) => NormalizedMediaItem,
+): LibraryIndex<T> {
+  const snapshotIndexes = indexes as WeakMap<readonly T[], LibraryIndex<T>>;
+  const known = snapshotIndexes.get(rows);
+  if (known != null) return known;
+  const index = indexLibrary(rows, itemOf);
+  snapshotIndexes.set(rows, index);
+  return index;
+}
+
 /** Row numbers whose `key` equals `value`, in list order. */
 export function rowsWith<T>(
   index: LibraryIndex<T>,
