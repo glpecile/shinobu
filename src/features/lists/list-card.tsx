@@ -23,7 +23,7 @@ export function ListCard({
   onActions: (list: ListSummary) => void;
 }) {
   const newTab = useNewTabPress(list.href);
-  const { hovered, hoverProps } = usePointerHover();
+  const { hovered, hoverProps } = usePointerHover(list.id);
   return (
     <View
       onPointerDown={newTab.onPointerDown}
