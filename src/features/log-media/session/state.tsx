@@ -21,12 +21,6 @@ const StateContext = createContext<{
 
 const NONE: readonly LoggedWatch[] = [];
 
-/**
- * One mutation per tracked log, so each log's optimistic state ends with its
- * own work. Not `useOptimistic`: React 19 joins concurrent async transitions,
- * so a log would end only when every log in flight settles
- * (docs/solutions/react-async-transitions-are-entangled.md).
- */
 const LOGGED_WATCH_KEY = ['logged-watch'] as const;
 
 interface HeldWatch {

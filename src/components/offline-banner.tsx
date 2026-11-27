@@ -5,10 +5,7 @@ import { Text, View } from 'react-native';
 
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * Shown while the app counts as offline (`lib/online`): reads pause and logs
- * wait in the pending queue.
- */
+/** Shown while the app counts as offline (`lib/online`). */
 export function OfflineBanner() {
   const online = useSyncExternalStore(
     onlineManager.subscribe,
