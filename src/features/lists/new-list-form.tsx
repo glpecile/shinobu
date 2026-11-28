@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { usePreventRemove, useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Switch, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { FieldLabel } from '@/components/field-label';
@@ -11,6 +11,7 @@ import { GroupedList } from '@/components/grouped-list';
 import Head from '@/components/head';
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 import { List } from '@/components/List';
+import { NativeSwitch } from '@/components/native-switch';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { SectionEnter } from '@/components/section-enter';
 import { Sheet } from '@/components/sheet';
@@ -32,7 +33,6 @@ import {
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
-import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
 import { useCreateList, type NewList } from '@/state/queries/list-membership';
 import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
@@ -47,6 +47,9 @@ import {
 } from './new-list-schema';
 
 export type { ListProvider };
+
+// py-1.5 around the 54pt `sm` poster.
+const PICKED_ROW_HEIGHT = 66;
 
 function editorUrl(provider: ListProvider, username: string) {
   switch (provider) {
@@ -139,26 +142,19 @@ function SwitchRow({
   onChange: (value: boolean) => void;
   disabled: boolean;
 }) {
-  const accent = useThemeColor('--color-accent');
-  const border = useThemeColor('--color-border');
-  const accentForeground = useThemeColor('--color-accent-foreground');
   return (
     <View className="flex-row items-center gap-4">
       <View className="flex-1 min-w-0">
         <FieldLabel>{label}</FieldLabel>
         <Text className="text-muted font-sans text-xs mt-0.5">{note}</Text>
       </View>
-      <Switch
+      <NativeSwitch
         accessibilityLabel={label}
-        // react-native-web paints the on thumb teal unless this web-only prop is set.
-        {...{ activeThumbColor: accentForeground }}
         disabled={disabled}
         onValueChange={(next) => {
           haptics.selection();
           onChange(next);
         }}
-        thumbColor={process.env.EXPO_OS === 'android' ? (value ? accent : undefined) : undefined}
-        trackColor={{ false: border, true: accent }}
         value={value}
       />
     </View>
@@ -528,10 +524,10 @@ export function NewListForm({
           {items.length === 0 ? (
             <Text className="text-muted font-sans text-sm">{emptyNote()}</Text>
           ) : (
-            <View style={{ height: Math.min(items.length, 5) * 70 }}>
+            <View style={{ height: Math.min(items.length, 5) * PICKED_ROW_HEIGHT }}>
               <List
                 data={items}
-                estimatedItemSize={70}
+                estimatedItemSize={PICKED_ROW_HEIGHT}
                 extraData={ranked}
                 keyExtractor={(item) => item.id}
                 nestedScrollEnabled
@@ -583,11 +579,7 @@ export function NewListForm({
             </Text>
           )}
           {mutation.isError && (
-            <SectionEnter>
-              <Text className="text-accent font-sans text-sm" role="alert">
-                {mutation.error.message}
-              </Text>
-            </SectionEnter>
+            <WriteSheet.Error>{mutation.error.message}</WriteSheet.Error>
           )}
           {needsScript && !scriptUntrusted && (
             <Button

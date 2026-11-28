@@ -37,7 +37,7 @@ export function ManualWriteRows({
                 ? `${verb} ${PROVIDERS[provider].label}`
                 : `${verb} ${PROVIDERS[provider].label}. ${reason}`
             }
-            className="flex-row items-center justify-between px-3 py-2.5 rounded-md"
+            className="flex-row items-center justify-between min-h-11 px-3 py-2.5 rounded-md"
             key={provider}
             onPress={() => openExternalUrl(url)}
           >

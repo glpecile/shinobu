@@ -166,7 +166,7 @@ function ListRows({
           loading={isFetchingNextPage}
           loadingLabel="Loading…"
           onPress={fetchNextPage}
-          variant="ghost"
+          variant="quiet"
         />
       )}
       <Button
