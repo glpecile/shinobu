@@ -30,6 +30,7 @@ export function ConnectSerializdButton() {
   const {
     control,
     handleSubmit,
+    setFocus,
     formState: { errors },
   } = useForm<CredentialsForm>({
     defaultValues: { email: '', password: '' },
@@ -49,26 +50,33 @@ export function ConnectSerializdButton() {
         name="email"
         render={({ field }) => (
           <TextField
+            accessibilityLabel="Serializd email"
+            autoComplete="email"
             keyboardType="email-address"
             onBlur={field.onBlur}
             onChangeText={field.onChange}
+            onSubmitEditing={() => setFocus('password')}
             placeholder="Serializd email"
+            returnKeyType="next"
             value={field.value}
           />
         )}
       />
       {errors.email != null && (
-        <Text className="text-accent font-sans text-xs">{errors.email.message}</Text>
+        <Text className="text-accent font-sans text-xs" role="alert">{errors.email.message}</Text>
       )}
       <Controller
         control={control}
         name="password"
         render={({ field }) => (
           <TextField
+            accessibilityLabel="Serializd password"
+            autoComplete="current-password"
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             onSubmitEditing={() => submit()}
             placeholder="Password"
+            ref={field.ref}
             returnKeyType="done"
             secureTextEntry
             value={field.value}
@@ -76,10 +84,14 @@ export function ConnectSerializdButton() {
         )}
       />
       {errors.password != null && (
-        <Text className="text-accent font-sans text-xs">{errors.password.message}</Text>
+        <Text className="text-accent font-sans text-xs" role="alert">
+          {errors.password.message}
+        </Text>
       )}
       {login.error != null && (
-        <Text className="text-accent font-sans text-xs">{loginErrorText(login.error.message)}</Text>
+        <Text className="text-accent font-sans text-xs" role="alert">
+          {loginErrorText(login.error.message)}
+        </Text>
       )}
       <Button
         icon={<Button.Icon name="link-outline" />}

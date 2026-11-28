@@ -3,10 +3,11 @@ import { openAuthSessionAsync } from 'expo-web-browser';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Linking, Platform, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
+import { InlineLink } from '@/components/inline-link';
 import { Steps } from '@/components/steps';
 import { TextField } from '@/components/text-field';
 import { SHINOBU_NATIVE_REDIRECT_URI, SHINOBU_WEB_DOMAIN } from '@/lib/config';
@@ -119,12 +120,9 @@ export function ConnectAniListButton() {
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
                 Create a client at{' '}
-                <Text
-                  className="text-accent font-sans-semibold underline"
-                  onPress={() => Linking.openURL(ANILIST_CREATE_CLIENT_URL)}
-                >
+                <InlineLink inApp={false} url={ANILIST_CREATE_CLIENT_URL}>
                   {ANILIST_CREATE_CLIENT_URL.replace('https://', '')}
-                </Text>
+                </InlineLink>
                 . Name can be anything (e.g. "Shinobu").
               </Text>
             </Steps.Item>
@@ -160,6 +158,7 @@ export function ConnectAniListButton() {
           name="clientId"
           render={({ field }) => (
             <TextField
+              accessibilityLabel="AniList Client ID"
               inputMode="numeric"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
@@ -171,7 +170,9 @@ export function ConnectAniListButton() {
           )}
         />
         {errors.clientId != null && (
-          <Text className="text-accent font-sans text-xs">{errors.clientId.message}</Text>
+          <Text className="text-accent font-sans text-xs" role="alert">
+            {errors.clientId.message}
+          </Text>
         )}
         <Button
           icon={<Button.Icon name="link-outline" />}
@@ -191,7 +192,7 @@ export function ConnectAniListButton() {
         device — your password is never sent to Shinobu.
       </Text>
       {status === 'error' && (
-        <Text className="text-accent font-sans text-xs">
+        <Text className="text-accent font-sans text-xs" role="alert">
           Could not connect. Tap Connect to try again.
         </Text>
       )}
