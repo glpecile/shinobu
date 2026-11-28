@@ -4,7 +4,7 @@ import { useWindowDimensions } from '@/lib/window-dimensions';
 import { List } from '@/components/List';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PresstableScale } from '@/components/presstable';
-import { useRailFade } from '@/components/rail';
+import { railScrollbarProps, showsRailScrollbar, useRailFade } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { usePointerHover } from '@/components/use-pointer-hover';
@@ -13,6 +13,9 @@ import { useTmdbToken } from '@/state/session/tmdb-token';
 
 import { PersonAvatar } from './person-avatar';
 import { creditRoute, type PersonCredit } from './person-credit-sheet';
+
+/** Avatar plus a name and two role lines, which grow with the font scale. */
+const railHeight = (fontScale: number) => 90 + 48 * fontScale;
 
 function PersonCardContent({ credit }: { credit: PersonCredit }) {
   return (
@@ -109,7 +112,7 @@ export function PeopleSection({
       <Section.Header>
         <Section.Title>{title}</Section.Title>
       </Section.Header>
-      <View>
+      <View {...railScrollbarProps}>
         <List
           data={people}
           estimatedItemSize={112}
@@ -145,8 +148,8 @@ export function PeopleSection({
               />
             )
           }
-          showsHorizontalScrollIndicator={false}
-          style={{ height: 90 + 48 * fontScale }}
+          showsHorizontalScrollIndicator={showsRailScrollbar}
+          style={{ height: railHeight(fontScale) }}
           {...scrollProps}
         />
         {fade}
@@ -156,10 +159,11 @@ export function PeopleSection({
 }
 
 export function PeopleRailSkeleton() {
+  const { fontScale } = useWindowDimensions();
   return (
     <View className="mt-8">
-      <Skeleton className="h-6 w-24 rounded mb-4" />
-      <View className="flex-row overflow-hidden">
+      <Skeleton className="h-7 w-24 rounded mb-4" />
+      <View className="flex-row overflow-hidden" style={{ height: railHeight(fontScale) }}>
         {Array.from({ length: 10 }).map((_, index) => (
           <View className="w-24 items-center mr-4" key={index}>
             <Skeleton className="w-20 h-20 rounded-full" delay={staggerDelay(index)} />

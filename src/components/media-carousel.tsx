@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { List } from '@/components/List';
-import { useRailFade } from '@/components/rail';
+import { railScrollbarProps, showsRailScrollbar, useRailFade } from '@/components/rail';
 import { SectionEnter, useArrivalHistory } from '@/components/section-enter';
 import { ViewAllLink } from '@/components/view-all-link';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -47,7 +47,7 @@ export function MediaCarousel({
       title={title}
       action={onViewAll != null && <ViewAllLink onPress={onViewAll} title={title} />}
     >
-      <View>
+      <View {...railScrollbarProps}>
         <List
           data={items}
           estimatedItemSize={CARD_WIDTH + CARD_GAP}
@@ -71,7 +71,7 @@ export function MediaCarousel({
               </View>
             );
           }}
-          showsHorizontalScrollIndicator={false}
+          showsHorizontalScrollIndicator={showsRailScrollbar}
           style={{ height: CARD_HEIGHT }}
           {...scrollProps}
         />
