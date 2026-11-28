@@ -152,10 +152,10 @@ function ProgressOfTotal({ progress, total }: { progress: number; total: number 
   return (
     <View className="flex-row items-baseline mt-0.5">
       {/* Clamped: AniList counts a manga's extra chapters past its total (62 of 59). */}
-      <MorphText className="text-foreground text-2xl font-sans-semibold">
+      <MorphText className="text-foreground text-2xl font-sans-semibold tabular-nums">
         {Math.min(progress, total)}
       </MorphText>
-      <Text className="text-muted text-2xl font-sans-semibold">{` / ${total}`}</Text>
+      <Text className="text-muted text-2xl font-sans-semibold tabular-nums">{` / ${total}`}</Text>
     </View>
   );
 }
@@ -250,7 +250,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
         {parts.map((part, index) => (
           <MorphText
             key={index === 0 ? 'status' : parts.length - index}
-            className="text-muted font-sans text-sm"
+            className="text-muted font-sans text-sm tabular-nums"
             numberOfLines={wrapsAsText ? 0 : undefined}
           >
             {index < parts.length - 1 ? `${part} ·` : part}

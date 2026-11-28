@@ -159,7 +159,7 @@ function Stat({
         {value == null ? (
           <Skeleton className="h-6 w-10 rounded my-0.5" />
         ) : (
-          <MorphText className="text-foreground font-sans-semibold text-xl">{`${formatCount(value)}${atLeast ? '+' : ''}`}</MorphText>
+          <MorphText className="text-foreground font-sans-semibold text-xl tabular-nums">{`${formatCount(value)}${atLeast ? '+' : ''}`}</MorphText>
         )}
       </View>
       <Text className="shrink text-muted font-sans text-xs" numberOfLines={2}>

@@ -47,6 +47,7 @@ export function TextField({
         props.multiline && 'rounded-2xl min-h-24',
         size === 'sm' && 'h-9 ios:h-8 px-3 py-0 web:text-sm',
         props.textAlign === 'center' && 'text-center',
+        props.inputMode === 'numeric' && 'tabular-nums',
       )}
       onBlur={(event) => {
         setFocused(false);

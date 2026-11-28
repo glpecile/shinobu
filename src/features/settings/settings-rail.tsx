@@ -167,7 +167,7 @@ function SettingsRailPinned({
       >
         <Ionicons color={muted} name={icon} size={16} />
         <Text className="font-display text-base text-foreground">{title}</Text>
-        <Text className="ml-1 shrink text-muted font-sans text-xs" numberOfLines={1}>
+        <Text className="ml-1 shrink text-muted font-sans text-xs tabular-nums" numberOfLines={1}>
           {count}
         </Text>
       </AnimatedView>

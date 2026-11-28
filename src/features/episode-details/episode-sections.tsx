@@ -259,7 +259,7 @@ export function EpisodeNavigation({
           variant="ghost"
         />
         <View className="flex-1 items-center">
-          <MorphText className="font-sans-semibold text-lg text-foreground self-center">
+          <MorphText className="font-sans-semibold text-lg text-foreground self-center tabular-nums">
             {episodeCode(season, number)}
           </MorphText>
         </View>

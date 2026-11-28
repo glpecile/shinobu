@@ -91,7 +91,7 @@ export function ReadingCard({
       >
         {title}
       </Text>
-      <MorphText className="text-muted font-sans text-xs mt-0.5" numberOfLines={1}>
+      <MorphText className="text-muted font-sans text-xs mt-0.5 tabular-nums" numberOfLines={1}>
         {progress}
       </MorphText>
     </View>
