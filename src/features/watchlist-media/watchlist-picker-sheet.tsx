@@ -1,4 +1,3 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -22,7 +21,6 @@ import { haptics } from '@/lib/haptics';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
-import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
 import { cachedMangaList } from '@/state/queries/anilist';
 import type { ProviderFailure } from '@/state/queries/settle';
@@ -229,7 +227,6 @@ export function WatchlistRemovePicker({
   });
 
   const [reviewed, setReviewed] = useState<ProviderId[] | null>(null);
-  const foreground = useThemeColor('--color-foreground');
   const warned = destructiveProviders(reviewed ?? [], entry);
   const destructive = warned.length > 0;
 
@@ -268,15 +265,6 @@ export function WatchlistRemovePicker({
     return (
       <WriteSheet.Step key="confirm">
         <WriteSheet.Header onClose={onCancel}>
-          <View className="size-12 rounded-xl border border-border bg-background items-center justify-center mb-4">
-            <Ionicons
-              accessibilityElementsHidden
-              color={foreground}
-              importantForAccessibility="no"
-              name={destructive ? 'trash-outline' : 'bookmark-outline'}
-              size={24}
-            />
-          </View>
           <WriteSheet.Title>{`Remove “${entry.item.title}”?`}</WriteSheet.Title>
         </WriteSheet.Header>
         <View className="mt-4 gap-3">

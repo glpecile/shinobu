@@ -309,7 +309,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </View>
-        <View className="hidden md:flex mt-auto border-t border-border">
+        <View className="hidden md:flex mt-auto">
           <SidebarToggle collapsed={collapsed} animate={animated} onToggle={userToggleSidebar} />
         </View>
       </View>

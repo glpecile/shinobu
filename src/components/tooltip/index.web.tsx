@@ -164,7 +164,7 @@ export function Tooltip({
           maxWidth: `calc(100vw - ${GAP * 2}px)`,
         }}
       >
-        <View className="max-w-full bg-toast-surface border border-border rounded-lg px-2.5 py-1.5 shadow-md">
+        <View className="max-w-full bg-toast-surface rounded-lg px-2.5 py-1.5 shadow-md shadow-toast-shadow">
           <Text className="text-foreground font-sans text-xs" numberOfLines={1}>
             {label}
           </Text>

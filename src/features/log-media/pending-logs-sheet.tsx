@@ -55,8 +55,8 @@ export function PendingLogs() {
           <WriteSheet.Title>Pending logs</WriteSheet.Title>
         </Sheet.Header>
         <WriteSheet.Description>
-          Saved on this device. Shinobu sends them when you are online. A log that stopped waits for
-          Try again.
+          Saved on this device. Shinobu sends them when you are back online. A failed log waits until
+          you tap Try again.
         </WriteSheet.Description>
         {/* ponytail: at most MAX_PENDING_LOGS cards in the sheet's scroller. Use List if the cap grows. */}
         {records.map((record) => {

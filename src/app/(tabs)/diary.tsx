@@ -105,7 +105,7 @@ function DiaryScreen() {
         <CenteredNotice.Icon name="cloud-offline-outline" />
         <CenteredNotice.Title>Couldn’t load your diary</CenteredNotice.Title>
         <CenteredNotice.Body>
-          Something went wrong reaching your trackers. Check your connection and try again.
+          Your trackers didn’t respond. Check your connection and try again.
         </CenteredNotice.Body>
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}

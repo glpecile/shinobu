@@ -31,13 +31,11 @@ import { routes } from '@/lib/routes';
 import { preAiringDisplay } from '@/features/log-media/release-gate';
 import { DetailsList, type DetailsListProps } from './details-list';
 import type { PendingLog } from './season-accordion';
-import { formatRuntime, seriesRuntimeMinutes } from './runtime';
 
 function SeasonsSkeleton() {
   return (
     <View className="mt-8">
-      <Skeleton className="h-7 w-32 rounded" />
-      <Skeleton className="h-5 w-40 rounded mt-1 mb-4" />
+      <Skeleton className="h-7 w-32 rounded mb-4" />
       {Array.from({ length: 3 }).map((_, index) => (
         <Skeleton
           className={cn('h-17 rounded-lg', index > 0 && 'mt-3')}
@@ -49,16 +47,13 @@ function SeasonsSkeleton() {
   );
 }
 
+/** Suspends on the season list so a failed load surfaces through its boundary's toast. */
 function SeasonsHeading({ source }: { source: ShowSeasonsSource }) {
-  const { data: seasons } = useSuspenseShowSeasonsQuery(source);
-  const total = seriesRuntimeMinutes(seasons);
+  useSuspenseShowSeasonsQuery(source);
   return (
     <Section>
       <Section.Header>
         <Section.Title>Seasons</Section.Title>
-        {total > 0 && (
-          <Section.Subtitle>{`${formatRuntime(total)} total runtime`}</Section.Subtitle>
-        )}
       </Section.Header>
     </Section>
   );
@@ -150,7 +145,7 @@ function ShowDetailsList({
             <SuspenseSection
               errorToast={{
                 title: 'Episodes unavailable',
-                message: 'The season list didn’t load — pull to refresh to try again.',
+                message: 'Pull to refresh to try again.',
               }}
               fallback={<SeasonsSkeleton />}
               resetKey={resetKey}

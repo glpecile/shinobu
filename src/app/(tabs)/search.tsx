@@ -100,6 +100,17 @@ const SCOPES = [
 
 type SearchScope = (typeof SCOPES)[number]['value'];
 
+function scopeWelcome(scope: Exclude<SearchScope, 'titles'>, readingLabel: string): string {
+  switch (scope) {
+    case 'people':
+      return 'Find an actor, director, or voice actor and open their credits.';
+    case 'studios':
+      return 'Find a studio and open everything it made.';
+    case 'reading':
+      return `Find ${readingLabel} and log what you read.`;
+  }
+}
+
 function resultMeta(item: NormalizedMediaItem): string {
   return [mediaKindLabel(item), item.year != null ? String(item.year) : null]
     .filter((part) => part != null)
@@ -590,13 +601,9 @@ function SearchScreen() {
                     <PosterWall key={scope.value} subject={scope.value} />
                     <View className="flex-1 justify-end md:justify-center px-6 pb-24 md:px-16 md:pb-16">
                       <Text className="text-5xl text-muted mb-4">忍</Text>
-                      <Text className="text-2xl font-display text-foreground">Search</Text>
+                      <Text className="text-2xl font-display text-foreground">{scope.label}</Text>
                       <Text className="text-base font-sans text-muted mt-3 max-w-sm leading-relaxed">
-                        Find any movie, show, anime, or manga — open its details or log it to your
-                        trackers. The button in the corner switches to
-                        {tmdbAvailable
-                          ? ' reading, cast & crew, or studios.'
-                          : ' reading or cast & crew.'}
+                        {scopeWelcome(scope.value, readingLabel)}
                       </Text>
                     </View>
                   </View>
@@ -605,10 +612,8 @@ function SearchScreen() {
                 <ResultsSkeleton scope={scope.value} />
               ) : state === 'error' ? (
                 <CenteredNotice className="-mt-16">
-                  <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
-                  <CenteredNotice.Body>
-                    Search failed. Check your connection and try again.
-                  </CenteredNotice.Body>
+                  <CenteredNotice.Title>Search failed</CenteredNotice.Title>
+                  <CenteredNotice.Body>Check your connection and try again.</CenteredNotice.Body>
                   <CenteredNotice.Action
                     icon={<Button.Icon name="refresh" />}
                     label="Try again"

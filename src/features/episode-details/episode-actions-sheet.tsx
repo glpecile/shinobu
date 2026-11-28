@@ -58,14 +58,8 @@ function SheetBody({
           <MetaLine
             className="mt-1"
             parts={[
-              episode.firstAired != null && (
-                <MetaLine.Part icon="calendar-outline">
-                  {formatAirDate(episode.firstAired)}
-                </MetaLine.Part>
-              ),
-              episode.runtime != null && (
-                <MetaLine.Part icon="time-outline">{`${episode.runtime} min`}</MetaLine.Part>
-              ),
+              episode.firstAired != null && formatAirDate(episode.firstAired),
+              episode.runtime != null && `${episode.runtime} min`,
             ]}
           />
         </SheetHeader.Content>
@@ -89,8 +83,8 @@ function SheetBody({
           />
         ) : (
           <Text className="text-muted font-sans text-sm">
-            {airsIn == null ? 'Not aired yet' : `Airs ${airsIn.toLowerCase()}`} — it can be logged
-            once it’s out.
+            {airsIn == null ? 'Not aired yet' : `Airs ${airsIn.toLowerCase()}`}. Log it once it’s
+            out.
           </Text>
         )}
       </View>

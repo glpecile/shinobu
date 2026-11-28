@@ -324,7 +324,7 @@ export function ListSearch({
           <CenteredNotice className="min-h-80">
             <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
             <CenteredNotice.Title>{find}</CenteredNotice.Title>
-            <CenteredNotice.Body>{`Search ${noun} to add to this list. Enter at least two characters to begin.`}</CenteredNotice.Body>
+            <CenteredNotice.Body>Type at least two characters.</CenteredNotice.Body>
           </CenteredNotice>
         ) : (
           <QueryErrorResetBoundary>

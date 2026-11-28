@@ -91,7 +91,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
             {connectFailed && (
               <HeroEnter className="mt-4" delay={COPY_STAGGER * 3}>
                 <Text className="text-accent font-sans text-sm">
-                  Connecting your tracker failed. Please try again.
+                  Couldn’t connect your tracker. Try again.
                 </Text>
               </HeroEnter>
             )}

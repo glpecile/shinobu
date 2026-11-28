@@ -109,9 +109,9 @@ export function ConnectTmdbTokenSection() {
   const count = saved != null ? 'TMDB' : 'Not set';
 
   return (
-    <SettingsRail.Section count={count} icon="sparkles-outline" title="Metadata">
+    <SettingsRail.Section count={count} icon="image-outline" title="Metadata">
       <SettingsRail.Head label={`Metadata, ${count}`}>
-        <RailHead.Icon name="sparkles-outline">Metadata</RailHead.Icon>
+        <RailHead.Icon name="image-outline">Metadata</RailHead.Icon>
         <RailHead.Count>{count}</RailHead.Count>
       </SettingsRail.Head>
       <SettingsRail.Row>
@@ -140,9 +140,8 @@ export function ConnectTmdbTokenSection() {
         <SettingsRail.Row>
           <View className="flex-1 gap-4">
             <Text className="text-muted font-sans text-sm">
-              This build ships without a TMDB key, so detail pages fall back to your trackers’
-              metadata and the people and studio pages stay closed. Add your own (free) TMDB read
-              token to turn them on.
+              Without a TMDB token, detail pages use your trackers’ metadata, and people and
+              studio pages stay closed. The token is free.
             </Text>
 
             <Collapsible label="How to get your TMDB token">
