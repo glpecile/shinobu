@@ -123,8 +123,6 @@ export function ActionableRow({
           'shrink-0 flex-row items-center justify-end self-stretch',
           showActions ? 'ml-2' : 'grow',
         )}
-        accessible={false}
-        aria-hidden
         focusable={false}
         onLongPress={pressProps.onLongPress}
         onPress={pressProps.onPress}

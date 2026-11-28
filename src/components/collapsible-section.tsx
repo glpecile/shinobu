@@ -27,8 +27,8 @@ import { useThemeColor } from '@/lib/theme-color';
 import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import { setSectionCollapsed, useSectionCollapsed } from '@/state/prefs/collapsed-sections';
 
-/** Grows a title-only header's hit area to 44pt without moving its layout. */
-const TITLE_HIT_AREA = 'py-2 -my-2';
+/** Grows a title-only header's hit area to 44pt on native. */
+const TITLE_HIT_SLOP = { top: 8, bottom: 8 };
 
 const ScrollContext = createContext<{
   content: RefObject<ViewInstance | null>;
@@ -159,10 +159,8 @@ export function CollapsibleSection({
           accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
           accessibilityRole="button"
           accessibilityState={{ expanded: !collapsed }}
-          className={cn(
-            'flex-row items-center gap-2 shrink',
-            action ? 'min-h-11' : TITLE_HIT_AREA,
-          )}
+          className={cn('flex-row items-center gap-2 shrink', action && 'min-h-11')}
+          hitSlop={action == null ? TITLE_HIT_SLOP : undefined}
           onPress={toggle}
           pressBehavior="immediate"
         >

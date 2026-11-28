@@ -48,7 +48,6 @@ function WebPresstable({
       // react-native-web drops `accessibilityState`
       // (docs/solutions/pressto-accessibility-state-not-mapped-on-web.md).
       aria-busy={state?.busy}
-      aria-checked={state?.checked}
       aria-disabled={state?.disabled}
       aria-expanded={state?.expanded}
       aria-pressed={state?.selected}

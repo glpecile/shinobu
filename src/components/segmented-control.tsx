@@ -135,7 +135,7 @@ export function SegmentedControl<T extends string>({
           accessibilityLabel={option.accessibilityLabel ?? option.label}
           accessibilityRole="button"
           accessibilityState={{ selected: option.value === value }}
-          className={cn(segmentClassName, 'min-h-11 pointer-fine:min-h-0')}
+          className={segmentClassName}
           key={option.value}
           onPress={() => select(option.value)}
         >
