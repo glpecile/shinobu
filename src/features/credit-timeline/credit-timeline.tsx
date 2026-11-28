@@ -324,7 +324,7 @@ export function CreditTimeline({
         ListFooterComponent={
           <Column>
             {footer}
-            {/* Clears the scroll-to-top FAB above the home indicator or nav bar. */}
+            {/* Scroll-to-top FAB clearance */}
             <View style={{ height: 96 + insets.bottom }} />
           </Column>
         }

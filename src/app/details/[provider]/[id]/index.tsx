@@ -413,9 +413,9 @@ function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
 
 function StudiosSkeleton() {
   return (
-    <View className="mt-8">
+    <View className="mt-8 pointer-fine:pb-3">
       <Skeleton className="h-7 w-24 rounded mb-4" />
-      <View className="flex-row gap-4 web:pt-1">
+      <View className="flex-row gap-4 web:pt-1 overflow-hidden">
         {[1, 2, 3].map((index) => (
           <StudioCardSkeleton index={index} key={index} />
         ))}
@@ -426,6 +426,7 @@ function StudiosSkeleton() {
 
 function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdrop: boolean }) {
   const backButtonClearance = useFloatingBackButtonClearance();
+  const wide = useWindowDimensions().width >= 768;
   return (
     <>
       {backdrop ? (
@@ -441,9 +442,7 @@ function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdr
             <Skeleton className="h-4 w-16 rounded" delay={staggerDelay(2)} />
             <Skeleton className="h-9 w-48 rounded mt-1" delay={staggerDelay(2)} />
             <Skeleton className="h-5 w-32 rounded mt-1.5" delay={staggerDelay(2)} />
-            <View className="hidden md:flex mt-4">
-              <ExpandableText.Skeleton />
-            </View>
+            {wide && <ExpandableText.Skeleton className="mt-4" />}
           </View>
           <Link.AppleZoomTarget>
             <View className="w-32 h-48 md:w-48 md:h-72 rounded-lg overflow-hidden bg-surface">
@@ -455,9 +454,7 @@ function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdr
             </View>
           </Link.AppleZoomTarget>
         </View>
-        <View className="md:hidden">
-          <ExpandableText.Skeleton />
-        </View>
+        {!wide && <ExpandableText.Skeleton />}
       </View>
     </>
   );
@@ -852,7 +849,7 @@ function DetailsScreen() {
   const footer = (
     <View
       className="w-full max-w-4xl self-center px-6"
-      style={{ paddingBottom: process.env.EXPO_OS === 'android' ? 48 + insets.bottom : 48 }}
+      style={{ paddingBottom: 48 + insets.bottom }}
     >
       <RelationsSection item={shown} onItemActions={openActions} resetKey={refreshCount} />
 

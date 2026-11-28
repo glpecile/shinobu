@@ -111,12 +111,11 @@ export const ROW_HEIGHT = 92;
 
 /**
  * Bottom padding for a stack screen's list: room for the add-to-list FAB when
- * `fab`, otherwise room for Android's navigation bar, as `lists-grid` does.
+ * `fab`, otherwise clearance above the home indicator or navigation bar.
  */
-export function useListEndPadding(fab: boolean | undefined): number | undefined {
+export function useListEndPadding(fab: boolean | undefined): number {
   const insets = useSafeAreaInsets();
-  if (fab) return 96 + insets.bottom;
-  return process.env.EXPO_OS === 'android' ? 24 + insets.bottom : undefined;
+  return (fab ? 96 : 24) + insets.bottom;
 }
 
 export function WatchlistRows({
