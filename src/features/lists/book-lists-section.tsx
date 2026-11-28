@@ -57,7 +57,7 @@ function BookListsRail({ bookId }: { bookId: number }) {
 
 function BookListsSkeleton() {
   return (
-    <View className="mt-8">
+    <View className="mt-8 pointer-fine:pb-3">
       <Skeleton className="h-6 w-24 rounded mb-4" />
       <View className="flex-row overflow-hidden">
         {[0, 1, 2].map((index) => (

@@ -34,6 +34,9 @@ export function List<T>({
     <Activity mode={focused ? 'visible' : 'hidden'}>
       <ListComponent
         {...props}
+        showsVerticalScrollIndicator={
+          props.showsVerticalScrollIndicator ?? (props.horizontal ? false : undefined)
+        }
         style={
           props.horizontal || scrollEnabled === false
             ? style

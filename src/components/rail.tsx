@@ -13,17 +13,15 @@ import { type ThemeColorToken, useThemeColor } from '@/lib/theme-color';
 
 import './rail.css';
 
-/** Web shows a thin scrollbar (`rail.css`) so a mouse can drag the rail. */
-export const showsRailScrollbar = process.env.EXPO_OS === 'web';
-
-/** Spread on the View that wraps a rail's scroller and its fade, for `rail.css`. */
-export const railScrollbarProps = { 'data-shinobu-rail': '' };
+const showsRailScrollbar = process.env.EXPO_OS === 'web';
+const railScrollbarProps =
+  process.env.EXPO_OS === 'web' ? { 'data-shinobu-rail': '' } : undefined;
 
 export const RailFadeColor = createContext<ThemeColorToken>('--color-background');
 
 type ScrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 
-export function useRailFade(onScroll?: ScrollHandler) {
+function useRailFade(onScroll?: ScrollHandler) {
   const color = useThemeColor(useContext(RailFadeColor));
   const [atEnd, setAtEnd] = useState(false);
   // Web hands back `var(--token)`, which takes no alpha suffix, and browsers

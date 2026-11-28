@@ -1,12 +1,9 @@
-/*
- * A mouse without a horizontal wheel drags a rail by its scrollbar, so rails
- * show a thin one in the foreground at 20%, which follows Uniwind's theme
- * class. The page scrollbar keeps the browser default.
- */
 @media (hover: hover) and (pointer: fine) {
   [data-shinobu-rail] > :first-child {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--color-foreground) 20%, transparent) transparent;
+    box-sizing: content-box;
+    padding-bottom: 12px;
   }
 
   @supports not (scrollbar-color: auto) {
@@ -18,5 +15,15 @@
       background-color: color-mix(in srgb, var(--color-foreground) 20%, transparent);
       border-radius: 3px;
     }
+  }
+}
+
+@media not ((hover: hover) and (pointer: fine)) {
+  [data-shinobu-rail] > :first-child {
+    scrollbar-width: none;
+  }
+
+  [data-shinobu-rail] > :first-child::-webkit-scrollbar {
+    display: none;
   }
 }
