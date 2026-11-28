@@ -5,12 +5,12 @@ import { haptics } from '@/lib/haptics';
 const REPEAT_DELAY = 400;
 const REPEAT_EVERY = 60;
 
+type PressEvent = { nativeEvent?: { type?: string; detail?: number } };
+
 /**
  * Hold-to-repeat for a stepper `Button`: spread the result on it. A press steps
  * at once, then after 400ms every 60ms until release, unmount, or `canStep`
- * turning false. Each tick reads `canStep` itself, because a button disabled
- * mid-press is not promised a press-out. Keyboard and screen-reader activation
- * fire `onPress` alone, so `onPress` steps only when no press-in did.
+ * turning false. Web keyboard and screen-reader clicks step on activation.
  */
 export function useHoldRepeat(step: () => void, canStep: boolean) {
   const [hold, setHold] = useState(0);
@@ -41,15 +41,16 @@ export function useHoldRepeat(step: () => void, canStep: boolean) {
   }
 
   return {
-    onPressIn: () => {
+    onPressIn: (event?: PressEvent) => {
+      if (event?.nativeEvent?.type === 'keydown') return;
       steppedOnPressIn.current = true;
       stepOnce();
       setHold((current) => current + 1);
     },
     onPressOut: () => setHold(0),
-    onPress: () => {
-      if (steppedOnPressIn.current) steppedOnPressIn.current = false;
-      else stepOnce();
+    onPress: (event?: PressEvent) => {
+      if (!steppedOnPressIn.current || event?.nativeEvent?.detail === 0) stepOnce();
+      steppedOnPressIn.current = false;
     },
   };
 }
