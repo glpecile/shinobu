@@ -80,7 +80,7 @@
     "happy-dom": "^21.0.4",
     "oxlint": "^1.95.0",
     "oxlint-tsgolint": "7.0.2009",
-    "typescript": "~7.0.2",
+    "typescript": "~6.0.3",
     "wrangler": "^4.169.0"
   },
   "private": true,
