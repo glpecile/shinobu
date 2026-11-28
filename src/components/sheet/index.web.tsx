@@ -119,7 +119,7 @@ export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
         {open && (
           <>
             <AnimatedView
-              className="absolute inset-0 bg-scrim backdrop-blur-sm"
+              className="absolute inset-0 bg-scrim"
               entering={backdropEntering}
               exiting={backdropExiting}
             />

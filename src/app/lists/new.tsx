@@ -51,7 +51,7 @@ function NewListWithItem({
           </View>
           <View className="gap-2">
             <Skeleton className="h-5 w-24 rounded" />
-            <Skeleton className="h-24 w-full rounded-2xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
           </View>
         </View>
       </View>

@@ -1,9 +1,11 @@
 import { DropdownMenu, DropdownMenuItem, Host, RNHostView, Text } from '@expo/ui/jetpack-compose';
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { useColorScheme, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { haptics } from '@/lib/haptics';
+import { useThemeColor } from '@/lib/theme-color';
 
 import type { NativePickerMenuProps } from './types';
 
@@ -16,6 +18,7 @@ export function NativePickerMenu<T extends string | number | null>({
 }: NativePickerMenuProps<T>) {
   const [open, setOpen] = useState(false);
   const scheme = useColorScheme();
+  const foreground = useThemeColor('--color-foreground');
 
   return (
     <Host colorScheme={scheme ?? undefined} matchContents>
@@ -57,7 +60,11 @@ export function NativePickerMenu<T extends string | number | null>({
               </DropdownMenuItem.Text>
               {option.value === value && (
                 <DropdownMenuItem.TrailingIcon>
-                  <Text>✓</Text>
+                  <RNHostView matchContents>
+                    <View>
+                      <Ionicons color={foreground} name="checkmark" size={20} />
+                    </View>
+                  </RNHostView>
                 </DropdownMenuItem.TrailingIcon>
               )}
             </DropdownMenuItem>
