@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-screens/experimental';
@@ -216,15 +216,27 @@ function EntityRowSkeleton({ index = 0, shape }: { index?: number; shape: 'face'
   );
 }
 
-function ResultsSkeleton({ row }: { row: (index: number) => React.ReactNode }) {
+function ResultRowSkeleton({ index, scope }: { index?: number; scope: SearchScope }) {
+  switch (scope) {
+    case 'titles':
+    case 'reading':
+      return <RowSkeleton index={index} />;
+    case 'people':
+      return <EntityRowSkeleton index={index} shape="face" />;
+    case 'studios':
+      return <EntityRowSkeleton index={index} shape="logo" />;
+  }
+}
+
+function ResultsSkeleton({ scope }: { scope: SearchScope }) {
   return (
     <View>
       <View className="flex-row items-center gap-2 px-6 pt-4 pb-1.5">
         <Skeleton className="size-3.5 rounded-full" />
         <Skeleton className="h-4 w-20 rounded" />
       </View>
-      {Array.from({ length: 6 }, (_, index) => (
-        <Fragment key={index}>{row(index)}</Fragment>
+      {Array.from({ length: 6 }).map((_, index) => (
+        <ResultRowSkeleton index={index} key={index} scope={scope} />
       ))}
     </View>
   );
@@ -371,12 +383,6 @@ function SearchScreen() {
   const scope = scopes.find((entry) => entry.value === selectedScope) ?? SCOPES[0];
   const reading = scope.value === 'reading';
   const titleSearch = scope.value === 'titles' || reading;
-  const rowSkeleton = (index: number) =>
-    titleSearch ? (
-      <RowSkeleton index={index} />
-    ) : (
-      <EntityRowSkeleton index={index} shape={scope.value === 'people' ? 'face' : 'logo'} />
-    );
 
   const tmdbSearch = useTmdbSearchQuery({
     query,
@@ -596,7 +602,7 @@ function SearchScreen() {
                   </View>
                 )
               ) : state === 'loading' ? (
-                <ResultsSkeleton row={rowSkeleton} />
+                <ResultsSkeleton scope={scope.value} />
               ) : state === 'error' ? (
                 <CenteredNotice className="-mt-16">
                   <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
@@ -657,7 +663,7 @@ function SearchScreen() {
                       ) : row.kind === 'entity' ? (
                         <EntityResultRow onPress={pushRoute} row={row} />
                       ) : row.kind === 'loading' ? (
-                        rowSkeleton(0)
+                        <ResultRowSkeleton scope={scope.value} />
                       ) : (
                         <View className="px-6 py-2 flex-row items-center justify-between gap-3">
                           <Text className="shrink text-muted font-sans text-sm">
