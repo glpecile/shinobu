@@ -9,8 +9,9 @@ finger lands to stop a fling, or on a short drag that starts on a poster.
 ## Cause
 
 Shared animated pressables use pressto, which renders gesture-handler's
-`Touchable` (`BaseButton` before pressto 0.8). Legend List and `RefreshableScrollView` scrolled with React
-Native's own `ScrollView`, which gesture-handler doesn't track as a gesture.
+`Touchable` (`BaseButton` before pressto 0.8). Legend List and
+`RefreshableScrollView` scrolled with React Native's own `ScrollView`, which
+gesture-handler doesn't track as a gesture.
 Nothing told the button that the touch became, or ended, a scroll, so the lift
 counted as a press. pressto's README calls this out ("Avoid highlight flicker
 effect in Scrollable List").
@@ -39,5 +40,10 @@ button the drag started on, such as Add to watchlist or a diary day's
 collapse chevron. Android's `SwipeRefreshLayout` takes the pull natively, so no
 gesture-handler gesture activates to cancel the button. gesture-handler 3's
 button presses on any lift that wasn't cancelled and reports
-`pointerInside` to `onPress`, which pressto drops. `Presstable*` sets
-`shouldCancelWhenOutside`, so a press that leaves the button's bounds cancels.
+`pointerInside` to `onPress`, which pressto drops. pressto 0.8 sets
+`Touchable`'s `cancelOnLeave` to false unless it gets `shouldCancelWhenOutside`.
+`Presstable*` passes `shouldCancelWhenOutside`, so a press that leaves the
+button's bounds cancels.
+
+pressto 0.8 drops `waitFor` and `simultaneousHandlers` on gesture-handler 3, so
+a gesture relation can't fix a pressable. Use the scroll component.

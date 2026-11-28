@@ -1,8 +1,4 @@
-# A pressto pressable's `disabled`/`accessibilityState` never reaches the DOM
-
-Since #485 the web Presstable renders react-native-web's `Pressable`, which
-maps `disabled` to `aria-disabled`. It still drops `accessibilityState`, so
-keep `aria-busy` and `aria-pressed` (`docs/solutions/web-pressables-skip-gesture-handler.md`).
+# A pressable's `accessibilityState` never reaches the DOM on web
 
 **Symptom (2026-07-26).** Building `components/button`, the loading state looked
 right — dimmed fill, spinner, "Connecting…" — but the rendered `<button>` on web
@@ -15,21 +11,23 @@ carried no `aria-busy`, no `aria-disabled` and no `disabled` attribute:
 …even though the component passed both `disabled={unavailable}` and
 `accessibilityState={{ busy: loading, disabled: unavailable }}`.
 
-**What is and isn't broken.** The press _is_ blocked. pressto forwards `disabled`
-to RNGH's `BaseButton` as `enabled` (`pressto/lib/module/pressables/base.js`), and
-its web implementation honours it — three forced taps on a button in its loading
-state produced exactly one request. What's missing is only the _announcement_:
-neither `disabled` nor `accessibilityState` is mapped onto the DOM node, so
-assistive tech hears an ordinary, idle button while a fan-out is in flight.
+**Cause.** On web, `components/presstable/index.web.tsx` renders
+react-native-web 0.21's `Pressable`, not pressto
+(`web-pressables-skip-gesture-handler.md`). `Pressable` maps `disabled` to
+`aria-disabled` and blocks the press. react-native-web's `createDOMProps` reads
+the flat `aria-*` and `accessibility*` props, never the `accessibilityState`
+object, so `busy`, `selected` and `expanded` from it are dropped. Assistive tech
+hears an ordinary, idle button while a fan-out is in flight.
 
-**Fix.** Pass the ARIA props explicitly alongside the RN ones — they forward
-through pressto to the DOM, and native ignores them:
+**Fix.** Pass the ARIA props explicitly alongside the RN ones. Native ignores
+them:
 
 ```tsx
 <PresstableOpacity
   accessibilityState={{ busy: loading, disabled: unavailable }} // native
   aria-busy={loading} // web
   aria-disabled={unavailable}
+  aria-pressed={pressed}
   disabled={unavailable} // the actual gate
 />
 ```

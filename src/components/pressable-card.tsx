@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { PresstableScale } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 
-/** Inner View holds the border because pressto never draws borders on Android (docs/solutions/pressto-border-not-drawn-on-android.md). */
+/** Inner View holds the border, padding and fill, so `className` stays layout only (docs/solutions/pressto-border-not-drawn-on-android.md). */
 export function PressableCard({
   children,
   className,

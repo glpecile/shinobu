@@ -12,10 +12,10 @@ export { longPressAction, type PressBehavior } from './press-behavior';
 // `withUniwind` is required because Uniwind drops `className` on raw third-party components
 // on native (docs/solutions/uniwind-classname-third-party-components.md).
 
-// Disables RNGH BaseButton's Android ripple, which ignores child border radius
-// (docs/solutions/android-ripple-ignores-child-radius.md). `'transparent'` skips
-// `createSelectableDrawable` entirely, whereas `undefined` falls back to the theme ripple.
-const RIPPLE_COLOR = 'transparent';
+// pressto 0.8 renders gesture-handler's `Touchable`. It draws no Android ripple unless a caller
+// passes `rippleColor` (docs/solutions/android-ripple-ignores-child-radius.md). pressto maps
+// `shouldCancelWhenOutside` to `cancelOnLeave`, which it otherwise sets to false, so an Android
+// refresh pull that leaves the button cancels its press (docs/solutions/ghost-taps-while-scrolling.md).
 const PRESS_ANIMATION = { duration: DURATION.enter, easing: KEYFRAME_EASE_OUT };
 
 const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion?: boolean }>(
@@ -46,19 +46,17 @@ export function PresstableScale({
   onLongPress,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onPressIn' | 'onLongPress'> &
+}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onLongPress'> &
   PressBehaviorProps & {
     minScale?: number;
     onLongPress?: () => void;
   }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
   const reduceMotion = useReducedMotion();
-  // Android refresh pulls can leave the button without activating a scroll gesture.
   return (
     <UniwindPressableScale
       animationConfig={PRESS_ANIMATION}
       animationType="timing"
-      rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
       {...longPressAction(onLongPress)}
       {...rest}
@@ -86,7 +84,6 @@ export function PresstableOpacity({
     <UniwindPressableOpacity
       animationConfig={PRESS_ANIMATION}
       animationType="timing"
-      rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
       {...longPressAction(onLongPress)}
       {...rest}

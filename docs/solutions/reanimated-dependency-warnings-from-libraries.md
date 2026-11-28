@@ -13,7 +13,8 @@ array on native. 4.5.1 had no such warning. Our code passes none, and
 dependencies, still present in their latest releases as of this date:
 
 - `pressto` 0.7.0 / 0.8.1: `useDerivedValue` ×2 and `useAnimatedStyle` in
-  `pressables/base.js`, behind every pressable.
+  `pressables/base.js`, behind every pressable. Fixed in 0.8.2, which passes
+  the arrays on web only (`webOnlyDeps`).
 - `sonner-native` 0.27.0: five calls across the toast animation hooks.
 - `@legendapp/list/reanimated` 3.6.0 / 3.7.1: the sticky-position
   `useAnimatedStyle`, used when `List` gets `sharedValues` or
@@ -23,7 +24,7 @@ Native ignores the arrays, so behaviour is unaffected.
 
 ## Decision
 
-Left as is. Patching three libraries for a dev-only warning fails the AGENTS.md
+Left as is. Patching the libraries for a dev-only warning fails the AGENTS.md
 patch bar, and `configureReanimatedLogger({ level: error })` would hide real
 Reanimated warnings too. Revisit when a library drops its deps arrays. A new
 occurrence after that is ours, and the lint rule should catch it.
