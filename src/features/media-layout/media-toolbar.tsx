@@ -5,6 +5,7 @@ import { Button } from '@/components/button';
 import { Rail } from '@/components/rail';
 import { Skeleton } from '@/components/skeleton';
 import { ViewToggle } from '@/components/view-toggle';
+import { cn } from '@/lib/cn';
 import { useMediaSort, type MediaSortScope } from '@/state/prefs/media-sort';
 import {
   setWatchlistView,
@@ -24,15 +25,15 @@ export function MediaToolbar({
   notice?: ReactNode;
 }) {
   return (
-    <View className="gap-2 px-6 pb-3">
-      <View className="flex-row items-center gap-3">
+    <View className={cn('gap-2 px-6 pb-3', notice == null && 'pointer-fine:pb-0')}>
+      <View className="flex-row items-center pointer-fine:items-start gap-3">
         <View className="flex-1 min-w-0">
           <Rail accessibilityLabel="Title controls">
-            <View className="flex-row items-center gap-2 pe-8">{children}</View>
+            <View className="min-h-11 flex-row items-center gap-2 pe-8">{children}</View>
           </Rail>
         </View>
         {view != null && (
-          <View className="shrink-0">
+          <View className="shrink-0 min-h-11 justify-center">
             <ViewToggle size="sm" onChange={setWatchlistView} view={view} />
           </View>
         )}

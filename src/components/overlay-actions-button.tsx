@@ -8,11 +8,10 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
-export type OverlayActionsButtonSize = 'sm' | 'md' | 'lg';
+export type OverlayActionsButtonSize = 'md' | 'lg';
 export type OverlayActionsButtonTone = 'overlay' | 'surface';
 
 const SIZE: Record<OverlayActionsButtonSize, { box: string; icon: number }> = {
-  sm: { box: 'w-7 h-7', icon: 14 },
   lg: { box: 'w-7 h-7', icon: 14 },
   md: { box: 'w-8 h-8', icon: 16 },
 };
@@ -71,9 +70,12 @@ export function OverlayActionsButton({
         accessibilityLabel={label}
         accessibilityRole="button"
         className={cn(
-          'items-center justify-center rounded-full',
-          size === 'lg' ? 'w-11 h-11' : cn('w-10 h-10', size === 'sm' ? '-m-1.5' : '-m-1'),
-          'web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',
+          'items-center justify-center rounded-full w-11 h-11',
+          size === 'md' && '-m-1.5',
+          'web:focus-visible:outline-2 web:focus-visible:-outline-offset-2',
+          tone === 'overlay'
+            ? 'web:focus-visible:outline-on-scrim web:focus-visible:ring-2 web:focus-visible:ring-scrim'
+            : 'web:focus-visible:outline-foreground',
         )}
         onPress={onPress}
       >

@@ -79,8 +79,7 @@ function FilterPill({
       <PresstableOpacity
         accessibilityLabel="Show all trackers"
         accessibilityRole="button"
-        className="self-stretch justify-center pl-1 pr-2.5"
-        hitSlop={{ top: 6, bottom: 6, right: 8 }}
+        className="w-11 h-11 -my-1 -ml-2 -mr-2 pl-3 pr-4.5 justify-center"
         onPress={onClear}
       >
         <Ionicons color={foreground} name="close" size={14} />

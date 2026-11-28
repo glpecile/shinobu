@@ -1,10 +1,9 @@
 import { Text, View } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 
-import { List } from '@/components/List';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PresstableScale } from '@/components/presstable';
-import { railScrollbarProps, showsRailScrollbar, useRailFade } from '@/components/rail';
+import { VirtualizedRail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { usePointerHover } from '@/components/use-pointer-hover';
@@ -14,7 +13,7 @@ import { useTmdbToken } from '@/state/session/tmdb-token';
 import { PersonAvatar } from './person-avatar';
 import { creditRoute, type PersonCredit } from './person-credit-sheet';
 
-/** Avatar plus a name and two role lines, which grow with the font scale. */
+// Avatar plus name and two scaled role lines
 const railHeight = (fontScale: number) => 90 + 48 * fontScale;
 
 function PersonCardContent({ credit }: { credit: PersonCredit }) {
@@ -83,7 +82,7 @@ function PersonCard({
           className="absolute top-0 right-0"
           label={`More about ${credit.name}`}
           onPress={() => onActions(credit)}
-          size="sm"
+          size="lg"
           visible={hovered}
         />
       )}
@@ -101,7 +100,6 @@ export function PeopleSection({
   onCreditActions?: (credit: PersonCredit) => void;
 }) {
   const pushRoute = usePushRoute();
-  const { scrollProps, fade } = useRailFade();
   const { fontScale } = useWindowDimensions();
   const hasTmdb = useTmdbToken() !== '';
 
@@ -112,48 +110,41 @@ export function PeopleSection({
       <Section.Header>
         <Section.Title>{title}</Section.Title>
       </Section.Header>
-      <View {...railScrollbarProps}>
-        <List
-          data={people}
-          estimatedItemSize={112}
-          horizontal
-          keyExtractor={(credit) => credit.id}
-          nestedScrollEnabled
-          renderItem={({ item: credit }) =>
-            onCreditActions == null ? (
-              credit.hardcoverId == null ? (
-                <View className="w-24 mr-4 items-center">
-                  <PersonCardContent credit={credit} />
-                </View>
-              ) : (
-                <View className="w-24 mr-4">
-                  <PresstableScale
-                    accessibilityLabel={
-                      credit.role === '' ? credit.name : `${credit.name} / ${credit.role}`
-                    }
-                    className="items-center"
-                    onPress={() => pushRoute(creditRoute(credit))}
-                  >
-                    <PersonCardContent credit={credit} />
-                  </PresstableScale>
-                </View>
-              )
+      <VirtualizedRail
+        data={people}
+        estimatedItemSize={112}
+        keyExtractor={(credit) => credit.id}
+        renderItem={({ item: credit }) =>
+          onCreditActions == null ? (
+            credit.hardcoverId == null ? (
+              <View className="w-24 mr-4 items-center">
+                <PersonCardContent credit={credit} />
+              </View>
             ) : (
-              <PersonCard
-                credit={credit}
-                onActions={onCreditActions}
-                {...(hasTmdb || credit.anilistId != null
-                  ? { onPress: () => pushRoute(creditRoute(credit)) }
-                  : {})}
-              />
+              <View className="w-24 mr-4">
+                <PresstableScale
+                  accessibilityLabel={
+                    credit.role === '' ? credit.name : `${credit.name} / ${credit.role}`
+                  }
+                  className="items-center"
+                  onPress={() => pushRoute(creditRoute(credit))}
+                >
+                  <PersonCardContent credit={credit} />
+                </PresstableScale>
+              </View>
             )
-          }
-          showsHorizontalScrollIndicator={showsRailScrollbar}
-          style={{ height: railHeight(fontScale) }}
-          {...scrollProps}
-        />
-        {fade}
-      </View>
+          ) : (
+            <PersonCard
+              credit={credit}
+              onActions={onCreditActions}
+              {...(hasTmdb || credit.anilistId != null
+                ? { onPress: () => pushRoute(creditRoute(credit)) }
+                : {})}
+            />
+          )
+        }
+        style={{ height: railHeight(fontScale) }}
+      />
     </Section>
   );
 }
@@ -161,7 +152,7 @@ export function PeopleSection({
 export function PeopleRailSkeleton() {
   const { fontScale } = useWindowDimensions();
   return (
-    <View className="mt-8">
+    <View className="mt-8 pointer-fine:pb-3">
       <Skeleton className="h-7 w-24 rounded mb-4" />
       <View className="flex-row overflow-hidden" style={{ height: railHeight(fontScale) }}>
         {Array.from({ length: 10 }).map((_, index) => (

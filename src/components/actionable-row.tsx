@@ -24,14 +24,13 @@ function RowActionsButton({
     <View
       className={cn(
         alwaysVisible ? 'flex' : 'hidden pointer-fine:flex',
-        showActions ? 'w-11' : 'w-10',
-        'shrink-0 items-center',
+        'w-11 shrink-0 items-center',
       )}
     >
       <OverlayActionsButton
         label={`More options for ${item.title}`}
         onPress={() => onActions(item)}
-        size={showActions ? 'lg' : 'sm'}
+        size="lg"
         tone="surface"
         visible={visible || alwaysVisible}
       />
