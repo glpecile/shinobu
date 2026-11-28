@@ -2,6 +2,7 @@ import { Suspense, useDeferredValue, useState } from 'react';
 import { Keyboard, Text, View } from 'react-native';
 import { QueryErrorResetBoundary, useIsFetching } from '@tanstack/react-query';
 import { ErrorBoundary } from 'react-error-boundary';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
@@ -392,21 +393,23 @@ export function AddToList({
   target: ListEditTarget;
   items: readonly NormalizedMediaItem[];
 }) {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState(0);
   const [selected, setSelected] = useState<NormalizedMediaItem | null>(null);
   return (
     <>
-      <Fab
-        className="absolute bottom-6 end-6"
-        icon="add"
-        label={copy(target.provider).fab}
-        onPress={() => {
-          setSelected(null);
-          setSession(session + 1);
-          setOpen(true);
-        }}
-      />
+      <View className="absolute end-6" style={{ bottom: Math.max(24, insets.bottom + 12) }}>
+        <Fab
+          icon="add"
+          label={copy(target.provider).fab}
+          onPress={() => {
+            setSelected(null);
+            setSession(session + 1);
+            setOpen(true);
+          }}
+        />
+      </View>
       <Sheet onClose={() => setOpen(false)} open={open}>
         {session > 0 &&
           (selected == null ? (

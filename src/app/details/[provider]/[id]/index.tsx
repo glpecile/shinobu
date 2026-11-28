@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
@@ -515,6 +516,7 @@ function DetailsScreen() {
   const backgroundVariable = useCSSVariable('--color-background');
   const background = typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   const backButtonClearance = useFloatingBackButtonClearance();
+  const insets = useSafeAreaInsets();
   const [refreshCount, setRefreshCount] = useState(0);
 
   const { item, isLoading } = useResolvedMediaItem(id, mediaType);
@@ -848,7 +850,10 @@ function DetailsScreen() {
     </>
   );
   const footer = (
-    <View className="w-full max-w-4xl self-center px-6 pb-12">
+    <View
+      className="w-full max-w-4xl self-center px-6"
+      style={{ paddingBottom: process.env.EXPO_OS === 'android' ? 48 + insets.bottom : 48 }}
+    >
       <RelationsSection item={shown} onItemActions={openActions} resetKey={refreshCount} />
 
       <SuspenseSection

@@ -15,6 +15,7 @@ import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/media-sort-control';
 import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
+import { useListEndPadding } from '@/features/media-layout/watchlist-rows';
 import { DURATION } from '@/lib/motion';
 import { sortMediaEntries } from '@/lib/media-sort';
 import { Provider } from '@/lib/providers/types';
@@ -69,6 +70,7 @@ export function SerializdListItems({
   }));
   const pushRoute = usePushRoute();
   const { openActions, sheetProps } = useCardActions();
+  const paddingBottom = useListEndPadding(target != null);
   return (
     <>
       <Head>
@@ -105,7 +107,7 @@ export function SerializdListItems({
         estimatedItemSize={92}
         recycleItems
         itemLayoutAnimation={Platform.OS === 'web' || reducedMotion ? undefined : membershipLayout}
-        contentContainerStyle={{ paddingBottom: target != null ? 96 : undefined }}
+        contentContainerStyle={{ paddingBottom }}
         keyExtractor={(entry) => entry.id}
         refreshControl={<RefreshControl onRefresh={query.refetch} />}
         renderItem={({ item: entry }) => (

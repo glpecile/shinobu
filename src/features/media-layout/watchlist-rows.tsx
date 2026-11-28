@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { List } from '@/components/List';
@@ -108,6 +109,16 @@ export function WatchlistRow({
 
 export const ROW_HEIGHT = 92;
 
+/**
+ * Bottom padding for a stack screen's list: room for the add-to-list FAB when
+ * `fab`, otherwise room for Android's navigation bar, as `lists-grid` does.
+ */
+export function useListEndPadding(fab: boolean | undefined): number | undefined {
+  const insets = useSafeAreaInsets();
+  if (fab) return 96 + insets.bottom;
+  return process.env.EXPO_OS === 'android' ? 24 + insets.bottom : undefined;
+}
+
 export function WatchlistRows({
   entries,
   onItemPress,
@@ -119,10 +130,11 @@ export function WatchlistRows({
   showActions,
   itemLayoutAnimation,
 }: MediaLayoutProps) {
+  const paddingBottom = useListEndPadding(showActions);
   return (
     <List
       className="flex-1"
-      contentContainerStyle={{ paddingTop: 4, paddingBottom: showActions ? 96 : undefined }}
+      contentContainerStyle={{ paddingTop: 4, paddingBottom }}
       data={entries}
       extraData={watched}
       itemLayoutAnimation={itemLayoutAnimation}

@@ -16,6 +16,7 @@ import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import type { MediaLayoutProps } from './types';
+import { useListEndPadding } from './watchlist-rows';
 
 const POSTER_ASPECT = 2 / 3;
 const GAP = 8;
@@ -161,6 +162,7 @@ export function PosterWall({
   itemLayoutAnimation,
 }: MediaLayoutProps) {
   const { columns, rowHeight } = useWallMetrics();
+  const paddingBottom = useListEndPadding(showActions);
 
   return (
     <List
@@ -171,7 +173,7 @@ export function PosterWall({
       contentContainerStyle={{
         paddingHorizontal: EDGE_PAD - GAP / 2,
         paddingTop: GAP / 2,
-        paddingBottom: showActions ? 96 : undefined,
+        paddingBottom,
       }}
       data={entries}
       extraData={watched}

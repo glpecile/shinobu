@@ -1,3 +1,4 @@
+import type { StyleProp, ViewStyle } from 'react-native';
 import { FadeIn, FadeOut, Keyframe, useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -30,14 +31,20 @@ const fabExiting = new Keyframe({
 const fabFadingIn = FadeIn.duration(DURATION.enter);
 const fabFadingOut = FadeOut.duration(DURATION.exit);
 
+/**
+ * Pinned to the bottom-right. A stack screen passes a `style` bottom that
+ * clears the safe area; a tab screen moves it above its tab bar with `className`.
+ */
 export function ScrollToTopFab({
   visible,
   onPress,
   className,
+  style,
 }: {
   visible: boolean;
   onPress: () => void;
   className?: string;
+  style?: StyleProp<ViewStyle>;
 }) {
   const reduceMotion = useReducedMotion();
   if (!visible) return null;
@@ -46,6 +53,7 @@ export function ScrollToTopFab({
       className={cn('absolute bottom-6 right-6', className)}
       entering={reduceMotion ? fabFadingIn : fabEntering}
       exiting={reduceMotion ? fabFadingOut : fabExiting}
+      style={style}
     >
       <Fab icon="arrow-up" label="Scroll to top" onPress={onPress} />
     </AnimatedView>
