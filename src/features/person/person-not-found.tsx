@@ -1,3 +1,4 @@
+import { useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -13,10 +14,12 @@ export function PersonNotFound({
 }: {
   detail: string;
   onGoBack: () => void;
+  /** Called after the query error boundary resets, so a route `ErrorBoundary` can pass `retry`. */
   onRetry?: () => void;
   onOpenSettings?: () => void;
   title?: string;
 }) {
+  const { reset } = useQueryErrorResetBoundary();
   return (
     <View className="flex-1 bg-background">
       <CenteredNotice>
@@ -31,7 +34,11 @@ export function PersonNotFound({
             <Button
               icon={<Button.Icon name="refresh" />}
               label="Try again"
-              onPress={onRetry}
+              onPress={() => {
+                // A remount alone rethrows the cached query error.
+                reset();
+                onRetry();
+              }}
               variant="quiet"
             />
           )}

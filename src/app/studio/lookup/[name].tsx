@@ -1,4 +1,3 @@
-import { useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import { Suspense } from 'react';
 
@@ -62,16 +61,12 @@ export default function StudioLookupScreen() {
 
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
-  const { reset } = useQueryErrorResetBoundary();
   return (
     <PersonNotFound
       detail="This studio couldn’t be loaded."
       title="Couldn’t load"
       onGoBack={() => (router.canGoBack() ? router.back() : router.replace(routes.home))}
-      onRetry={() => {
-        reset();
-        void retry();
-      }}
+      onRetry={retry}
     />
   );
 }
