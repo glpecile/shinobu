@@ -122,10 +122,16 @@ function WatchlistGrid({
   if (entries.length === 0) {
     return (
       <CenteredNotice>
+        <CenteredNotice.Icon name="bookmark-outline" />
         <CenteredNotice.Title>Nothing here yet</CenteredNotice.Title>
         <CenteredNotice.Body>
           Anything you add to a connected tracker’s watchlist shows up here.
         </CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="search-outline" />}
+          label="Find something to watch"
+          onPress={() => pushRoute(routes.search)}
+        />
       </CenteredNotice>
     );
   }

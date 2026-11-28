@@ -60,11 +60,13 @@ function SeasonWall({
   format,
   active,
   onItemActions,
+  onShowAllFormats,
 }: {
   window: AnimeSeasonWindow;
   format: AnimeFormatFilter;
   active: boolean;
   onItemActions: (item: NormalizedMediaItem) => void;
+  onShowAllFormats: () => void;
 }) {
   const pushRoute = usePushRoute();
   const pages = useSuspenseSeasonalAnimePagesQuery(window, format);
@@ -86,6 +88,14 @@ function SeasonWall({
         <CenteredNotice.Body>
           {`AniList lists nothing for ${animeSeasonLabel(window)} yet.`}
         </CenteredNotice.Body>
+        {format !== 'ALL' && (
+          <CenteredNotice.Action
+            icon={<Button.Icon name="albums-outline" />}
+            label="Show all formats"
+            onPress={onShowAllFormats}
+            variant="quiet"
+          />
+        )}
       </CenteredNotice>
     );
   }
@@ -135,11 +145,13 @@ function WallBoundary({
   format,
   active,
   onItemActions,
+  onShowAllFormats,
 }: {
   window: AnimeSeasonWindow;
   format: AnimeFormatFilter;
   active: boolean;
   onItemActions: (item: NormalizedMediaItem) => void;
+  onShowAllFormats: () => void;
 }) {
   const { reset } = useQueryErrorResetBoundary();
   return (
@@ -161,7 +173,13 @@ function WallBoundary({
       resetKeys={[window.season, window.year, format]}
     >
       <Suspense fallback={<SeasonSkeleton animated={active} />}>
-        <SeasonWall active={active} format={format} onItemActions={onItemActions} window={window} />
+        <SeasonWall
+          active={active}
+          format={format}
+          onItemActions={onItemActions}
+          onShowAllFormats={onShowAllFormats}
+          window={window}
+        />
       </Suspense>
     </QueryErrorBoundary>
   );
@@ -244,6 +262,7 @@ export default function AnimeSeasonsScreen() {
               format={pageFormat}
               key={`${window.year}-${pageFormat}`}
               onItemActions={openActions}
+              onShowAllFormats={() => setFormat('ALL')}
               window={{ season, year: window.year }}
             />
           );

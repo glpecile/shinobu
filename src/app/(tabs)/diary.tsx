@@ -19,6 +19,7 @@ import { PendingLogs } from '@/features/log-media/pending-logs-sheet';
 import { cn } from '@/lib/cn';
 import { feedReadsType } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
+import { routes } from '@/lib/routes';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
 
@@ -120,6 +121,11 @@ function DiaryScreen() {
           Log a movie, show, or anime and it’ll show up here — and in every tracker you’ve
           connected.
         </CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="search-outline" />}
+          label="Find something to log"
+          onPress={() => pushRoute(routes.search)}
+        />
       </CenteredNotice>
     );
   } else {
@@ -136,6 +142,7 @@ function DiaryScreen() {
         onItemActions={openActions}
         onOpen={pushRoute}
         onRefresh={diary.refetch}
+        onShowAll={() => setPicked('ALL')}
         onRetry={() => {
           void diary.refetch();
         }}
