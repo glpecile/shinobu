@@ -67,7 +67,7 @@ function DiaryScreen() {
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
   const diary = useDiaryFeedQuery();
-  const retry = useMutation({ mutationFn: diary.refetch, networkMode: 'always' });
+  const retry = useMutation({ mutationFn: diary.refetch });
   const { openActions, sheetProps } = useCardActions();
   const [picked, setPicked] = useState<DiaryFormat>('ALL');
   const reading = {

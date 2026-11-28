@@ -20,12 +20,7 @@ export function CenteredNotice({
 
 function CenteredNoticeGlyph({ children }: { children: ReactNode }) {
   return (
-    <Text
-      accessibilityElementsHidden
-      aria-hidden
-      className="text-5xl text-muted mb-4"
-      importantForAccessibility="no-hide-descendants"
-    >
+    <Text aria-hidden className="text-5xl text-muted mb-4">
       {children}
     </Text>
   );

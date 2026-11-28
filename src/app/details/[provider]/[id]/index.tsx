@@ -517,7 +517,7 @@ function DetailsScreen() {
   const [refreshCount, setRefreshCount] = useState(0);
 
   const { item, isLoading, isError, refetch } = useResolvedMediaItem(id, mediaType);
-  const retry = useMutation({ mutationFn: refetch, networkMode: 'always' });
+  const retry = useMutation({ mutationFn: refetch });
   const mediaDetails = useMediaDetailsQuery(item);
   const anilistId = item?.externalIds.anilist;
   const connected = useConnectedProviders();
@@ -604,35 +604,6 @@ function DetailsScreen() {
     const externalUrl = mediaLinkUrl(id, mediaType);
     const needsHardcover =
       provider === Provider.Hardcover && !connected.includes(Provider.Hardcover);
-    if (isError && !needsHardcover) {
-      return (
-        <View className="flex-1 bg-background">
-          <CenteredNotice>
-            <Head>
-              <title>Couldn’t load — Shinobu</title>
-            </Head>
-            <CenteredNotice.Title>Couldn’t load</CenteredNotice.Title>
-            <CenteredNotice.Body>
-              This item couldn’t be loaded. Check your connection and try again.
-            </CenteredNotice.Body>
-            <CenteredNotice.Actions>
-              <Button
-                icon={<Button.Icon name="refresh" />}
-                label="Try again"
-                loading={retry.isPending}
-                onPress={() => retry.mutate()}
-              />
-              <Button
-                icon={<Button.Icon name="arrow-back" />}
-                label="Go back"
-                onPress={goBack}
-                variant="quiet"
-              />
-            </CenteredNotice.Actions>
-          </CenteredNotice>
-        </View>
-      );
-    }
     return (
       <View className="flex-1 bg-background">
         <CenteredNotice>
@@ -648,6 +619,15 @@ function DetailsScreen() {
                 : 'This linked item could not be loaded.'}
           </CenteredNotice.Body>
           <CenteredNotice.Actions>
+            {isError && (
+              <Button
+                icon={<Button.Icon name="refresh" />}
+                label="Try again"
+                loading={retry.isPending}
+                onPress={() => retry.mutate()}
+                variant="quiet"
+              />
+            )}
             {externalUrl != null && (
               <Button
                 icon={<Button.Icon name="open-outline" />}

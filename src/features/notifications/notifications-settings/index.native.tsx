@@ -153,7 +153,6 @@ export function NotificationsSettingsSection() {
             icon={<Button.Icon name="open-outline" />}
             label="Open Settings"
             onPress={() => Linking.openSettings()}
-            size="md"
             variant="quiet"
           />
         </SettingsRail.Row>

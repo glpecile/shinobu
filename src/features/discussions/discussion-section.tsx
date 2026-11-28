@@ -8,6 +8,7 @@ import { Button } from '@/components/button';
 import { Rail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Sheet } from '@/components/sheet';
+import { SheetHeader } from '@/components/sheet-header';
 import { SuspenseSection } from '@/components/suspense-section';
 import { discussionBoards, type DiscussionBoard } from '@/lib/http/fourchan';
 import {
@@ -26,7 +27,6 @@ import {
 import { useAnimeByIdQuery } from '@/state/queries/anilist';
 import { useAniListIdByTmdbQuery } from '@/state/queries/mapping';
 import type { NormalizedMediaItem } from '@/types/media';
-import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { DiscussionCard } from './discussion-card';
 
 const discussionFade = { from: { opacity: 0 }, to: { opacity: 1 } };
@@ -177,7 +177,7 @@ function DiscussionBody({
         </Rail>
         <Sheet onClose={() => onOpenChange(false)} open={open}>
           <Sheet.Header>
-            <WriteSheet.Title>Discussion options</WriteSheet.Title>
+            <SheetHeader.Title>Discussion options</SheetHeader.Title>
           </Sheet.Header>
           <View className="mt-5 gap-2">
             <Button
