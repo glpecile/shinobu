@@ -602,15 +602,16 @@ function DetailsScreen() {
       );
     }
     const externalUrl = mediaLinkUrl(id, mediaType);
+    const notFoundTitle = isError ? 'Couldn’t load' : 'Not found';
     const needsHardcover =
       provider === Provider.Hardcover && !connected.includes(Provider.Hardcover);
     return (
       <View className="flex-1 bg-background">
         <CenteredNotice>
           <Head>
-            <title>Not found — Shinobu</title>
+            <title>{`${notFoundTitle} — Shinobu`}</title>
           </Head>
-          <CenteredNotice.Title>Not found</CenteredNotice.Title>
+          <CenteredNotice.Title>{notFoundTitle}</CenteredNotice.Title>
           <CenteredNotice.Body>
             {provider === Provider.Trakt
               ? 'This linked item could not be loaded. Trakt links require your own client credentials in Settings.'

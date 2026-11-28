@@ -20,8 +20,9 @@ object, so `busy`, `selected` and `expanded` from it are dropped. Assistive tech
 hears an ordinary, idle button while a fan-out is in flight.
 
 **Fix.** `WebPresstable` maps `accessibilityState` to `aria-busy`,
-`aria-checked`, `aria-disabled`, `aria-expanded` and `aria-pressed` (from
-`selected`) for every caller. A caller's own `aria-*` prop still wins. Callers
+`aria-disabled`, `aria-expanded` and `aria-pressed` (from `selected`) for every
+caller. It drops `checked`: the role is always `button`, which does not allow
+`aria-checked`, so a toggle passes `selected`. A caller's own `aria-*` prop still wins. Callers
 pass `accessibilityState` once and `disabled` as the actual gate:
 
 ```tsx
