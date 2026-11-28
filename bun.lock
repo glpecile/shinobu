@@ -11,7 +11,7 @@
         "@hzblj/expo-app-icons": "0.1.4",
         "@legendapp/list": "^3.9.2",
         "@nandorojo/galeria": "^3.1.0",
-        "@react-native-vector-icons/ionicons": "^13.1.5",
+        "@react-native-vector-icons/ionicons": "^14.0.0",
         "@swmansion/react-native-bottom-sheet": "1.1.0",
         "@tanstack/query-sync-storage-persister": "^5.108.4",
         "@tanstack/react-query": "^5.108.4",
@@ -657,9 +657,9 @@
 
     "@radix-ui/react-use-layout-effect": ["@radix-ui/react-use-layout-effect@1.1.4", "", { "peerDependencies": { "@types/react": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react"] }, "sha512-K20DkRkUwDnxEYMBPcg3Y6voLkEy5p5QQmszZgLngKKiC7dzBR/aEuK3w1qlx2JWDUNH6FluahYdgR3BP+QbYw=="],
 
-    "@react-native-vector-icons/common": ["@react-native-vector-icons/common@13.0.4", "", { "dependencies": { "find-up": "^8.0.0", "picocolors": "^1.1.1", "plist": "^3.1.0" }, "peerDependencies": { "@react-native-vector-icons/get-image": "^13.0.2", "@react-native/assets-registry": "*", "expo-font": "*", "react": "*", "react-native": "*" }, "optionalPeers": ["@react-native-vector-icons/get-image", "@react-native/assets-registry", "expo-font"], "bin": { "rnvi-update-plist": "lib/commonjs/scripts/updatePlist.js" } }, "sha512-1MvNyRf3KIW747rJsmka/+EdEwV92ccVHedEXFV2kQ0lo6D7uvrIBTtffeDidN4//l8+R4bN3IiQv0tXQzaRXQ=="],
+    "@react-native-vector-icons/common": ["@react-native-vector-icons/common@14.0.0", "", { "dependencies": { "find-up": "^8.0.0", "picocolors": "^1.1.1", "plist": "^3.1.0" }, "peerDependencies": { "@react-native-vector-icons/get-image": "^14.0.0", "@react-native/assets-registry": "*", "expo-font": "*", "react": "*", "react-native": "*" }, "optionalPeers": ["@react-native-vector-icons/get-image", "@react-native/assets-registry", "expo-font"], "bin": { "rnvi-update-plist": "lib/commonjs/scripts/updatePlist.js" } }, "sha512-wlNieCygX7DWFjMDjYuFfk4mcQVLkF1XTm/spxKdlrQMSofzvLOHSd4vkeQwDsWz/D4wbZPdzU3++crmi/x8XA=="],
 
-    "@react-native-vector-icons/ionicons": ["@react-native-vector-icons/ionicons@13.1.5", "", { "dependencies": { "@react-native-vector-icons/common": "^13.0.4" }, "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" }, "optionalPeers": ["expo"] }, "sha512-2g5KjOgx1607tmDNSXHkubR4jMD2bCjWA/xWzngGCYzEJnvRIpqcLW3Qxy5G18Dfqx/DQcrdmgwhDf1c4K4nIw=="],
+    "@react-native-vector-icons/ionicons": ["@react-native-vector-icons/ionicons@14.0.0", "", { "dependencies": { "@react-native-vector-icons/common": "^14.0.0" }, "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" }, "optionalPeers": ["expo"] }, "sha512-cSi8RZTaPGX6ZUoSCVPd2nseH09Zyh1v9P2tRpy0JHQacVQdYs/5YD9U2JQBvLrzK98QV6cJI/tZoIjBbtmTmw=="],
 
     "@react-native/asset-utils": ["@react-native/asset-utils@0.88.1", "", {}, "sha512-BLb5FF7NgggGYiCsA7KKkK2qFhn0K+6iGXOI+4Ucd+G7Robzw9Gt4WsWwxLt+Od+G+/hyqfz8ASokyWFZ6VcLw=="],
 
