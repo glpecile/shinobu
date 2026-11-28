@@ -112,7 +112,7 @@ export function ActionableRow({
       {...hoverProps}
     >
       <PresstableScale
-        className={cn('flex-row items-center shrink min-w-0', showActions && 'flex-1')}
+        className={cn('flex-row items-center shrink min-w-0 self-stretch', showActions && 'flex-1')}
         {...pressProps}
       >
         {leading}
@@ -123,6 +123,12 @@ export function ActionableRow({
           'shrink-0 flex-row items-center justify-end self-stretch',
           showActions ? 'ml-2' : 'grow',
         )}
+        // A second hit area for the same press. The leading pressable's label
+        // already says what the trailing content shows, so assistive tech and
+        // the tab order skip this one.
+        accessible={false}
+        aria-hidden
+        focusable={false}
         onLongPress={pressProps.onLongPress}
         onPress={pressProps.onPress}
         pressBehavior={pressBehavior}

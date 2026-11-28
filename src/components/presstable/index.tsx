@@ -40,11 +40,14 @@ export function PresstableScale({
   minScale,
   onPress,
   onLongPress,
+  focusable: _focusable,
   pressBehavior = 'prevent-repeat',
   ...rest
 }: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata'> &
   PressBehaviorProps & {
     minScale?: number;
+    /** Web only: `false` takes it out of the tab order. */
+    focusable?: boolean;
   }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
   const reduceMotion = useReducedMotion();
@@ -53,6 +56,8 @@ export function PresstableScale({
       animationConfig={PRESS_ANIMATION}
       animationType="timing"
       shouldCancelWhenOutside
+      // pressto sets no role, so VoiceOver and TalkBack read a bare pressable as text.
+      accessibilityRole="button"
       {...longPressAction(onLongPress)}
       {...rest}
       onLongPress={onLongPress}
@@ -79,6 +84,8 @@ export function PresstableOpacity({
       animationConfig={PRESS_ANIMATION}
       animationType="timing"
       shouldCancelWhenOutside
+      // pressto sets no role, so VoiceOver and TalkBack read a bare pressable as text.
+      accessibilityRole="button"
       {...longPressAction(onLongPress)}
       {...rest}
       onLongPress={onLongPress}

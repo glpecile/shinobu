@@ -236,12 +236,6 @@ export function Button({
         iconOnly && 'min-w-11 min-h-11 items-center justify-center',
         className,
       )}
-      // `accessibilityState` never becomes ARIA on web, so a screen reader
-      // would hear an idle button while a fan-out is in flight. These say it
-      // (docs/solutions/pressto-accessibility-state-not-mapped-on-web.md).
-      aria-busy={loading}
-      aria-disabled={unavailable}
-      aria-pressed={pressedState}
       disabled={unavailable}
       onPress={onPress}
       onPressIn={onPressIn}

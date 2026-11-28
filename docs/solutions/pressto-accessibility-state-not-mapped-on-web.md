@@ -19,16 +19,15 @@ the flat `aria-*` and `accessibility*` props, never the `accessibilityState`
 object, so `busy`, `selected` and `expanded` from it are dropped. Assistive tech
 hears an ordinary, idle button while a fan-out is in flight.
 
-**Fix.** Pass the ARIA props explicitly alongside the RN ones. Native ignores
-them:
+**Fix.** `WebPresstable` maps `accessibilityState` to `aria-busy`,
+`aria-checked`, `aria-disabled`, `aria-expanded` and `aria-pressed` (from
+`selected`) for every caller. A caller's own `aria-*` prop still wins. Callers
+pass `accessibilityState` once and `disabled` as the actual gate:
 
 ```tsx
 <PresstableOpacity
-  accessibilityState={{ busy: loading, disabled: unavailable }} // native
-  aria-busy={loading} // web
-  aria-disabled={unavailable}
-  aria-pressed={pressed}
-  disabled={unavailable} // the actual gate
+  accessibilityState={{ busy: loading, disabled: unavailable, selected: pressed }}
+  disabled={unavailable}
 />
 ```
 
