@@ -2,6 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { createContext, type ReactNode, useContext } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { Spinner } from '@/components/spinner';
+import { useDelayedBusy } from '@/components/use-delayed-busy';
 import Svg, { Path } from 'react-native-svg';
 import {
   type CSSTransitionProperties,
@@ -160,6 +161,8 @@ export type ButtonShape = 'rounded' | 'pill';
 export interface ButtonProps {
   label: string;
   onPress: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
   icon?: ReactNode;
   trailingIcon?: ReactNode;
   align?: 'center' | 'start';
@@ -181,6 +184,8 @@ export interface ButtonProps {
 export function Button({
   label,
   onPress,
+  onPressIn,
+  onPressOut,
   icon,
   trailingIcon,
   align = 'center',
@@ -199,7 +204,8 @@ export function Button({
   className,
 }: ButtonProps) {
   const reduceMotion = useReducedMotion();
-  const unavailable = disabled || loading;
+  const busy = useDelayedBusy(loading);
+  const unavailable = disabled || loading || busy;
   const pressedState = SELECTABLE[variant] ? pressed : undefined;
   const selected = pressedState === true;
   const tonalSelected = selected && !iconOnly;
@@ -210,8 +216,8 @@ export function Button({
       : SPINNER_TOKEN[variant];
   const spinnerColor = useThemeColor(glyphToken);
   const LabelText = morphLabel ? MorphText : Text;
-  const shownLabel = loading ? (loadingLabel ?? label) : label;
-  const overlay = loading && loadingLabel == null;
+  const shownLabel = busy ? (loadingLabel ?? label) : label;
+  const overlay = busy && loadingLabel == null;
   const contentTransition: CSSTransitionProperties & { transform: { translateY: number }[] } = {
     ...COLOR_TRANSITION,
     transitionProperty: ['opacity', 'transform'],
@@ -240,6 +246,8 @@ export function Button({
       aria-pressed={pressedState}
       disabled={unavailable}
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       pressBehavior={pressBehavior}
     >
       <LayoutAnimationConfig skipEntering skipExiting>
@@ -264,7 +272,7 @@ export function Button({
           layout={BOX_LAYOUT}
           style={COLOR_TRANSITION}
         >
-          {loading && (
+          {busy && (
             // Wrapped so the spinner keeps its own box on native, where an
             // ActivityIndicator dropped straight into a flex row can stretch.
             <AnimatedView
@@ -290,7 +298,7 @@ export function Button({
               </AnimatedView>
             </AnimatedView>
           )}
-          {icon != null && (overlay || !loading) && (
+          {icon != null && (overlay || !busy) && (
             <AnimatedView
               className="items-center justify-center"
               entering={SLOT_ENTER}
