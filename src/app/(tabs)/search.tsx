@@ -100,7 +100,6 @@ const SCOPES = [
 
 type SearchScope = (typeof SCOPES)[number]['value'];
 
-/** The idle line for a scope without discovery rows. */
 function scopeWelcome(scope: Exclude<SearchScope, 'titles'>, readingLabel: string): string {
   switch (scope) {
     case 'people':
