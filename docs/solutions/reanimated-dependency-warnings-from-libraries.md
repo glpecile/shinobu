@@ -14,8 +14,11 @@ dependencies, still present in their latest releases as of this date:
 
 - `pressto` 0.7.0 / 0.8.1: `useDerivedValue` ×2 and `useAnimatedStyle` in
   `pressables/base.js`, behind every pressable. Fixed in 0.8.2, which passes
-  the arrays on web only (`webOnlyDeps`).
-- `sonner-native` 0.27.0: five calls across the toast animation hooks.
+  the arrays on web only (`webOnlyDeps`). The app is on 0.8.2 since #527.
+- `sonner-native` 0.27.0: five calls across the toast hooks, in
+  `use-toast-position.ts`, `use-toast-animations.ts`, and `gestures.tsx`.
+  Upstream commit `2b45163` (2026-11-12) passes them on web only, but no
+  release has it yet (checked 2026-11-28). Upgrade it in #534.
 - `@legendapp/list/reanimated` 3.6.0 / 3.7.1: the sticky-position
   `useAnimatedStyle`, used when `List` gets `sharedValues` or
   `itemLayoutAnimation`.
