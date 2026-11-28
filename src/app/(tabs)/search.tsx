@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-screens/experimental';
@@ -43,6 +43,7 @@ import {
   TrendingShowsRow,
 } from '@/features/feed/feed-rows';
 import { PosterWall } from '@/features/feed/poster-wall';
+import { mediaKindLabel } from '@/features/media-layout/watchlist-rows';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { DURATION, EASE_OUT } from '@/lib/motion';
@@ -51,6 +52,7 @@ import { hasCoarsePointer } from '@/lib/pointer';
 import { usePushRoute } from '@/lib/navigation';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { Provider } from '@/lib/providers/types';
+import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useAniListSearchQuery, useAniListStaffSearchQuery } from '@/state/queries/anilist';
@@ -99,7 +101,7 @@ const SCOPES = [
 type SearchScope = (typeof SCOPES)[number]['value'];
 
 function resultMeta(item: NormalizedMediaItem): string {
-  return [item.type, item.year != null ? String(item.year) : null]
+  return [mediaKindLabel(item), item.year != null ? String(item.year) : null]
     .filter((part) => part != null)
     .join(' · ');
 }
@@ -201,15 +203,28 @@ function RowSkeleton({ index = 0 }: { index?: number }) {
   );
 }
 
-function ResultsSkeleton() {
+function EntityRowSkeleton({ index = 0, shape }: { index?: number; shape: 'face' | 'logo' }) {
+  const delay = staggerDelay(index);
+  return (
+    <View className="flex-row items-center px-6 py-2.5">
+      <Skeleton
+        className={cn('size-12', shape === 'face' ? 'rounded-full' : 'rounded')}
+        delay={delay}
+      />
+      <Skeleton className="h-4 w-1/2 ml-4 rounded" delay={delay} />
+    </View>
+  );
+}
+
+function ResultsSkeleton({ row }: { row: (index: number) => React.ReactNode }) {
   return (
     <View>
       <View className="flex-row items-center gap-2 px-6 pt-4 pb-1.5">
         <Skeleton className="size-3.5 rounded-full" />
         <Skeleton className="h-4 w-20 rounded" />
       </View>
-      {Array.from({ length: 6 }).map((_, index) => (
-        <RowSkeleton index={index} key={index} />
+      {Array.from({ length: 6 }, (_, index) => (
+        <Fragment key={index}>{row(index)}</Fragment>
       ))}
     </View>
   );
@@ -356,6 +371,12 @@ function SearchScreen() {
   const scope = scopes.find((entry) => entry.value === selectedScope) ?? SCOPES[0];
   const reading = scope.value === 'reading';
   const titleSearch = scope.value === 'titles' || reading;
+  const rowSkeleton = (index: number) =>
+    titleSearch ? (
+      <RowSkeleton index={index} />
+    ) : (
+      <EntityRowSkeleton index={index} shape={scope.value === 'people' ? 'face' : 'logo'} />
+    );
 
   const tmdbSearch = useTmdbSearchQuery({
     query,
@@ -575,7 +596,7 @@ function SearchScreen() {
                   </View>
                 )
               ) : state === 'loading' ? (
-                <ResultsSkeleton />
+                <ResultsSkeleton row={rowSkeleton} />
               ) : state === 'error' ? (
                 <CenteredNotice className="-mt-16">
                   <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
@@ -636,7 +657,7 @@ function SearchScreen() {
                       ) : row.kind === 'entity' ? (
                         <EntityResultRow onPress={pushRoute} row={row} />
                       ) : row.kind === 'loading' ? (
-                        <RowSkeleton />
+                        rowSkeleton(0)
                       ) : (
                         <View className="px-6 py-2 flex-row items-center justify-between gap-3">
                           <Text className="shrink text-muted font-sans text-sm">
