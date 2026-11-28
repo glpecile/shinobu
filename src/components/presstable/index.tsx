@@ -75,7 +75,7 @@ export function PresstableOpacity({
   onMouseDown: _onMouseDown,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn' | 'onLongPress'> &
+}: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onLongPress'> &
   PressBehaviorProps & {
     onLongPress?: () => void;
     /** Web-only DOM handler, typed here because callers type-check against this file. */

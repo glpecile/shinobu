@@ -54,9 +54,10 @@ export type ListEditTarget = {
 /** Confirm upstream first, update mounted pages, then reconcile detail and index reads. */
 export function useListMembership(target: ListEditTarget) {
   const client = useQueryClient();
+  const identity = target.provider === Provider.Hardcover ? target.id : target.url;
   return useMutation({
-    mutationKey: ['list-membership', target.provider, target.username, target.url],
-    scope: { id: `list-membership/${target.provider}/${target.username}/${target.url}` },
+    mutationKey: ['list-membership', target.provider, target.username, identity],
+    scope: { id: `list-membership/${target.provider}/${target.username}/${identity}` },
     retry: false,
     mutationFn: async ({
       item: listed,
@@ -180,9 +181,10 @@ function invalidateHardcoverList(client: QueryClient, id: string) {
  */
 export function useRenameList(target: ListEditTarget) {
   const client = useQueryClient();
+  const identity = target.provider === Provider.Hardcover ? target.id : target.url;
   return useMutation({
-    mutationKey: ['list-rename', target.provider, target.username, target.url],
-    scope: { id: `list-membership/${target.provider}/${target.username}/${target.url}` },
+    mutationKey: ['list-rename', target.provider, target.username, identity],
+    scope: { id: `list-membership/${target.provider}/${target.username}/${identity}` },
     retry: false,
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
       switch (target.provider) {

@@ -105,7 +105,7 @@ export function LetterboxdListFilms({
         view={view}
       >
         <MediaSortControl scope="lists" sort={sort} />
-        {target != null && <RenameList key={title} target={target} />}
+        {target != null && <RenameList key={`${owner}/${slug}`} target={target} />}
         <ToolbarIcon>
           <ProviderListLink iconOnly provider={Provider.Letterboxd} url={url} />
         </ToolbarIcon>

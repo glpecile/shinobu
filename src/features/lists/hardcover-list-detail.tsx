@@ -115,7 +115,7 @@ export function HardcoverListItems({ id }: { id: number }) {
       >
         <MediaSortControl scope="lists" sort={sort} />
         {target != null && (
-          <RenameList description={list.description} key={list.title} target={target} />
+          <RenameList description={list.description} key={list.id} target={target} />
         )}
         {target != null && <DeleteList id={list.id} title={list.title} url={url} />}
         <ToolbarIcon>

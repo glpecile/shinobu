@@ -7,11 +7,11 @@ import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { NativeSwitch } from '@/components/native-switch';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
-import { haptics } from '@/lib/haptics';
 import { setReadingInPages, useReadingInPages } from '@/state/prefs/reading-unit';
 import { ProgressScrubber } from './progress-scrubber';
 import { pageAt, percentRead, stepPage } from './reading-share';
 import { StepperField } from './stepper-field';
+import { useHoldRepeat } from './use-hold-repeat';
 
 export interface ReadingProgress {
   finished: boolean;
@@ -69,6 +69,9 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
     });
   };
 
+  const back = useHoldRepeat(() => step(-1), !pending && page > 0);
+  const forward = useHoldRepeat(() => step(1), !pending && page < total);
+
   return (
     <View
       className={cn('mt-5 gap-1', pending && 'opacity-50')}
@@ -121,10 +124,7 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
           icon={<Button.Icon name="remove" />}
           iconOnly
           label={inPages ? 'Previous page' : 'Down 1%'}
-          onPress={() => {
-            haptics.selection();
-            step(-1);
-          }}
+          {...back}
           pressBehavior="immediate"
           variant="quiet"
         />
@@ -145,10 +145,7 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
           icon={<Button.Icon name="add" />}
           iconOnly
           label={inPages ? 'Next page' : 'Up 1%'}
-          onPress={() => {
-            haptics.selection();
-            step(1);
-          }}
+          {...forward}
           pressBehavior="immediate"
           variant="quiet"
         />
