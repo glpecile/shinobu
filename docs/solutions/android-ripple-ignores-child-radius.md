@@ -49,6 +49,12 @@ before concluding a fix didn't work.
 
 **Keyboard focus.** A button with no ripple has no drawable for
 `state_focused`, so Android draws its default focus highlight. That highlight is
-a rectangle over the view's bounds, whatever radius the view has. `components/fab`
-keeps a ripple for this reason: a `RippleDrawable` draws its own focused state,
-clipped to the pressable's border radius, so a Tab-focused FAB follows its rounded-square shape.
+a rectangle over the view's bounds, whatever radius the view has. Under
+gesture-handler 2, `components/fab` kept `rippleColor` so its `RippleDrawable`
+replaced that rectangular focus highlight with one masked to the pressable's
+border radius. Under gesture-handler 3 and pressto 0.8, pressto maps
+`rippleColor` to `androidRipple` without `foreground: true`, so
+`ButtonViewGroup` clears `foreground` and draws `selectableDrawable` in
+`dispatchDraw` behind children — where `Fab`'s opaque inner `View` covers it and
+Android's default focus highlight still inspects only `background` and
+`foreground`.

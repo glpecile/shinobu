@@ -38,12 +38,14 @@ A new scroll surface whose rows are pressables uses `GestureScrollView`, not
 A downward drag at the top of a list started a refresh and then fired the
 button the drag started on, such as Add to watchlist or a diary day's
 collapse chevron. Android's `SwipeRefreshLayout` takes the pull natively, so no
-gesture-handler gesture activates to cancel the button. gesture-handler 3's
-button presses on any lift that wasn't cancelled and reports
-`pointerInside` to `onPress`, which pressto drops. pressto 0.8 sets
-`Touchable`'s `cancelOnLeave` to false unless it gets `shouldCancelWhenOutside`.
-`Presstable*` passes `shouldCancelWhenOutside`, so a press that leaves the
-button's bounds cancels.
+gesture-handler gesture activates to cancel the button. Before pressto 0.8,
+`BaseButton` fired `onPress(pointerInside)` on any uncancelled lift, and pressto
+ignored `pointerInside`. With pressto 0.8, gesture-handler 3's `Touchable`
+already skips `onPress` when the lift happens outside bounds, but pressto sets
+`Touchable`'s `cancelOnLeave` to `false` unless given `shouldCancelWhenOutside`
+(keeping the press alive if the finger leaves and re-enters before lifting).
+`Presstable*` passes `shouldCancelWhenOutside`, so leaving the button's bounds
+cancels the press permanently.
 
 pressto 0.8 drops `waitFor` and `simultaneousHandlers` on gesture-handler 3, so
 a gesture relation can't fix a pressable. Use the scroll component.

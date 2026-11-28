@@ -4,7 +4,6 @@ import { View } from 'react-native';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 
-/** Inner View holds the border and fill, so `className` stays layout only (docs/solutions/pressto-border-not-drawn-on-android.md). */
 export function RoundIconButton({
   icon,
   label,

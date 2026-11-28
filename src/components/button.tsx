@@ -230,8 +230,6 @@ export function Button({
       accessibilityLabel={accessibilityLabel ?? (iconOnly ? label : undefined)}
       accessibilityRole="button"
       accessibilityState={{ busy: loading, disabled: unavailable, selected: pressedState }}
-      // The box lives on the inner View, so `className` stays layout only
-      // (docs/solutions/pressto-border-not-drawn-on-android.md).
       className={cn(
         SHAPE[shape],
         'web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',

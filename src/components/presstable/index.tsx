@@ -12,10 +12,6 @@ export { longPressAction, type PressBehavior } from './press-behavior';
 // `withUniwind` is required because Uniwind drops `className` on raw third-party components
 // on native (docs/solutions/uniwind-classname-third-party-components.md).
 
-// pressto 0.8 renders gesture-handler's `Touchable`. It draws no Android ripple unless a caller
-// passes `rippleColor` (docs/solutions/android-ripple-ignores-child-radius.md). pressto maps
-// `shouldCancelWhenOutside` to `cancelOnLeave`, which it otherwise sets to false, so an Android
-// refresh pull that leaves the button cancels its press (docs/solutions/ghost-taps-while-scrolling.md).
 const PRESS_ANIMATION = { duration: DURATION.enter, easing: KEYFRAME_EASE_OUT };
 
 const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion?: boolean }>(
@@ -46,10 +42,9 @@ export function PresstableScale({
   onLongPress,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onLongPress'> &
+}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata'> &
   PressBehaviorProps & {
     minScale?: number;
-    onLongPress?: () => void;
   }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
   const reduceMotion = useReducedMotion();
@@ -73,9 +68,8 @@ export function PresstableOpacity({
   onMouseDown: _onMouseDown,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onLongPress'> &
+}: ComponentProps<typeof UniwindPressableOpacity> &
   PressBehaviorProps & {
-    onLongPress?: () => void;
     /** Web-only DOM handler, typed here because callers type-check against this file. */
     onMouseDown?: MouseEventHandler<HTMLElement>;
   }) {
