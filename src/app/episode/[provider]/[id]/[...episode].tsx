@@ -83,8 +83,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (
     <PersonNotFound
-      detail="This episode couldn’t be loaded."
-      title="Couldn’t load"
+      title="Couldn’t load this episode"
       onGoBack={() => (router.canGoBack() ? router.back() : router.replace(routes.home))}
       onRetry={retry}
     />

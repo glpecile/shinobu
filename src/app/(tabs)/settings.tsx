@@ -96,7 +96,9 @@ function SettingsScreen() {
                   </SettingsRail.Lead>
                   <SettingsRail.Text>
                     <SettingsRail.Title>Shinobu</SettingsRail.Title>
-                    <SettingsRail.Subtitle>Version {VERSION ?? 'unknown'}</SettingsRail.Subtitle>
+                    <SettingsRail.Subtitle>
+                      {process.env.EXPO_OS === 'web' ? 'Source on GitHub' : 'Releases on GitHub'}
+                    </SettingsRail.Subtitle>
                   </SettingsRail.Text>
                 </SettingsRail.Target>
               </SettingsRail.Row>

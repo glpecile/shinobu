@@ -160,7 +160,7 @@ function WallBoundary({
     <QueryErrorBoundary
       fallbackRender={({ resetErrorBoundary }) => (
         <CenteredNotice>
-          <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
+          <CenteredNotice.Title>Couldn’t load this season</CenteredNotice.Title>
           <CenteredNotice.Body>
             AniList didn’t respond. Check your connection and try again.
           </CenteredNotice.Body>
@@ -281,8 +281,8 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return (
     <View className="flex-1 bg-background">
       <CenteredNotice>
-        <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
-        <CenteredNotice.Body>The season couldn’t be displayed.</CenteredNotice.Body>
+        <CenteredNotice.Title>Couldn’t display this season</CenteredNotice.Title>
+        <CenteredNotice.Body>Try again, or go home.</CenteredNotice.Body>
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}
           label="Try again"

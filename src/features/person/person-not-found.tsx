@@ -12,7 +12,7 @@ export function PersonNotFound({
   onOpenSettings,
   title = 'Not found',
 }: {
-  detail: string;
+  detail?: string;
   onGoBack: () => void;
   /** Called after the query error boundary resets, so a route `ErrorBoundary` can pass `retry`. */
   onRetry?: () => void;
@@ -28,7 +28,7 @@ export function PersonNotFound({
         </Head>
         <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
         <CenteredNotice.Title>{title}</CenteredNotice.Title>
-        <CenteredNotice.Body>{detail}</CenteredNotice.Body>
+        {detail != null && <CenteredNotice.Body>{detail}</CenteredNotice.Body>}
         <CenteredNotice.Actions>
           {onRetry != null && (
             <Button

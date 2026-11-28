@@ -107,10 +107,8 @@ function WatchlistGrid({
   if (entries.length === 0 && errors.length > 0) {
     return (
       <CenteredNotice>
-        <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
-        <CenteredNotice.Body>
-          Your watchlist couldn’t be loaded. Check your connection and try again.
-        </CenteredNotice.Body>
+        <CenteredNotice.Title>Couldn’t load your watchlist</CenteredNotice.Title>
+        <CenteredNotice.Body>Check your connection and try again.</CenteredNotice.Body>
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}
           label="Try again"
@@ -241,8 +239,8 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return (
     <View className="flex-1 bg-background">
       <CenteredNotice>
-        <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
-        <CenteredNotice.Body>Your watchlist couldn’t be displayed.</CenteredNotice.Body>
+        <CenteredNotice.Title>Couldn’t display your watchlist</CenteredNotice.Title>
+        <CenteredNotice.Body>Try again, or go home.</CenteredNotice.Body>
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}
           label="Try again"

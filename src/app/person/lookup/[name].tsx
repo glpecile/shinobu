@@ -30,7 +30,7 @@ export default function PersonLookupScreen() {
   }
 
   if (name == null || name === '') {
-    return <PersonNotFound detail="This person page doesn’t exist." onGoBack={goBack} />;
+    return <PersonNotFound onGoBack={goBack} title="Person not found" />;
   }
 
   return (
@@ -54,8 +54,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (
     <PersonNotFound
-      detail="This person couldn’t be loaded."
-      title="Couldn’t load"
+      title="Couldn’t load this person"
       onGoBack={() => (router.canGoBack() ? router.back() : router.replace(routes.home))}
       onRetry={retry}
     />
