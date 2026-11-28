@@ -76,14 +76,7 @@ function PickerOption({
       onPress={() => picker.select(value)}
     >
       {icon}
-      <Text
-        className={cn(
-          'flex-1 font-sans text-base text-foreground',
-          selected && 'font-sans-semibold',
-        )}
-      >
-        {label}
-      </Text>
+      <Text className="flex-1 font-sans text-base text-foreground">{label}</Text>
       {count != null && <Text className="text-muted font-sans text-sm">{count}</Text>}
     </PresstableOpacity>
   );

@@ -242,10 +242,8 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
                 <Ionicons color={title === active ? foreground : muted} name={icon} size={16} />
                 <Text
                   className={cn(
-                    'text-sm',
-                    title === active
-                      ? 'text-foreground font-sans-semibold'
-                      : 'text-muted font-sans',
+                    'font-sans text-sm',
+                    title === active ? 'text-foreground' : 'text-muted',
                   )}
                 >
                   {title}

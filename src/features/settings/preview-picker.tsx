@@ -80,12 +80,8 @@ function Preview({ children, className }: { children: ReactNode; className?: str
 }
 
 function Label({ children }: { children: ReactNode }) {
-  const checked = useContext(CheckedContext);
   return (
-    <Text
-      className={cn('font-sans text-sm text-foreground', checked && 'font-sans-semibold')}
-      numberOfLines={1}
-    >
+    <Text className="font-sans text-sm text-foreground" numberOfLines={1}>
       {children}
     </Text>
   );
