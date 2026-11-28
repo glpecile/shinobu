@@ -85,7 +85,7 @@ function NoTargets({ onConnect }: { onConnect?: () => void }) {
   const connected = useConnectedProviders();
   const accent = useThemeColor('--color-accent');
   return (
-    <View className="rounded-3xl border border-border bg-surface px-4 py-3 flex-row items-center justify-between gap-3">
+    <View className="rounded-xl border border-border bg-surface px-4 py-3 flex-row items-center justify-between gap-3">
       <Text className="text-muted font-sans text-sm flex-1" numberOfLines={2}>
         {connected.length === 0
           ? 'No trackers connected yet.'
@@ -161,7 +161,7 @@ function ProviderOptions({
 
 export function ProviderToggleList(props: ProviderPickerProps) {
   return (
-    <View className="rounded-3xl border border-border bg-surface overflow-hidden">
+    <View className="rounded-xl border border-border bg-surface overflow-hidden">
       <ProviderOptions {...props} />
     </View>
   );
@@ -182,7 +182,7 @@ export function ProviderPicker({
       : selected.map((id) => PROVIDERS[id].label).join(', ');
 
   return (
-    <View className="rounded-3xl border border-border bg-surface overflow-hidden">
+    <View className="rounded-xl border border-border bg-surface overflow-hidden">
       <PresstableOpacity
         accessibilityLabel={selectionLabel}
         accessibilityRole="button"
