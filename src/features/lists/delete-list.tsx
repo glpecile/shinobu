@@ -14,18 +14,19 @@ import { useDeleteHardcoverList } from '@/state/queries/list-membership';
 import { ToolbarIcon } from './list-header';
 
 function DeleteConfirm({
-  id,
+  mutation,
   title,
   url,
   onCancel,
+  onError,
 }: {
-  id: string;
+  mutation: ReturnType<typeof useDeleteHardcoverList>;
   title: string;
   url: string;
   onCancel: () => void;
+  onError: () => void;
 }) {
   const router = useRouter();
-  const mutation = useDeleteHardcoverList(id);
   function confirm() {
     haptics.destructive();
     mutation.mutate(undefined, {
@@ -35,7 +36,10 @@ function DeleteConfirm({
         if (router.canGoBack()) router.back();
         else router.replace(routes.hardcoverLists('created'));
       },
-      onError: () => haptics.error(),
+      onError: () => {
+        haptics.error();
+        onError();
+      },
     });
   }
   return (
@@ -73,8 +77,17 @@ function DeleteConfirm({
   );
 }
 
+/**
+ * The mutation lives here, not in the sheet, so a save the user dismisses mid-flight still
+ * toasts and leaves the deleted list, and a failure reopens the sheet with its link.
+ */
 export function DeleteList({ id, title, url }: { id: string; title: string; url: string }) {
   const [open, setOpen] = useState(false);
+  const mutation = useDeleteHardcoverList(id);
+  function openSheet() {
+    if (mutation.isError) mutation.reset();
+    setOpen(true);
+  }
   const compact = useWindowDimensions().width < 640;
   return (
     <>
@@ -85,7 +98,7 @@ export function DeleteList({ id, title, url }: { id: string; title: string; url:
               icon={<Button.Icon name="trash-outline" />}
               iconOnly
               label="Delete list"
-              onPress={() => setOpen(true)}
+              onPress={openSheet}
               size="sm"
               variant="quiet"
             />
@@ -95,13 +108,21 @@ export function DeleteList({ id, title, url }: { id: string; title: string; url:
         <Button
           icon={<Button.Icon name="trash-outline" />}
           label="Delete"
-          onPress={() => setOpen(true)}
+          onPress={openSheet}
           size="sm"
           variant="quiet"
         />
       )}
       <Sheet onClose={() => setOpen(false)} open={open}>
-        {open && <DeleteConfirm id={id} onCancel={() => setOpen(false)} title={title} url={url} />}
+        {open && (
+          <DeleteConfirm
+            mutation={mutation}
+            onCancel={() => setOpen(false)}
+            onError={() => setOpen(true)}
+            title={title}
+            url={url}
+          />
+        )}
       </Sheet>
     </>
   );

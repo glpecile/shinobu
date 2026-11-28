@@ -26,16 +26,19 @@ import { ToolbarIcon } from './list-header';
 function RenameForm({
   target,
   description: saved,
+  mutation,
   onDone,
+  onError,
 }: {
   target: ListEditTarget;
   description: string | undefined;
+  mutation: ReturnType<typeof useRenameList>;
   onDone: () => void;
+  onError: () => void;
 }) {
   const router = useRouter();
   const [name, setName] = useState(target.title);
   const [description, setDescription] = useState(saved ?? '');
-  const mutation = useRenameList(target);
   const hasSession = useHasLetterboxdWriteSession();
   const hasScript = useLetterboxdUserscript('list-rename');
   const scriptUntrusted = useLetterboxdUserscriptUntrusted();
@@ -61,7 +64,10 @@ function RenameForm({
         )
           router.replace(routes.letterboxdList(result.owner, result.slug));
       },
-      onError: () => haptics.error(),
+      onError: () => {
+        haptics.error();
+        onError();
+      },
     });
   }
   return (
@@ -143,6 +149,12 @@ export function RenameList({
   description?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // Held here, not in the sheet, so a save dismissed mid-flight still confirms.
+  const mutation = useRenameList(target);
+  function openSheet() {
+    if (mutation.isError) mutation.reset();
+    setOpen(true);
+  }
   const compact = useWindowDimensions().width < 640;
   const editable = target.provider === Provider.Hardcover ? description : undefined;
   const label = editable == null ? 'Rename' : 'Edit';
@@ -155,7 +167,7 @@ export function RenameList({
               icon={<Button.Icon name="create-outline" />}
               iconOnly
               label={`${label} list`}
-              onPress={() => setOpen(true)}
+              onPress={openSheet}
               size="sm"
               variant="quiet"
             />
@@ -165,14 +177,20 @@ export function RenameList({
         <Button
           icon={<Button.Icon name="create-outline" />}
           label={label}
-          onPress={() => setOpen(true)}
+          onPress={openSheet}
           size="sm"
           variant="quiet"
         />
       )}
       <Sheet autoFocus onClose={() => setOpen(false)} open={open}>
         {open && (
-          <RenameForm description={editable} onDone={() => setOpen(false)} target={target} />
+          <RenameForm
+            description={editable}
+            mutation={mutation}
+            onDone={() => setOpen(false)}
+            onError={() => setOpen(true)}
+            target={target}
+          />
         )}
       </Sheet>
     </>
