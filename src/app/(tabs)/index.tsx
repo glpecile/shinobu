@@ -18,6 +18,7 @@ import { GestureScrollView } from '@/components/animated-view';
 import { ConnectTrackerButton } from '@/components/connect-tracker-button';
 import { COPY_STAGGER, HeroEnter, HeroProviders } from '@/components/hero-enter';
 import { OfflineBanner } from '@/components/offline-banner';
+import { ProviderIcon } from '@/components/provider-icon';
 import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -168,7 +169,17 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {watchlistConnected && (
-          <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
+          <SuspenseSection
+            fallback={
+              <FeedRowSkeleton
+                collapseKey="your-watchlist"
+                hasAction
+                leading={<CollapsibleSection.Icon name="bookmark-outline" />}
+                title="Your Watchlist"
+              />
+            }
+            resetKey={refreshCount}
+          >
             <YourWatchlistRow onItemActions={openActions} />
           </SuspenseSection>
         )}
@@ -182,26 +193,48 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {letterboxdUsername != null && (
-          <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
+          <SuspenseSection
+            fallback={
+              <FeedRowSkeleton
+                collapseKey="letterboxd-watchlist"
+                hasAction
+                leading={<ProviderIcon id={Provider.Letterboxd} size={16} />}
+                title="Watchlist"
+              />
+            }
+            resetKey={refreshCount}
+          >
             <LetterboxdWatchlistRow onItemActions={openActions} username={letterboxdUsername} />
           </SuspenseSection>
         )}
         {letterboxdUsername != null && (
           <>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+            <SuspenseSection
+              fallback={<ListsRowSkeleton kind="created" provider={Provider.Letterboxd} />}
+              resetKey={refreshCount}
+            >
               <LetterboxdListsRow kind="created" username={letterboxdUsername} />
             </SuspenseSection>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+            <SuspenseSection
+              fallback={<ListsRowSkeleton kind="liked" provider={Provider.Letterboxd} />}
+              resetKey={refreshCount}
+            >
               <LetterboxdListsRow kind="liked" username={letterboxdUsername} />
             </SuspenseSection>
           </>
         )}
         {serializdUsername != null && (
           <>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+            <SuspenseSection
+              fallback={<ListsRowSkeleton kind="created" provider={Provider.Serializd} />}
+              resetKey={refreshCount}
+            >
               <SerializdListsRow kind="created" username={serializdUsername} />
             </SuspenseSection>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+            <SuspenseSection
+              fallback={<ListsRowSkeleton kind="liked" provider={Provider.Serializd} />}
+              resetKey={refreshCount}
+            >
               <SerializdListsRow kind="liked" username={serializdUsername} />
             </SuspenseSection>
           </>
@@ -209,10 +242,16 @@ function FeedScreen() {
         {connected.includes(Provider.Hardcover) &&
           (hardcoverListsGranted ? (
             <>
-              <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <SuspenseSection
+                fallback={<ListsRowSkeleton kind="created" provider={Provider.Hardcover} />}
+                resetKey={refreshCount}
+              >
                 <HardcoverListsRow kind="created" />
               </SuspenseSection>
-              <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <SuspenseSection
+                fallback={<ListsRowSkeleton kind="liked" provider={Provider.Hardcover} />}
+                resetKey={refreshCount}
+              >
                 <HardcoverListsRow kind="liked" />
               </SuspenseSection>
             </>

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 
@@ -5,7 +6,6 @@ import { Rail } from '@/components/rail';
 import { ProviderIcon } from '@/components/provider-icon';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
-import { cn } from '@/lib/cn';
 import { episodeCardRailHeight, STACK_OFFSET } from '@/features/up-next/ui/metrics';
 import { Provider } from '@/lib/providers/types';
 
@@ -16,24 +16,43 @@ function SkeletonCard({ index }: { index: number }) {
   return <Skeleton className="w-40 h-60 rounded-lg mr-3" delay={staggerDelay(index)} />;
 }
 
-function SkeletonRow({ cardCount, hasAction = false }: { cardCount: number; hasAction?: boolean }) {
+function SkeletonRail() {
+  const { width } = useWindowDimensions();
+  const cardCount = Math.ceil(width / (CARD_WIDTH + CARD_GAP)) + 1;
   return (
-    <View className="mb-6">
-      <SkeletonSectionHeader hasAction={hasAction} widthClass="w-40" />
-      <Rail className="px-4">
-        {Array.from({ length: cardCount }).map((_, index) => (
-          <SkeletonCard index={index} key={index} />
-        ))}
-      </Rail>
-    </View>
+    <Rail className="px-4">
+      {Array.from({ length: cardCount }).map((_, index) => (
+        <SkeletonCard index={index} key={index} />
+      ))}
+    </Rail>
   );
 }
 
-export function FeedRowSkeleton({ hasAction = false }: { hasAction?: boolean }) {
-  const { width } = useWindowDimensions();
-  const cardCount = Math.ceil(width / (CARD_WIDTH + CARD_GAP)) + 1;
-
-  return <SkeletonRow cardCount={cardCount} hasAction={hasAction} />;
+/**
+ * Fallback for a `MediaCarousel` row. Takes the row's own header props, so a
+ * collapsed row stays collapsed.
+ */
+export function FeedRowSkeleton({
+  collapseKey,
+  title,
+  leading,
+  hasAction = false,
+}: {
+  collapseKey: string;
+  title: string;
+  leading?: ReactNode;
+  hasAction?: boolean;
+}) {
+  return (
+    <CollapsibleSection
+      action={hasAction && <Skeleton className="h-4 w-16 rounded" />}
+      collapseKey={collapseKey}
+      leading={leading}
+      title={title}
+    >
+      <SkeletonRail />
+    </CollapsibleSection>
+  );
 }
 
 const LANDSCAPE_WIDTH = 256;
@@ -125,20 +144,6 @@ function SkeletonDayCell({ index }: { index: number }) {
   );
 }
 
-function SkeletonSectionHeader({
-  widthClass,
-  hasAction = false,
-}: {
-  widthClass: string;
-  hasAction?: boolean;
-}) {
-  return (
-    <View className={cn('justify-center mb-3 mx-4', hasAction && 'min-h-11')}>
-      <Skeleton className={cn('h-7', widthClass, 'rounded')} />
-    </View>
-  );
-}
-
 export function UpNextSectionSkeleton() {
   const { width, fontScale } = useWindowDimensions();
   const cardCount = Math.ceil(width / (LANDSCAPE_WIDTH + CARD_GAP)) + 1;
@@ -192,8 +197,12 @@ export function UpNextSectionSkeleton() {
 export function FeedSkeleton() {
   return (
     <View className="pt-2">
-      <FeedRowSkeleton />
-      <FeedRowSkeleton />
+      {[0, 1].map((row) => (
+        <View className="mb-6" key={row}>
+          <Skeleton className="h-7 w-40 rounded mx-4 mb-3" />
+          <SkeletonRail />
+        </View>
+      ))}
     </View>
   );
 }

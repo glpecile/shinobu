@@ -50,7 +50,7 @@ import { DURATION, EASE_OUT } from '@/lib/motion';
 import { dismissKeyboardNow } from '@/lib/keyboard';
 import { hasCoarsePointer } from '@/lib/pointer';
 import { usePushRoute } from '@/lib/navigation';
-import { animeSeasonAt } from '@/lib/providers/anilist/season';
+import { animeSeasonAt, animeSeasonLabel } from '@/lib/providers/anilist/season';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
@@ -205,6 +205,10 @@ function RowSkeleton({ index = 0 }: { index?: number }) {
 function ResultsSkeleton() {
   return (
     <View>
+      <View className="flex-row items-center gap-2 px-6 pt-4 pb-1.5">
+        <Skeleton className="size-3.5 rounded-full" />
+        <Skeleton className="h-4 w-20 rounded" />
+      </View>
       {Array.from({ length: 6 }).map((_, index) => (
         <RowSkeleton index={index} key={index} />
       ))}
@@ -539,16 +543,50 @@ function SearchScreen() {
                     keyboardShouldPersistTaps="handled"
                     ref={scrollRef}
                   >
-                    <SuspenseSection fallback={<FeedRowSkeleton hasAction />}>
+                    <SuspenseSection
+                      fallback={
+                        <FeedRowSkeleton
+                          collapseKey="seasonal-anime"
+                          hasAction
+                          leading={<ProviderIcon id={Provider.AniList} size={16} />}
+                          title={`Anime of ${animeSeasonLabel(animeSeason)}`}
+                        />
+                      }
+                    >
                       <SeasonalAnimeRow onItemActions={openActions} season={animeSeason} />
                     </SuspenseSection>
-                    <SuspenseSection fallback={<FeedRowSkeleton hasAction />}>
+                    <SuspenseSection
+                      fallback={
+                        <FeedRowSkeleton
+                          collapseKey="anime-movies"
+                          hasAction
+                          leading={<ProviderIcon id={Provider.AniList} size={16} />}
+                          title={`Films of ${animeSeasonLabel(animeSeason)}`}
+                        />
+                      }
+                    >
                       <AnimeMoviesRow onItemActions={openActions} season={animeSeason} />
                     </SuspenseSection>
-                    <SuspenseSection fallback={<FeedRowSkeleton />}>
+                    <SuspenseSection
+                      fallback={
+                        <FeedRowSkeleton
+                          collapseKey="trending-movies"
+                          leading={<ProviderIcon id={Provider.Simkl} size={16} />}
+                          title="Trending Movies"
+                        />
+                      }
+                    >
                       <TrendingMoviesRow onItemActions={openActions} />
                     </SuspenseSection>
-                    <SuspenseSection fallback={<FeedRowSkeleton />}>
+                    <SuspenseSection
+                      fallback={
+                        <FeedRowSkeleton
+                          collapseKey="trending-shows"
+                          leading={<ProviderIcon id={Provider.Simkl} size={16} />}
+                          title="Trending TV Shows"
+                        />
+                      }
+                    >
                       <TrendingShowsRow onItemActions={openActions} />
                     </SuspenseSection>
                     <FeedEnd

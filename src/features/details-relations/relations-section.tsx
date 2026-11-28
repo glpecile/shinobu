@@ -1,9 +1,9 @@
 import { Text, View } from 'react-native';
 
+import { FeedRowSkeleton } from '@/components/feed-skeleton';
 import { MediaCarousel } from '@/components/media-carousel';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Section } from '@/components/section';
-import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import { Provider } from '@/lib/providers/types';
 import { useSuspenseAniListRelationsQuery } from '@/state/queries/anilist';
@@ -118,15 +118,22 @@ function SimilarBooks({
   return <SimilarBooksCarousel ids={ids} onItemActions={onItemActions} />;
 }
 
-function CarouselSkeleton() {
+function CarouselSkeleton({
+  collapseKey,
+  title,
+  provider,
+}: {
+  collapseKey: string;
+  title: string;
+  provider: typeof Provider.AniList | typeof Provider.Hardcover;
+}) {
   return (
-    <View className="mt-8">
-      <Skeleton className="h-6 w-24 rounded mb-4" />
-      <View className="flex-row gap-3 overflow-hidden">
-        {[0, 1, 2].map((index) => (
-          <Skeleton className="w-40 h-60 rounded-lg" delay={staggerDelay(index)} key={index} />
-        ))}
-      </View>
+    <View className={ALIGN_TO_COLUMN}>
+      <FeedRowSkeleton
+        collapseKey={collapseKey}
+        leading={<ProviderIcon id={provider} size={16} />}
+        title={title}
+      />
     </View>
   );
 }
@@ -142,7 +149,16 @@ export function RelationsSection({
 }) {
   if (item.externalIds.anilist == null) return null;
   return (
-    <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
+    <SuspenseSection
+      fallback={
+        <CarouselSkeleton
+          collapseKey="details-relations"
+          provider={Provider.AniList}
+          title="Related"
+        />
+      }
+      resetKey={resetKey}
+    >
       <RelationsRow
         mediaId={item.externalIds.anilist}
         onItemActions={onItemActions}
@@ -163,7 +179,16 @@ export function RecommendationsAndTagsSection({
 }) {
   if (item.externalIds.anilist == null) return null;
   return (
-    <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
+    <SuspenseSection
+      fallback={
+        <CarouselSkeleton
+          collapseKey="details-recommendations"
+          provider={Provider.AniList}
+          title="Recommendations"
+        />
+      }
+      resetKey={resetKey}
+    >
       <RecommendationsAndTags
         mediaId={item.externalIds.anilist}
         onItemActions={onItemActions}
@@ -184,7 +209,16 @@ export function SimilarBooksSection({
 }) {
   if (item.externalIds.hardcover == null) return null;
   return (
-    <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
+    <SuspenseSection
+      fallback={
+        <CarouselSkeleton
+          collapseKey="details-similar-books"
+          provider={Provider.Hardcover}
+          title="Similar books"
+        />
+      }
+      resetKey={resetKey}
+    >
       <SimilarBooks item={item} onItemActions={onItemActions} />
     </SuspenseSection>
   );
