@@ -1,6 +1,6 @@
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { useState, type ComponentProps } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -26,6 +26,7 @@ import {
 import { useAnimeByIdQuery } from '@/state/queries/anilist';
 import { useAniListIdByTmdbQuery } from '@/state/queries/mapping';
 import type { NormalizedMediaItem } from '@/types/media';
+import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { DiscussionCard } from './discussion-card';
 
 const discussionFade = { from: { opacity: 0 }, to: { opacity: 1 } };
@@ -175,8 +176,8 @@ function DiscussionBody({
           ))}
         </Rail>
         <Sheet onClose={() => onOpenChange(false)} open={open}>
-          <Sheet.Header className="items-center">
-            <Text className="font-display text-xl text-foreground">Discussion options</Text>
+          <Sheet.Header>
+            <WriteSheet.Title>Discussion options</WriteSheet.Title>
           </Sheet.Header>
           <View className="mt-5 gap-2">
             <Button

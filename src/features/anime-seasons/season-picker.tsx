@@ -72,7 +72,7 @@ export function YearStepper({
           className="h-11 flex-row items-center gap-1 px-2 rounded-full"
           onPress={() => setSheetOpen(true)}
         >
-          <Text className="text-xl font-display text-foreground">{window.year}</Text>
+          <Text className="text-xl font-display text-foreground tabular-nums">{window.year}</Text>
           <Ionicons color={tint(false)} name="chevron-down" size={14} />
         </PresstableOpacity>
       </NativePickerMenu>

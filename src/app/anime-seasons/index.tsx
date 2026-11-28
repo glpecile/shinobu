@@ -95,7 +95,6 @@ function SeasonWall({
               icon={<Button.Icon name="albums-outline" />}
               label="Show all formats"
               onPress={onShowAllFormats}
-              variant="quiet"
             />
           )}
         </CenteredNotice>

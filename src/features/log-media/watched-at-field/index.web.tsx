@@ -30,7 +30,7 @@ export function WatchedAtField({
         <input
           aria-label={label}
           // appearance-none drops Safari's default rounded fill on date inputs.
-          className="appearance-none self-stretch bg-transparent text-foreground font-sans text-sm"
+          className="appearance-none self-stretch bg-transparent text-foreground font-sans text-base pointer-fine:text-sm"
           max={today}
           // Browsers tint the native date-picker icon from color-scheme, not color.
           style={{ colorScheme: 'light dark' }}

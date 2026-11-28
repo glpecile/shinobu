@@ -110,7 +110,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
               <ZoomableImage
                 alt={title}
                 className={cn(
-                  'aspect-video rounded-lg border border-border bg-surface',
+                  'aspect-video rounded-lg border border-hairline bg-surface',
                   wide ? 'w-80' : 'w-full',
                 )}
                 contentFit="cover"

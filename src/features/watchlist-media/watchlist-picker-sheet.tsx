@@ -172,8 +172,13 @@ export function WatchlistAddPicker({
             )}
           </View>
         )}
-        {writable.length > 0 && selected.length === 0 && (
-          <Text className="text-accent font-sans text-sm mt-2">Select at least one provider.</Text>
+        {writable.length > 0 && (
+          // Always mounted while a provider can be picked, so the actions below don't move.
+          <View className="mt-2 min-h-5">
+            {selected.length === 0 && (
+              <Text className="text-accent font-sans text-sm">Select at least one provider.</Text>
+            )}
+          </View>
         )}
       </View>
 
@@ -352,8 +357,13 @@ export function WatchlistRemovePicker({
           }}
           verb="Remove on"
         />
-        {split.targets.length > 0 && selected.length === 0 && (
-          <Text className="text-accent font-sans text-sm mt-2">Select at least one provider.</Text>
+        {split.targets.length > 0 && (
+          // Always mounted while a provider can be picked, so the actions below don't move.
+          <View className="mt-2 min-h-5">
+            {selected.length === 0 && (
+              <Text className="text-accent font-sans text-sm">Select at least one provider.</Text>
+            )}
+          </View>
         )}
       </View>
       <WriteSheet.Actions>
