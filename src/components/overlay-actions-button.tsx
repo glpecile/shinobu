@@ -73,7 +73,7 @@ export function OverlayActionsButton({
         className={cn(
           'items-center justify-center rounded-full',
           size === 'lg' ? 'w-11 h-11' : SIZE[size].box,
-          'web:focus-visible:outline-2 web:focus-visible:outline-accent web:focus-visible:outline-offset-2',
+          'web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',
         )}
         onPress={onPress}
       >
