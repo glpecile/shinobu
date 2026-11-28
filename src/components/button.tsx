@@ -234,6 +234,8 @@ export function Button({
         SHAPE[shape],
         'web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',
         iconOnly && 'min-w-11 min-h-11 items-center justify-center',
+        // The 36pt `sm` box gets a 44pt hit area; the negative margin keeps its layout.
+        !iconOnly && size === 'sm' && 'py-1 -my-1',
         className,
       )}
       disabled={unavailable}
