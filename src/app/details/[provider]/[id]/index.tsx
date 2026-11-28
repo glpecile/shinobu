@@ -413,7 +413,7 @@ function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
 function StudiosSkeleton() {
   return (
     <View className="mt-8">
-      <Skeleton className="h-6 w-24 rounded mb-4" />
+      <Skeleton className="h-7 w-24 rounded mb-4" />
       <View className="flex-row gap-4 web:pt-1">
         {[1, 2, 3].map((index) => (
           <StudioCardSkeleton index={index} key={index} />
@@ -437,9 +437,12 @@ function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdr
           className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', !backdrop && 'mt-0')}
         >
           <View className="flex-1">
-            <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
-            <Skeleton className="h-8 w-48 rounded mt-2" delay={staggerDelay(2)} />
-            <Skeleton className="h-3 w-32 rounded mt-2" delay={staggerDelay(2)} />
+            <Skeleton className="h-4 w-16 rounded" delay={staggerDelay(2)} />
+            <Skeleton className="h-9 w-48 rounded mt-1" delay={staggerDelay(2)} />
+            <Skeleton className="h-5 w-32 rounded mt-1.5" delay={staggerDelay(2)} />
+            <View className="hidden md:flex mt-4">
+              <ExpandableText.Skeleton />
+            </View>
           </View>
           <Link.AppleZoomTarget>
             <View className="w-32 h-48 md:w-48 md:h-72 rounded-lg overflow-hidden bg-surface">
@@ -451,7 +454,9 @@ function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdr
             </View>
           </Link.AppleZoomTarget>
         </View>
-        <ExpandableText.Skeleton />
+        <View className="md:hidden">
+          <ExpandableText.Skeleton />
+        </View>
       </View>
     </>
   );
