@@ -239,6 +239,16 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
                   scrollRef.current?.scrollTo({ y, animated: !reduceMotion });
                 }}
               >
+                <AnimatedView
+                  className="w-0.5 h-4 rounded-full bg-accent"
+                  style={{
+                    opacity: title === active ? 1 : 0,
+                    transform: [{ scaleY: title === active || reduceMotion ? 1 : 0.5 }],
+                    transitionProperty: ['opacity', 'transform'],
+                    transitionDuration: DURATION.color,
+                    transitionTimingFunction: EASE_OUT,
+                  }}
+                />
                 <Ionicons color={title === active ? foreground : muted} name={icon} size={16} />
                 <Text
                   className={cn(

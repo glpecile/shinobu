@@ -48,7 +48,7 @@ export function YearSheet({
             >
               <Text
                 className={cn(
-                  'font-sans text-base text-foreground',
+                  'font-sans text-base text-foreground tabular-nums',
                   selected && 'text-background',
                 )}
               >

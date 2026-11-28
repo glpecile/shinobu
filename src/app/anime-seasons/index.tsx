@@ -10,6 +10,7 @@ import { BackButton } from '@/components/back-button';
 import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
 import { LoadMoreFooter } from '@/components/load-more-footer';
+import { SectionEnter } from '@/components/section-enter';
 import Head from '@/components/head';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -83,20 +84,22 @@ function SeasonWall({
 
   if (items.length === 0) {
     return (
-      <CenteredNotice>
-        <CenteredNotice.Title>Nothing here</CenteredNotice.Title>
-        <CenteredNotice.Body>
-          {`AniList lists nothing for ${animeSeasonLabel(window)} yet.`}
-        </CenteredNotice.Body>
-        {format !== 'ALL' && (
-          <CenteredNotice.Action
-            icon={<Button.Icon name="albums-outline" />}
-            label="Show all formats"
-            onPress={onShowAllFormats}
-            variant="quiet"
-          />
-        )}
-      </CenteredNotice>
+      <SectionEnter className="flex-1">
+        <CenteredNotice>
+          <CenteredNotice.Title>Nothing here</CenteredNotice.Title>
+          <CenteredNotice.Body>
+            {`AniList lists nothing for ${animeSeasonLabel(window)} yet.`}
+          </CenteredNotice.Body>
+          {format !== 'ALL' && (
+            <CenteredNotice.Action
+              icon={<Button.Icon name="albums-outline" />}
+              label="Show all formats"
+              onPress={onShowAllFormats}
+              variant="quiet"
+            />
+          )}
+        </CenteredNotice>
+      </SectionEnter>
     );
   }
 

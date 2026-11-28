@@ -673,6 +673,9 @@ export function DiaryList({
   }
 
   const sideMonth = visibleMonth ?? (days[0]?.key ?? today).slice(0, 7);
+  const allHidden = format === 'ALL' && days.length > 0;
+  const showAll = format !== 'ALL' && onShowAll != null;
+  const hasEmptyActions = hasNextPage || allHidden || showAll;
 
   return (
     <View className="flex-1 flex-row">
@@ -751,41 +754,40 @@ export function DiaryList({
               <CenteredNotice className="flex-none">
                 <CenteredNotice.Icon name={emptyIcon} />
                 <CenteredNotice.Title>{emptyTitle}</CenteredNotice.Title>
-                {format === 'ALL' && days.length > 0 && (
+                {allHidden && (
                   <CenteredNotice.Body>
                     You hid every log loaded so far. Unhide items in Settings.
                   </CenteredNotice.Body>
                 )}
-                <CenteredNotice.Actions>
-                  {hasNextPage && (
-                    <Button
-                      icon={<Button.Icon name="chevron-down" />}
-                      label="Load more"
-                      loading={isFetchingNextPage}
-                      onPress={onEndReached}
-                      variant="quiet"
-                    />
-                  )}
-                  {format === 'ALL' ? (
-                    !hasNextPage && (
+                {hasEmptyActions && (
+                  <CenteredNotice.Actions>
+                    {hasNextPage && (
+                      <Button
+                        icon={<Button.Icon name="chevron-down" />}
+                        label="Load more"
+                        loading={isFetchingNextPage}
+                        onPress={onEndReached}
+                        variant="quiet"
+                      />
+                    )}
+                    {allHidden && (
                       <Button
                         icon={<Button.Icon name="open-outline" />}
                         label="Settings"
                         onPress={() => onOpen(routes.settings)}
                         variant="quiet"
                       />
-                    )
-                  ) : (
-                    onShowAll != null && (
+                    )}
+                    {showAll && (
                       <Button
                         icon={<Button.Icon name="albums-outline" />}
                         label="Show all logs"
                         onPress={onShowAll}
                         variant="quiet"
                       />
-                    )
-                  )}
-                </CenteredNotice.Actions>
+                    )}
+                  </CenteredNotice.Actions>
+                )}
               </CenteredNotice>
             </SectionEnter>
           }
