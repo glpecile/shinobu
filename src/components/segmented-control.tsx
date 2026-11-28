@@ -135,7 +135,6 @@ export function SegmentedControl<T extends string>({
           accessibilityLabel={option.accessibilityLabel ?? option.label}
           accessibilityRole="button"
           accessibilityState={{ selected: option.value === value }}
-          // Only the pressable takes the touch height; the pill's copy stretches to it.
           className={cn(segmentClassName, 'min-h-11 pointer-fine:min-h-0')}
           key={option.value}
           onPress={() => select(option.value)}

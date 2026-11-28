@@ -233,7 +233,6 @@ export function useResolvedMediaItem(
   const catalogue = useMovieCatalogueQuery(cachedOrFetched);
   const traktIdentity = useTraktIdentityQuery(cachedOrFetched);
   const enriched = catalogue.data ?? traktIdentity.data;
-  // The reads a cold deep link waits on.
   const deepLinkReads = [
     (deepLink != null || hardcoverBook != null) && deepLinkDetails,
     hardcoverSlug != null && hardcoverSlugId,

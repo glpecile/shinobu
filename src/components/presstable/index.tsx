@@ -56,7 +56,7 @@ export function PresstableScale({
       animationConfig={PRESS_ANIMATION}
       animationType="timing"
       shouldCancelWhenOutside
-      // pressto sets no role, so VoiceOver and TalkBack read a bare pressable as text.
+      // pressto sets no role.
       accessibilityRole="button"
       {...longPressAction(onLongPress)}
       {...rest}
@@ -84,7 +84,7 @@ export function PresstableOpacity({
       animationConfig={PRESS_ANIMATION}
       animationType="timing"
       shouldCancelWhenOutside
-      // pressto sets no role, so VoiceOver and TalkBack read a bare pressable as text.
+      // pressto sets no role.
       accessibilityRole="button"
       {...longPressAction(onLongPress)}
       {...rest}

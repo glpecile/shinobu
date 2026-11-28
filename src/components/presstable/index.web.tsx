@@ -45,8 +45,7 @@ function WebPresstable({
   const state = rest.accessibilityState;
   return (
     <Pressable
-      // react-native-web drops the `accessibilityState` object, so it rides as
-      // ARIA here. A caller's own `aria-*` prop wins
+      // react-native-web drops `accessibilityState`
       // (docs/solutions/pressto-accessibility-state-not-mapped-on-web.md).
       aria-busy={state?.busy}
       aria-checked={state?.checked}

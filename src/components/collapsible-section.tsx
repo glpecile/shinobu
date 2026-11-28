@@ -27,6 +27,9 @@ import { useThemeColor } from '@/lib/theme-color';
 import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import { setSectionCollapsed, useSectionCollapsed } from '@/state/prefs/collapsed-sections';
 
+/** Grows a title-only header's hit area to 44pt without moving its layout. */
+const TITLE_HIT_AREA = 'py-2 -my-2';
+
 const ScrollContext = createContext<{
   content: RefObject<ViewInstance | null>;
   contentY: SharedValue<number>;
@@ -158,8 +161,7 @@ export function CollapsibleSection({
           accessibilityState={{ expanded: !collapsed }}
           className={cn(
             'flex-row items-center gap-2 shrink',
-            // Without an action the row stays title height; the padding reaches 44pt into its margins.
-            action ? 'min-h-11' : 'py-2 -my-2',
+            action ? 'min-h-11' : TITLE_HIT_AREA,
           )}
           onPress={toggle}
           pressBehavior="immediate"

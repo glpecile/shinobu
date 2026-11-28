@@ -123,9 +123,6 @@ export function ActionableRow({
           'shrink-0 flex-row items-center justify-end self-stretch',
           showActions ? 'ml-2' : 'grow',
         )}
-        // A second hit area for the same press. The leading pressable's label
-        // already says what the trailing content shows, so assistive tech and
-        // the tab order skip this one.
         accessible={false}
         aria-hidden
         focusable={false}
