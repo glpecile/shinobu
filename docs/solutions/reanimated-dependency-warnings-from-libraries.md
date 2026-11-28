@@ -19,9 +19,11 @@ dependencies, still present in their latest releases as of this date:
   `use-toast-position.ts`, `use-toast-animations.ts`, and `gestures.tsx`.
   Upstream commit `2b45163` (2026-11-12) passes them on web only, but no
   release has it yet (checked 2026-11-28). Upgrade it in #534.
-- `@legendapp/list/reanimated` 3.6.0 / 3.7.1: the sticky-position
-  `useAnimatedStyle`, used when `List` gets `sharedValues` or
-  `itemLayoutAnimation`.
+- `@legendapp/list/reanimated` 3.6.0 to 3.9.2 and 4.0.0-next.0: the
+  `useAnimatedStyle` in `ReanimatedPositionViewSticky`. It renders only for
+  sticky items (`stickyHeaderIndices`), which the app does not use, so it never
+  warns here. The `itemLayoutAnimation` view passes no deps (checked
+  2026-11-28).
 
 Native ignores the arrays, so behaviour is unaffected.
 
