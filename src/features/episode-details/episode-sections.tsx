@@ -259,7 +259,7 @@ export function EpisodeNavigation({
           variant="ghost"
         />
         <View className="flex-1 items-center">
-          <MorphText className="font-sans-semibold text-lg text-foreground self-center">
+          <MorphText className="font-sans-semibold text-lg text-foreground self-center tabular-nums">
             {episodeCode(season, number)}
           </MorphText>
         </View>
@@ -305,9 +305,9 @@ export function EpisodeNavigation({
 export function EpisodeHeaderSkeleton() {
   return (
     <View>
-      <Skeleton className="h-3 w-32 rounded mt-0.5" />
-      <Skeleton className="h-7 w-64 rounded mt-2.5" />
-      <Skeleton className="h-3.5 w-40 rounded mt-3" />
+      <Skeleton className="h-4 w-32 rounded" />
+      <Skeleton className="h-9 w-64 rounded mt-1" />
+      <Skeleton className="h-5 w-40 rounded mt-1.5" />
     </View>
   );
 }

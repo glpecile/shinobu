@@ -29,7 +29,7 @@ export default function StudioScreen() {
   }
 
   if (!Number.isSafeInteger(tmdbId) || tmdbId <= 0) {
-    return <PersonNotFound detail="This studio page doesn't exist." onGoBack={goBack} />;
+    return <PersonNotFound detail="This studio page doesn’t exist." onGoBack={goBack} />;
   }
 
   return (
@@ -53,7 +53,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (
     <PersonNotFound
-      detail="This studio couldn't be loaded."
+      detail="This studio couldn’t be loaded."
       title="Couldn’t load"
       onGoBack={() => (router.canGoBack() ? router.back() : router.replace(routes.home))}
       onRetry={retry}

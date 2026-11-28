@@ -63,7 +63,7 @@ export function WatchedMark({
           {state.total != null && state.total > 0 && (
             <ProgressRing label={label} max={state.total} value={state.current} />
           )}
-          <Text className="font-sans text-xs text-foreground">{label}</Text>
+          <Text className="font-sans text-xs text-foreground tabular-nums">{label}</Text>
         </View>
       )}
     </>

@@ -19,6 +19,7 @@ import { PendingLogs } from '@/features/log-media/pending-logs-sheet';
 import { cn } from '@/lib/cn';
 import { feedReadsType } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
+import { routes } from '@/lib/routes';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
 
@@ -30,7 +31,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
       </Head>
       <DiaryHeader />
       <CenteredNotice>
-        <CenteredNotice.Title>Couldn't display your diary</CenteredNotice.Title>
+        <CenteredNotice.Title>Couldn’t display your diary</CenteredNotice.Title>
         <CenteredNotice.Body>Try again, or switch to another screen.</CenteredNotice.Body>
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}
@@ -100,7 +101,7 @@ function DiaryScreen() {
     content = (
       <CenteredNotice className="mb-16">
         <CenteredNotice.Icon name="cloud-offline-outline" />
-        <CenteredNotice.Title>Couldn't load your diary</CenteredNotice.Title>
+        <CenteredNotice.Title>Couldn’t load your diary</CenteredNotice.Title>
         <CenteredNotice.Body>
           Something went wrong reaching your trackers. Check your connection and try again.
         </CenteredNotice.Body>
@@ -117,9 +118,14 @@ function DiaryScreen() {
         <CenteredNotice.Icon name="book-outline" />
         <CenteredNotice.Title>No logs yet</CenteredNotice.Title>
         <CenteredNotice.Body>
-          Log a movie, show, or anime and it'll show up here — and in every tracker you've
+          Log a movie, show, or anime and it’ll show up here — and in every tracker you’ve
           connected.
         </CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="search-outline" />}
+          label="Find something to log"
+          onPress={() => pushRoute(routes.search)}
+        />
       </CenteredNotice>
     );
   } else {
@@ -136,6 +142,7 @@ function DiaryScreen() {
         onItemActions={openActions}
         onOpen={pushRoute}
         onRefresh={diary.refetch}
+        onShowAll={() => setPicked('ALL')}
         onRetry={() => {
           void diary.refetch();
         }}

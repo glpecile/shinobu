@@ -2,8 +2,7 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { CollapsibleSection } from '@/components/collapsible-section';
-import { List } from '@/components/List';
-import { useRailFade } from '@/components/rail';
+import { VirtualizedRail } from '@/components/rail';
 import { SectionEnter, useArrivalHistory } from '@/components/section-enter';
 import { ViewAllLink } from '@/components/view-all-link';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -35,7 +34,6 @@ export function MediaCarousel({
   onItemActions,
   onViewAll,
 }: MediaCarouselProps) {
-  const { scrollProps, fade } = useRailFade();
   const arrivalHistory = useArrivalHistory(items.map((item) => item.id));
 
   if (items.length === 0) return null;
@@ -47,36 +45,30 @@ export function MediaCarousel({
       title={title}
       action={onViewAll != null && <ViewAllLink onPress={onViewAll} title={title} />}
     >
-      <View>
-        <List
-          data={items}
-          estimatedItemSize={CARD_WIDTH + CARD_GAP}
-          horizontal
-          keyExtractor={(item) => item.id}
-          // Legend List drops horizontal `contentContainerStyle` padding on web
-          // (docs/solutions/legend-list-horizontal-content-padding-web.md).
-          ListHeaderComponent={<View style={{ width: EDGE_GUTTER }} />}
-          ListFooterComponent={<View style={{ width: EDGE_GUTTER - CARD_GAP }} />}
-          renderItem={({ item }) => {
-            const card = (
-              <MediaCard
-                item={item}
-                onActionsPress={onItemActions}
-                subtitle={subtitles?.[item.id]}
-              />
-            );
-            return (
-              <View className="mr-3">
-                <SectionEnter arrival={{ id: item.id, seen: arrivalHistory }}>{card}</SectionEnter>
-              </View>
-            );
-          }}
-          showsHorizontalScrollIndicator={false}
-          style={{ height: CARD_HEIGHT }}
-          {...scrollProps}
-        />
-        {fade}
-      </View>
+      <VirtualizedRail
+        data={items}
+        estimatedItemSize={CARD_WIDTH + CARD_GAP}
+        keyExtractor={(item) => item.id}
+        // Legend List drops horizontal `contentContainerStyle` padding on web
+        // (docs/solutions/legend-list-horizontal-content-padding-web.md).
+        ListHeaderComponent={<View style={{ width: EDGE_GUTTER }} />}
+        ListFooterComponent={<View style={{ width: EDGE_GUTTER - CARD_GAP }} />}
+        renderItem={({ item }) => {
+          const card = (
+            <MediaCard
+              item={item}
+              onActionsPress={onItemActions}
+              subtitle={subtitles?.[item.id]}
+            />
+          );
+          return (
+            <View className="mr-3">
+              <SectionEnter arrival={{ id: item.id, seen: arrivalHistory }}>{card}</SectionEnter>
+            </View>
+          );
+        }}
+        style={{ height: CARD_HEIGHT }}
+      />
     </CollapsibleSection>
   );
 }

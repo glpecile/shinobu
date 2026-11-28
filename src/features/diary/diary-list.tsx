@@ -556,6 +556,8 @@ export interface DiaryListProps {
   onRefresh: () => Promise<unknown>;
   onOpen: (href: string) => void;
   onItemActions: (item: NormalizedMediaItem) => void;
+  /** Clears the format filter from the empty state. Omit it when `format` stays `ALL`. */
+  onShowAll?: () => void;
 }
 
 export function DiaryList({
@@ -571,6 +573,7 @@ export function DiaryList({
   onRefresh,
   onOpen,
   onItemActions,
+  onShowAll,
 }: DiaryListProps) {
   const reduceMotion = useReducedMotion();
   const listRef = useRef<LegendListRef>(null);
@@ -670,6 +673,9 @@ export function DiaryList({
   }
 
   const sideMonth = visibleMonth ?? (days[0]?.key ?? today).slice(0, 7);
+  const allHidden = format === 'ALL' && days.length > 0;
+  const showAll = format !== 'ALL' && onShowAll != null;
+  const hasEmptyActions = hasNextPage || allHidden || showAll;
 
   return (
     <View className="flex-1 flex-row">
@@ -748,14 +754,39 @@ export function DiaryList({
               <CenteredNotice className="flex-none">
                 <CenteredNotice.Icon name={emptyIcon} />
                 <CenteredNotice.Title>{emptyTitle}</CenteredNotice.Title>
-                {hasNextPage && (
-                  <CenteredNotice.Action
-                    icon={<Button.Icon name="chevron-down" />}
-                    label="Load more"
-                    loading={isFetchingNextPage}
-                    onPress={onEndReached}
-                    variant="quiet"
-                  />
+                {allHidden && (
+                  <CenteredNotice.Body>
+                    You hid every log loaded so far. Unhide items in Settings.
+                  </CenteredNotice.Body>
+                )}
+                {hasEmptyActions && (
+                  <CenteredNotice.Actions>
+                    {hasNextPage && (
+                      <Button
+                        icon={<Button.Icon name="chevron-down" />}
+                        label="Load more"
+                        loading={isFetchingNextPage}
+                        onPress={onEndReached}
+                        variant="quiet"
+                      />
+                    )}
+                    {allHidden && (
+                      <Button
+                        icon={<Button.Icon name="open-outline" />}
+                        label="Settings"
+                        onPress={() => onOpen(routes.settings)}
+                        variant="quiet"
+                      />
+                    )}
+                    {showAll && (
+                      <Button
+                        icon={<Button.Icon name="albums-outline" />}
+                        label="Show all logs"
+                        onPress={onShowAll}
+                        variant="quiet"
+                      />
+                    )}
+                  </CenteredNotice.Actions>
                 )}
               </CenteredNotice>
             </SectionEnter>

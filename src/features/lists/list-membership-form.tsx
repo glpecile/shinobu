@@ -2,6 +2,7 @@ import { Suspense, useDeferredValue, useState } from 'react';
 import { Keyboard, Text, View } from 'react-native';
 import { QueryErrorResetBoundary, useIsFetching } from '@tanstack/react-query';
 import { ErrorBoundary } from 'react-error-boundary';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
@@ -349,9 +350,9 @@ export function ListSearch({
               >
                 <Suspense
                   fallback={
-                    <View className="gap-4 mt-4" accessibilityLabel="Loading search results">
+                    <View accessibilityLabel="Loading search results">
                       {[0, 1, 2].map((index) => (
-                        <View className="flex-row items-center gap-3" key={index}>
+                        <View className="flex-row items-center gap-3 py-2" key={index}>
                           <Skeleton className="w-9 h-13.5 rounded" delay={staggerDelay(index)} />
                           <View className="flex-1 gap-2">
                             <Skeleton className="h-4 w-3/4 rounded" delay={staggerDelay(index)} />
@@ -392,21 +393,23 @@ export function AddToList({
   target: ListEditTarget;
   items: readonly NormalizedMediaItem[];
 }) {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState(0);
   const [selected, setSelected] = useState<NormalizedMediaItem | null>(null);
   return (
     <>
-      <Fab
-        className="absolute bottom-6 end-6"
-        icon="add"
-        label={copy(target.provider).fab}
-        onPress={() => {
-          setSelected(null);
-          setSession(session + 1);
-          setOpen(true);
-        }}
-      />
+      <View className="absolute end-6" style={{ bottom: Math.max(24, insets.bottom + 12) }}>
+        <Fab
+          icon="add"
+          label={copy(target.provider).fab}
+          onPress={() => {
+            setSelected(null);
+            setSession(session + 1);
+            setOpen(true);
+          }}
+        />
+      </View>
       <Sheet onClose={() => setOpen(false)} open={open}>
         {session > 0 &&
           (selected == null ? (

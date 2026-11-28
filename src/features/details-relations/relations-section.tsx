@@ -1,9 +1,9 @@
 import { Text, View } from 'react-native';
 
+import { FeedRowSkeleton } from '@/components/feed-skeleton';
 import { MediaCarousel } from '@/components/media-carousel';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Section } from '@/components/section';
-import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import { Provider } from '@/lib/providers/types';
 import { useSuspenseAniListRelationsQuery } from '@/state/queries/anilist';
@@ -12,6 +12,30 @@ import { useSuspenseMediaDetailsQuery } from '@/state/queries/media-details';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
 const ALIGN_TO_COLUMN = '-mx-4 -mb-6 mt-8';
+
+type CarouselHeader = {
+  collapseKey: string;
+  provider: typeof Provider.AniList | typeof Provider.Hardcover;
+  title: string;
+};
+
+const RELATIONS_HEADER: CarouselHeader = {
+  collapseKey: 'details-relations',
+  provider: Provider.AniList,
+  title: 'Related',
+};
+
+const RECOMMENDATIONS_HEADER: CarouselHeader = {
+  collapseKey: 'details-recommendations',
+  provider: Provider.AniList,
+  title: 'Recommendations',
+};
+
+const SIMILAR_BOOKS_HEADER: CarouselHeader = {
+  collapseKey: 'details-similar-books',
+  provider: Provider.Hardcover,
+  title: 'Similar books',
+};
 
 function RelationsRow({
   mediaId,
@@ -27,14 +51,14 @@ function RelationsRow({
   return (
     <View className={ALIGN_TO_COLUMN}>
       <MediaCarousel
-        collapseKey="details-relations"
+        collapseKey={RELATIONS_HEADER.collapseKey}
         items={data.relations.map((relation) => relation.item)}
         onItemActions={onItemActions}
-        leading={<ProviderIcon id={Provider.AniList} size={16} />}
+        leading={<ProviderIcon id={RELATIONS_HEADER.provider} size={16} />}
         subtitles={Object.fromEntries(
           data.relations.map((relation) => [relation.item.id, relation.relation]),
         )}
-        title="Related"
+        title={RELATIONS_HEADER.title}
       />
     </View>
   );
@@ -55,11 +79,11 @@ function RecommendationsAndTags({
       {data.recommendations.length > 0 && (
         <View className={ALIGN_TO_COLUMN}>
           <MediaCarousel
-            collapseKey="details-recommendations"
+            collapseKey={RECOMMENDATIONS_HEADER.collapseKey}
             items={data.recommendations}
             onItemActions={onItemActions}
-            leading={<ProviderIcon id={Provider.AniList} size={16} />}
-            title="Recommendations"
+            leading={<ProviderIcon id={RECOMMENDATIONS_HEADER.provider} size={16} />}
+            title={RECOMMENDATIONS_HEADER.title}
           />
         </View>
       )}
@@ -95,11 +119,11 @@ function SimilarBooksCarousel({
   return (
     <View className={ALIGN_TO_COLUMN}>
       <MediaCarousel
-        collapseKey="details-similar-books"
+        collapseKey={SIMILAR_BOOKS_HEADER.collapseKey}
         items={data}
         onItemActions={onItemActions}
-        leading={<ProviderIcon id={Provider.Hardcover} size={16} />}
-        title="Similar books"
+        leading={<ProviderIcon id={SIMILAR_BOOKS_HEADER.provider} size={16} />}
+        title={SIMILAR_BOOKS_HEADER.title}
       />
     </View>
   );
@@ -118,15 +142,14 @@ function SimilarBooks({
   return <SimilarBooksCarousel ids={ids} onItemActions={onItemActions} />;
 }
 
-function CarouselSkeleton() {
+function CarouselSkeleton({ header }: { header: CarouselHeader }) {
   return (
-    <View className="mt-8">
-      <Skeleton className="h-6 w-24 rounded mb-4" />
-      <View className="flex-row gap-3 overflow-hidden">
-        {[0, 1, 2].map((index) => (
-          <Skeleton className="w-40 h-60 rounded-lg" delay={staggerDelay(index)} key={index} />
-        ))}
-      </View>
+    <View className={ALIGN_TO_COLUMN}>
+      <FeedRowSkeleton
+        collapseKey={header.collapseKey}
+        leading={<ProviderIcon id={header.provider} size={16} />}
+        title={header.title}
+      />
     </View>
   );
 }
@@ -142,7 +165,7 @@ export function RelationsSection({
 }) {
   if (item.externalIds.anilist == null) return null;
   return (
-    <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
+    <SuspenseSection fallback={<CarouselSkeleton header={RELATIONS_HEADER} />} resetKey={resetKey}>
       <RelationsRow
         mediaId={item.externalIds.anilist}
         onItemActions={onItemActions}
@@ -163,7 +186,10 @@ export function RecommendationsAndTagsSection({
 }) {
   if (item.externalIds.anilist == null) return null;
   return (
-    <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
+    <SuspenseSection
+      fallback={<CarouselSkeleton header={RECOMMENDATIONS_HEADER} />}
+      resetKey={resetKey}
+    >
       <RecommendationsAndTags
         mediaId={item.externalIds.anilist}
         onItemActions={onItemActions}
@@ -184,7 +210,10 @@ export function SimilarBooksSection({
 }) {
   if (item.externalIds.hardcover == null) return null;
   return (
-    <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
+    <SuspenseSection
+      fallback={<CarouselSkeleton header={SIMILAR_BOOKS_HEADER} />}
+      resetKey={resetKey}
+    >
       <SimilarBooks item={item} onItemActions={onItemActions} />
     </SuspenseSection>
   );

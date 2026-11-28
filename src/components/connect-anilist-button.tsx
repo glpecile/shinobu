@@ -30,7 +30,7 @@ const clientIdSchema = z.object({
     .min(1, 'Paste your Client ID first.')
     .regex(
       /^\d+$/,
-      "That doesn't look like a Client ID — it's the short number on your AniList client's page.",
+      "That doesn’t look like a Client ID — it’s the short number on your AniList client’s page.",
     ),
 });
 
@@ -147,7 +147,7 @@ export function ConnectAniListButton() {
 
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Save, then copy the client's{' '}
+                Save, then copy the client’s{' '}
                 <Text className="text-foreground font-sans-semibold">ID</Text> (a short number) and
                 paste it below.
               </Text>
@@ -187,7 +187,7 @@ export function ConnectAniListButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        You sign in on AniList's own site, and Shinobu keeps only the resulting access token on this
+        You sign in on AniList’s own site, and Shinobu keeps only the resulting access token on this
         device — your password is never sent to Shinobu.
       </Text>
       {status === 'error' && (

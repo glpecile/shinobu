@@ -33,10 +33,9 @@ import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 function SeasonsSkeleton() {
   return (
     <View className="mt-8">
-      <Skeleton className="h-6 w-32 rounded mb-4" />
-      {Array.from({ length: 1 }).map((_, index) => (
-        <Skeleton className="h-16 rounded-lg mb-3" key={index} />
-      ))}
+      <Skeleton className="h-7 w-32 rounded" />
+      <Skeleton className="h-5 w-40 rounded mt-1 mb-4" />
+      <Skeleton className="h-17 rounded-lg" />
     </View>
   );
 }
@@ -112,7 +111,7 @@ function AnimeDetailsList({
     if (tmdbId == null || placed == null) {
       toast.error(
         'Episode details unavailable',
-        "This episode isn't mapped to TMDB's numbering yet.",
+        "This episode isn’t mapped to TMDB’s numbering yet.",
       );
       return null;
     }

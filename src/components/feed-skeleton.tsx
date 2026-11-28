@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 
@@ -5,7 +6,6 @@ import { Rail } from '@/components/rail';
 import { ProviderIcon } from '@/components/provider-icon';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
-import { cn } from '@/lib/cn';
 import { episodeCardRailHeight, STACK_OFFSET } from '@/features/up-next/ui/metrics';
 import { Provider } from '@/lib/providers/types';
 
@@ -16,24 +16,43 @@ function SkeletonCard({ index }: { index: number }) {
   return <Skeleton className="w-40 h-60 rounded-lg mr-3" delay={staggerDelay(index)} />;
 }
 
-function SkeletonRow({ cardCount, hasAction = false }: { cardCount: number; hasAction?: boolean }) {
+function SkeletonRail() {
+  const { width } = useWindowDimensions();
+  const cardCount = Math.ceil(width / (CARD_WIDTH + CARD_GAP)) + 1;
   return (
-    <View className="mb-6">
-      <SkeletonSectionHeader hasAction={hasAction} widthClass="w-40" />
-      <Rail className="px-4">
-        {Array.from({ length: cardCount }).map((_, index) => (
-          <SkeletonCard index={index} key={index} />
-        ))}
-      </Rail>
-    </View>
+    <Rail className="px-4" style={{ height: 240 }}>
+      {Array.from({ length: cardCount }).map((_, index) => (
+        <SkeletonCard index={index} key={index} />
+      ))}
+    </Rail>
   );
 }
 
-export function FeedRowSkeleton({ hasAction = false }: { hasAction?: boolean }) {
-  const { width } = useWindowDimensions();
-  const cardCount = Math.ceil(width / (CARD_WIDTH + CARD_GAP)) + 1;
-
-  return <SkeletonRow cardCount={cardCount} hasAction={hasAction} />;
+/**
+ * Fallback for a `MediaCarousel` row. Takes the row's own header props, so a
+ * collapsed row stays collapsed.
+ */
+export function FeedRowSkeleton({
+  collapseKey,
+  title,
+  leading,
+  hasAction = false,
+}: {
+  collapseKey: string;
+  title: string;
+  leading?: ReactNode;
+  hasAction?: boolean;
+}) {
+  return (
+    <CollapsibleSection
+      action={hasAction && <Skeleton className="h-4 w-16 rounded" />}
+      collapseKey={collapseKey}
+      leading={leading}
+      title={title}
+    >
+      <SkeletonRail />
+    </CollapsibleSection>
+  );
 }
 
 const LANDSCAPE_WIDTH = 256;
@@ -69,18 +88,15 @@ export function LandscapeRowSkeleton() {
       leading={<ProviderIcon id={Provider.Serializd} size={16} />}
       title="Coming Soon"
     >
-      <View
-        style={{
-          height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2),
-          paddingTop: STACK_OFFSET * 2,
-        }}
+      <Rail
+        className="px-4"
+        contentContainerStyle={{ paddingTop: STACK_OFFSET * 2 }}
+        style={{ height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2) }}
       >
-        <Rail className="px-4">
-          {Array.from({ length: cardCount }).map((_, index) => (
-            <SkeletonLandscapeCard index={index} key={index} />
-          ))}
-        </Rail>
-      </View>
+        {Array.from({ length: cardCount }).map((_, index) => (
+          <SkeletonLandscapeCard index={index} key={index} />
+        ))}
+      </Rail>
     </CollapsibleSection>
   );
 }
@@ -96,20 +112,18 @@ export function ReadingRowSkeleton() {
       leading={<CollapsibleSection.Icon name="book-outline" />}
       title="Continue Reading"
     >
-      <View style={{ height: episodeCardRailHeight(fontScale, 48) }}>
-        <Rail className="px-4">
-          {Array.from({ length: cardCount }).map((_, index) => {
-            const delay = staggerDelay(index);
-            return (
-              <View className="w-32 mr-3" key={index}>
-                <Skeleton className="w-32 h-48 rounded-lg" delay={delay} />
-                <Skeleton className="h-4 w-2/3 rounded mt-2" delay={delay} />
-                <Skeleton className="h-3 w-1/2 rounded mt-1.5" delay={delay} />
-              </View>
-            );
-          })}
-        </Rail>
-      </View>
+      <Rail className="px-4" style={{ height: episodeCardRailHeight(fontScale, 48) }}>
+        {Array.from({ length: cardCount }).map((_, index) => {
+          const delay = staggerDelay(index);
+          return (
+            <View className="w-32 mr-3" key={index}>
+              <Skeleton className="w-32 h-48 rounded-lg" delay={delay} />
+              <Skeleton className="h-4 w-2/3 rounded mt-2" delay={delay} />
+              <Skeleton className="h-3 w-1/2 rounded mt-1.5" delay={delay} />
+            </View>
+          );
+        })}
+      </Rail>
     </CollapsibleSection>
   );
 }
@@ -121,20 +135,6 @@ function SkeletonDayCell({ index }: { index: number }) {
       <Skeleton className="h-3 w-7 rounded" delay={delay} />
       <Skeleton className="h-6 w-6 rounded mt-1" delay={delay} />
       <Skeleton className="size-1.5 rounded-full mt-1" delay={delay} />
-    </View>
-  );
-}
-
-function SkeletonSectionHeader({
-  widthClass,
-  hasAction = false,
-}: {
-  widthClass: string;
-  hasAction?: boolean;
-}) {
-  return (
-    <View className={cn('justify-center mb-3 mx-4', hasAction && 'min-h-11')}>
-      <Skeleton className={cn('h-7', widthClass, 'rounded')} />
     </View>
   );
 }
@@ -152,13 +152,11 @@ export function UpNextSectionSkeleton() {
         leading={<CollapsibleSection.Icon name="play-circle-outline" />}
         title="Continue Watching"
       >
-        <View style={{ height: cardRailHeight }}>
-          <Rail className="px-4">
-            {Array.from({ length: cardCount }).map((_, index) => (
-              <SkeletonLandscapeCard hasAction index={index} key={index} />
-            ))}
-          </Rail>
-        </View>
+        <Rail className="px-4" style={{ height: cardRailHeight }}>
+          {Array.from({ length: cardCount }).map((_, index) => (
+            <SkeletonLandscapeCard hasAction index={index} key={index} />
+          ))}
+        </Rail>
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -171,14 +169,12 @@ export function UpNextSectionSkeleton() {
             <SkeletonDayCell index={index} key={index} />
           ))}
         </Rail>
-        <View
-          className="mt-3"
-          style={{
-            height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2),
-            paddingTop: STACK_OFFSET * 2,
-          }}
-        >
-          <Rail className="px-4">
+        <View className="mt-3">
+          <Rail
+            className="px-4"
+            contentContainerStyle={{ paddingTop: STACK_OFFSET * 2 }}
+            style={{ height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2) }}
+          >
             {Array.from({ length: cardCount }).map((_, index) => (
               <SkeletonLandscapeCard index={index} key={index} />
             ))}
@@ -192,8 +188,12 @@ export function UpNextSectionSkeleton() {
 export function FeedSkeleton() {
   return (
     <View className="pt-2">
-      <FeedRowSkeleton />
-      <FeedRowSkeleton />
+      {[0, 1].map((row) => (
+        <View className="mb-6" key={row}>
+          <Skeleton className="h-7 w-40 rounded mx-4 mb-3" />
+          <SkeletonRail />
+        </View>
+      ))}
     </View>
   );
 }

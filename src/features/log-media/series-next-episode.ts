@@ -146,7 +146,7 @@ export function unairedEpisodeLabel(
   now: Date = new Date(),
 ): string {
   const offset = localDayOffset(firstAired, now);
-  if (offset == null || offset < 0) return `${label} hasn't aired yet`;
+  if (offset == null || offset < 0) return `${label} hasn’t aired yet`;
   if (offset > 1) return `${label} airs in ${offset} days`;
   return `${label} airs ${offset === 0 ? 'today' : 'tomorrow'}`;
 }

@@ -103,7 +103,7 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
           {item.title}
         </Text>
         <View className="flex-row items-center mt-1.5">
-          <Text className="text-on-scrim/70 text-xs font-sans flex-1" numberOfLines={1}>
+          <Text className="text-on-scrim/70 text-xs font-sans flex-1 tabular-nums" numberOfLines={1}>
             {item.type}
             {progress != null ? ` · ${progress}` : ''}
           </Text>

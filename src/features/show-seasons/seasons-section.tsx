@@ -2,7 +2,8 @@ import { View } from 'react-native';
 
 import { SuspenseSection } from '@/components/suspense-section';
 import { Section } from '@/components/section';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { Provider } from '@/lib/providers/types';
 import { hasAired } from '@/lib/time/has-aired';
@@ -35,9 +36,14 @@ import { formatRuntime, seriesRuntimeMinutes } from './runtime';
 function SeasonsSkeleton() {
   return (
     <View className="mt-8">
-      <Skeleton className="h-6 w-32 rounded mb-4" />
+      <Skeleton className="h-7 w-32 rounded" />
+      <Skeleton className="h-5 w-40 rounded mt-1 mb-4" />
       {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton className="h-16 rounded-lg mb-3" key={index} />
+        <Skeleton
+          className={cn('h-17 rounded-lg', index > 0 && 'mt-3')}
+          delay={staggerDelay(index)}
+          key={index}
+        />
       ))}
     </View>
   );

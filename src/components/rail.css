@@ -1,0 +1,29 @@
+@media (hover: hover) and (pointer: fine) {
+  [data-shinobu-rail] > :first-child {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-foreground) 20%, transparent) transparent;
+    box-sizing: content-box;
+    padding-bottom: 12px;
+  }
+
+  @supports not (scrollbar-color: auto) {
+    [data-shinobu-rail] > :first-child::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    [data-shinobu-rail] > :first-child::-webkit-scrollbar-thumb {
+      background-color: color-mix(in srgb, var(--color-foreground) 20%, transparent);
+      border-radius: 3px;
+    }
+  }
+}
+
+@media not ((hover: hover) and (pointer: fine)) {
+  [data-shinobu-rail] > :first-child {
+    scrollbar-width: none;
+  }
+
+  [data-shinobu-rail] > :first-child::-webkit-scrollbar {
+    display: none;
+  }
+}

@@ -50,7 +50,7 @@ function CreditMeta({
   if (loading) {
     return (
       <View className="mt-5">
-        <Skeleton className="h-3 w-2/3 rounded" />
+        <Skeleton className="h-5 w-2/3 rounded" />
       </View>
     );
   }

@@ -30,7 +30,7 @@ const clientIdSchema = z.object({
     .min(1, 'Paste your Client ID first.')
     .regex(
       /^[a-f0-9]{16,}$/i,
-      "That doesn't look like a Client ID — it's the long hex string on your Simkl app's page.",
+      "That doesn’t look like a Client ID — it’s the long hex string on your Simkl app’s page.",
     ),
 });
 
@@ -160,7 +160,7 @@ export function ConnectSimklButton() {
 
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Save, then copy the app's{' '}
+                Save, then copy the app’s{' '}
                 <Text className="text-foreground font-sans-semibold">Client ID</Text> (a long hex
                 string) and paste it below.
               </Text>
@@ -199,7 +199,7 @@ export function ConnectSimklButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        You sign in on Simkl's own site, and Shinobu keeps only the resulting access token on this
+        You sign in on Simkl’s own site, and Shinobu keeps only the resulting access token on this
         device — your password is never sent to Shinobu.
       </Text>
       {status === 'error' && (

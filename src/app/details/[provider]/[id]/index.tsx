@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
@@ -152,10 +153,10 @@ function ProgressOfTotal({ progress, total }: { progress: number; total: number 
   return (
     <View className="flex-row items-baseline mt-0.5">
       {/* Clamped: AniList counts a manga's extra chapters past its total (62 of 59). */}
-      <MorphText className="text-foreground text-2xl font-sans-semibold">
+      <MorphText className="text-foreground text-2xl font-sans-semibold tabular-nums">
         {Math.min(progress, total)}
       </MorphText>
-      <Text className="text-muted text-2xl font-sans-semibold">{` / ${total}`}</Text>
+      <Text className="text-muted text-2xl font-sans-semibold tabular-nums">{` / ${total}`}</Text>
     </View>
   );
 }
@@ -250,7 +251,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
         {parts.map((part, index) => (
           <MorphText
             key={index === 0 ? 'status' : parts.length - index}
-            className="text-muted font-sans text-sm"
+            className="text-muted font-sans text-sm tabular-nums"
             numberOfLines={wrapsAsText ? 0 : undefined}
           >
             {index < parts.length - 1 ? `${part} ·` : part}
@@ -412,9 +413,9 @@ function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
 
 function StudiosSkeleton() {
   return (
-    <View className="mt-8">
-      <Skeleton className="h-6 w-24 rounded mb-4" />
-      <View className="flex-row gap-4 web:pt-1">
+    <View className="mt-8 pointer-fine:pb-3">
+      <Skeleton className="h-7 w-24 rounded mb-4" />
+      <View className="flex-row gap-4 web:pt-1 overflow-hidden">
         {[1, 2, 3].map((index) => (
           <StudioCardSkeleton index={index} key={index} />
         ))}
@@ -425,6 +426,7 @@ function StudiosSkeleton() {
 
 function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdrop: boolean }) {
   const backButtonClearance = useFloatingBackButtonClearance();
+  const wide = useWindowDimensions().width >= 768;
   return (
     <>
       {backdrop ? (
@@ -437,9 +439,10 @@ function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdr
           className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', !backdrop && 'mt-0')}
         >
           <View className="flex-1">
-            <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
-            <Skeleton className="h-8 w-48 rounded mt-2" delay={staggerDelay(2)} />
-            <Skeleton className="h-3 w-32 rounded mt-2" delay={staggerDelay(2)} />
+            <Skeleton className="h-4 w-16 rounded" delay={staggerDelay(2)} />
+            <Skeleton className="h-9 w-48 rounded mt-1" delay={staggerDelay(2)} />
+            <Skeleton className="h-5 w-32 rounded mt-1.5" delay={staggerDelay(2)} />
+            {wide && <ExpandableText.Skeleton className="mt-4" />}
           </View>
           <Link.AppleZoomTarget>
             <View className="w-32 h-48 md:w-48 md:h-72 rounded-lg overflow-hidden bg-surface">
@@ -451,7 +454,7 @@ function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdr
             </View>
           </Link.AppleZoomTarget>
         </View>
-        <ExpandableText.Skeleton />
+        {!wide && <ExpandableText.Skeleton />}
       </View>
     </>
   );
@@ -510,6 +513,7 @@ function DetailsScreen() {
   const backgroundVariable = useCSSVariable('--color-background');
   const background = typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   const backButtonClearance = useFloatingBackButtonClearance();
+  const insets = useSafeAreaInsets();
   const [refreshCount, setRefreshCount] = useState(0);
 
   const { item, isLoading } = useResolvedMediaItem(id, mediaType);
@@ -843,7 +847,10 @@ function DetailsScreen() {
     </>
   );
   const footer = (
-    <View className="w-full max-w-4xl self-center px-6 pb-12">
+    <View
+      className="w-full max-w-4xl self-center px-6"
+      style={{ paddingBottom: 48 + insets.bottom }}
+    >
       <RelationsSection item={shown} onItemActions={openActions} resetKey={refreshCount} />
 
       <SuspenseSection

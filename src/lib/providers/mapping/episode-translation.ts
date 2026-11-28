@@ -42,7 +42,7 @@ function describeTable(map: AniZipEpisodeMap): MappedTable | string {
   if (rows.length === 0) return 'ani.zip has no episode mapping for this entry yet';
 
   const gaps =
-    "ani.zip's episode numbering for this entry has gaps — the season can't be resolved safely";
+    "ani.zip’s episode numbering for this entry has gaps — the season can’t be resolved safely";
   const season = rows[0][1].season;
   let spansSeasons = false;
   for (let index = 1; index < rows.length; index++) {
@@ -143,7 +143,7 @@ export function translateEntryEpisodes(
   if (context.layout == null) {
     return {
       ok: false,
-      reason: "couldn't read this show's season list to place the episode",
+      reason: "couldn’t read this show’s season list to place the episode",
     };
   }
 
@@ -183,11 +183,11 @@ function extrapolate(
     return `ani.zip has no season mapping for episode ${entryNumber} of this entry yet`;
   }
   if (table.spansSeasons) {
-    return "this entry's episodes cross a season boundary — Shinobu won't guess past the last mapped one";
+    return "this entry’s episodes cross a season boundary — Shinobu won’t guess past the last mapped one";
   }
   const declared = context.declaredEpisodeCount;
   if (declared != null && entryNumber > declared) {
-    return `episode ${entryNumber} is past this entry's ${declared} episodes — no season mapping`;
+    return `episode ${entryNumber} is past this entry’s ${declared} episodes — no season mapping`;
   }
   return {
     season: table.season,

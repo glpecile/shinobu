@@ -551,7 +551,7 @@ describe('deleteAniListEntry — only a bare PLANNING entry is deletable (R36)',
     );
     expect(result).toEqual({
       status: 'skipped',
-      reason: "wasn't on your AniList list",
+      reason: "wasn’t on your AniList list",
     });
     expect(seen.mutations).toEqual([]);
   });

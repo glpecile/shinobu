@@ -11,11 +11,17 @@ import { GestureScrollView } from '@/components/animated-view';
 import { List, type ListProps } from '@/components/List';
 import { type ThemeColorToken, useThemeColor } from '@/lib/theme-color';
 
+import './rail.css';
+
+const showsRailScrollbar = process.env.EXPO_OS === 'web';
+const railScrollbarProps =
+  process.env.EXPO_OS === 'web' ? { 'data-shinobu-rail': '' } : undefined;
+
 export const RailFadeColor = createContext<ThemeColorToken>('--color-background');
 
 type ScrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 
-export function useRailFade(onScroll?: ScrollHandler) {
+function useRailFade(onScroll?: ScrollHandler) {
   const color = useThemeColor(useContext(RailFadeColor));
   const [atEnd, setAtEnd] = useState(false);
   // Web hands back `var(--token)`, which takes no alpha suffix, and browsers
@@ -54,11 +60,11 @@ export function useRailFade(onScroll?: ScrollHandler) {
 export function Rail({ onScroll, ...rest }: ScrollViewProps) {
   const { scrollProps, fade } = useRailFade(onScroll);
   return (
-    <View>
+    <View {...railScrollbarProps}>
       <GestureScrollView
         horizontal
         nestedScrollEnabled
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={showsRailScrollbar}
         {...rest}
         {...scrollProps}
       />
@@ -71,11 +77,11 @@ export function Rail({ onScroll, ...rest }: ScrollViewProps) {
 export function VirtualizedRail<T>({ onScroll, ...props }: ListProps<T>) {
   const { scrollProps, fade } = useRailFade(onScroll);
   return (
-    <View>
+    <View {...railScrollbarProps}>
       <List
         horizontal
         nestedScrollEnabled
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={showsRailScrollbar}
         {...props}
         {...scrollProps}
       />

@@ -18,6 +18,7 @@ import {
   type EntryOrExitLayoutType,
   type SharedValue,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { ActionableRow } from '@/components/actionable-row';
@@ -206,6 +207,7 @@ function TimelineScrollToTop({
   scrollY: SharedValue<number>;
   onPress: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   useAnimatedReaction(
     () => scrollY.get() > SCROLL_TO_TOP_THRESHOLD,
@@ -213,7 +215,13 @@ function TimelineScrollToTop({
       if (past !== wasPast) scheduleOnRN(setVisible, past);
     },
   );
-  return <ScrollToTopFab onPress={onPress} visible={visible} />;
+  return (
+    <ScrollToTopFab
+      onPress={onPress}
+      style={{ bottom: Math.max(24, insets.bottom + 12) }}
+      visible={visible}
+    />
+  );
 }
 
 export interface CreditTimelineProps {
@@ -256,6 +264,7 @@ export function CreditTimeline({
       }),
     );
   }
+  const insets = useSafeAreaInsets();
   const listRef = useRef<LegendListRef>(null);
   const { scrollY } = useScrolledTitle();
   const [format, setFormat] = useState<FormatFilter>('ALL');
@@ -315,7 +324,8 @@ export function CreditTimeline({
         ListFooterComponent={
           <Column>
             {footer}
-            <View className="h-12" />
+            {/* Scroll-to-top FAB clearance */}
+            <View style={{ height: 96 + insets.bottom }} />
           </Column>
         }
         ListHeaderComponent={

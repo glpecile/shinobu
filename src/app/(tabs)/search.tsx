@@ -21,7 +21,6 @@ import { CollapsibleSection } from '@/components/collapsible-section';
 import { CenteredNotice } from '@/components/centered-notice';
 import { Eyebrow } from '@/components/eyebrow';
 import { Fab } from '@/components/fab';
-import { FeedRowSkeleton } from '@/components/feed-skeleton';
 import { Image } from '@/components/image';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { List } from '@/components/List';
@@ -205,6 +204,10 @@ function RowSkeleton({ index = 0 }: { index?: number }) {
 function ResultsSkeleton() {
   return (
     <View>
+      <View className="flex-row items-center gap-2 px-6 pt-4 pb-1.5">
+        <Skeleton className="size-3.5 rounded-full" />
+        <Skeleton className="h-4 w-20 rounded" />
+      </View>
       {Array.from({ length: 6 }).map((_, index) => (
         <RowSkeleton index={index} key={index} />
       ))}
@@ -539,16 +542,16 @@ function SearchScreen() {
                     keyboardShouldPersistTaps="handled"
                     ref={scrollRef}
                   >
-                    <SuspenseSection fallback={<FeedRowSkeleton hasAction />}>
+                    <SuspenseSection fallback={<SeasonalAnimeRow.Skeleton season={animeSeason} />}>
                       <SeasonalAnimeRow onItemActions={openActions} season={animeSeason} />
                     </SuspenseSection>
-                    <SuspenseSection fallback={<FeedRowSkeleton hasAction />}>
+                    <SuspenseSection fallback={<AnimeMoviesRow.Skeleton season={animeSeason} />}>
                       <AnimeMoviesRow onItemActions={openActions} season={animeSeason} />
                     </SuspenseSection>
-                    <SuspenseSection fallback={<FeedRowSkeleton />}>
+                    <SuspenseSection fallback={<TrendingMoviesRow.Skeleton />}>
                       <TrendingMoviesRow onItemActions={openActions} />
                     </SuspenseSection>
-                    <SuspenseSection fallback={<FeedRowSkeleton />}>
+                    <SuspenseSection fallback={<TrendingShowsRow.Skeleton />}>
                       <TrendingShowsRow onItemActions={openActions} />
                     </SuspenseSection>
                     <FeedEnd

@@ -58,7 +58,7 @@ function dayContentAnimation(
 }
 
 function emptyDayCopy(offset: number, label: string): string {
-  if (offset === 0) return "That's all for today.";
+  if (offset === 0) return "That’s all for today.";
   if (offset === 1) return 'Nothing airing tomorrow.';
   return `Nothing airing on ${label}.`;
 }
@@ -150,14 +150,19 @@ export function UpNextSection({ onItemPress, onItemActions }: UpNextSectionProps
             entering={dayContentAnimation(direction, reduceMotion)}
           >
             {selected.groups.length === 0 ? (
-              <View className="flex-1 items-center justify-center px-4">
-                <Text className="text-muted/40 text-4xl mb-2">忍</Text>
-                <MorphText
-                  className="text-muted font-sans text-sm text-center"
-                  numberOfLines={fontScale > 1 ? 0 : undefined}
+              <View className="pointer-fine:pb-3">
+                <View
+                  className="items-center justify-center px-4"
+                  style={{ minHeight: episodeCardRailHeight(fontScale, STACK_HEADROOM) }}
                 >
-                  {emptyDayCopy(selected.offset, selected.label)}
-                </MorphText>
+                  <Text className="text-muted/40 text-4xl mb-2">忍</Text>
+                  <MorphText
+                    className="text-muted font-sans text-sm text-center"
+                    numberOfLines={fontScale > 1 ? 0 : undefined}
+                  >
+                    {emptyDayCopy(selected.offset, selected.label)}
+                  </MorphText>
+                </View>
               </View>
             ) : (
               <EpisodeCardRail

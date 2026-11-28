@@ -19,6 +19,7 @@ import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/media-sort-control';
 import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
+import { useListEndPadding } from '@/features/media-layout/watchlist-rows';
 import { sortMediaEntries } from '@/lib/media-sort';
 import { usePushRoute } from '@/lib/navigation';
 import {
@@ -92,6 +93,7 @@ export function HardcoverListItems({ id }: { id: number }) {
   const target = mine
     ? { provider: Provider.Hardcover, username: list.owner, id: list.id, title: list.title, url }
     : null;
+  const paddingBottom = useListEndPadding(target != null);
   return (
     <>
       <Head>
@@ -140,7 +142,7 @@ export function HardcoverListItems({ id }: { id: number }) {
           drawDistance={92 * 4}
           estimatedItemSize={92}
           recycleItems
-          contentContainerStyle={{ paddingBottom: target != null ? 96 : undefined }}
+          contentContainerStyle={{ paddingBottom }}
           keyExtractor={(entry) => entry.id}
           onEndReached={
             query.hasNextPage && !query.isFetchingNextPage && !query.isFetchNextPageError

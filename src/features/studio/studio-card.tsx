@@ -51,10 +51,10 @@ export function StudioCard({
       </PresstableScale>
       {process.env.EXPO_OS === 'web' && onActions != null && (
         <OverlayActionsButton
-          className="absolute top-1 right-1"
+          className="absolute top-0 right-0"
           label={`More options for ${studio.name}`}
           onPress={onActions}
-          size="sm"
+          size="lg"
           visible={hovered}
         />
       )}

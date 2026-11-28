@@ -167,7 +167,7 @@ function SettingsRailPinned({
       >
         <Ionicons color={muted} name={icon} size={16} />
         <Text className="font-display text-base text-foreground">{title}</Text>
-        <Text className="ml-1 shrink text-muted font-sans text-xs" numberOfLines={1}>
+        <Text className="ml-1 shrink text-muted font-sans text-xs tabular-nums" numberOfLines={1}>
           {count}
         </Text>
       </AnimatedView>
@@ -239,13 +239,21 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
                   scrollRef.current?.scrollTo({ y, animated: !reduceMotion });
                 }}
               >
+                <AnimatedView
+                  className="w-0.5 h-4 rounded-full bg-accent"
+                  style={{
+                    opacity: title === active ? 1 : 0,
+                    transform: [{ scaleY: title === active || reduceMotion ? 1 : 0.5 }],
+                    transitionProperty: ['opacity', 'transform'],
+                    transitionDuration: DURATION.color,
+                    transitionTimingFunction: EASE_OUT,
+                  }}
+                />
                 <Ionicons color={title === active ? foreground : muted} name={icon} size={16} />
                 <Text
                   className={cn(
-                    'text-sm',
-                    title === active
-                      ? 'text-foreground font-sans-semibold'
-                      : 'text-muted font-sans',
+                    'font-sans text-sm',
+                    title === active ? 'text-foreground' : 'text-muted',
                   )}
                 >
                   {title}

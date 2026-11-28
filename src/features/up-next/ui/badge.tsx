@@ -14,7 +14,7 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Badge
     >
       <Text
         className={cn(
-          'font-sans text-xs',
+          'font-sans text-xs tabular-nums',
           accent ? 'text-accent-on-tonal' : 'text-on-scrim',
         )}
         numberOfLines={1}

@@ -5,7 +5,6 @@ import Head from '@/components/head';
 import { Platform, type ScrollViewInstance, Text, View } from 'react-native';
 
 import {
-  FeedRowSkeleton,
   FeedSkeleton,
   LandscapeRowSkeleton,
   ReadingRowSkeleton,
@@ -168,7 +167,7 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {watchlistConnected && (
-          <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
+          <SuspenseSection fallback={<YourWatchlistRow.Skeleton />} resetKey={refreshCount}>
             <YourWatchlistRow onItemActions={openActions} />
           </SuspenseSection>
         )}
@@ -182,26 +181,38 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {letterboxdUsername != null && (
-          <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
+          <SuspenseSection fallback={<LetterboxdWatchlistRow.Skeleton />} resetKey={refreshCount}>
             <LetterboxdWatchlistRow onItemActions={openActions} username={letterboxdUsername} />
           </SuspenseSection>
         )}
         {letterboxdUsername != null && (
           <>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+            <SuspenseSection
+              fallback={<ListsRowSkeleton kind="created" provider={Provider.Letterboxd} />}
+              resetKey={refreshCount}
+            >
               <LetterboxdListsRow kind="created" username={letterboxdUsername} />
             </SuspenseSection>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+            <SuspenseSection
+              fallback={<ListsRowSkeleton kind="liked" provider={Provider.Letterboxd} />}
+              resetKey={refreshCount}
+            >
               <LetterboxdListsRow kind="liked" username={letterboxdUsername} />
             </SuspenseSection>
           </>
         )}
         {serializdUsername != null && (
           <>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+            <SuspenseSection
+              fallback={<ListsRowSkeleton kind="created" provider={Provider.Serializd} />}
+              resetKey={refreshCount}
+            >
               <SerializdListsRow kind="created" username={serializdUsername} />
             </SuspenseSection>
-            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+            <SuspenseSection
+              fallback={<ListsRowSkeleton kind="liked" provider={Provider.Serializd} />}
+              resetKey={refreshCount}
+            >
               <SerializdListsRow kind="liked" username={serializdUsername} />
             </SuspenseSection>
           </>
@@ -209,10 +220,16 @@ function FeedScreen() {
         {connected.includes(Provider.Hardcover) &&
           (hardcoverListsGranted ? (
             <>
-              <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <SuspenseSection
+                fallback={<ListsRowSkeleton kind="created" provider={Provider.Hardcover} />}
+                resetKey={refreshCount}
+              >
                 <HardcoverListsRow kind="created" />
               </SuspenseSection>
-              <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <SuspenseSection
+                fallback={<ListsRowSkeleton kind="liked" provider={Provider.Hardcover} />}
+                resetKey={refreshCount}
+              >
                 <HardcoverListsRow kind="liked" />
               </SuspenseSection>
             </>

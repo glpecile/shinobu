@@ -258,7 +258,7 @@ export function TagPicker({
           accessibilityLabel={expanded ? 'Show fewer tag suggestions' : 'Show more tag suggestions'}
           accessibilityRole="button"
           accessibilityState={{ expanded }}
-          className="flex-row items-center gap-1 self-start mt-2 py-1"
+          className="flex-row items-center gap-1 self-start mt-1 pt-2 pb-5 -mb-4 -mx-2 px-2"
           onPress={() => setExpanded(!expanded)}
           pressBehavior="immediate"
         >

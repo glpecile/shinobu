@@ -5,16 +5,16 @@ import { manualWriteReasons } from './manual-reasons';
 describe('manualWriteReasons (plan 0032 R5)', () => {
   test('a platform-banned write names the platform — the permanent case', () => {
     expect(manualWriteReasons(['letterboxd'], 'watchlist', 'web')).toEqual({
-      letterboxd: "Can't be added from the web",
+      letterboxd: "Can’t be added from the web",
     });
     expect(manualWriteReasons(['letterboxd'], 'log', 'web')).toEqual({
-      letterboxd: "Can't be logged from the web",
+      letterboxd: "Can’t be logged from the web",
     });
   });
 
   test("a declared-'manual' verb reads as not-yet, not never", () => {
     expect(manualWriteReasons(['serializd'], 'watchlist-remove', 'ios')).toEqual({
-      serializd: "Can't be removed from Shinobu yet",
+      serializd: "Can’t be removed from Shinobu yet",
     });
   });
 });

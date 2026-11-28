@@ -59,7 +59,7 @@ export function ProviderCardsSection() {
       case Provider.Trakt:
         return traktNeedsCredentials ? 'Trakt now needs your own API app.' : undefined;
       case Provider.Hardcover:
-        return hardcoverNeedsReconnect ? "Hardcover's sign-in expired." : undefined;
+        return hardcoverNeedsReconnect ? "Hardcover’s sign-in expired." : undefined;
       default:
         return undefined;
     }

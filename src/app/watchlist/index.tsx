@@ -7,6 +7,7 @@ import { Button } from '@/components/button';
 import { BackButton } from '@/components/back-button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { LoadMoreFooter } from '@/components/load-more-footer';
+import { SectionEnter } from '@/components/section-enter';
 import Head from '@/components/head';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -121,12 +122,20 @@ function WatchlistGrid({
 
   if (entries.length === 0) {
     return (
-      <CenteredNotice>
-        <CenteredNotice.Title>Nothing here yet</CenteredNotice.Title>
-        <CenteredNotice.Body>
-          Anything you add to a connected tracker’s watchlist shows up here.
-        </CenteredNotice.Body>
-      </CenteredNotice>
+      <SectionEnter className="flex-1">
+        <CenteredNotice>
+          <CenteredNotice.Icon name="bookmark-outline" />
+          <CenteredNotice.Title>Nothing here yet</CenteredNotice.Title>
+          <CenteredNotice.Body>
+            Anything you add to a connected tracker’s watchlist shows up here.
+          </CenteredNotice.Body>
+          <CenteredNotice.Action
+            icon={<Button.Icon name="search-outline" />}
+            label="Find something to watch"
+            onPress={() => pushRoute(routes.search)}
+          />
+        </CenteredNotice>
+      </SectionEnter>
     );
   }
 

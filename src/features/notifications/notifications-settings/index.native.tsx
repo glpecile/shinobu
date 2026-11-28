@@ -135,7 +135,7 @@ export function NotificationsSettingsSection() {
           <SettingsRail.Title>Release alerts</SettingsRail.Title>
           <SettingsRail.Subtitle lines={2}>
             {permissionDenied
-              ? "Notifications are blocked for Shinobu. Allow them in your device's settings."
+              ? "Notifications are blocked for Shinobu. Allow them in your device’s settings."
               : 'Scheduled on this device, 7 to 14 days ahead.'}
           </SettingsRail.Subtitle>
         </SettingsRail.Text>
