@@ -114,7 +114,8 @@ function WatchlistGrid({
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}
           label="Try again"
-          onPress={() => void refresh()}
+          loading={retry.isPending}
+          onPress={() => retry.mutate()}
         />
       </CenteredNotice>
     );

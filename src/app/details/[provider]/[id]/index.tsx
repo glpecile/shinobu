@@ -1,5 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useQueryClient, type QueryKey } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
@@ -516,7 +516,8 @@ function DetailsScreen() {
   const insets = useSafeAreaInsets();
   const [refreshCount, setRefreshCount] = useState(0);
 
-  const { item, isLoading } = useResolvedMediaItem(id, mediaType);
+  const { item, isLoading, isError, refetch } = useResolvedMediaItem(id, mediaType);
+  const retry = useMutation({ mutationFn: refetch, networkMode: 'always' });
   const mediaDetails = useMediaDetailsQuery(item);
   const anilistId = item?.externalIds.anilist;
   const connected = useConnectedProviders();
@@ -581,11 +582,13 @@ function DetailsScreen() {
                 icon={<Button.Icon name="open-outline" />}
                 label="Open movie"
                 onPress={() => router.replace(routes.details(id, 'MOVIE'))}
+                variant="quiet"
               />
               <Button
                 icon={<Button.Icon name="open-outline" />}
                 label="Open TV show"
                 onPress={() => router.replace(routes.details(id, 'TV'))}
+                variant="quiet"
               />
               <Button
                 icon={<Button.Icon name="arrow-back" />}
@@ -601,6 +604,35 @@ function DetailsScreen() {
     const externalUrl = mediaLinkUrl(id, mediaType);
     const needsHardcover =
       provider === Provider.Hardcover && !connected.includes(Provider.Hardcover);
+    if (isError && !needsHardcover) {
+      return (
+        <View className="flex-1 bg-background">
+          <CenteredNotice>
+            <Head>
+              <title>Couldn’t load — Shinobu</title>
+            </Head>
+            <CenteredNotice.Title>Couldn’t load</CenteredNotice.Title>
+            <CenteredNotice.Body>
+              This item couldn’t be loaded. Check your connection and try again.
+            </CenteredNotice.Body>
+            <CenteredNotice.Actions>
+              <Button
+                icon={<Button.Icon name="refresh" />}
+                label="Try again"
+                loading={retry.isPending}
+                onPress={() => retry.mutate()}
+              />
+              <Button
+                icon={<Button.Icon name="arrow-back" />}
+                label="Go back"
+                onPress={goBack}
+                variant="quiet"
+              />
+            </CenteredNotice.Actions>
+          </CenteredNotice>
+        </View>
+      );
+    }
     return (
       <View className="flex-1 bg-background">
         <CenteredNotice>
@@ -793,7 +825,7 @@ function DetailsScreen() {
                 alt={shown.title}
                 uri={zoomPoster ?? (shown.coverImage || artwork.coverImage)}
                 type="image"
-                className="w-32 h-48 md:w-48 md:h-72 rounded-lg border border-border bg-surface"
+                className="w-32 h-48 md:w-48 md:h-72 rounded-lg border border-hairline bg-surface"
                 contentFit="cover"
                 {...(zoomPoster != null ? { transition: 0 } : {})}
               />
