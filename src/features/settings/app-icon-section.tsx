@@ -1,11 +1,9 @@
 import { useAppIcon } from '@hzblj/expo-app-icons';
-import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { Text, useColorScheme, View } from 'react-native';
+import { Text, useColorScheme } from 'react-native';
 import { Image } from '@/components/image';
 import { RailHead } from '@/components/rail-head';
 import { PreviewPicker } from '@/features/settings/preview-picker';
 import { SettingsRail } from '@/features/settings/settings-rail';
-import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
 
 const OPTIONS: { value: string; label: string; source: number }[] = [
@@ -22,7 +20,6 @@ const DEFAULT_DARK_SOURCE = require('../../../assets/images/ios-icon-dark.png');
 
 export function AppIconSection() {
   const { icon: current, isSupported, setIcon } = useAppIcon();
-  const muted = useThemeColor('--color-muted');
   const dark = useColorScheme() === 'dark';
   if (!isSupported) return null;
 
@@ -64,16 +61,9 @@ export function AppIconSection() {
       </SettingsRail.Row>
       {process.env.EXPO_OS === 'android' && (
         <SettingsRail.Row>
-          <View
-            accessible
-            accessibilityLabel="The icon changes when you leave the app."
-            className="flex-1 min-w-0 flex-row items-center gap-1.5"
-          >
-            <Ionicons color={muted} name="information-circle-outline" size={16} />
-            <Text className="flex-1 font-sans text-xs text-muted">
-              The icon changes when you leave the app.
-            </Text>
-          </View>
+          <Text className="flex-1 font-sans text-xs text-muted">
+            The icon changes when you leave the app.
+          </Text>
         </SettingsRail.Row>
       )}
     </SettingsRail.Section>

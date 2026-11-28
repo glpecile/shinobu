@@ -1,9 +1,7 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { Fragment, type ComponentProps, type ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Text } from 'react-native';
 
 import { cn } from '@/lib/cn';
-import { useThemeColor } from '@/lib/theme-color';
 
 export function MetaLine({
   parts,
@@ -30,20 +28,3 @@ export function MetaLine({
   );
 }
 
-function Part({
-  icon,
-  children,
-}: {
-  icon: ComponentProps<typeof Ionicons>['name'];
-  children: string;
-}) {
-  const muted = useThemeColor('--color-muted');
-  return (
-    <>
-      <Ionicons accessible={false} color={muted} name={icon} size={14} />
-      {`\u00A0${children}`}
-    </>
-  );
-}
-
-MetaLine.Part = Part;

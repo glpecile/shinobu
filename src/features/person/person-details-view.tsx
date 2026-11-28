@@ -62,11 +62,11 @@ export function PersonDetailsView({ person, rows, tvCredits }: NormalizedPersonD
                   uri={person.headshot}
                   zoomUri={person.headshotFull}
                   type="circle-avi"
-                  className="w-28 h-28 rounded-full bg-surface border border-border"
+                  className="w-28 h-28 rounded-full bg-surface border border-hairline"
                   contentFit="cover"
                 />
               ) : (
-                <View className="w-28 h-28 rounded-full bg-surface border border-border items-center justify-center">
+                <View className="w-28 h-28 rounded-full bg-surface border border-hairline items-center justify-center">
                   <Text className="text-muted font-sans-semibold text-3xl">
                     {initials(person.name)}
                   </Text>

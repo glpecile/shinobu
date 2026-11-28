@@ -13,7 +13,6 @@ import { useLoggedWatches } from '@/features/log-media/logged-context';
 import { useCatchUpControls } from '@/features/log-media/session/state';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import type { PendingLog } from '@/features/show-seasons/season-accordion';
-import { formatRuntime, seasonRuntimeMinutes } from '@/features/show-seasons/runtime';
 import {
   useAniListEpisodesQuery,
   useAniListEntryStateQuery,
@@ -33,8 +32,7 @@ import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 function SeasonsSkeleton() {
   return (
     <View className="mt-8">
-      <Skeleton className="h-7 w-32 rounded" />
-      <Skeleton className="h-5 w-40 rounded mt-1 mb-4" />
+      <Skeleton className="h-7 w-32 rounded mb-4" />
       <Skeleton className="h-17 rounded-lg" />
     </View>
   );
@@ -50,15 +48,11 @@ function watchedKeys(progress: number): ReadonlySet<string> {
 }
 
 function AnimeSeasonsHeading({ mediaId }: { mediaId: number }) {
-  const { data: season } = useSuspenseAniListEpisodesQuery({ mediaId });
-  const runtime = seasonRuntimeMinutes(season);
+  useSuspenseAniListEpisodesQuery({ mediaId });
   return (
     <Section>
       <Section.Header>
         <Section.Title>Seasons</Section.Title>
-        {runtime > 0 && (
-          <Section.Subtitle>{`${formatRuntime(runtime)} total runtime`}</Section.Subtitle>
-        )}
       </Section.Header>
     </Section>
   );

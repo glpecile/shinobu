@@ -612,13 +612,15 @@ function DetailsScreen() {
             <title>{`${notFoundTitle} — Shinobu`}</title>
           </Head>
           <CenteredNotice.Title>{notFoundTitle}</CenteredNotice.Title>
-          <CenteredNotice.Body>
-            {provider === Provider.Trakt
-              ? 'This linked item could not be loaded. Trakt links require your own client credentials in Settings.'
-              : needsHardcover
-                ? 'This book could not be loaded. Book links open once Hardcover is connected in Settings.'
-                : 'This linked item could not be loaded.'}
-          </CenteredNotice.Body>
+          {provider === Provider.Trakt ? (
+            <CenteredNotice.Body>
+              Trakt links need your own client credentials in Settings.
+            </CenteredNotice.Body>
+          ) : needsHardcover ? (
+            <CenteredNotice.Body>
+              Book links open once Hardcover is connected in Settings.
+            </CenteredNotice.Body>
+          ) : null}
           <CenteredNotice.Actions>
             {isError && (
               <Button
@@ -774,27 +776,19 @@ function DetailsScreen() {
             <MetaLine
               className="mt-1.5"
               parts={[
-                shown.year != null && (
-                  <MetaLine.Part icon="calendar-outline">{String(shown.year)}</MetaLine.Part>
-                ),
-                shown.runtime != null && (
-                  <MetaLine.Part icon="time-outline">{`${shown.runtime} min`}</MetaLine.Part>
-                ),
-                shown.genres != null && shown.genres.length > 0 && (
-                  <MetaLine.Part icon="pricetags-outline">
-                    {shown.genres.slice(0, 3).join(', ')}
-                  </MetaLine.Part>
-                ),
-                !showProgress && shown.progressUnit === 'page' && shown.totalEpisodes != null && (
-                  <MetaLine.Part icon="book-outline">{`${shown.totalEpisodes} pages`}</MetaLine.Part>
-                ),
-                bookSeries != null && (
-                  <MetaLine.Part icon="library-outline">
-                    {bookSeries.position != null
-                      ? `${bookSeries.name} #${bookSeries.position}`
-                      : bookSeries.name}
-                  </MetaLine.Part>
-                ),
+                shown.year != null && String(shown.year),
+                shown.runtime != null && `${shown.runtime} min`,
+                shown.genres != null &&
+                  shown.genres.length > 0 &&
+                  shown.genres.slice(0, 3).join(', '),
+                !showProgress &&
+                  shown.progressUnit === 'page' &&
+                  shown.totalEpisodes != null &&
+                  `${shown.totalEpisodes} pages`,
+                bookSeries != null &&
+                  (bookSeries.position != null
+                    ? `${bookSeries.name} #${bookSeries.position}`
+                    : bookSeries.name),
               ]}
             />
             <WatchedLine item={shown} />
@@ -823,7 +817,7 @@ function DetailsScreen() {
         {display === 'hidden' ? null : display === 'countdown' ? (
           <View className="flex-row gap-4">
             <StatTile
-              caption={`First episode · ${formatAirDate(premiere!)}`}
+              caption={formatAirDate(premiere!)}
               label="Premieres"
               value={formatRelativeDay(premiere!) ?? '—'}
             />

@@ -56,10 +56,7 @@ export function EpisodeRow({
   const hasActionsButton = process.env.EXPO_OS === 'web' && onActions != null;
   const airsOn = episode.firstAired == null ? null : formatAirDate(episode.firstAired);
   const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
-  const meta = [
-    episode.runtime != null ? `${episode.runtime} min` : null,
-    airsOn ?? (aired ? null : 'Unaired'),
-  ]
+  const meta = [episode.runtime != null ? `${episode.runtime} min` : null, airsOn]
     .filter((part) => part != null)
     .join(' · ');
   const label = (

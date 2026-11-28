@@ -115,16 +115,10 @@ function ProviderSheetContent({
               {accountCard}
             </PresstableScale>
           )}
-          <View className="flex-row items-start gap-2">
-            {/* Uniwind drops className on the raw icon on native, so the offset sits on a View. */}
-            <View aria-hidden className="mt-0.5">
-              <Ionicons color={muted} name="information-circle-outline" size={16} />
-            </View>
-            <Text className="flex-1 text-muted font-sans text-sm">
-              Disconnect signs Shinobu out of {label} on this device. Your {label} account and its
-              data do not change.
-            </Text>
-          </View>
+          <Text className="text-muted font-sans text-sm">
+            Disconnect signs Shinobu out of {label} on this device. Your {label} account and its
+            data do not change.
+          </Text>
           <Button
             label="Disconnect"
             onPress={() => {

@@ -1,5 +1,4 @@
 import { Button } from '@/components/button';
-import { Eyebrow } from '@/components/eyebrow';
 import { ShareButton } from '@/components/share-button';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
@@ -31,7 +30,6 @@ export function StudioSheet({ studio, open, onClose }: StudioSheetProps) {
         <>
           <SheetHeader>
             <SheetHeader.Content>
-              <Eyebrow>Studio</Eyebrow>
               <SheetHeader.Title>{studio.name}</SheetHeader.Title>
             </SheetHeader.Content>
           </SheetHeader>

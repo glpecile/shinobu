@@ -1,8 +1,6 @@
-import { View } from 'react-native';
-
-import { FieldLabel } from '@/components/field-label';
 import { LinkPill } from '@/components/link-pill';
 import { ProviderIcon } from '@/components/provider-icon';
+import { Section } from '@/components/section';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { providerStudioUrl, type UrlStudio } from '@/lib/providers/external-urls';
 import type { ProviderLink } from '@/lib/providers/provider-links';
@@ -46,8 +44,10 @@ export function StudioLinksSection({
     return <ProviderLinkRows className="mt-2" links={links} onOpened={onOpened} />;
 
   return (
-    <View className="mt-6">
-      <FieldLabel className="mb-2">View on</FieldLabel>
+    <Section>
+      <Section.Header>
+        <Section.Title>View on</Section.Title>
+      </Section.Header>
       <LinkPill.Rail>
         {links.map(({ provider, url }) => (
           <LinkPill
@@ -59,6 +59,6 @@ export function StudioLinksSection({
           />
         ))}
       </LinkPill.Rail>
-    </View>
+    </Section>
   );
 }

@@ -96,14 +96,8 @@ export function EpisodeHeading({
         align={align}
         className="mt-1.5"
         parts={[
-          episode.firstAired != null && (
-            <MetaLine.Part icon="calendar-outline">
-              {formatAirDate(episode.firstAired)}
-            </MetaLine.Part>
-          ),
-          episode.runtime != null && (
-            <MetaLine.Part icon="time-outline">{`${episode.runtime} min`}</MetaLine.Part>
-          ),
+          episode.firstAired != null && formatAirDate(episode.firstAired),
+          episode.runtime != null && `${episode.runtime} min`,
         ]}
       />
     </View>
