@@ -156,7 +156,11 @@ export function CollapsibleSection({
           accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
           accessibilityRole="button"
           accessibilityState={{ expanded: !collapsed }}
-          className={cn('flex-row items-center gap-2 shrink', action && 'min-h-11')}
+          className={cn(
+            'flex-row items-center gap-2 shrink',
+            // Without an action the row stays title height; the padding reaches 44pt into its margins.
+            action ? 'min-h-11' : 'py-2 -my-2',
+          )}
           onPress={toggle}
           pressBehavior="immediate"
         >

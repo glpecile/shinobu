@@ -130,7 +130,7 @@ function RailHeadCount({ children }: { children: ReactNode }) {
   const open = useContext(OpenContext);
   return (
     <View className={TRAILING}>
-      <Text className="shrink text-muted/70 font-sans text-[11px] mr-3 tabular-nums">{children}</Text>
+      <Text className="shrink text-muted font-sans text-xs mr-3 tabular-nums">{children}</Text>
       <View className={RULE} />
       <DisclosureChevron className="ml-2.5" open={open} size={14} />
     </View>

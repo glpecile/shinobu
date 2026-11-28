@@ -173,6 +173,7 @@ function SidebarItem({
   return (
     <PresstableOpacity
       accessibilityLabel={item.label}
+      aria-current={active ? 'page' : undefined}
       className={cn('h-11 flex-row items-center rounded-xl', active && 'bg-accent-tonal')}
       onMouseDown={item.href === routes.search ? preventMouseFocus : undefined}
       onPress={onPress}
@@ -270,6 +271,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <PresstableOpacity
                 accessibilityLabel={item.label}
                 accessibilityRole="button"
+                aria-current={active ? 'page' : undefined}
                 className="flex-1 items-center justify-center gap-1"
                 key={item.href}
                 onMouseDown={item.href === routes.search ? preventMouseFocus : undefined}
