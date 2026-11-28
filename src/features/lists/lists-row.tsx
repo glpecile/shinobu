@@ -30,6 +30,9 @@ import { POSTER_STACK_RATIO } from './poster-stack';
 
 const CARD_WIDTH = 240;
 
+const listsCollapseKey = (provider: ListSummary['provider'], kind: 'created' | 'liked') =>
+  `${provider}-${kind}-lists`;
+
 export function listsTitle(kind: LetterboxdListKind) {
   return kind === 'liked' ? 'Liked Lists' : 'Your Lists';
 }
@@ -56,14 +59,18 @@ export function ListsRowSkeleton({
   provider: ListSummary['provider'];
   kind: 'created' | 'liked';
 }) {
+  const { fontScale } = useWindowDimensions();
   return (
     <CollapsibleSection
       action={<Skeleton className="h-4 w-16 rounded" />}
-      collapseKey={`${provider}-${kind}-lists`}
+      collapseKey={listsCollapseKey(provider, kind)}
       leading={<ProviderIcon id={provider} size={16} />}
       title={listsTitle(kind)}
     >
-      <Rail className="px-4">
+      <Rail
+        className="px-4"
+        style={{ height: CARD_WIDTH / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale }}
+      >
         {[0, 1, 2].map((index) => (
           <View className="w-60 mr-4" key={index}>
             <ListCardSkeleton delay={staggerDelay(index)} />
@@ -127,7 +134,7 @@ export function HardcoverListsReconnectRow() {
   const prompt = useHardcoverListsPrompt();
   return (
     <CollapsibleSection
-      collapseKey={`${Provider.Hardcover}-created-lists`}
+      collapseKey={listsCollapseKey(Provider.Hardcover, 'created')}
       leading={<ProviderIcon id={Provider.Hardcover} size={16} />}
       title={listsTitle('created')}
     >
@@ -172,7 +179,7 @@ function ListsRail({
           <ViewAllLink onPress={() => pushRoute(indexHref)} title={title} />
         ) : undefined
       }
-      collapseKey={`${provider}-${kind}-lists`}
+      collapseKey={listsCollapseKey(provider, kind)}
       leading={<ProviderIcon id={provider} size={16} />}
       title={title}
     >

@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { CollapsibleSection } from '@/components/collapsible-section';
+import { FeedRowSkeleton } from '@/components/feed-skeleton';
 import { MediaCarousel } from '@/components/media-carousel';
 import { ProviderIcon } from '@/components/provider-icon';
 import { VirtualizedRail } from '@/components/rail';
@@ -32,21 +33,28 @@ interface FeedRowCallbacks {
   onItemActions: (item: NormalizedMediaItem) => void;
 }
 
+const yourWatchlistHeader = () => ({
+  collapseKey: 'your-watchlist',
+  leading: <CollapsibleSection.Icon name="bookmark-outline" />,
+  title: 'Your Watchlist',
+});
+
 export function YourWatchlistRow({ onItemActions }: FeedRowCallbacks) {
   const { entries } = useSuspenseWatchlistQuery();
   const pushRoute = usePushRoute();
   const items = capFeedRow(entries.map((entry) => entry.item));
   return (
     <MediaCarousel
-      collapseKey="your-watchlist"
+      {...yourWatchlistHeader()}
       items={items}
       onItemActions={onItemActions}
-      leading={<CollapsibleSection.Icon name="bookmark-outline" />}
       onViewAll={() => pushRoute(routes.watchlist())}
-      title="Your Watchlist"
     />
   );
 }
+YourWatchlistRow.Skeleton = function YourWatchlistRowSkeleton() {
+  return <FeedRowSkeleton {...yourWatchlistHeader()} hasAction />;
+};
 
 export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
   const items = capFeedRow(useVisibleItems(useSuspenseContinueReadingQuery()));
@@ -82,6 +90,12 @@ export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
   );
 }
 
+const letterboxdWatchlistHeader = () => ({
+  collapseKey: 'letterboxd-watchlist',
+  leading: <ProviderIcon id={Provider.Letterboxd} size={16} />,
+  title: 'Watchlist',
+});
+
 export function LetterboxdWatchlistRow({
   username,
   onItemActions,
@@ -91,43 +105,52 @@ export function LetterboxdWatchlistRow({
   const items = useVisibleItems(data);
   return (
     <MediaCarousel
-      collapseKey="letterboxd-watchlist"
+      {...letterboxdWatchlistHeader()}
       items={items}
       onItemActions={onItemActions}
       onViewAll={() => pushRoute(routes.watchlist(Provider.Letterboxd))}
-      leading={<ProviderIcon id={Provider.Letterboxd} size={16} />}
-      title="Watchlist"
     />
   );
 }
+LetterboxdWatchlistRow.Skeleton = function LetterboxdWatchlistRowSkeleton() {
+  return <FeedRowSkeleton {...letterboxdWatchlistHeader()} hasAction />;
+};
+
+const trendingMoviesHeader = () => ({
+  collapseKey: 'trending-movies',
+  leading: <ProviderIcon id={Provider.Simkl} size={16} />,
+  title: 'Trending Movies',
+});
 
 export function TrendingMoviesRow({ onItemActions }: FeedRowCallbacks) {
   const { data } = useSuspenseTrendingMoviesQuery();
   const items = useVisibleItems(data);
-  return (
-    <MediaCarousel
-      collapseKey="trending-movies"
-      items={items}
-      onItemActions={onItemActions}
-      leading={<ProviderIcon id={Provider.Simkl} size={16} />}
-      title="Trending Movies"
-    />
-  );
+  return <MediaCarousel {...trendingMoviesHeader()} items={items} onItemActions={onItemActions} />;
 }
+TrendingMoviesRow.Skeleton = function TrendingMoviesRowSkeleton() {
+  return <FeedRowSkeleton {...trendingMoviesHeader()} />;
+};
+
+const trendingShowsHeader = () => ({
+  collapseKey: 'trending-shows',
+  leading: <ProviderIcon id={Provider.Simkl} size={16} />,
+  title: 'Trending TV Shows',
+});
 
 export function TrendingShowsRow({ onItemActions }: FeedRowCallbacks) {
   const { data } = useSuspenseTrendingShowsQuery();
   const items = useVisibleItems(data);
-  return (
-    <MediaCarousel
-      collapseKey="trending-shows"
-      items={items}
-      onItemActions={onItemActions}
-      leading={<ProviderIcon id={Provider.Simkl} size={16} />}
-      title="Trending TV Shows"
-    />
-  );
+  return <MediaCarousel {...trendingShowsHeader()} items={items} onItemActions={onItemActions} />;
 }
+TrendingShowsRow.Skeleton = function TrendingShowsRowSkeleton() {
+  return <FeedRowSkeleton {...trendingShowsHeader()} />;
+};
+
+const seasonalAnimeHeader = (season: AnimeSeasonWindow) => ({
+  collapseKey: 'seasonal-anime',
+  leading: <ProviderIcon id={Provider.AniList} size={16} />,
+  title: `Anime of ${animeSeasonLabel(season)}`,
+});
 
 export function SeasonalAnimeRow({
   season,
@@ -138,15 +161,26 @@ export function SeasonalAnimeRow({
   const items = capFeedRow(useVisibleItems(data));
   return (
     <MediaCarousel
-      collapseKey="seasonal-anime"
+      {...seasonalAnimeHeader(season)}
       items={items}
       onItemActions={onItemActions}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'TV'))}
-      leading={<ProviderIcon id={Provider.AniList} size={16} />}
-      title={`Anime of ${animeSeasonLabel(season)}`}
     />
   );
 }
+SeasonalAnimeRow.Skeleton = function SeasonalAnimeRowSkeleton({
+  season,
+}: {
+  season: AnimeSeasonWindow;
+}) {
+  return <FeedRowSkeleton {...seasonalAnimeHeader(season)} hasAction />;
+};
+
+const animeMoviesHeader = (season: AnimeSeasonWindow) => ({
+  collapseKey: 'anime-movies',
+  leading: <ProviderIcon id={Provider.AniList} size={16} />,
+  title: `Films of ${animeSeasonLabel(season)}`,
+});
 
 export function AnimeMoviesRow({
   season,
@@ -157,15 +191,20 @@ export function AnimeMoviesRow({
   const items = capFeedRow(useVisibleItems(data));
   return (
     <MediaCarousel
-      collapseKey="anime-movies"
+      {...animeMoviesHeader(season)}
       items={items}
       onItemActions={onItemActions}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'MOVIE'))}
-      leading={<ProviderIcon id={Provider.AniList} size={16} />}
-      title={`Films of ${animeSeasonLabel(season)}`}
     />
   );
 }
+AnimeMoviesRow.Skeleton = function AnimeMoviesRowSkeleton({
+  season,
+}: {
+  season: AnimeSeasonWindow;
+}) {
+  return <FeedRowSkeleton {...animeMoviesHeader(season)} hasAction />;
+};
 
 export function FeedEnd({ onPress }: { onPress: () => void }) {
   return (

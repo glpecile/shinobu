@@ -5,7 +5,6 @@ import Head from '@/components/head';
 import { Platform, type ScrollViewInstance, Text, View } from 'react-native';
 
 import {
-  FeedRowSkeleton,
   FeedSkeleton,
   LandscapeRowSkeleton,
   ReadingRowSkeleton,
@@ -18,7 +17,6 @@ import { GestureScrollView } from '@/components/animated-view';
 import { ConnectTrackerButton } from '@/components/connect-tracker-button';
 import { COPY_STAGGER, HeroEnter, HeroProviders } from '@/components/hero-enter';
 import { OfflineBanner } from '@/components/offline-banner';
-import { ProviderIcon } from '@/components/provider-icon';
 import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -169,17 +167,7 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {watchlistConnected && (
-          <SuspenseSection
-            fallback={
-              <FeedRowSkeleton
-                collapseKey="your-watchlist"
-                hasAction
-                leading={<CollapsibleSection.Icon name="bookmark-outline" />}
-                title="Your Watchlist"
-              />
-            }
-            resetKey={refreshCount}
-          >
+          <SuspenseSection fallback={<YourWatchlistRow.Skeleton />} resetKey={refreshCount}>
             <YourWatchlistRow onItemActions={openActions} />
           </SuspenseSection>
         )}
@@ -193,17 +181,7 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {letterboxdUsername != null && (
-          <SuspenseSection
-            fallback={
-              <FeedRowSkeleton
-                collapseKey="letterboxd-watchlist"
-                hasAction
-                leading={<ProviderIcon id={Provider.Letterboxd} size={16} />}
-                title="Watchlist"
-              />
-            }
-            resetKey={refreshCount}
-          >
+          <SuspenseSection fallback={<LetterboxdWatchlistRow.Skeleton />} resetKey={refreshCount}>
             <LetterboxdWatchlistRow onItemActions={openActions} username={letterboxdUsername} />
           </SuspenseSection>
         )}

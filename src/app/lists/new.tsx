@@ -42,7 +42,9 @@ function NewListWithItem({
           accessibilityLabel="Loading starting title"
           className="w-full max-w-2xl self-center px-6 gap-6"
         >
-          {props.providers.length > 1 && <Skeleton className="h-9 web:h-7.5 w-72 rounded-full self-center" />}
+          {props.providers.length > 1 && (
+            <Skeleton className="h-9 web:h-7.5 w-full max-w-72 rounded-full self-center" />
+          )}
           <View className="gap-2">
             <Skeleton className="h-5 w-12 rounded" />
             <Skeleton className="h-11 w-full rounded-full" />
