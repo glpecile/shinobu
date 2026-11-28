@@ -87,7 +87,9 @@ function WriteError({ children }: { children: ReactNode }) {
           name="alert-circle"
           size={20}
         />
-        <Text className="text-accent-on-tonal font-sans text-sm flex-1">{children}</Text>
+        <Text className="text-accent-on-tonal font-sans text-sm flex-1" role="alert">
+          {children}
+        </Text>
       </View>
     </SectionEnter>
   );

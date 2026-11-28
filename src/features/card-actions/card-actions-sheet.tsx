@@ -34,6 +34,7 @@ import {
   WatchlistAddPicker,
   WatchlistRemovePicker,
 } from '@/features/watchlist-media/watchlist-picker-sheet';
+import { mediaKindLabel } from '@/features/media-layout/watchlist-rows';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useCachedWatchlistRemoval } from '@/features/watchlist/use-cached-watchlist-removal';
 import { ProviderLinkRow } from '@/features/provider-links/provider-link-row';
@@ -249,7 +250,7 @@ export function CardActionsSheet({
                 <SheetHeader.Title>{item.title}</SheetHeader.Title>
               </PresstableOpacity>
               <SheetHeader.Subtitle>
-                {[item.type, item.year != null ? String(item.year) : null]
+                {[mediaKindLabel(item), item.year != null ? String(item.year) : null]
                   .filter((part) => part != null)
                   .join(' · ')}
               </SheetHeader.Subtitle>

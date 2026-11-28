@@ -11,7 +11,7 @@ import { usePushRoute } from '@/lib/navigation';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 
 import { PersonAvatar } from './person-avatar';
-import { creditRoute, type PersonCredit } from './person-credit-sheet';
+import { creditRoleLine, creditRoute, type PersonCredit } from './person-credit-sheet';
 
 // Avatar plus name and two scaled role lines
 const railHeight = (fontScale: number) => 90 + 48 * fontScale;
@@ -61,7 +61,7 @@ function PersonCard({
     >
       {onPress == null ? (
         <PresstableScale
-          accessibilityLabel={`${credit.name} / ${credit.role}`}
+          accessibilityLabel={`${credit.name}, ${creditRoleLine(credit)}`}
           className="items-center"
           onPress={() => onActions(credit)}
         >
@@ -69,7 +69,7 @@ function PersonCard({
         </PresstableScale>
       ) : (
         <PresstableScale
-          accessibilityLabel={`${credit.name} / ${credit.role}`}
+          accessibilityLabel={`${credit.name}, ${creditRoleLine(credit)}`}
           className="items-center"
           onLongPress={() => onActions(credit)}
           onPress={onPress}
@@ -123,9 +123,7 @@ export function PeopleSection({
             ) : (
               <View className="w-24 mr-4">
                 <PresstableScale
-                  accessibilityLabel={
-                    credit.role === '' ? credit.name : `${credit.name} / ${credit.role}`
-                  }
+                  accessibilityLabel={`${credit.name}, ${creditRoleLine(credit)}`}
                   className="items-center"
                   onPress={() => pushRoute(creditRoute(credit))}
                 >

@@ -172,7 +172,7 @@ export function ListMembershipForm({
           icon={<Button.Icon name="arrow-back" />}
           label={present ? 'Back' : 'Cancel'}
           onPress={onBack}
-          variant="ghost"
+          variant="quiet"
         />
         {(!writable || mutation.isError) && <ListRecovery item={item} target={target} />}
       </WriteSheet.Actions>

@@ -102,6 +102,8 @@ export function useResolvedMediaItem(
 ): {
   item: NormalizedMediaItem | undefined;
   isLoading: boolean;
+  isError: boolean;
+  refetch: () => Promise<unknown>;
 } {
   const feed = useUnifiedFeed();
   const queryClient = useQueryClient();
@@ -231,20 +233,24 @@ export function useResolvedMediaItem(
   const catalogue = useMovieCatalogueQuery(cachedOrFetched);
   const traktIdentity = useTraktIdentityQuery(cachedOrFetched);
   const enriched = catalogue.data ?? traktIdentity.data;
+  const deepLinkReads = [
+    (deepLink != null || hardcoverBook != null) && deepLinkDetails,
+    hardcoverSlug != null && hardcoverSlugId,
+    anilistDeepLink != null && resolvedItem == null && anilistDeepLinkItem,
+    letterboxd != null && resolvedItem == null && film,
+    (imdb != null || serializd != null) && externalItem,
+    traktDeepLinkItem.isEnabled && traktDeepLinkItem,
+    simklDeepLink != null && simklLookup,
+  ].filter((read) => read !== false);
   return {
     item:
       cachedOrFetched != null && enriched != null
         ? mergeCatalogueMetadata(cachedOrFetched, enriched)
         : cachedOrFetched,
-    isLoading:
-      feed.isLoading ||
-      ((deepLink != null || hardcoverBook != null) && deepLinkDetails.isPending) ||
-      (hardcoverSlug != null && hardcoverSlugId.isPending) ||
-      (anilistDeepLink != null && resolvedItem == null && anilistDeepLinkItem.isPending) ||
-      (letterboxd != null && resolvedItem == null && film.isPending) ||
-      ((imdb != null || serializd != null) && externalItem.isPending) ||
-      (traktDeepLinkItem.isEnabled && traktDeepLinkItem.isPending) ||
-      (simklDeepLink != null && simklLookup.isPending),
+    isLoading: feed.isLoading || deepLinkReads.some((read) => read.isPending),
+    isError: deepLinkReads.some((read) => read.isError),
+    refetch: () =>
+      Promise.all(deepLinkReads.filter((read) => read.isError).map((read) => read.refetch())),
   };
 }
 

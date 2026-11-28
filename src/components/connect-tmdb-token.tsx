@@ -3,11 +3,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Linking, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { z } from 'zod';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
+import { InlineLink } from '@/components/inline-link';
 import { RailHead } from '@/components/rail-head';
 import { Steps } from '@/components/steps';
 import { TextField } from '@/components/text-field';
@@ -149,12 +150,9 @@ export function ConnectTmdbTokenSection() {
                 <Steps.Item>
                   <Text className="text-muted font-sans text-sm">
                     Open{' '}
-                    <Text
-                      className="text-accent font-sans-semibold underline"
-                      onPress={() => Linking.openURL(TMDB_API_SETTINGS_URL)}
-                    >
+                    <InlineLink inApp={false} url={TMDB_API_SETTINGS_URL}>
                       {TMDB_API_SETTINGS_URL.replace('https://', '')}
-                    </Text>{' '}
+                    </InlineLink>{' '}
                     and sign in (creating an account is free).
                   </Text>
                 </Steps.Item>
@@ -184,6 +182,7 @@ export function ConnectTmdbTokenSection() {
               name="token"
               render={({ field }) => (
                 <TextField
+                  accessibilityLabel="TMDB API Read Access Token"
                   onBlur={field.onBlur}
                   onChangeText={field.onChange}
                   onSubmitEditing={() => void submit()}
@@ -195,10 +194,14 @@ export function ConnectTmdbTokenSection() {
               )}
             />
             {errors.token != null && (
-              <Text className="text-accent font-sans text-xs">{errors.token.message}</Text>
+              <Text className="text-accent font-sans text-xs" role="alert">
+                {errors.token.message}
+              </Text>
             )}
             {(status === 'invalid' || status === 'unreachable') && (
-              <Text className="text-accent font-sans text-xs">{STATUS_MESSAGE[status]}</Text>
+              <Text className="text-accent font-sans text-xs" role="alert">
+                {STATUS_MESSAGE[status]}
+              </Text>
             )}
             <Button
               icon={<Button.Icon name="checkmark" />}

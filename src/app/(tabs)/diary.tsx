@@ -1,3 +1,4 @@
+import { useMutation } from '@tanstack/react-query';
 import type { ErrorBoundaryProps } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -66,6 +67,7 @@ function DiaryScreen() {
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
   const diary = useDiaryFeedQuery();
+  const retry = useMutation({ mutationFn: diary.refetch });
   const { openActions, sheetProps } = useCardActions();
   const [picked, setPicked] = useState<DiaryFormat>('ALL');
   const reading = {
@@ -108,7 +110,8 @@ function DiaryScreen() {
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}
           label="Try again"
-          onPress={() => diary.refetch()}
+          loading={retry.isPending}
+          onPress={() => retry.mutate()}
         />
       </CenteredNotice>
     );

@@ -1,6 +1,6 @@
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { useState, type ComponentProps } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -8,6 +8,7 @@ import { Button } from '@/components/button';
 import { Rail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Sheet } from '@/components/sheet';
+import { SheetHeader } from '@/components/sheet-header';
 import { SuspenseSection } from '@/components/suspense-section';
 import { discussionBoards, type DiscussionBoard } from '@/lib/http/fourchan';
 import {
@@ -175,8 +176,8 @@ function DiscussionBody({
           ))}
         </Rail>
         <Sheet onClose={() => onOpenChange(false)} open={open}>
-          <Sheet.Header className="items-center">
-            <Text className="font-display text-xl text-foreground">Discussion options</Text>
+          <Sheet.Header>
+            <SheetHeader.Title>Discussion options</SheetHeader.Title>
           </Sheet.Header>
           <View className="mt-5 gap-2">
             <Button

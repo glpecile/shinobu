@@ -12,6 +12,7 @@ let requestPermission = async (): Promise<{ granted: boolean }> => {
 let refresh = async () => {};
 const errors: string[] = [];
 mock.module('expo-notifications', () => ({ requestPermissionsAsync: () => requestPermission() }));
+mock.module('react-native', () => ({ Linking: { openSettings: () => {} } }));
 mock.module('@react-native-vector-icons/ionicons/static', () => ({ default: () => null }));
 mock.module('@/lib/theme-color', () => ({ useThemeColor: () => undefined }));
 mock.module('@/lib/toast', () => ({ toast: { error: (title: string) => errors.push(title) } }));

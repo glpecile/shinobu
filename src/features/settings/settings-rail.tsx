@@ -231,7 +231,7 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
               <PresstableOpacity
                 accessibilityLabel={`Jump to ${title}`}
                 accessibilityRole="button"
-                accessibilityState={{ selected: title === active }}
+                aria-current={title === active ? 'location' : undefined}
                 className="flex-row items-center gap-3 py-2 min-h-11 web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2"
                 key={title}
                 onPress={() => {

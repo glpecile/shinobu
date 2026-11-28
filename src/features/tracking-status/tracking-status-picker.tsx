@@ -121,8 +121,12 @@ export function TrackingStatusPicker({
             {`Up Next keeps it while ${providerLabelList(manual)} still ${manual.length === 1 ? 'tracks' : 'track'} it.`}
           </Text>
         )}
-        {writable.length > 0 && selected.length === 0 && (
-          <Text className="text-accent font-sans text-sm mt-2">Select at least one provider.</Text>
+        {writable.length > 0 && (
+          <View className="mt-2 min-h-5">
+            {selected.length === 0 && (
+              <Text className="text-accent font-sans text-sm">Select at least one provider.</Text>
+            )}
+          </View>
         )}
       </View>
 

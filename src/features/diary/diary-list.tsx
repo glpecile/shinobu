@@ -285,12 +285,12 @@ function RowTrailing({
         </View>
       )}
       {runCount != null ? (
-        <Text className="text-foreground font-sans-semibold text-[10px] rounded-full border border-accent/40 bg-accent/15 px-1.5 py-px">
+        <Text className="text-accent-on-tonal font-sans-semibold text-[10px] tabular-nums rounded-full bg-accent-tonal px-1.5 py-px">
           {runCount}
         </Text>
       ) : (
         time != null &&
-        time !== '' && <Text className="text-muted/70 font-sans text-[11px]">{time}</Text>
+        time !== '' && <Text className="text-muted font-sans text-xs">{time}</Text>
       )}
       <ProviderMarks providers={providers} />
     </View>
@@ -430,7 +430,7 @@ function DiaryChildRow({
     <View className="flex-row">
       <RailLine key={entry.id} stop={last} />
       <ActionableRow
-        className="flex-1 h-9 pr-6 pl-3"
+        className="flex-1 min-h-11 pr-6 pl-3"
         href={href}
         item={entry.item}
         leading={

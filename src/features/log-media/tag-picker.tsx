@@ -126,6 +126,7 @@ function TagChip({
         accessibilityLabel={selected ? `Remove tag ${tag}` : `Add tag ${tag}`}
         accessibilityRole="button"
         accessibilityState={{ selected }}
+        hitSlop={4}
         onPress={onToggle}
       >
         {/* onLayout sits on the chip's own box, not the pressable: pressto's

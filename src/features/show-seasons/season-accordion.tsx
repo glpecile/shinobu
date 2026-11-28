@@ -69,10 +69,7 @@ export function EpisodeRow({
         <Text
           className="font-sans text-sm"
           numberOfLines={2}
-          style={{
-            color: aired ? foreground : muted,
-            opacity: aired ? 1 : 0.6,
-          }}
+          style={{ color: aired ? foreground : muted }}
         >
           E{episode.number} · {episode.title}
         </Text>

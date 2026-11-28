@@ -112,7 +112,7 @@ export function ActionableRow({
       {...hoverProps}
     >
       <PresstableScale
-        className={cn('flex-row items-center shrink min-w-0', showActions && 'flex-1')}
+        className={cn('flex-row items-center shrink min-w-0 self-stretch', showActions && 'flex-1')}
         {...pressProps}
       >
         {leading}
@@ -123,6 +123,7 @@ export function ActionableRow({
           'shrink-0 flex-row items-center justify-end self-stretch',
           showActions ? 'ml-2' : 'grow',
         )}
+        focusable={false}
         onLongPress={pressProps.onLongPress}
         onPress={pressProps.onPress}
         pressBehavior={pressBehavior}

@@ -19,7 +19,11 @@ export function CenteredNotice({
 }
 
 function CenteredNoticeGlyph({ children }: { children: ReactNode }) {
-  return <Text className="text-5xl text-muted mb-4">{children}</Text>;
+  return (
+    <Text aria-hidden className="text-5xl text-muted mb-4">
+      {children}
+    </Text>
+  );
 }
 
 function CenteredNoticeIcon({ name }: { name: ComponentProps<typeof Ionicons>['name'] }) {
@@ -38,7 +42,10 @@ function CenteredNoticeIcon({ name }: { name: ComponentProps<typeof Ionicons>['n
 
 function CenteredNoticeTitle({ children }: { children: ReactNode }) {
   return (
-    <Text className="text-2xl font-display text-foreground text-center max-w-full web:wrap-anywhere">
+    <Text
+      accessibilityRole="header"
+      className="text-2xl font-display text-foreground text-center max-w-full web:wrap-anywhere"
+    >
       {children}
     </Text>
   );

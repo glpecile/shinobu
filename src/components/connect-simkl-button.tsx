@@ -3,10 +3,11 @@ import { openAuthSessionAsync } from 'expo-web-browser';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Linking, Platform, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
+import { InlineLink } from '@/components/inline-link';
 import { Steps } from '@/components/steps';
 import { TextField } from '@/components/text-field';
 import { SIMKL_CREATE_APP_URL } from '@/lib/providers/external-urls';
@@ -131,12 +132,9 @@ export function ConnectSimklButton() {
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
                 Create an app at{' '}
-                <Text
-                  className="text-accent font-sans-semibold underline"
-                  onPress={() => Linking.openURL(SIMKL_CREATE_APP_URL)}
-                >
+                <InlineLink inApp={false} url={SIMKL_CREATE_APP_URL}>
                   {SIMKL_CREATE_APP_URL.replace('https://', '')}
-                </Text>
+                </InlineLink>
                 . Name can be anything (e.g. "Shinobu").
               </Text>
             </Steps.Item>
@@ -173,6 +171,7 @@ export function ConnectSimklButton() {
           name="clientId"
           render={({ field }) => (
             <TextField
+              accessibilityLabel="Simkl Client ID"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
               onSubmitEditing={() => submitClientId()}
@@ -183,7 +182,9 @@ export function ConnectSimklButton() {
           )}
         />
         {errors.clientId != null && (
-          <Text className="text-accent font-sans text-xs">{errors.clientId.message}</Text>
+          <Text className="text-accent font-sans text-xs" role="alert">
+            {errors.clientId.message}
+          </Text>
         )}
         <Button
           icon={<Button.Icon name="link-outline" />}
@@ -203,7 +204,7 @@ export function ConnectSimklButton() {
         device — your password is never sent to Shinobu.
       </Text>
       {status === 'error' && (
-        <Text className="text-accent font-sans text-xs">
+        <Text className="text-accent font-sans text-xs" role="alert">
           Could not connect. Tap Connect to try again.
         </Text>
       )}

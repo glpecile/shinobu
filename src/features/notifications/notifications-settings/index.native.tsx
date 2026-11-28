@@ -2,6 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { useState, useSyncExternalStore, useTransition } from 'react';
+import { Linking } from 'react-native';
 
 import { Button } from '@/components/button';
 import { NativeSwitch } from '@/components/native-switch';
@@ -146,6 +147,16 @@ export function NotificationsSettingsSection() {
           value={enabled}
         />
       </SettingsRail.Row>
+      {permissionDenied && (
+        <SettingsRail.Row>
+          <Button
+            icon={<Button.Icon name="open-outline" />}
+            label="Open Settings"
+            onPress={() => Linking.openSettings()}
+            variant="quiet"
+          />
+        </SettingsRail.Row>
+      )}
       {NOTIFICATION_KINDS.map(({ kind, label }) => (
         <KindToggle alertsOn={enabled} key={kind} kind={kind} label={label} />
       ))}

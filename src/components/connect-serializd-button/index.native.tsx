@@ -33,7 +33,7 @@ export function ConnectSerializdButton() {
         only the resulting access token on this device — your password is never sent to Shinobu.
       </Text>
       {status === 'error' && (
-        <Text className="text-accent font-sans text-xs">
+        <Text className="text-accent font-sans text-xs" role="alert">
           Could not verify your Serializd session. Try signing in again.
         </Text>
       )}

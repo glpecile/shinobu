@@ -43,6 +43,7 @@ import {
   TrendingShowsRow,
 } from '@/features/feed/feed-rows';
 import { PosterWall } from '@/features/feed/poster-wall';
+import { mediaKindLabel } from '@/features/media-layout/watchlist-rows';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { DURATION, EASE_OUT } from '@/lib/motion';
@@ -51,6 +52,7 @@ import { hasCoarsePointer } from '@/lib/pointer';
 import { usePushRoute } from '@/lib/navigation';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { Provider } from '@/lib/providers/types';
+import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useAniListSearchQuery, useAniListStaffSearchQuery } from '@/state/queries/anilist';
@@ -99,7 +101,7 @@ const SCOPES = [
 type SearchScope = (typeof SCOPES)[number]['value'];
 
 function resultMeta(item: NormalizedMediaItem): string {
-  return [item.type, item.year != null ? String(item.year) : null]
+  return [mediaKindLabel(item), item.year != null ? String(item.year) : null]
     .filter((part) => part != null)
     .join(' · ');
 }
@@ -201,7 +203,32 @@ function RowSkeleton({ index = 0 }: { index?: number }) {
   );
 }
 
-function ResultsSkeleton() {
+function EntityRowSkeleton({ index = 0, shape }: { index?: number; shape: 'face' | 'logo' }) {
+  const delay = staggerDelay(index);
+  return (
+    <View className="flex-row items-center px-6 py-2.5">
+      <Skeleton
+        className={cn('size-12', shape === 'face' ? 'rounded-full' : 'rounded')}
+        delay={delay}
+      />
+      <Skeleton className="h-4 w-1/2 ml-4 rounded" delay={delay} />
+    </View>
+  );
+}
+
+function ResultRowSkeleton({ index, scope }: { index?: number; scope: SearchScope }) {
+  switch (scope) {
+    case 'titles':
+    case 'reading':
+      return <RowSkeleton index={index} />;
+    case 'people':
+      return <EntityRowSkeleton index={index} shape="face" />;
+    case 'studios':
+      return <EntityRowSkeleton index={index} shape="logo" />;
+  }
+}
+
+function ResultsSkeleton({ scope }: { scope: SearchScope }) {
   return (
     <View>
       <View className="flex-row items-center gap-2 px-6 pt-4 pb-1.5">
@@ -209,7 +236,7 @@ function ResultsSkeleton() {
         <Skeleton className="h-4 w-20 rounded" />
       </View>
       {Array.from({ length: 6 }).map((_, index) => (
-        <RowSkeleton index={index} key={index} />
+        <ResultRowSkeleton index={index} key={index} scope={scope} />
       ))}
     </View>
   );
@@ -575,7 +602,7 @@ function SearchScreen() {
                   </View>
                 )
               ) : state === 'loading' ? (
-                <ResultsSkeleton />
+                <ResultsSkeleton scope={scope.value} />
               ) : state === 'error' ? (
                 <CenteredNotice className="-mt-16">
                   <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
@@ -636,7 +663,7 @@ function SearchScreen() {
                       ) : row.kind === 'entity' ? (
                         <EntityResultRow onPress={pushRoute} row={row} />
                       ) : row.kind === 'loading' ? (
-                        <RowSkeleton />
+                        <ResultRowSkeleton scope={scope.value} />
                       ) : (
                         <View className="px-6 py-2 flex-row items-center justify-between gap-3">
                           <Text className="shrink text-muted font-sans text-sm">

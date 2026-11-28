@@ -1,6 +1,5 @@
 import { View } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
@@ -8,6 +7,7 @@ import { List } from '@/components/List';
 import { LoadMoreFooter } from '@/components/load-more-footer';
 import { RefreshControl } from '@/components/refresh-control';
 import { staggerDelay } from '@/components/skeleton';
+import { useListEndPadding } from '@/features/media-layout/watchlist-rows';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useHiddenLists, visibleByIds } from '@/state/prefs/hidden-items';
@@ -67,7 +67,7 @@ export function ListsIndex({
   emptyBody: string;
 }) {
   const pushRoute = usePushRoute();
-  const insets = useSafeAreaInsets();
+  const paddingBottom = useListEndPadding(false);
   const { columns, rowHeight } = useGrid();
   const { openList, sheetProps } = useListSheet();
   const loaded = [...new Map(lists.map((list) => [list.id, list])).values()];
@@ -114,10 +114,7 @@ export function ListsIndex({
         <List
           key={columns}
           className="flex-1"
-          contentContainerStyle={{
-            padding: PADDING,
-            paddingBottom: process.env.EXPO_OS === 'android' ? 24 + insets.bottom : PADDING,
-          }}
+          contentContainerStyle={{ padding: PADDING, paddingBottom }}
           data={items}
           // One row, margin included: an estimate the library calls too large
           // starves its container pool (the web "creating one on demand"

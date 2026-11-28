@@ -81,6 +81,9 @@ const SIZE: Record<ButtonSize, { container: string; label: string; icon: number 
   md: { container: 'px-5 py-3 gap-2', label: 'text-base', icon: 18 },
 };
 
+/** Grows the 36pt `sm` box's hit area to 44pt on native. */
+const SM_HIT_SLOP = { top: 4, bottom: 4 };
+
 const TRAILING_ICON: Record<ButtonSize, number> = { sm: 12, md: 16 };
 
 const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number } | null>(null);
@@ -236,13 +239,8 @@ export function Button({
         iconOnly && 'min-w-11 min-h-11 items-center justify-center',
         className,
       )}
-      // `accessibilityState` never becomes ARIA on web, so a screen reader
-      // would hear an idle button while a fan-out is in flight. These say it
-      // (docs/solutions/pressto-accessibility-state-not-mapped-on-web.md).
-      aria-busy={loading}
-      aria-disabled={unavailable}
-      aria-pressed={pressedState}
       disabled={unavailable}
+      hitSlop={!iconOnly && size === 'sm' ? SM_HIT_SLOP : undefined}
       onPress={onPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}

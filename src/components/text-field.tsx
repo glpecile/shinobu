@@ -44,8 +44,10 @@ export function TextField({
       // react-native-web ignores the `textAlign` prop, so centring rides as a class too.
       className={cn(
         'border bg-surface text-foreground px-4 py-3 rounded-full font-sans outline-none caret-accent',
+        // iOS Safari zooms into a focused field under 16px.
+        'web:text-base web:pointer-fine:text-sm',
         props.multiline && 'rounded-2xl min-h-24',
-        size === 'sm' && 'h-9 ios:h-8 px-3 py-0 web:text-sm',
+        size === 'sm' && 'h-9 ios:h-8 px-3 py-0',
         props.textAlign === 'center' && 'text-center',
         props.inputMode === 'numeric' && 'tabular-nums',
       )}

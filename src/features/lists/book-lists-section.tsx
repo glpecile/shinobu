@@ -3,8 +3,8 @@ import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { ProviderIcon } from '@/components/provider-icon';
-import { VirtualizedRail } from '@/components/rail';
-import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { Rail, VirtualizedRail } from '@/components/rail';
+import { staggerDelay } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import { usePushRoute } from '@/lib/navigation';
 import { Provider } from '@/lib/providers/types';
@@ -19,6 +19,7 @@ import { ListCardSkeleton } from './lists-row';
 import { POSTER_STACK_RATIO } from './poster-stack';
 
 const CARD_WIDTH = 240;
+const COLLAPSE_KEY = 'details-book-lists';
 
 function BookListsRail({ bookId }: { bookId: number }) {
   const pushRoute = usePushRoute();
@@ -32,7 +33,7 @@ function BookListsRail({ bookId }: { bookId: number }) {
   return (
     <View className="-mx-4 -mb-6 mt-8">
       <CollapsibleSection
-        collapseKey="details-book-lists"
+        collapseKey={COLLAPSE_KEY}
         leading={<ProviderIcon id={Provider.Hardcover} size={16} />}
         title="Lists"
       >
@@ -56,16 +57,25 @@ function BookListsRail({ bookId }: { bookId: number }) {
 }
 
 function BookListsSkeleton() {
+  const { fontScale } = useWindowDimensions();
   return (
-    <View className="mt-8 pointer-fine:pb-3">
-      <Skeleton className="h-6 w-24 rounded mb-4" />
-      <View className="flex-row overflow-hidden">
-        {[0, 1, 2].map((index) => (
-          <View className="w-60 mr-4" key={index}>
-            <ListCardSkeleton delay={staggerDelay(index)} />
-          </View>
-        ))}
-      </View>
+    <View className="-mx-4 -mb-6 mt-8">
+      <CollapsibleSection
+        collapseKey={COLLAPSE_KEY}
+        leading={<ProviderIcon id={Provider.Hardcover} size={16} />}
+        title="Lists"
+      >
+        <Rail
+          className="px-4"
+          style={{ height: CARD_WIDTH / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale }}
+        >
+          {[0, 1, 2].map((index) => (
+            <View className="w-60 mr-4" key={index}>
+              <ListCardSkeleton delay={staggerDelay(index)} />
+            </View>
+          ))}
+        </Rail>
+      </CollapsibleSection>
     </View>
   );
 }

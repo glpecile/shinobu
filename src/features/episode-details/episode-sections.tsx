@@ -15,6 +15,7 @@ import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
+import { Tooltip } from '@/components/tooltip';
 import {
   PeopleSection,
   PeopleSectionsSkeleton,
@@ -238,7 +239,6 @@ export function EpisodeNavigation({
   const go = useGoToEpisode();
   const pushRoute = usePushRoute();
   const insets = useSafeAreaInsets();
-  const [showSeriesHint, setShowSeriesHint] = useState(false);
   function step(target: EpisodeRef | undefined) {
     if (target == null) return;
     haptics.selection();
@@ -272,32 +272,14 @@ export function EpisodeNavigation({
           variant="ghost"
         />
       </Button.Capsule>
-      <View
-        className="relative"
-        onPointerEnter={() => setShowSeriesHint(true)}
-        onPointerLeave={() => setShowSeriesHint(false)}
-        {...(process.env.EXPO_OS === 'web'
-          ? {
-              onFocus: () => setShowSeriesHint(true),
-              onBlur: () => setShowSeriesHint(false),
-            }
-          : {})}
-      >
-        {process.env.EXPO_OS === 'web' && showSeriesHint && (
-          <View
-            className="absolute bottom-full right-0 mb-2 px-3 py-2 rounded-md border border-border bg-surface shadow-sm"
-            style={{ pointerEvents: 'none' }}
-          >
-            <Text className="font-sans text-xs text-foreground whitespace-nowrap">View series</Text>
-          </View>
-        )}
+      <Tooltip label="View series">
         <Fab
           icon="tv-outline"
           label="View series"
           size="md"
           onPress={() => pushRoute(routes.details(id, 'TV'))}
         />
-      </View>
+      </Tooltip>
     </View>
   );
 }

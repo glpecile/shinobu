@@ -110,7 +110,7 @@ export function WriteResultReport({
       {failed.length > 0 && (
         <View className="mt-3 gap-2">
           {failedHeadline != null && (
-            <Text className="text-accent font-sans text-sm">
+            <Text className="text-foreground font-sans text-sm">
               {failedHeadline(
                 failed.map((outcome) => outcome.provider),
                 succeeded,

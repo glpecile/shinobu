@@ -3,12 +3,12 @@ import { openAuthSessionAsync } from 'expo-web-browser';
 import { Platform, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { InlineLink } from '@/components/inline-link';
 import { beginHardcoverAuthFlow } from '@/lib/providers/hardcover/authorize';
 import { clearHardcoverAuthFlow } from '@/lib/providers/hardcover/auth-flow';
 import { hardcoverClientId } from '@/lib/providers/hardcover/config';
 import { getHardcoverRedirectUri } from '@/lib/providers/hardcover/redirect-uri';
 import { HARDCOVER_GOODREADS_IMPORT_URL } from '@/lib/providers/external-urls';
-import { openExternalUrl } from '@/lib/open-external-url';
 import { exchangeHardcoverCode } from '@/state/queries/hardcover';
 
 export function ConnectHardcoverButton() {
@@ -63,17 +63,13 @@ export function ConnectHardcoverButton() {
       </Text>
       <Text className="text-muted font-sans text-sm">
         Coming from Goodreads?{' '}
-        <Text
-          accessibilityRole="link"
-          className="text-accent font-sans-semibold underline"
-          onPress={() => void openExternalUrl(HARDCOVER_GOODREADS_IMPORT_URL)}
-        >
+        <InlineLink url={HARDCOVER_GOODREADS_IMPORT_URL}>
           Import your Goodreads library into Hardcover
-        </Text>{' '}
+        </InlineLink>{' '}
         first.
       </Text>
       {connect.isError && (
-        <Text className="text-accent font-sans text-xs">
+        <Text className="text-accent font-sans text-xs" role="alert">
           Could not connect. Tap Connect to try again.
         </Text>
       )}

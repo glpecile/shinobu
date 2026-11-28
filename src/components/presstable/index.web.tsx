@@ -42,8 +42,15 @@ function WebPresstable({
   ...rest
 }: PresstableProps & { pressedStyle: ViewStyle }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
+  const state = rest.accessibilityState;
   return (
     <Pressable
+      // react-native-web drops `accessibilityState`
+      // (docs/solutions/pressto-accessibility-state-not-mapped-on-web.md).
+      aria-busy={state?.busy}
+      aria-disabled={state?.disabled}
+      aria-expanded={state?.expanded}
+      aria-pressed={state?.selected}
       {...rest}
       // Always a button: react-native-web skips Enter on a `link` div and Space
       // on any role but button. It also drops `accessibilityActions`, so the

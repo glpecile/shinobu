@@ -60,6 +60,7 @@ export function ConnectLetterboxdButton() {
         name="username"
         render={({ field }) => (
           <TextField
+            accessibilityLabel="Letterboxd username"
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             onSubmitEditing={() => submit()}
@@ -70,15 +71,17 @@ export function ConnectLetterboxdButton() {
         )}
       />
       {errors.username != null && (
-        <Text className="text-accent font-sans text-xs">{errors.username.message}</Text>
+        <Text className="text-accent font-sans text-xs" role="alert">
+          {errors.username.message}
+        </Text>
       )}
       {status === 'not-found' && (
-        <Text className="text-accent font-sans text-xs">
+        <Text className="text-accent font-sans text-xs" role="alert">
           No Letterboxd member with that username — check the spelling.
         </Text>
       )}
       {status === 'error' && (
-        <Text className="text-accent font-sans text-xs">
+        <Text className="text-accent font-sans text-xs" role="alert">
           Could not reach Letterboxd. Try again.
         </Text>
       )}
