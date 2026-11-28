@@ -1,4 +1,3 @@
-import { Fragment, type ReactNode } from 'react';
 import { Text } from 'react-native';
 
 import { cn } from '@/lib/cn';
@@ -8,7 +7,7 @@ export function MetaLine({
   align = 'left',
   className,
 }: {
-  parts: ReactNode[];
+  parts: (string | null | undefined | false)[];
   align?: 'left' | 'center';
   className?: string;
 }) {
@@ -18,13 +17,7 @@ export function MetaLine({
     <Text
       className={cn('text-muted font-sans text-sm', align === 'center' && 'text-center', className)}
     >
-      {shown.map((part, index) => (
-        <Fragment key={index}>
-          {index > 0 && '\u00A0· '}
-          {part}
-        </Fragment>
-      ))}
+      {shown.join('\u00A0· ')}
     </Text>
   );
 }
-
