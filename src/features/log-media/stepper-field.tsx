@@ -6,8 +6,9 @@ import { Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
-import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
+
+import { useHoldRepeat } from './use-hold-repeat';
 
 export function StepperField({
   label,
@@ -43,10 +44,8 @@ export function StepperField({
   const accent = useThemeColor('--color-accent');
   const line = error ?? note;
 
-  function step(by: 1 | -1) {
-    haptics.selection();
-    onStep(by);
-  }
+  const back = useHoldRepeat(() => onStep(-1), !pending && canStepBack);
+  const forward = useHoldRepeat(() => onStep(1), !pending && canStepForward);
 
   return (
     <View className={cn('gap-2', pending && 'opacity-50', className)}>
@@ -62,7 +61,7 @@ export function StepperField({
           icon={<Button.Icon name="chevron-back" />}
           iconOnly
           label={backLabel}
-          onPress={() => step(-1)}
+          {...back}
           pressBehavior="immediate"
           variant="quiet"
         />
@@ -86,7 +85,7 @@ export function StepperField({
           icon={<Button.Icon name="chevron-forward" />}
           iconOnly
           label={forwardLabel}
-          onPress={() => step(1)}
+          {...forward}
           pressBehavior="immediate"
           variant="quiet"
         />

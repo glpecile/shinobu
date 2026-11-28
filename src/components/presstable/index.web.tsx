@@ -25,7 +25,7 @@ const FEEDBACK = {
 
 type PresstableProps = Omit<
   ComponentProps<typeof Pressable>,
-  'onPress' | 'onLongPress' | 'onPressIn' | 'style'
+  'onPress' | 'onLongPress' | 'style'
 > &
   PressBehaviorProps & {
     onPress?: () => void;
