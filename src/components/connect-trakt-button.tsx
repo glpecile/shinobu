@@ -36,7 +36,7 @@ const hex64 = (label: string) =>
     .min(1, `Paste your ${label} first.`)
     .regex(
       /^[0-9a-f]{64}$/i,
-      `That doesn't look like a ${label} — it's a 64-character hex string on your Trakt app's page.`,
+      `That doesn’t look like a ${label} — it’s a 64-character hex string on your Trakt app’s page.`,
     );
 
 const credentialsSchema = z.object({

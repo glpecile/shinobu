@@ -58,7 +58,7 @@ export function ConnectHardcoverButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        You sign in on Hardcover's own site. Shinobu keeps only the resulting tokens on this device
+        You sign in on Hardcover’s own site. Shinobu keeps only the resulting tokens on this device
         and never sees your password.
       </Text>
       <Text className="text-muted font-sans text-sm">

@@ -303,7 +303,7 @@ export function withUnconfirmed(
     unconfirmed.map((provider) => [provider, PROVIDERS[provider].label] as const),
     (label) => () =>
       Promise.reject(
-        new Error(`Couldn't check whether the last try reached ${label}, so it wasn't sent again.`),
+        new Error(`Couldn’t check whether the last try reached ${label}, so it wasn’t sent again.`),
       ),
   );
 }

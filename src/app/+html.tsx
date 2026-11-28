@@ -4,7 +4,7 @@ import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { fontFaceCss, preloadedFonts } from '@/lib/fonts/web-faces';
 
 const SITE_DESCRIPTION =
-  "Log a movie, show, anime, or manga once, and Shinobu writes it to every tracker you've connected.";
+  "Log a movie, show, anime, or manga once, and Shinobu writes it to every tracker you’ve connected.";
 
 export default function Root({ children }: { children: React.ReactNode }) {
   const { bodyAttributes, bodyNodes, htmlAttributes, headNodes } = useServerDocumentContext();
@@ -41,6 +41,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
               html, body {
                 background-color: #0a0a0a;
                 color: #0a0a0a;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
               }
               #boot-loader {
                 background-color: #0a0a0a;

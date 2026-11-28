@@ -8,7 +8,7 @@ import { isStaleBundleError } from '@/lib/stale-bundle';
 export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const stale = isStaleBundleError(error);
   const message = stale
-    ? "Shinobu couldn't load part of the app. Reload the page to get the latest version."
+    ? "Shinobu couldn’t load part of the app. Reload the page to get the latest version."
     : error instanceof Error
       ? error.message
       : 'Unknown error';

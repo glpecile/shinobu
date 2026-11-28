@@ -90,7 +90,7 @@ function SheetBody({
         ) : (
           <Text className="text-muted font-sans text-sm">
             {airsIn == null ? 'Not aired yet' : `Airs ${airsIn.toLowerCase()}`} — it can be logged
-            once it&apos;s out.
+            once it’s out.
           </Text>
         )}
       </View>

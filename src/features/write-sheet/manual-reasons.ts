@@ -18,9 +18,9 @@ export function manualWriteReasons(
   for (const provider of manual) {
     reasons[provider] = isManualWriteTarget(provider, platform)
       ? platform === 'web'
-        ? `Can't be ${word} from the web`
-        : `Can't be ${word} on this platform`
-      : `Can't be ${word} from Shinobu yet`;
+        ? `Can’t be ${word} from the web`
+        : `Can’t be ${word} on this platform`
+      : `Can’t be ${word} from Shinobu yet`;
   }
   return reasons;
 }

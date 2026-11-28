@@ -58,7 +58,7 @@ function dayContentAnimation(
 }
 
 function emptyDayCopy(offset: number, label: string): string {
-  if (offset === 0) return "That's all for today.";
+  if (offset === 0) return "That’s all for today.";
   if (offset === 1) return 'Nothing airing tomorrow.';
   return `Nothing airing on ${label}.`;
 }

@@ -100,7 +100,7 @@ export function DiaryWelcome({ timeZone }: { timeZone: string }) {
           </HeroEnter>
           <HeroEnter className="mt-3 md:mt-5" delay={COPY_STAGGER * 2}>
             <Text className="font-sans text-muted text-base leading-relaxed md:max-w-md">
-              Connect a tracker and everything you've logged, in Shinobu or on the tracker itself,
+              Connect a tracker and everything you’ve logged, in Shinobu or on the tracker itself,
               lands here in one diary.
             </Text>
           </HeroEnter>

@@ -112,7 +112,7 @@ function AnimeDetailsList({
     if (tmdbId == null || placed == null) {
       toast.error(
         'Episode details unavailable',
-        "This episode isn't mapped to TMDB's numbering yet.",
+        "This episode isn’t mapped to TMDB’s numbering yet.",
       );
       return null;
     }

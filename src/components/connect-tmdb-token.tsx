@@ -33,7 +33,7 @@ const tokenSchema = z.object({
     .min(1, 'Paste your API Read Access Token first.')
     .regex(
       /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/,
-      'That looks like the short v3 API Key. Shinobu needs the long "API Read Access Token" from the same page.',
+      'That looks like the short v3 API Key. Shinobu needs the long “API Read Access Token” from the same page.',
     ),
 });
 
@@ -51,7 +51,7 @@ async function tokenWorks(token: string): Promise<boolean> {
 
 const STATUS_MESSAGE: Record<Exclude<SaveStatus, 'idle' | 'checking'>, string> = {
   invalid: 'TMDB rejected that token. Copy the API Read Access Token again.',
-  unreachable: "Couldn't reach TMDB to check that token. Try again in a moment.",
+  unreachable: "Couldn’t reach TMDB to check that token. Try again in a moment.",
 };
 
 export function ConnectTmdbTokenSection() {

@@ -327,7 +327,7 @@ export function deleteAniListEntry(
     if (entry == null) {
       return {
         status: 'skipped',
-        reason: "wasn't on your AniList list",
+        reason: "wasn’t on your AniList list",
       } satisfies ProviderWriteResult;
     }
     // Branch 2 — skipped wholesale under `allowDestructive`, where the user has

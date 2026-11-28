@@ -204,7 +204,7 @@ export function removeFromHardcoverReadingList(
     const bookId = yield* bookIdOf(item);
     const entry = yield* getBookEntry(deps, bookId);
     if (entry == null) {
-      return { status: 'skipped', reason: "wasn't in your Hardcover library" };
+      return { status: 'skipped', reason: "wasn’t in your Hardcover library" };
     }
     if (entry.statusId !== HardcoverStatus.WantToRead) {
       return {
