@@ -94,7 +94,7 @@ function NoTargets({ onConnect }: { onConnect?: () => void }) {
       {onConnect != null && (
         <PresstableOpacity
           accessibilityRole="button"
-          className="flex-row items-center gap-1"
+          className="min-h-11 -my-3 flex-row items-center gap-1"
           onPress={onConnect}
         >
           <Text className="text-accent font-sans-semibold text-sm">Connect one</Text>

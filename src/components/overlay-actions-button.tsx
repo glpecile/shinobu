@@ -72,7 +72,7 @@ export function OverlayActionsButton({
         accessibilityRole="button"
         className={cn(
           'items-center justify-center rounded-full',
-          size === 'lg' ? 'w-11 h-11' : SIZE[size].box,
+          size === 'lg' ? 'w-11 h-11' : cn('w-10 h-10', size === 'sm' ? '-m-1.5' : '-m-1'),
           'web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',
         )}
         onPress={onPress}

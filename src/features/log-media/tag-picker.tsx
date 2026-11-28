@@ -259,6 +259,7 @@ export function TagPicker({
           accessibilityRole="button"
           accessibilityState={{ expanded }}
           className="flex-row items-center gap-1 self-start mt-2 py-1"
+          hitSlop={{ top: 4, bottom: 16, left: 8, right: 8 }}
           onPress={() => setExpanded(!expanded)}
           pressBehavior="immediate"
         >
