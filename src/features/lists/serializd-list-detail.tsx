@@ -91,7 +91,7 @@ export function SerializdListItems({
         notice={sort !== 'default' && !list.complete ? <SortingLoadedNotice /> : undefined}
       >
         <MediaSortControl scope="lists" sort={sort} />
-        {target != null && <RenameList key={list.title} target={target} />}
+        {target != null && <RenameList key={id} target={target} />}
         <ToolbarIcon>
           <ProviderListLink iconOnly provider={Provider.Serializd} url={url} />
         </ToolbarIcon>
