@@ -18,13 +18,22 @@ third-party component silently dropping `className`
 _is_ the withUniwind wrapper, and the same class string's `padding`,
 `borderRadius` and `backgroundColor` all landed. Only the border vanished.
 
-**Cause.** pressto renders RNGH's `BaseButton`, which on Android is a native
-`RNGestureHandlerButton` that installs its own background drawable (for the
-ripple). React Native draws a view's border _as part of its background
-drawable_ — so once the native button supplies one, `borderWidth`/`borderColor`
-have nothing to draw into. `backgroundColor` survives because it is applied
+**Cause.** pressto rendered gesture-handler 2's `BaseButton`, which on Android
+is a native `RNGestureHandlerButton` that installed its own background drawable
+(for the ripple). React Native draws a view's border _as part of its background
+drawable_, so once the native button supplied one, `borderWidth`/`borderColor`
+had nothing to draw into. `backgroundColor` survived because it was applied
 separately, which is exactly why a filled button looked fine and an outlined one
 looked like unstyled text.
+
+**With pressto 0.8 and gesture-handler 3.** The button view manager now routes
+`borderWidth`, `borderColor` and `backgroundColor` through
+`BackgroundStyleApplicator`, and draws the ripple in `dispatchDraw` instead of
+replacing the background (`RNGestureHandlerButtonViewManager.kt`). By the
+source, a border on the pressable draws. Keep the inner `View` anyway: it owns
+the padding and radius of the visible box, which `className` on `Button` and
+`PressableCard` must not reach (`button-classname-padding-shrinks-the-label.md`),
+and it clips poster corners.
 
 **Fix.** Keep the box off the pressable: the pressable carries layout only, and
 an inner plain `View` carries the border, padding and fill. `components/button`
@@ -44,11 +53,12 @@ same shape as the box it wraps.
 ## Poster corner clipping
 
 `MediaCard` puts `rounded-lg overflow-hidden` and its border on an inner
-`View`. The pressto button did not clip poster corners on Android. The inner
-view clips the artwork and gradient; the pressable scales the card.
+`View`. The inner view clips the artwork and gradient; the pressable scales the
+card. The gesture-handler 3 button clips its children only with
+`overflow: hidden` on the pressable itself.
 
-**Scope.** Anything bordered _and_ pressable is suspect on Android. Buttons are
-handled by the primitive; the remaining hand-rolled cases (e.g. the log sheet's
-provider-picker rows, which use `border border-border` directly on a
-`PresstableOpacity`) have the same bug and should move to the inner-View shape
-when they're next touched.
+**Scope.** `Button`, `PressableCard` and `RoundIconButton` draw their box on the
+inner `View`. The poster wall (`features/media-layout/poster-wall.tsx`) and
+detail variants (`features/detail-variants/detail-variants-section.tsx`) put
+`border border-hairline overflow-hidden` on the `PresstableScale` itself, which
+the gesture-handler 3 button draws and clips.

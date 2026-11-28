@@ -12,10 +12,6 @@ export { longPressAction, type PressBehavior } from './press-behavior';
 // `withUniwind` is required because Uniwind drops `className` on raw third-party components
 // on native (docs/solutions/uniwind-classname-third-party-components.md).
 
-// Disables RNGH BaseButton's Android ripple, which ignores child border radius
-// (docs/solutions/android-ripple-ignores-child-radius.md). `'transparent'` skips
-// `createSelectableDrawable` entirely, whereas `undefined` falls back to the theme ripple.
-const RIPPLE_COLOR = 'transparent';
 const PRESS_ANIMATION = { duration: DURATION.enter, easing: KEYFRAME_EASE_OUT };
 
 const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion?: boolean }>(
@@ -46,19 +42,16 @@ export function PresstableScale({
   onLongPress,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onPressIn' | 'onLongPress'> &
+}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata'> &
   PressBehaviorProps & {
     minScale?: number;
-    onLongPress?: () => void;
   }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
   const reduceMotion = useReducedMotion();
-  // Android refresh pulls can leave the button without activating a scroll gesture.
   return (
     <UniwindPressableScale
       animationConfig={PRESS_ANIMATION}
       animationType="timing"
-      rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
       {...longPressAction(onLongPress)}
       {...rest}
@@ -75,9 +68,8 @@ export function PresstableOpacity({
   onMouseDown: _onMouseDown,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onLongPress'> &
+}: ComponentProps<typeof UniwindPressableOpacity> &
   PressBehaviorProps & {
-    onLongPress?: () => void;
     /** Web-only DOM handler, typed here because callers type-check against this file. */
     onMouseDown?: MouseEventHandler<HTMLElement>;
   }) {
@@ -86,7 +78,6 @@ export function PresstableOpacity({
     <UniwindPressableOpacity
       animationConfig={PRESS_ANIMATION}
       animationType="timing"
-      rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
       {...longPressAction(onLongPress)}
       {...rest}

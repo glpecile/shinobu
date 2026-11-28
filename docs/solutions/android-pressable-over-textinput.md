@@ -34,12 +34,17 @@ writes, before believing any story about state.
 
 On Android, a focused `ReactEditText` claims the touch stream for its own bounds.
 A sibling pressable that merely _overlaps_ it — even one that is later in child
-order, which is normally enough to win hit-testing — loses: pressto's pressables
-are RNGH tap handlers, and RNGH does not activate a tap until the pointer is
-released, by which time the `EditText` has already consumed the gesture. Web has
-no such native text widget, so react-native-web's hit-testing gives the overlay
-the click and the same code works there. Neither a longer press (`input swipe`
-with a 120 ms hold) nor dismissing the keyboard first made any difference.
+order, which is normally enough to win hit-testing — loses. pressto 0.7 rendered
+gesture-handler 2's `BaseButton`, a tap handler that does not activate until the
+pointer is released, by which time the `EditText` has already consumed the
+gesture. Web has no such native text widget, so react-native-web's hit-testing
+gives the overlay the click and the same code works there. Neither a longer
+press (`input swipe` with a 120 ms hold) nor dismissing the keyboard first made
+any difference.
+
+pressto 0.8 renders gesture-handler 3's `Touchable`, whose native button runs
+its own press handler. Nothing in the app overlaps a `TextInput` now, so the
+overlap was not tested again. Keep the sibling layout either way.
 
 ## Fix
 
