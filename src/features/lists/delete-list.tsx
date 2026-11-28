@@ -78,8 +78,7 @@ function DeleteConfirm({
 }
 
 /**
- * The mutation lives here, not in the sheet, so a save the user dismisses mid-flight still
- * toasts and leaves the deleted list, and a failure reopens the sheet with its link.
+ * Confirms deletion after dismissal and reopens the sheet on failure.
  */
 export function DeleteList({ id, title, url }: { id: string; title: string; url: string }) {
   const [open, setOpen] = useState(false);

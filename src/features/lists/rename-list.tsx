@@ -149,7 +149,6 @@ export function RenameList({
   description?: string;
 }) {
   const [open, setOpen] = useState(false);
-  // Held here, not in the sheet, so a save dismissed mid-flight still confirms.
   const mutation = useRenameList(target);
   function openSheet() {
     if (mutation.isError) mutation.reset();

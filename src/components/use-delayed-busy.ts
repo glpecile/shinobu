@@ -4,9 +4,7 @@ const SHOW_AFTER = 150;
 const HOLD_FOR = 300;
 
 /**
- * Whether a pending action shows its spinner: 150ms after `pending` turns true,
- * so a fast write never flashes one, then for at least 300ms, so it never blinks.
- * The timer waits on the wall clock, which is why this is an effect.
+ * Shows a pending action's spinner after 150ms, then for at least 300ms.
  */
 export function useDelayedBusy(pending: boolean): boolean {
   const [shown, setShown] = useState(false);
